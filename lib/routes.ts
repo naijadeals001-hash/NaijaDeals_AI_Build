@@ -1,0 +1,28 @@
+export const routeTitles: Record<string, string> = {
+  "": "Home",
+  "ecosystem-hub": "Ecosystem Hub",
+  categories: "Categories",
+  search: "Search",
+  "product-listing": "Product listing",
+  "product-detail": "Product detail",
+  cart: "Cart",
+  checkout: "Checkout",
+  account: "Account",
+  orders: "Orders",
+  wallet: "Wallet",
+  help: "Help",
+  returns: "Returns",
+  safety: "Safety",
+  shipping: "Shipping",
+  payments: "Payments",
+  naijashop: "NaijaShop",
+  naijaeats: "NaijaEats",
+  naijagigs: "NaijaGigs",
+  naijastay: "NaijaStay",
+  naijadrive: "NaijaDrive",
+  naijasend: "NaijaSend",
+  naijastream: "NaijaStream",
+  "aura-ai": "Aura AI"
+};
+
+export const publicRoutes = Object.keys(routeTitles).filter(Boolean);
