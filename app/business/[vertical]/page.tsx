@@ -18,25 +18,17 @@ export function generateMetadata({ params }: { params: { vertical: string } }): 
 
 export default function BusinessPage({ params }: { params: { vertical: string } }) {
   const vertical = verticals.find((item) => item.key === params.vertical) ?? verticals[0];
-  const Icon = vertical.icon;
 
   return (
     <div className="space-y-6">
       <section className="rounded-2xl bg-night p-6 text-white shadow-soft">
         <TrustBadge>Business OS</TrustBadge>
-        <div className="mt-5 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-          <div>
-            <span className={`grid h-14 w-14 place-items-center rounded-xl ${vertical.color}`}>
-              <Icon className="h-7 w-7" />
-            </span>
-            <h1 className="mt-4 font-display text-3xl font-extrabold sm:text-4xl">{vertical.name} seller command center</h1>
-            <p className="mt-3 max-w-2xl text-white/70">Operate listings, inventory, orders, payouts, reviews, promotions, AI insights, and support from one merchant-ready surface.</p>
-          </div>
-          <Link href={`/onboarding/${vertical.key === "eats" ? "restaurant" : vertical.key === "drive" || vertical.key === "send" ? "driver" : vertical.key === "stream" ? "creator" : vertical.key === "stay" ? "host" : "vendor"}`} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary-live px-5 font-bold text-white">
-            Start onboarding <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
+        <h1 className="mt-5 font-display text-3xl font-extrabold sm:text-4xl">{vertical.name} seller command center</h1>
+        <p className="mt-3 max-w-2xl text-white/70">Manage inventory, orders, support, wallet settlement, escrow releases, promotions, and seller growth from one operator console.</p>
       </section>
+      <Link href={`/onboarding/${vertical.key === "eats" ? "restaurant" : vertical.key === "drive" || vertical.key === "send" ? "driver" : vertical.key === "stream" ? "creator" : vertical.key === "stay" ? "host" : "vendor"}`} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 font-bold text-white">
+        Start onboarding <ArrowRight className="h-4 w-4" />
+      </Link>
 
       <section className="grid gap-4 md:grid-cols-4">
         <MetricCard label="Revenue today" value="NGN 8.4M" detail="Orders, missions, bookings, tips" />

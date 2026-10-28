@@ -1,0 +1,676 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ActorType {
+  CUSTOMER
+  VENDOR
+  COURIER
+  ADMIN
+  SYSTEM
+}
+
+enum VendorStatus {
+  PENDING
+  VERIFIED
+  SUSPENDED
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum CartStatus {
+  ACTIVE
+  CHECKED_OUT
+  ABANDONED
+}
+
+enum OrderStatus {
+  created
+  payment_pending
+  escrow_held
+  vendor_notified
+  accepted
+  preparing
+  ready_for_pickup
+  courier_assigned
+  picked_up
+  in_transit
+  delivered
+  completed
+  cancelled
+  disputed
+  refunded
+}
+
+enum EscrowStatus {
+  pending
+  held
+  release_eligible
+  released
+  refund_requested
+  refunded
+  reserved
+  disputed
+}
+
+enum DeliveryStatus {
+  pending_assignment
+  assigned
+  pickup_started
+  picked_up
+  in_transit
+  delivery_attempted
+  delivered
+  failed
+  returned
+}
+
+enum DisputeStatus {
+  open
+  under_review
+  awaiting_vendor
+  awaiting_customer
+  resolved_refund
+  resolved_release
+  rejected
+}
+
+enum WalletTransactionType {
+  debit
+  credit
+  hold
+  release
+  refund
+  payout
+}
+
+enum LedgerDirection {
+  DEBIT
+  CREDIT
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  RECEIVED
+  REFUNDED
+}
+
+enum PayoutStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+}
+
+enum SellerApplicationStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  passwordHash      String?
+  name              String
+  phone             String?
+  countryCode       String             @default("NG")
+  actorType         ActorType          @default(CUSTOMER)
+  verifiedAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  roles             UserRole[]
+  vendors           Vendor[]
+  courier           Courier?
+  carts             Cart[]
+  orders            Order[]            @relation("CustomerOrders")
+  wallets           Wallet[]
+  disputes          Dispute[]          @relation("CustomerDisputes")
+  adminActions      AdminAction[]
+  auditLogs         AuditLog[]
+  systemEvents      SystemEvent[]      @relation("SystemEventActor")
+  sessions          Session[]
+  addresses         Address[]
+  savedItems        SavedItem[]
+  reviews           Review[]
+  sellerApplication SellerApplication?
+  returnRequests    ReturnRequest[]
+}
+
+model Role {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  users       UserRole[]
+}
+
+model UserRole {
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  role      Role     @relation(fields: [roleId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@id([userId, roleId])
+}
+
+model Vendor {
+  id                  String          @id @default(cuid())
+  ownerId             String
+  name                String
+  slug                String          @unique
+  market              String
+  description         String?
+  logoUrl             String?
+  pickupAddress       String
+  pickupPhone         String
+  countryCode         String          @default("NG")
+  status              VendorStatus    @default(PENDING)
+  trustScore          Int             @default(50)
+  commissionBps       Int             @default(1000)
+  payoutBank          String?
+  payoutAccountName   String?
+  payoutAccountNumber String?
+  suspendedReason     String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  owner               User            @relation(fields: [ownerId], references: [id])
+  products            Product[]
+  orders              Order[]         @relation("VendorOrders")
+  wallets             Wallet[]
+  disputes            Dispute[]       @relation("VendorDisputes")
+  payouts             Payout[]
+  returnRequests      ReturnRequest[]
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  products    Product[]
+}
+
+model Product {
+  id             String           @id @default(cuid())
+  vendorId       String
+  categoryId     String
+  name           String
+  slug           String           @unique
+  description    String
+  brand          String?
+  condition      String           @default("NEW")
+  priceKobo      BigInt
+  compareAtKobo  BigInt?
+  countryCode    String           @default("NG")
+  weightGrams    Int              @default(500)
+  status         ProductStatus    @default(ACTIVE)
+  moderationNote String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  category       Category         @relation(fields: [categoryId], references: [id])
+  vendor         Vendor           @relation(fields: [vendorId], references: [id])
+  images         ProductImage[]
+  stock          InventoryStock?
+  variants       ProductVariant[]
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  reviews        Review[]
+  savedBy        SavedItem[]
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model ProductVariant {
+  id         String      @id @default(cuid())
+  productId  String
+  name       String
+  sku        String      @unique
+  priceKobo  BigInt
+  stock      Int         @default(0)
+  reserved   Int         @default(0)
+  attributes Json?
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  product    Product     @relation(fields: [productId], references: [id])
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+}
+
+model InventoryStock {
+  id            String   @id @default(cuid())
+  productId     String   @unique
+  quantity      Int
+  reserved      Int      @default(0)
+  lowStockLevel Int      @default(3)
+  updatedAt     DateTime @updatedAt
+  product       Product  @relation(fields: [productId], references: [id])
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String
+  status    CartStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id])
+  items     CartItem[]
+}
+
+model CartItem {
+  id            String          @id @default(cuid())
+  cartId        String
+  productId     String
+  variantId     String?
+  quantity      Int
+  savedForLater Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  cart          Cart            @relation(fields: [cartId], references: [id])
+  product       Product         @relation(fields: [productId], references: [id])
+  variant       ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([cartId, productId])
+}
+
+model Order {
+  id              String              @id @default(cuid())
+  orderNumber     String              @unique
+  customerId      String
+  vendorId        String
+  cartId          String?
+  status          OrderStatus         @default(created)
+  paymentStatus   String              @default("pending")
+  subtotalKobo    BigInt
+  deliveryFeeKobo BigInt              @default(0)
+  escrowFeeKobo   BigInt              @default(0)
+  commissionKobo  BigInt              @default(0)
+  refundedKobo    BigInt              @default(0)
+  totalKobo       BigInt
+  currency        String              @default("NGN")
+  countryCode     String              @default("NG")
+  deliveryAddress String
+  deliveryZone    String?
+  contactName     String
+  contactPhone    String
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  customer        User                @relation("CustomerOrders", fields: [customerId], references: [id])
+  vendor          Vendor              @relation("VendorOrders", fields: [vendorId], references: [id])
+  items           OrderItem[]
+  statusEvents    OrderStatusEvent[]
+  walletTxs       WalletTransaction[]
+  escrowHolds     EscrowHold[]
+  deliveries      Delivery[]
+  disputes        Dispute[]
+  payments        Payment[]
+  returnRequests  ReturnRequest[]
+  reviews         Review[]
+}
+
+model OrderItem {
+  id          String          @id @default(cuid())
+  orderId     String
+  productId   String
+  variantId   String?
+  quantity    Int
+  unitKobo    BigInt
+  totalKobo   BigInt
+  productName String
+  variantName String?
+  imageUrl    String?
+  order       Order           @relation(fields: [orderId], references: [id])
+  product     Product         @relation(fields: [productId], references: [id])
+  variant     ProductVariant? @relation(fields: [variantId], references: [id])
+}
+
+model OrderStatusEvent {
+  id        String       @id @default(cuid())
+  orderId   String
+  from      OrderStatus?
+  to        OrderStatus
+  note      String?
+  createdAt DateTime     @default(now())
+  order     Order        @relation(fields: [orderId], references: [id])
+}
+
+model Wallet {
+  id            String              @id @default(cuid())
+  ownerType     ActorType
+  userId        String?
+  vendorId      String?
+  currency      String              @default("NGN")
+  availableKobo BigInt              @default(0)
+  heldKobo      BigInt              @default(0)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  user          User?               @relation(fields: [userId], references: [id])
+  vendor        Vendor?             @relation(fields: [vendorId], references: [id])
+  transactions  WalletTransaction[]
+  ledgerEntries LedgerEntry[]
+}
+
+model WalletTransaction {
+  id          String                @id @default(cuid())
+  walletId    String
+  orderId     String?
+  type        WalletTransactionType
+  amountKobo  BigInt
+  reference   String                @unique
+  description String
+  createdAt   DateTime              @default(now())
+  wallet      Wallet                @relation(fields: [walletId], references: [id])
+  order       Order?                @relation(fields: [orderId], references: [id])
+  ledger      LedgerEntry[]
+}
+
+model LedgerEntry {
+  id            String            @id @default(cuid())
+  transactionId String
+  walletId      String
+  direction     LedgerDirection
+  amountKobo    BigInt
+  memo          String
+  createdAt     DateTime          @default(now())
+  transaction   WalletTransaction @relation(fields: [transactionId], references: [id])
+  wallet        Wallet            @relation(fields: [walletId], references: [id])
+}
+
+model EscrowHold {
+  id             String        @id @default(cuid())
+  orderId        String
+  buyerWalletId  String
+  vendorWalletId String
+  amountKobo     BigInt
+  status         EscrowStatus  @default(pending)
+  reason         String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  order          Order         @relation(fields: [orderId], references: [id])
+  events         EscrowEvent[]
+  disputes       Dispute[]
+}
+
+model EscrowEvent {
+  id        String        @id @default(cuid())
+  escrowId  String
+  from      EscrowStatus?
+  to        EscrowStatus
+  note      String?
+  createdAt DateTime      @default(now())
+  escrow    EscrowHold    @relation(fields: [escrowId], references: [id])
+}
+
+model Courier {
+  id         String     @id @default(cuid())
+  userId     String     @unique
+  name       String
+  phone      String
+  active     Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  user       User       @relation(fields: [userId], references: [id])
+  deliveries Delivery[]
+}
+
+model Delivery {
+  id                String          @id @default(cuid())
+  orderId           String
+  courierId         String?
+  status            DeliveryStatus  @default(pending_assignment)
+  provider          String          @default("manual")
+  providerReference String?
+  trackingNumber    String?
+  pickupContact     String?
+  dropoffContact    String?
+  countryCode       String          @default("NG")
+  zone              String?
+  pickupAddress     String
+  dropoffAddress    String
+  feeKobo           BigInt          @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  order             Order           @relation(fields: [orderId], references: [id])
+  courier           Courier?        @relation(fields: [courierId], references: [id])
+  trackingEvents    TrackingEvent[]
+}
+
+model TrackingEvent {
+  id          String         @id @default(cuid())
+  deliveryId  String
+  status      DeliveryStatus
+  label       String
+  description String
+  proofCode   String?
+  createdAt   DateTime       @default(now())
+  delivery    Delivery       @relation(fields: [deliveryId], references: [id])
+}
+
+model Dispute {
+  id         String        @id @default(cuid())
+  orderId    String
+  customerId String
+  vendorId   String
+  escrowId   String?
+  status     DisputeStatus @default(open)
+  reason     String
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  order      Order         @relation(fields: [orderId], references: [id])
+  customer   User          @relation("CustomerDisputes", fields: [customerId], references: [id])
+  vendor     Vendor        @relation("VendorDisputes", fields: [vendorId], references: [id])
+  escrow     EscrowHold?   @relation(fields: [escrowId], references: [id])
+}
+
+model AdminAction {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String
+  entity    String
+  entityId  String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  admin     User     @relation(fields: [adminId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  actor     User?    @relation(fields: [actorId], references: [id])
+}
+
+model SystemEvent {
+  id        String   @id @default(cuid())
+  type      String
+  actorId   String?
+  entity    String
+  entityId  String?
+  payload   Json?
+  createdAt DateTime @default(now())
+  actor     User?    @relation("SystemEventActor", fields: [actorId], references: [id])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Address {
+  id          String   @id @default(cuid())
+  userId      String
+  label       String   @default("Home")
+  countryCode String
+  state       String
+  city        String
+  line1       String
+  line2       String?
+  phone       String
+  postalCode  String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model SavedItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model Review {
+  id               String       @id @default(cuid())
+  productId        String
+  userId           String
+  orderId          String
+  rating           Int
+  title            String
+  body             String
+  status           ReviewStatus @default(PENDING)
+  verifiedPurchase Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  product          Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user             User         @relation(fields: [userId], references: [id])
+  order            Order        @relation(fields: [orderId], references: [id])
+
+  @@unique([orderId, productId])
+  @@index([productId, status])
+}
+
+model SellerApplication {
+  id            String                  @id @default(cuid())
+  userId        String                  @unique
+  businessName  String
+  market        String
+  countryCode   String
+  pickupAddress String
+  phone         String
+  category      String
+  status        SellerApplicationStatus @default(SUBMITTED)
+  note          String?
+  createdAt     DateTime                @default(now())
+  reviewedAt    DateTime?
+  user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String
+  provider          String
+  providerReference String        @unique
+  idempotencyKey    String        @unique
+  status            PaymentStatus @default(PENDING)
+  amountKobo        BigInt
+  currency          String        @default("NGN")
+  failureReason     String?
+  raw               Json?
+  verifiedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  order             Order         @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+}
+
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  provider    String
+  eventId     String
+  status      String    @default("received")
+  payload     Json
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+
+  @@unique([provider, eventId])
+}
+
+model ReturnRequest {
+  id         String       @id @default(cuid())
+  orderId    String
+  userId     String
+  vendorId   String
+  reason     String
+  detail     String?
+  status     ReturnStatus @default(REQUESTED)
+  refundKobo BigInt       @default(0)
+  restocked  Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+  resolvedAt DateTime?
+  order      Order        @relation(fields: [orderId], references: [id])
+  user       User         @relation(fields: [userId], references: [id])
+  vendor     Vendor       @relation(fields: [vendorId], references: [id])
+
+  @@index([orderId])
+  @@index([vendorId, status])
+}
+
+model Payout {
+  id          String       @id @default(cuid())
+  vendorId    String
+  amountKobo  BigInt
+  status      PayoutStatus @default(PENDING)
+  reference   String       @unique
+  periodStart DateTime
+  periodEnd   DateTime
+  createdAt   DateTime     @default(now())
+  paidAt      DateTime?
+  vendor      Vendor       @relation(fields: [vendorId], references: [id])
+
+  @@index([vendorId, status])
+}

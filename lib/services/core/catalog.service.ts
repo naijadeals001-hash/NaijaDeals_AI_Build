@@ -1,0 +1,47 @@
+import { prisma } from "@/lib/prisma";
+
+const productInclude = {
+  category: true,
+  vendor: { select: { id: true, name: true, slug: true, market: true, status: true, trustScore: true } },
+  images: { orderBy: { sortOrder: "asc" as const } },
+  stock: true,
+  variants: { where: { isActive: true }, orderBy: { name: "asc" as const } },
+  reviews: { where: { status: "APPROVED" as const }, select: { rating: true } }
+};
+
+export type CatalogProduct = Awaited<ReturnType<typeof listProducts>>[number];
+
+export async function listProducts() {
+  return prisma.product.findMany({
+    where: { status: "ACTIVE", vendor: { status: "VERIFIED" } },
+    include: productInclude,
+    orderBy: { createdAt: "desc" }
+  });
+}
+
+export async function getProduct(idOrSlug: string) {
+  return prisma.product.findFirstOrThrow({
+    where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+    include: productInclude
+  });
+}
+
+export async function getCategories() {
+  return prisma.category.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } });
+}
+
+export function ratingSummary(reviews: Array<{ rating: number }>) {
+  if (reviews.length === 0) return { average: null, count: 0 };
+  const total = reviews.reduce((sum, review) => sum + review.rating, 0);
+  return { average: Math.round((total / reviews.length) * 10) / 10, count: reviews.length };
+}
+
+export function availableQuantity(product: {
+  stock: { quantity: number; reserved: number } | null;
+  variants: Array<{ stock: number; reserved: number }>;
+}) {
+  if (product.variants.length > 0) {
+    return product.variants.reduce((total, variant) => total + Math.max(variant.stock - variant.reserved, 0), 0);
+  }
+  return product.stock ? Math.max(product.stock.quantity - product.stock.reserved, 0) : 0;
+}

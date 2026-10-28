@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CheckCircle2 } from "lucide-react";
 import { onboardingFlows } from "@/lib/data/ecosystem";
 import { TrustBadge } from "@/components/ui/badge";
+import { OnboardingForm } from "@/components/functional/onboarding-form";
 
 export function generateStaticParams() {
   return onboardingFlows.map((flow) => ({ type: flow.slug }));
@@ -41,6 +42,7 @@ export default function OnboardingPage({ params }: { params: { type: string } })
           ))}
         </div>
       </section>
+      <OnboardingForm type={params.type} />
     </div>
   );
 }

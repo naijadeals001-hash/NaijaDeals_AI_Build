@@ -8,9 +8,16 @@
     "build": "next build",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "qa:visual": "node scripts/visual-qa.mjs"
+    "qa:visual": "node scripts/visual-qa.mjs",
+    "prisma:seed": "prisma db seed",
+    "test:marketplace": "tsx scripts/marketplace-tests.ts",
+    "engine:verify": "tsx scripts/marketplace-tests.ts"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.cjs"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.0",
     "@types/node": "^20.14.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
@@ -19,6 +26,7 @@
     "lucide-react": "^0.468.0",
     "next": "^14.2.4",
     "postcss": "^8.4.39",
+    "prisma": "^6.19.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.4",
@@ -27,6 +35,7 @@
   "devDependencies": {
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.35",
-    "playwright-core": "^1.60.0"
+    "playwright-core": "^1.60.0",
+    "tsx": "^4.22.4"
   }
 }

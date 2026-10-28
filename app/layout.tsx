@@ -1,29 +1,33 @@
 import type { Metadata } from "next";
 import { AppShell } from "@/components/shell/app-shell";
+import { getSessionUser, toPublicSessionUser } from "@/lib/auth/session";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "NaijaDeals.com | African Super App Marketplace",
+    default: "NaijaDeals.com | Nigerian Marketplace",
     template: "%s | NaijaDeals.com"
   },
   description:
-    "NaijaDeals.com is a production-ready African super ecosystem for ecommerce, food, gigs, stays, rides, logistics, streaming, wallet, escrow, Aura AI, and admin operations.",
-  metadataBase: new URL("https://naijadeals.com"),
+    "NaijaDeals is a Nigerian marketplace with verified sellers, server-verified payments, escrow and tracked delivery.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://naijadeals.com"),
   openGraph: {
-    title: "NaijaDeals.com Super Ecosystem",
-    description: "African Amazon-style marketplace, Uber-style mobility, wallet, escrow, Aura AI, and admin control center.",
+    title: "NaijaDeals.com",
+    description: "Verified sellers, escrow-protected payments and tracked delivery across Nigeria.",
     url: "https://naijadeals.com",
     siteName: "NaijaDeals.com",
     type: "website"
   }
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const sessionUser = await getSessionUser();
+  const user = sessionUser ? await toPublicSessionUser(sessionUser) : null;
+
   return (
     <html lang="en">
       <body>
-        <AppShell>{children}</AppShell>
+        <AppShell user={user}>{children}</AppShell>
       </body>
     </html>
   );

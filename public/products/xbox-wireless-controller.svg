@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Original illustration for GAMING">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fdf2f8"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f472b6"/>
+      <stop offset="100%" stop-color="#9d174d"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="120" cy="90" r="150" fill="#f472b6" opacity="0.12"/>
+  <circle cx="700" cy="520" r="190" fill="#9d174d" opacity="0.10"/>
+  <path d="M300 220 Q400 180 500 220 Q560 250 540 330 Q520 410 470 400 Q430 392 400 360 Q370 392 330 400 Q280 410 260 330 Q240 250 300 220 Z" fill="url(#body)" stroke="#ffffff" stroke-width="8"/>
+        <circle cx="345" cy="300" r="22" fill="#ffffff"/><circle cx="455" cy="290" r="14" fill="#ffffff"/><circle cx="480" cy="320" r="14" fill="#ffffff"/>
+  <text x="400" y="545" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800" letter-spacing="6" fill="#9d174d">GAMING</text>
+</svg>

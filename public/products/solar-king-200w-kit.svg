@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Original illustration for SOLAR">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fefce8"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#a16207"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="120" cy="90" r="150" fill="#facc15" opacity="0.12"/>
+  <circle cx="700" cy="520" r="190" fill="#a16207" opacity="0.10"/>
+  <path d="M300 180 L500 180 L540 330 L260 330 Z" fill="url(#body)" stroke="#ffffff" stroke-width="8"/>
+        <path d="M320 215 H480 M310 260 H490 M300 305 H500 M360 180 L340 330 M440 180 L460 330" stroke="#ffffff" stroke-width="5"/>
+        <rect x="380" y="330" width="40" height="120" fill="url(#body)"/>
+  <text x="400" y="545" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800" letter-spacing="6" fill="#a16207">SOLAR</text>
+</svg>

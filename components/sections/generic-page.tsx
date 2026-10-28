@@ -1,148 +1,237 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, MessageCircle, QrCode, Route, ShieldCheck } from "lucide-react";
-import { aiSystems, listings, pageCopy, trustFlows, verticals } from "@/lib/data/ecosystem";
-import { ListingCard, MetricCard } from "@/components/sections/cards";
-import { TrustBadge } from "@/components/ui/badge";
-import { RouteSpecificPanel } from "@/components/sections/flow-panels";
-import { VerticalDemoPanel } from "@/components/sections/investor-demo";
+import { Suspense } from "react";
+import { AlertCircle, ArrowRight, Bot, ChefHat, Headphones, PackageCheck, ShieldCheck, ShoppingBag, Truck, Wrench } from "lucide-react";
+import { NaijaEatsPage, NaijaPayPage, NaijaSendPage, NaijaShopPage, OrdersPageApi, SearchPage, ShopCartPage, ShopCheckoutPage } from "@/components/commerce/naijashop";
+
+const configuredShopRoutes = new Set(["categories", "product-listing"]);
 
 export function GenericPage({ slug }: { slug: string }) {
-  const copy = pageCopy[slug] ?? verticalCopy(slug);
-  const activeVertical = verticals.find((vertical) => vertical.href.replace("/", "") === slug);
-  const relevantListings = activeVertical ? listings.filter((item) => item.vertical === activeVertical.key || item.vertical === "shop").slice(0, 4) : listings;
+  if (slug === "naijashop") {
+    return (
+      <Suspense fallback={<Loading />}>
+        <NaijaShopPage />
+      </Suspense>
+    );
+  }
+
+  if (slug === "search" || configuredShopRoutes.has(slug)) {
+    return (
+      <Suspense fallback={<Loading />}>
+        <SearchPage />
+      </Suspense>
+    );
+  }
+
+  if (slug === "cart") {
+    return (
+      <Suspense fallback={<Loading />}>
+        <ShopCartPage />
+      </Suspense>
+    );
+  }
+
+  if (slug === "checkout") {
+    return (
+      <Suspense fallback={<Loading />}>
+        <ShopCheckoutPage />
+      </Suspense>
+    );
+  }
+
+  if (slug === "orders" || slug === "returns") {
+    return (
+      <Suspense fallback={<Loading />}>
+        <OrdersPageApi />
+      </Suspense>
+    );
+  }
+
+  if (slug === "wallet" || slug === "payments") {
+    return (
+      <Suspense fallback={<Loading />}>
+        <NaijaPayPage />
+      </Suspense>
+    );
+  }
+
+  if (slug === "naijaeats") return <NaijaEatsPage />;
+  if (slug === "naijasend" || slug === "shipping") return <NaijaSendPage />;
+  if (slug === "product-detail") return <ConfiguredLink title="Product detail" description="Open a live product from NaijaShop to see variants, stock, reviews and escrow checkout." href="/naijashop" cta="Browse NaijaShop" />;
+  if (slug === "safety") return <SafetyPage />;
+  if (slug === "help") return <HelpPage />;
+  if (slug === "ecosystem-hub") return <EcosystemPage />;
+
+  return <UnconfiguredVertical slug={slug} />;
+}
+
+function Loading() {
+  return <div className="rounded-2xl border border-border-soft bg-canvas p-5 font-bold text-muted">Loading...</div>;
+}
+
+function ConfiguredLink({ title, description, href, cta }: { title: string; description: string; href: string; cta: string }) {
+  return (
+    <section className="rounded-2xl border border-border-soft bg-canvas p-8">
+      <h1 className="font-display text-3xl font-extrabold">{title}</h1>
+      <p className="mt-2 max-w-2xl text-muted">{description}</p>
+      <Link href={href} className="mt-5 inline-flex min-h-12 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-white">
+        {cta}
+        <ArrowRight className="h-4 w-4" />
+      </Link>
+    </section>
+  );
+}
+
+function SafetyPage() {
+  const controls = [
+    "Passwords are hashed with scrypt; sessions are stored as SHA-256 token hashes in httpOnly cookies.",
+    "Every seller, admin and courier API checks the session and role on the server before reading or writing data.",
+    "Payment amounts, currency and status are verified with the provider on the server before an order is marked paid.",
+    "Stock is reserved atomically, so concurrent checkouts cannot oversell the same units.",
+    "Escrow holds, refunds and vendor payouts are written to ledger and audit records."
+  ];
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-2xl border border-border-soft bg-canvas p-5 shadow-sm sm:p-8">
-        <TrustBadge>{copy.eyebrow}</TrustBadge>
-        <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_360px]">
-          <div>
-            <h1 className="max-w-4xl font-display text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl">{copy.title}</h1>
-            <p className="mt-4 max-w-2xl text-muted">{copy.description}</p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/checkout" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 font-bold text-white">
-                {copy.cta} <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link href="/aura-ai" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-border-soft px-5 font-bold">
-                Ask Aura
-              </Link>
-            </div>
-          </div>
-          <div className="rounded-xl bg-primary-soft p-5">
-            <p className="text-xs font-bold uppercase tracking-wide text-primary">Live readiness</p>
-            <div className="mt-4 space-y-3 text-sm">
-              {["Auth-ready", "Wallet-ready", "Escrow-ready", "API-ready demo data"].map((item) => (
-                <div key={item} className="flex items-center gap-2 font-semibold">
-                  <CheckCircle2 className="h-4 w-4 text-primary" />
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Conversion lift" value="+18%" detail="Aura recommendation model target" />
-        <MetricCard label="Trust events" value="9,204" detail="KYC, QR, escrow, reviews" />
-        <MetricCard label="Avg response" value="42 sec" detail="Support and dispatch state" />
-        <MetricCard label="Low-data ready" value="100%" detail="Mobile-first layouts" />
-      </section>
-
-      <RouteSpecificPanel slug={slug} />
-
-      {activeVertical ? <VerticalDemoPanel keyName={activeVertical.key} /> : null}
-
-      <section>
-        <div className="mb-4 flex items-end justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-primary">Discovery rail</p>
-            <h2 className="font-display text-2xl font-extrabold">Featured experiences</h2>
-          </div>
-          <Link href="/search" className="text-sm font-bold text-primary">See all</Link>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {relevantListings.map((item) => (
-            <ListingCard key={item.id} item={item} />
-          ))}
-        </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-xl border border-border-soft bg-canvas p-5">
-          <Route className="h-6 w-6 text-primary" />
-          <h3 className="mt-3 font-display text-xl font-bold">Real-time tracking</h3>
-          <p className="mt-2 text-sm text-muted">Order, ride, delivery, booking, gig, and payout states use one mission timeline model.</p>
-          <Link href="/tracking/mission-2843" className="mt-4 inline-flex font-bold text-primary">Open tracker</Link>
-        </div>
-        <div className="rounded-xl border border-border-soft bg-canvas p-5">
-          <QrCode className="h-6 w-6 text-primary" />
-          <h3 className="mt-3 font-display text-xl font-bold">QR and barcode proof</h3>
-          <p className="mt-2 text-sm text-muted">Pickup, delivery, handoff, room access, and return verification events are represented.</p>
-          <Link href="/shipping" className="mt-4 inline-flex font-bold text-primary">View proof flow</Link>
-        </div>
-        <div className="rounded-xl border border-border-soft bg-canvas p-5">
-          <MessageCircle className="h-6 w-6 text-primary" />
-          <h3 className="mt-3 font-display text-xl font-bold">Disputes and refunds</h3>
-          <p className="mt-2 text-sm text-muted">Escrow, evidence, merchant response, refund rules, and human escalation are UI-ready.</p>
-          <Link href="/returns" className="mt-4 inline-flex font-bold text-primary">Resolve case</Link>
-        </div>
-      </section>
-
+    <div className="mx-auto max-w-3xl space-y-5">
+      <header>
+        <ShieldCheck className="h-10 w-10 text-primary" />
+        <h1 className="mt-3 font-display text-3xl font-extrabold">Safety and verification</h1>
+        <p className="mt-2 text-muted">These controls are implemented in the running application, not illustrative screens.</p>
+      </header>
       <section className="rounded-2xl border border-border-soft bg-canvas p-5">
-        <h2 className="font-display text-2xl font-extrabold">AI and trust systems</h2>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {aiSystems.map((system) => {
-            const Icon = system.icon;
-            return (
-              <div key={system.title} className="flex gap-3 rounded-xl bg-surface-low p-4">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-white">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <div>
-                  <h3 className="font-bold">{system.title}</h3>
-                  <p className="mt-1 text-sm text-muted">{system.status}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="rounded-2xl bg-night p-5 text-white">
-        <h2 className="font-display text-2xl font-extrabold">Wallet, escrow, payout lifecycle</h2>
-        <div className="mt-4 grid gap-4 md:grid-cols-4">
-          {trustFlows.map((flow) => {
-            const Icon = flow.icon;
-            return (
-              <div key={flow.title} className="rounded-xl bg-white/10 p-4">
-                <Icon className="h-5 w-5 text-primary-live" />
-                <h3 className="mt-3 font-bold">{flow.title}</h3>
-                <p className="mt-2 text-sm text-white/70">{flow.detail}</p>
-              </div>
-            );
-          })}
-        </div>
+        <ul className="space-y-3">
+          {controls.map((control) => (
+            <li key={control} className="flex gap-3 text-sm">
+              <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-soft text-primary">
+                <ShieldCheck className="h-3.5 w-3.5" />
+              </span>
+              <span>{control}</span>
+            </li>
+          ))}
+        </ul>
       </section>
     </div>
   );
 }
 
-function verticalCopy(slug: string) {
-  const vertical = verticals.find((item) => item.href.replace("/", "") === slug);
-  if (!vertical) {
-    return {
-      title: "NaijaDeals production-ready page",
-      eyebrow: "NaijaDeals",
-      description: "A structured, mobile-first page shell with ecosystem data, trust flows, AI interfaces, and backend-ready components.",
-      cta: "Continue"
-    };
-  }
+function HelpPage() {
+  return (
+    <div className="mx-auto max-w-3xl space-y-5">
+      <header>
+        <PackageCheck className="h-10 w-10 text-primary" />
+        <h1 className="mt-3 font-display text-3xl font-extrabold">Help with an order</h1>
+        <p className="mt-2 text-muted">Order actions are handled inside your account so the result is recorded server-side.</p>
+      </header>
+      <section className="grid gap-3 sm:grid-cols-2">
+        <Link href="/orders" className="rounded-2xl border border-border-soft bg-canvas p-5 hover:border-primary">
+          <h2 className="font-bold">Orders and returns</h2>
+          <p className="mt-1 text-sm text-muted">Cancel an unpaid order, request a return, confirm delivery or review a product.</p>
+        </Link>
+        <Link href="/account" className="rounded-2xl border border-border-soft bg-canvas p-5 hover:border-primary">
+          <h2 className="font-bold">Account details</h2>
+          <p className="mt-1 text-sm text-muted">Update addresses, view saved items or apply to become a seller.</p>
+        </Link>
+      </section>
+      <section className="rounded-2xl border border-border-soft bg-canvas p-5">
+        <h2 className="font-display text-xl font-extrabold">Live support configuration</h2>
+        <p className="mt-2 text-sm text-muted">
+          No live chat, email or SMS provider is configured in this environment. Support automation is therefore not
+          available rather than simulated. Configure an email or messaging provider to enable outbound support.
+        </p>
+      </section>
+    </div>
+  );
+}
 
-  return {
-    title: `${vertical.name} is ready for high-trust African scale.`,
-    eyebrow: vertical.name,
-    description: `${vertical.label}. Built from Stitch patterns including hero search, category chips, discovery rows, listing cards, checkout or booking flow, reviews, saved items, AI recommendations, and admin readiness.`,
-    cta: `Open ${vertical.name}`
+function EcosystemPage() {
+  const live = [
+    { name: "NaijaShop", href: "/naijashop", detail: "Products, cart, checkout, escrow, orders and reviews.", icon: ShoppingBag, live: true },
+    { name: "NaijaPay", href: "/wallet", detail: "Wallet balance, transactions and escrow holds.", icon: PackageCheck, live: true },
+    { name: "NaijaSend", href: "/naijasend", detail: "Manual courier workflow with tracked delivery events.", icon: Truck, live: true },
+    { name: "NaijaEats", href: "/naijaeats", detail: "No restaurant or dispatch provider is configured.", icon: ChefHat, live: false }
+  ];
+
+  return (
+    <div className="space-y-5">
+      <header>
+        <h1 className="font-display text-3xl font-extrabold">NaijaDeals ecosystem</h1>
+        <p className="mt-2 text-muted">Only the services below are connected to real backend data in this environment.</p>
+      </header>
+      <section className="grid gap-4 sm:grid-cols-2">
+        {live.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link key={item.name} href={item.href} className="rounded-2xl border border-border-soft bg-canvas p-5 hover:border-primary">
+              <Icon className="h-6 w-6 text-primary" />
+              <h2 className="mt-3 font-display text-lg font-extrabold">{item.name}</h2>
+              <p className="mt-1 text-sm text-muted">{item.detail}</p>
+              <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-black ${item.live ? "bg-primary-soft text-primary" : "bg-surface-mid text-muted"}`}>
+                {item.live ? "Connected" : "Not configured"}
+              </span>
+            </Link>
+          );
+        })}
+      </section>
+    </div>
+  );
+}
+
+const verticalCopy: Record<string, { name: string; description: string; requirement: string; icon: typeof Wrench }> = {
+  naijagigs: {
+    name: "NaijaGigs",
+    description: "Service bookings with milestone escrow.",
+    requirement: "A gig catalogue, provider verification and milestone payout rules are not implemented in this environment.",
+    icon: Wrench
+  },
+  naijastay: {
+    name: "NaijaStay",
+    description: "Hotel and shortlet bookings.",
+    requirement: "Property inventory, availability calendars and host payout accounts are not configured in this environment.",
+    icon: PackageCheck
+  },
+  naijadrive: {
+    name: "NaijaDrive",
+    description: "Ride hailing and chauffeur bookings.",
+    requirement: "Driver onboarding, vehicle compliance and dispatch integrations are not configured in this environment.",
+    icon: Truck
+  },
+  naijastream: {
+    name: "NaijaStream",
+    description: "Creator content, live rooms and royalties.",
+    requirement: "Media storage, rights management and royalty settlement are not configured in this environment.",
+    icon: Headphones
+  },
+  "aura-ai": {
+    name: "Aura AI",
+    description: "Shopping and support assistant.",
+    requirement: "No model provider key is configured, so the assistant is not available rather than simulated.",
+    icon: Bot
+  }
+};
+
+function UnconfiguredVertical({ slug }: { slug: string }) {
+  const copy = verticalCopy[slug] ?? {
+    name: "NaijaDeals service",
+    description: "This route is not connected to a backend service in this environment.",
+    requirement: "No provider credentials or service configuration are present.",
+    icon: AlertCircle
   };
+  const Icon = copy.icon;
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-5">
+      <section className="rounded-2xl border border-border-soft bg-canvas p-8">
+        <Icon className="h-10 w-10 text-primary" />
+        <h1 className="mt-3 font-display text-3xl font-extrabold">{copy.name}</h1>
+        <p className="mt-2 text-muted">{copy.description}</p>
+        <div className="mt-5 rounded-xl bg-surface-low p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-muted">Configuration state</p>
+          <p className="mt-1 text-sm font-semibold">{copy.requirement}</p>
+        </div>
+        <Link href="/naijashop" className="mt-5 inline-flex min-h-12 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-white">
+          Shop NaijaShop instead
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </section>
+    </div>
+  );
 }
