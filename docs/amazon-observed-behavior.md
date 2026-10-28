@@ -114,7 +114,7 @@ Two passes against the running app on 2026-10-28:
 - **API pass** - scripted HTTP against `http://localhost:3010` with `Origin: http://localhost:3010` and a real cookie session (`nd_session`), covering register, catalogue, cart, quantity, save-for-later, checkout, orders, cancel and the negative cases.
 - **UI pass** - the in-app Chromium browser on the same server: real fills, clicks and selects, with console and network inspected on every page.
 
-Seed data at the time: 12 active listings from 4 verified vendors (HP EliteBook 840 G6 and Anker PowerCore among them), prices in Naira.
+Seed data at the time: 12 active listings from 4 verified vendors (HP EliteBook 840 G6 and Anker PowerCore among them), prices in Naira. The final seed ships 12 products from 2 verified vendors; this section is a record of the state during that pass.
 
 ### Behaviour mapping
 
@@ -149,7 +149,7 @@ API status log from the scripted pass: register `201`, `/api/auth/me` `200`, pro
 - No persistent cart-count badge in the header (Amazon showed "0 items in cart" throughout the modal). The confirmation notice links to the cart instead.
 - Cart "Save for later" supports restore only; saved items cannot be deleted from the saved list.
 - `Cancel order` uses a native `confirm()` dialog ("Cancel order ND-...? Reserved stock will be released.") rather than a styled modal.
-- Signed-out `/checkout` still renders the address form. Submitting then hits `401` and redirects to `/login`; the cart survives, but the form is filled for nothing.
+- ~~Signed-out `/checkout` still renders the address form. Submitting then hits `401` and redirects to `/login`; the cart survives, but the form is filled for nothing.~~ Resolved: `/cart`, `/checkout`, `/orders`, `/wallet`, `/account` and `/tracking/[id]` now redirect to `/login?next=...` server-side before rendering.
 - Delivery is free at subtotals of ₦150,000 or more, so the large variant orders resolved to a ₦0 delivery line and a small order (₦38,500) charged the ₦2,000 Lagos Island fee.
 
 ### Not verified / limitations
@@ -158,7 +158,7 @@ API status log from the scripted pass: register `201`, `/api/auth/me` `200`, pro
 - Delivery and tracking lifecycle: no courier assignment, pickup, transit or proof-of-delivery run.
 - Mobile viewport, keyboard-only navigation and screen-reader announcement quality: the status region and labels exist, but no assistive-technology audit was performed.
 - Amazon's populated cart was never captured; the NaijaDeals cart pass covers the behaviours that the Amazon section lists as inferred, not a side-by-side comparison.
-- `npm run type-check` currently fails only in `scripts/marketplace-tests.ts` (lines 85 and 498), an in-progress payment test harness; the shopping UI files edited here type-check clean.
+- `npm run type-check` now passes across the app and the marketplace test harness. An earlier note that it failed in `scripts/marketplace-tests.ts` is superseded.
 
 ### Re-verified on the production build
 
@@ -171,3 +171,22 @@ The same journeys were repeated on the compiled app (`next build`, served by `ne
 - UI checkout on the build: order `ND-20261028-CFF6B0` (₦40,885) reached Payment Pending; "Pay from wallet" produced `POST /api/payments/initialize` `201`, `POST /api/payments/confirm` `402` and the on-screen alert "NaijaPay wallet balance is insufficient for this order."; `/orders` listed the order with `Pay ₦40,885` and `Cancel order`.
 - The production build marks `nd_session` as `Secure`. The in-app browser stores it over `http://localhost` because localhost is a secure context, but a deployed instance must be served over HTTPS or sessions will not persist. One earlier sign-out during this pass was traced to a concurrent reseed deleting the session row, not to the cookie.
 
+
+## Final status update (supersedes earlier details)
+
+The passes above were recorded while the marketplace was being built. The shipped state is
+recorded in `docs/marketplace-verification.md`, which is authoritative. Changes since:
+
+- Authenticated pages (`/cart`, `/checkout`, `/orders`, `/wallet`, `/account`,
+  `/tracking/[id]`) now redirect anonymous visitors to `/login?next=...` server-side
+  instead of rendering a client-side gate and firing `401` API calls.
+- The marketplace suite runs 13/13 scenarios and covers payments, escrow, refunds,
+  concurrency, delivery retries and RBAC. `npm run type-check` passes.
+- Visual QA now signs in per role and checks 99 page/viewport combinations, including the
+  seller, courier and admin dashboards and the anonymous redirect behaviour.
+- The seeded wallet fixture is backed by a balanced ledger transaction labelled as local
+  test funding. Escrow figures on the wallet page are derived from active holds.
+- The seed ships 12 products from 2 verified vendors and creates no orders, payments,
+  reviews or revenue.
+- Order IDs quoted above belong to earlier local databases and no longer exist after
+  reseeding. They are evidence of past runs, not current data.
