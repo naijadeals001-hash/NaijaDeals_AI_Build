@@ -17,6 +17,7 @@ export const routeTitles: Record<string, string> = {
   payments: "Payments",
   naijashop: "NaijaShop",
   naijaeats: "NaijaEats",
+  naijafresh: "NaijaFresh",
   naijagigs: "NaijaGigs",
   naijastay: "NaijaStay",
   naijadrive: "NaijaDrive",

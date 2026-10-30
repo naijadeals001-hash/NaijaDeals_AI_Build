@@ -1,20 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Original illustration for DELL">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="Original NaijaDeals studio illustration of a 24 inch desktop monitor">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f0f9ff"/>
-      <stop offset="100%" stop-color="#ffffff"/>
+    <linearGradient id="stage" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#eef2ff"/>
+      <stop offset="1" stop-color="#ffffff"/>
     </linearGradient>
-    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="100%" stop-color="#1e3a8a"/>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.55">
+      <stop offset="0" stop-color="#a5b4fc" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#a5b4fc" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="product" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#1e293b"/>
+      <stop offset="1" stop-color="#020617"/>
     </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="drop" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="22" stdDeviation="20" flood-color="#0b1220" flood-opacity="0.28"/>
+    </filter>
+    <filter id="blur"><feGaussianBlur stdDeviation="22"/></filter>
   </defs>
-  <rect width="800" height="600" fill="url(#bg)"/>
-  <circle cx="120" cy="90" r="150" fill="#38bdf8" opacity="0.12"/>
-  <circle cx="700" cy="520" r="190" fill="#1e3a8a" opacity="0.10"/>
-  <rect x="230" y="170" width="340" height="230" rx="16" fill="url(#body)" stroke="#ffffff" stroke-width="8"/>
-        <rect x="250" y="190" width="300" height="190" rx="8" fill="#ffffff" opacity="0.3"/>
-        <rect x="375" y="400" width="50" height="60" fill="url(#body)"/>
-        <rect x="330" y="455" width="140" height="20" rx="10" fill="url(#body)"/>
-  <text x="400" y="545" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800" letter-spacing="6" fill="#1e3a8a">DELL</text>
+  <rect width="800" height="600" fill="url(#stage)"/>
+  <circle cx="400" cy="250" r="300" fill="url(#glow)"/>
+  <path d="M0 430 q200 -70 400 -18 t400 -12 v200 H0z" fill="#ffffff" opacity="0.10"/>
+  <ellipse cx="400" cy="486" rx="250" ry="44" fill="#0b1220" opacity="0.20" filter="url(#blur)"/>
+  <g filter="url(#drop)">
+      <rect x="196" y="118" width="408" height="262" rx="16" fill="#0f172a"/>
+      <rect x="208" y="130" width="384" height="238" rx="8" fill="url(#product)"/>
+      <rect x="220" y="142" width="360" height="214" rx="4" fill="#111827"/>
+      <path d="M220 300 q90 -100 180 -30 t180 -60 v146 H220z" fill="#6366f1" opacity="0.35"/>
+      <circle cx="280" cy="200" r="34" fill="#a5b4fc" opacity="0.5"/>
+      <rect x="220" y="142" width="360" height="214" rx="4" fill="url(#shine)" opacity="0.4"/>
+      <path d="M378 380 h44 l10 66 h-64z" fill="#475569"/>
+      <rect x="310" y="444" width="180" height="16" rx="8" fill="#334155"/>
+    </g>
+  <text x="400" y="566" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="800" letter-spacing="5" fill="#312e81">DELL 24 MONITOR</text>
 </svg>

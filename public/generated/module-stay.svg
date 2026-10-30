@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="640" height="480" role="img" aria-label="Original NaijaDeals artwork: a modern Lagos shortlet building at dusk with warm lit windows and palms">
+  <defs>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.05"/></feComponentTransfer><feComposite in2="SourceGraphic" operator="over"/></filter>
+    <linearGradient id="bgStay" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#1b1035"/><stop offset="0.55" stop-color="#5b2160"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
+      <linearGradient id="tower" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2a1240"/><stop offset="0.6" stop-color="#3b1a52"/><stop offset="1" stop-color="#1e0b30"/></linearGradient>
+      <linearGradient id="window" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bgStay)"/>
+    <circle cx="96" cy="96" r="52" fill="#fef3c7" opacity="0.9"/>
+    <circle cx="96" cy="96" r="96" fill="#fef3c7" opacity="0.12" filter="url(#soft)"/>
+    <g fill="#2a1240" opacity="0.7">
+      <rect x="0" y="250" width="90" height="150"/><rect x="520" y="230" width="120" height="170"/>
+    </g>
+    <rect x="0" y="398" width="640" height="82" fill="#150a25"/>
+    <g transform="translate(150 88)">
+      <rect x="0" y="0" width="330" height="330" rx="10" fill="url(#tower)"/>
+      <rect x="0" y="0" width="330" height="20" fill="#4c1d95"/>
+      <g fill="url(#window)">
+        <rect x="28" y="44" width="48" height="40" rx="4"/><rect x="96" y="44" width="48" height="40" rx="4" opacity="0.55"/><rect x="164" y="44" width="48" height="40" rx="4"/><rect x="232" y="44" width="48" height="40" rx="4" opacity="0.35"/>
+        <rect x="28" y="112" width="48" height="40" rx="4" opacity="0.4"/><rect x="96" y="112" width="48" height="40" rx="4"/><rect x="164" y="112" width="48" height="40" rx="4" opacity="0.7"/><rect x="232" y="112" width="48" height="40" rx="4"/>
+        <rect x="28" y="180" width="48" height="40" rx="4"/><rect x="96" y="180" width="48" height="40" rx="4" opacity="0.5"/><rect x="164" y="180" width="48" height="40" rx="4"/><rect x="232" y="180" width="48" height="40" rx="4" opacity="0.6"/>
+        <rect x="28" y="248" width="48" height="40" rx="4" opacity="0.55"/><rect x="96" y="248" width="48" height="40" rx="4"/><rect x="164" y="248" width="48" height="40" rx="4" opacity="0.35"/><rect x="232" y="248" width="48" height="40" rx="4"/>
+      </g>
+      <g fill="#0f0718">
+        <rect x="28" y="44" width="48" height="12" rx="3"/><rect x="96" y="44" width="48" height="12" rx="3"/><rect x="164" y="44" width="48" height="12" rx="3"/><rect x="232" y="44" width="48" height="12" rx="3"/>
+      </g>
+      <rect x="0" y="316" width="330" height="14" fill="#240d38"/>
+      <rect x="150" y="150" width="30" height="46" rx="4" fill="#fbbf24"/>
+    </g>
+    <g transform="translate(96 258)">
+      <path d="M0 150 q-6 -90 28 -140" stroke="#166534" stroke-width="10" fill="none"/>
+      <g fill="#15803d">
+        <path d="M28 10 q40 -22 64 -4 q-34 26 -64 4z"/><path d="M28 10 q-6 -34 16 -46 q10 32 -16 46z"/>
+        <path d="M18 52 q44 -18 64 4 q-38 20 -64 -4z"/><path d="M8 96 q40 -14 58 8 q-36 16 -58 -8z"/>
+        <path d="M2 140 q34 -10 48 10 q-30 12 -48 -10z"/>
+      </g>
+    </g>
+    <g transform="translate(486 300)">
+      <path d="M0 100 q-4 -60 20 -96" stroke="#166534" stroke-width="8" fill="none"/>
+      <g fill="#15803d"><path d="M20 4 q34 -16 52 -2 q-28 20 -52 2z"/><path d="M12 40 q36 -12 52 6 q-32 16 -52 -6z"/><path d="M4 76 q30 -10 44 8 q-28 12 -44 -8z"/></g>
+    </g>
+    <rect width="640" height="480" filter="url(#grain)" opacity="0.55"/>
+</svg>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { AlertCircle, ArrowRight, Bot, ChefHat, Headphones, PackageCheck, ShieldCheck, ShoppingBag, Truck, Wrench } from "lucide-react";
 import { NaijaEatsPage, NaijaPayPage, NaijaSendPage, NaijaShopPage, OrdersPageApi, SearchPage, ShopCartPage, ShopCheckoutPage } from "@/components/commerce/naijashop";
+import { verticals } from "@/lib/data/ecosystem";
 
 const configuredShopRoutes = new Set(["categories", "product-listing"]);
 
@@ -175,7 +176,7 @@ function EcosystemPage() {
   );
 }
 
-const verticalCopy: Record<string, { name: string; description: string; requirement: string; icon: typeof Wrench }> = {
+const verticalCopy: Record<string, { name: string; description: string; requirement: string; icon: typeof Wrench; image?: string; works?: string[]; needs?: string[] }> = {
   naijagigs: {
     name: "NaijaGigs",
     description: "Service bookings with milestone escrow.",
@@ -190,8 +191,8 @@ const verticalCopy: Record<string, { name: string; description: string; requirem
   },
   naijadrive: {
     name: "NaijaDrive",
-    description: "Ride hailing and chauffeur bookings.",
-    requirement: "Driver onboarding, vehicle compliance and dispatch integrations are not configured in this environment.",
+    description: "Ride hailing, shared journeys and chauffeur bookings.",
+    requirement: "Driver onboarding, vehicle compliance, live map matching and dispatch integrations are not configured in this environment.",
     icon: Truck
   },
   naijastream: {
@@ -199,6 +200,12 @@ const verticalCopy: Record<string, { name: string; description: string; requirem
     description: "Creator content, live rooms and royalties.",
     requirement: "Media storage, rights management and royalty settlement are not configured in this environment.",
     icon: Headphones
+  },
+  naijafresh: {
+    name: "NaijaFresh",
+    description: "Groceries and fresh produce with substitutions.",
+    requirement: "Grocery inventory, a picker workflow and substitution approval are not configured in this environment.",
+    icon: PackageCheck
   },
   "aura-ai": {
     name: "Aura AI",
@@ -216,21 +223,43 @@ function UnconfiguredVertical({ slug }: { slug: string }) {
     icon: AlertCircle
   };
   const Icon = copy.icon;
+  const image = verticals.find((vertical) => vertical.href === `/${slug}`)?.image;
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      <section className="rounded-2xl border border-border-soft bg-canvas p-8">
-        <Icon className="h-10 w-10 text-primary" />
-        <h1 className="mt-3 font-display text-3xl font-extrabold">{copy.name}</h1>
-        <p className="mt-2 text-muted">{copy.description}</p>
-        <div className="mt-5 rounded-xl bg-surface-low p-4">
-          <p className="text-xs font-black uppercase tracking-wide text-muted">Configuration state</p>
-          <p className="mt-1 text-sm font-semibold">{copy.requirement}</p>
+      <Link
+        href="/products"
+        className="inline-flex min-h-9 items-center gap-1.5 text-sm font-bold text-muted transition hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        <ArrowRight className="h-4 w-4 rotate-180" aria-hidden="true" />
+        All products
+      </Link>
+      <section className="overflow-hidden rounded-3xl border border-border-soft bg-canvas">
+        {image ? (
+          <img src={image} alt={`Original NaijaDeals artwork for ${copy.name}`} width={640} height={480} className="h-44 w-full object-cover" />
+        ) : null}
+        <div className="p-6 sm:p-8">
+          <Icon className="h-9 w-9 text-primary" aria-hidden="true" />
+          <h1 className="mt-3 font-display text-3xl font-extrabold">{copy.name}</h1>
+          <p className="mt-2 text-muted">{copy.description}</p>
+          <div className="mt-5 rounded-xl bg-surface-low p-4">
+            <p className="text-xs font-black uppercase tracking-wide text-muted">Configuration state</p>
+            <p className="mt-1 text-sm font-semibold">{copy.requirement}</p>
+          </div>
+          <p className="mt-4 text-xs leading-relaxed text-muted">
+            This page is served so the route never dead-ends or pretends to complete a booking. The service becomes
+            usable only when its provider, operational data and money movement are connected and verified.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/products" className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-white">
+              Explore connected services
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+            <Link href="/naijashop" className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-border-soft px-5 text-sm font-bold">
+              Shop NaijaShop
+            </Link>
+          </div>
         </div>
-        <Link href="/naijashop" className="mt-5 inline-flex min-h-12 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-white">
-          Shop NaijaShop instead
-          <ArrowRight className="h-4 w-4" />
-        </Link>
       </section>
     </div>
   );

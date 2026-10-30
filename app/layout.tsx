@@ -5,17 +5,17 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "NaijaDeals.com | Nigerian Marketplace",
-    template: "%s | NaijaDeals.com"
+    default: "NaijaDeals — one app for African life",
+    template: "%s | NaijaDeals"
   },
   description:
-    "NaijaDeals is a Nigerian marketplace with verified sellers, server-verified payments, escrow and tracked delivery.",
+    "Shop, eat, send, ride, stay, stream and pay across Africa from one NaijaDeals account. Verified sellers, escrow payments and tracked delivery.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://naijadeals.com"),
   openGraph: {
-    title: "NaijaDeals.com",
-    description: "Verified sellers, escrow-protected payments and tracked delivery across Nigeria.",
+    title: "NaijaDeals — one app for African life",
+    description: "Shopping, delivery, rides, stays, services, streaming and payments in one account.",
     url: "https://naijadeals.com",
-    siteName: "NaijaDeals.com",
+    siteName: "NaijaDeals",
     type: "website"
   }
 };

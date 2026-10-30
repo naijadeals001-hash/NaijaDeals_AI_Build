@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="640" height="480" role="img" aria-label="Original NaijaDeals artwork: headphones, vinyl and a music waveform for African creators">
+  <defs>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.05"/></feComponentTransfer><feComposite in2="SourceGraphic" operator="over"/></filter>
+    <linearGradient id="bgStream" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#1a0630"/><stop offset="0.55" stop-color="#4c1d95"/><stop offset="1" stop-color="#f472b6"/></linearGradient>
+      <linearGradient id="phones" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0abfc"/><stop offset="0.5" stop-color="#a855f7"/><stop offset="1" stop-color="#4c1d95"/></linearGradient>
+      <radialGradient id="vinyl" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#f9a8d4"/><stop offset="0.2" stop-color="#a21caf"/><stop offset="0.6" stop-color="#1e1b4b"/><stop offset="1" stop-color="#0b0616"/></radialGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bgStream)"/>
+    <circle cx="520" cy="110" r="120" fill="#f472b6" opacity="0.16" filter="url(#soft)"/>
+    <g transform="translate(330 90)">
+      <circle cx="140" cy="150" r="132" fill="url(#vinyl)"/>
+      <g fill="none" stroke="#f9a8d4" stroke-width="1.5" opacity="0.28">
+        <circle cx="140" cy="150" r="112"/><circle cx="140" cy="150" r="92"/><circle cx="140" cy="150" r="72"/><circle cx="140" cy="150" r="52"/>
+      </g>
+      <circle cx="140" cy="150" r="30" fill="#fbbf24"/><circle cx="140" cy="150" r="6" fill="#1e1b4b"/>
+      <path d="M198 66 a100 100 0 0 1 8 44" stroke="#fff" stroke-width="4" opacity="0.25" fill="none"/>
+    </g>
+    <g transform="translate(60 130)">
+      <path d="M40 210 q-14 -140 64 -166 q78 26 64 166" stroke="url(#phones)" stroke-width="22" fill="none" stroke-linecap="round"/>
+      <rect x="0" y="182" width="52" height="96" rx="24" fill="#1e1b4b" stroke="#f0abfc" stroke-width="4"/>
+      <rect x="10" y="196" width="32" height="68" rx="16" fill="url(#phones)" opacity="0.9"/>
+      <rect x="196" y="182" width="52" height="96" rx="24" fill="#1e1b4b" stroke="#f0abfc" stroke-width="4"/>
+      <rect x="206" y="196" width="32" height="68" rx="16" fill="url(#phones)" opacity="0.9"/>
+    </g>
+    <g transform="translate(70 380)" fill="#f472b6">
+      <rect x="0" y="32" width="10" height="18" rx="4" opacity="0.45"/><rect x="18" y="20" width="10" height="30" rx="4" opacity="0.63"/><rect x="36" y="28" width="10" height="22" rx="4" opacity="0.81"/><rect x="54" y="6" width="10" height="44" rx="4" opacity="0.45"/><rect x="72" y="16" width="10" height="34" rx="4" opacity="0.63"/><rect x="90" y="-4" width="10" height="54" rx="4" opacity="0.81"/><rect x="108" y="24" width="10" height="26" rx="4" opacity="0.45"/><rect x="126" y="10" width="10" height="40" rx="4" opacity="0.63"/><rect x="144" y="30" width="10" height="20" rx="4" opacity="0.81"/><rect x="162" y="18" width="10" height="32" rx="4" opacity="0.45"/><rect x="180" y="26" width="10" height="24" rx="4" opacity="0.63"/><rect x="198" y="4" width="10" height="46" rx="4" opacity="0.81"/>
+    </g>
+    <g transform="translate(470 372)">
+      <circle cx="0" cy="0" r="40" fill="#fbbf24"/><path d="M-10 -16 l28 16 -28 16 z" fill="#1e1b4b"/>
+    </g>
+    <g fill="#f9a8d4" opacity="0.6">
+      <circle cx="470" cy="240" r="4"/><circle cx="520" cy="270" r="3"/><circle cx="440" cy="300" r="3"/><circle cx="560" cy="210" r="3.5"/>
+    </g>
+    <rect width="640" height="480" filter="url(#grain)" opacity="0.55"/>
+</svg>

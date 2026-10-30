@@ -1,19 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Original illustration for ANKARA">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="Original NaijaDeals studio illustration of colourful Ankara print sneakers">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#fff7ed"/>
-      <stop offset="100%" stop-color="#ffffff"/>
+    <linearGradient id="stage" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#fff7ed"/>
+      <stop offset="1" stop-color="#ffffff"/>
     </linearGradient>
-    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#fb923c"/>
-      <stop offset="100%" stop-color="#7c2d12"/>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.55">
+      <stop offset="0" stop-color="#fdba74" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#fdba74" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="product" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#f97316"/>
+      <stop offset="1" stop-color="#7c2d12"/>
     </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="drop" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="22" stdDeviation="20" flood-color="#0b1220" flood-opacity="0.28"/>
+    </filter>
+    <filter id="blur"><feGaussianBlur stdDeviation="22"/></filter>
   </defs>
-  <rect width="800" height="600" fill="url(#bg)"/>
-  <circle cx="120" cy="90" r="150" fill="#fb923c" opacity="0.12"/>
-  <circle cx="700" cy="520" r="190" fill="#7c2d12" opacity="0.10"/>
-  <path d="M245 330 Q330 300 360 250 L400 290 Q470 330 555 340 L555 395 H245 Z" fill="url(#body)" stroke="#ffffff" stroke-width="8"/>
-        <path d="M330 320 L380 360 M380 305 L430 350 M430 295 L480 340" stroke="#ffffff" stroke-width="8"/>
-        <rect x="240" y="395" width="320" height="24" rx="12" fill="#ffffff"/>
-  <text x="400" y="545" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800" letter-spacing="6" fill="#7c2d12">ANKARA</text>
+  <rect width="800" height="600" fill="url(#stage)"/>
+  <circle cx="400" cy="250" r="300" fill="url(#glow)"/>
+  <path d="M0 430 q200 -70 400 -18 t400 -12 v200 H0z" fill="#ffffff" opacity="0.10"/>
+  <ellipse cx="400" cy="486" rx="250" ry="44" fill="#0b1220" opacity="0.20" filter="url(#blur)"/>
+  <g filter="url(#drop)" transform="translate(0 18)">
+      <path d="M180 340 q10 -70 70 -88 l64 -18 q28 -8 44 12 l26 32 q34 12 82 26 q70 20 96 44 q22 20 16 48 H196 q-20 0 -16 -56z" fill="url(#product)"/>
+      <path d="M180 340 q10 -70 70 -88 l64 -18 q28 -8 44 12 l26 32 q34 12 82 26 q70 20 96 44 q22 20 16 48 H196 q-20 0 -16 -56z" fill="url(#shine)" opacity="0.28"/>
+      <path d="M196 384 h378 q8 0 8 14 t-8 14 H196 q-10 0 -10 -14 t10 -14z" fill="#fef3c7"/>
+      <path d="M196 400 h378" stroke="#b45309" stroke-width="4" opacity="0.5"/>
+      <g stroke="#fef3c7" stroke-width="6" stroke-linecap="round" opacity="0.9">
+        <path d="M282 286 l38 16"/><path d="M298 270 l38 18"/><path d="M316 256 l36 20"/><path d="M336 246 l34 20"/>
+      </g>
+      <g fill="#fbbf24" opacity="0.85">
+        <circle cx="236" cy="322" r="7"/><circle cx="266" cy="308" r="5"/><circle cx="470" cy="356" r="6"/><circle cx="510" cy="332" r="5"/>
+      </g>
+      <path d="M430 300 q40 18 92 34" stroke="#7c2d12" stroke-width="5" fill="none" opacity="0.5"/>
+      <path d="M430 300 q40 18 92 34" stroke="#fbbf24" stroke-width="2" fill="none" opacity="0.8"/>
+    </g>
+  <text x="400" y="566" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="800" letter-spacing="5" fill="#9a3412">ANKARA SNEAKERS</text>
 </svg>

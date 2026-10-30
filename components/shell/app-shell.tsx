@@ -5,9 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   Home,
+  LayoutGrid,
   Menu,
   Search,
-  ShoppingBag,
   ShoppingCart,
   UserCircle,
   PackageCheck,
@@ -20,14 +20,14 @@ import type { SessionUser } from "@/lib/api-client";
 
 const topLinks = [
   { href: "/", label: "Home" },
-  { href: "/naijashop", label: "NaijaShop" },
-  { href: "/search", label: "Search" },
+  { href: "/products", label: "Products" },
+  { href: "/naijashop", label: "Shop" },
   { href: "/sell", label: "Sell" }
 ];
 
 const bottomLinks = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/naijashop", label: "Shop", icon: ShoppingBag },
+  { href: "/products", label: "Products", icon: LayoutGrid },
   { href: "/cart", label: "Cart", icon: ShoppingCart },
   { href: "/orders", label: "Orders", icon: PackageCheck },
   { href: "/account", label: "Account", icon: UserCircle }
@@ -39,6 +39,8 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const closeMenu = () => setMobileMenuOpen(false);
+
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST", headers: { "Content-Type": "application/json" } });
@@ -62,7 +64,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
               <Link
                 key={link.href}
                 href={link.href}
-                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${pathname === link.href ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-low"}`}
+                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${isActive(link.href) ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-low"}`}
               >
                 {link.label}
               </Link>
@@ -147,15 +149,24 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
           )}
         </div>
         <nav className="space-y-1" aria-label="Marketplace">
+          <Link
+            href="/products"
+            className="flex items-center gap-3 rounded-xl bg-primary-soft px-3 py-3 text-sm font-extrabold text-primary"
+          >
+            <LayoutGrid className="h-5 w-5" aria-hidden="true" />
+            <span>All products</span>
+          </Link>
           {verticals.map((vertical) => {
             const Icon = vertical.icon;
             return (
               <Link
                 key={vertical.key}
                 href={vertical.href}
-                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-muted hover:bg-surface-low hover:text-primary"
+                className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold ${
+                  isActive(vertical.href) ? "bg-surface-low text-primary" : "text-muted hover:bg-surface-low hover:text-primary"
+                }`}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-5 w-5" aria-hidden="true" />
                 <span>{vertical.name}</span>
               </Link>
             );
@@ -182,14 +193,15 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
         <div className="grid grid-cols-5">
           {bottomLinks.map((link) => {
             const Icon = link.icon;
-            const active = pathname === link.href;
+            const active = isActive(link.href);
             return (
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={active ? "page" : undefined}
                 className={`flex min-h-14 flex-col items-center justify-center gap-1 py-2 text-[11px] font-bold ${active ? "text-primary" : "text-muted"}`}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-5 w-5" aria-hidden="true" />
                 {link.label}
               </Link>
             );

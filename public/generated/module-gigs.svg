@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="640" height="480" role="img" aria-label="Original NaijaDeals artwork: tools, a solar panel and a hard hat for verified service professionals">
+  <defs>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.05"/></feComponentTransfer><feComposite in2="SourceGraphic" operator="over"/></filter>
+    <linearGradient id="bgGigs" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#0b1a3a"/><stop offset="0.55" stop-color="#123b6b"/><stop offset="1" stop-color="#38bdf8"/></linearGradient>
+      <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1e3a8a"/><stop offset="0.5" stop-color="#2563eb"/><stop offset="1" stop-color="#0f172a"/></linearGradient>
+      <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e5e7eb"/><stop offset="1" stop-color="#6b7280"/></linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bgGigs)"/>
+    <circle cx="520" cy="90" r="130" fill="#38bdf8" opacity="0.15" filter="url(#soft)"/>
+    <g opacity="0.25" fill="#93c5fd">
+      <rect x="40" y="40" width="120" height="3" rx="1.5"/><rect x="40" y="60" width="80" height="3" rx="1.5"/>
+      <rect x="480" y="300" width="120" height="3" rx="1.5"/><rect x="500" y="318" width="90" height="3" rx="1.5"/>
+    </g>
+    <rect x="0" y="372" width="640" height="108" fill="#081226"/>
+    <g transform="translate(330 120) rotate(-7)">
+      <rect x="0" y="0" width="230" height="160" rx="10" fill="url(#panel)" stroke="#93c5fd" stroke-width="4"/>
+      <g stroke="#bfdbfe" stroke-width="2" opacity="0.55">
+        <path d="M0 40 h230 M0 80 h230 M0 120 h230 M58 0 v160 M116 0 v160 M174 0 v160"/>
+      </g>
+      <path d="M0 0 l40 0 -40 40 z" fill="#ffffff" opacity="0.18"/>
+    </g>
+    <rect x="438" y="270" width="12" height="108" fill="#475569" transform="rotate(6 438 270)"/>
+    <g transform="translate(64 232)">
+      <path d="M0 130 L44 16 L88 130 z" fill="#dc2626"/>
+      <path d="M20 130 L44 44 L68 130 z" fill="#f87171" opacity="0.6"/>
+      <path d="M-14 130 h116 v14 h-116 z" fill="#7f1d1d"/>
+      <path d="M28 78 h32 M44 52 v80" stroke="#fff" stroke-width="8" opacity="0.8"/>
+    </g>
+    <g transform="translate(196 300) rotate(-24)">
+      <rect x="0" y="0" width="120" height="14" rx="7" fill="url(#metal)"/>
+      <circle cx="10" cy="7" r="14" fill="none" stroke="#9ca3af" stroke-width="8"/>
+      <circle cx="10" cy="7" r="14" fill="none" stroke="#e5e7eb" stroke-width="3"/>
+      <path d="M112 0 l24 -8 v30 l-24 -8 z" fill="#d1d5db"/>
+    </g>
+    <g transform="translate(84 100)">
+      <rect x="0" y="0" width="96" height="60" rx="10" fill="#f59e0b"/>
+      <rect x="0" y="0" width="96" height="16" rx="8" fill="#fbbf24"/>
+      <path d="M20 0 v-14 a28 28 0 0 1 56 0 v14" stroke="#fbbf24" stroke-width="8" fill="none"/>
+      <rect x="38" y="28" width="20" height="10" rx="4" fill="#78350f"/>
+    </g>
+    <g transform="translate(506 372)">
+      <circle cx="0" cy="0" r="26" fill="#0ea5e9"/><path d="M-8 0 l6 7 11 -14" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </g>
+    <rect width="640" height="480" filter="url(#grain)" opacity="0.55"/>
+</svg>

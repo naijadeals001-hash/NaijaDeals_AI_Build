@@ -30,6 +30,20 @@ tracking events in the seed data.
   delivery assignment, payouts and audit trail.
 - Honest configuration states for NaijaEats, NaijaSend and other ecosystem verticals:
   unconfigured services say so instead of showing dead buttons or invented activity.
+- Ecosystem homepage and `/products` grid with original generated artwork for every
+  module card, whole-card links, mobile bottom navigation and honest live/setup labels.
+  See `docs/ecosystem-delivery-tracker.md` for module-by-module status.
+
+## Ecosystem artwork
+
+All public module and catalogue artwork is generated from source in this repository:
+
+```powershell
+npm run art:generate
+```
+
+The scripts write `public/generated/*.svg` and `public/products/*.svg` and use no
+network access or third-party assets.
 
 ## Local setup
 
@@ -151,6 +165,13 @@ Visual QA:
 ```powershell
 $env:QA_BASE_URL="http://localhost:3100"
 npm run qa:visual
+```
+
+Ecosystem shell smoke test (routes, artwork, card navigation, login return):
+
+```powershell
+$env:QA_BASE_URL="http://localhost:3100"
+npm run qa:ecosystem
 ```
 
 Visual QA uses local Chrome through `playwright-core` and runs seven passes: public pages

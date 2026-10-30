@@ -8,6 +8,7 @@ import {
   CreditCard,
   Headphones,
   Home,
+  Leaf,
   RadioTower,
   ShieldCheck,
   ShoppingBag,
@@ -18,7 +19,24 @@ import {
   Wrench
 } from "lucide-react";
 
-export type VerticalKey = "shop" | "eats" | "gigs" | "stay" | "drive" | "send" | "stream" | "wallet" | "aura";
+export type VerticalKey = "shop" | "eats" | "fresh" | "gigs" | "stay" | "drive" | "send" | "stream" | "wallet" | "aura";
+
+export type VerticalStatus = "live" | "setup";
+
+export type Vertical = {
+  key: VerticalKey;
+  name: string;
+  href: string;
+  icon: typeof ShoppingBag;
+  label: string;
+  description: string;
+  image: string;
+  accent: string;
+  status: VerticalStatus;
+  statusLabel: string;
+  color: string;
+  source: string;
+};
 
 export type Listing = {
   id: string;
@@ -47,13 +65,18 @@ export type VerticalDemo = {
   operators: string[];
 };
 
-export const verticals = [
+export const verticals: Vertical[] = [
   {
     key: "shop",
     name: "NaijaShop",
     href: "/naijashop",
     icon: ShoppingBag,
     label: "Verified market deals",
+    description: "Phones, fashion and home finds with escrow checkout.",
+    image: "/generated/module-shop.svg",
+    accent: "#f59e0b",
+    status: "live",
+    statusLabel: "Live",
     color: "bg-primary",
     source: "naijashop_marketplace"
   },
@@ -63,33 +86,39 @@ export const verticals = [
     href: "/naijaeats",
     icon: ChefHat,
     label: "Food and restaurant delivery",
+    description: "Restaurant and buka meals delivered hot to your door.",
+    image: "/generated/module-eats.svg",
+    accent: "#f97316",
+    status: "setup",
+    statusLabel: "Setup required",
     color: "bg-orange-500",
     source: "naijaeats_home_hub"
   },
   {
-    key: "gigs",
-    name: "NaijaGigs",
-    href: "/naijagigs",
-    icon: Wrench,
-    label: "Services with escrow",
-    color: "bg-blue-600",
-    source: "naijagigs_marketplace"
-  },
-  {
-    key: "stay",
-    name: "NaijaStay",
-    href: "/naijastay",
-    icon: Building2,
-    label: "Hotels, shortlets, apartments",
-    color: "bg-teal-600",
-    source: "naijastay_search"
+    key: "fresh",
+    name: "NaijaFresh",
+    href: "/naijafresh",
+    icon: Leaf,
+    label: "Groceries and market produce",
+    description: "Fresh produce and staples picked for you.",
+    image: "/generated/module-fresh.svg",
+    accent: "#84cc16",
+    status: "setup",
+    statusLabel: "Setup required",
+    color: "bg-lime-600",
+    source: "naijafresh_grocery"
   },
   {
     key: "drive",
     name: "NaijaDrive",
     href: "/naijadrive",
     icon: Car,
-    label: "Ride hailing and chauffeur",
+    label: "Rides, car sharing and business",
+    description: "Cars, shared seats, bikes and company rides.",
+    image: "/generated/module-drive.svg",
+    accent: "#fbbf24",
+    status: "setup",
+    statusLabel: "Setup required",
     color: "bg-zinc-900",
     source: "naijadrive_book_a_ride"
   },
@@ -99,8 +128,41 @@ export const verticals = [
     href: "/naijasend",
     icon: Truck,
     label: "Courier and logistics",
+    description: "Parcels across town with tracked delivery events.",
+    image: "/generated/module-send.svg",
+    accent: "#34d399",
+    status: "live",
+    statusLabel: "Live",
     color: "bg-emerald-700",
     source: "naijasend_logistics_dashboard"
+  },
+  {
+    key: "gigs",
+    name: "NaijaGigs",
+    href: "/naijagigs",
+    icon: Wrench,
+    label: "Services with escrow",
+    description: "Verified pros for repairs, solar and design.",
+    image: "/generated/module-gigs.svg",
+    accent: "#38bdf8",
+    status: "setup",
+    statusLabel: "Setup required",
+    color: "bg-blue-600",
+    source: "naijagigs_marketplace"
+  },
+  {
+    key: "stay",
+    name: "NaijaStay",
+    href: "/naijastay",
+    icon: Building2,
+    label: "Hotels, shortlets, apartments",
+    description: "Shortlets and hotels scored for power and safety.",
+    image: "/generated/module-stay.svg",
+    accent: "#c084fc",
+    status: "setup",
+    statusLabel: "Setup required",
+    color: "bg-teal-600",
+    source: "naijastay_search"
   },
   {
     key: "stream",
@@ -108,6 +170,11 @@ export const verticals = [
     href: "/naijastream",
     icon: Headphones,
     label: "Music, video, creators",
+    description: "African charts, creator rooms and licensed audio.",
+    image: "/generated/module-stream.svg",
+    accent: "#f472b6",
+    status: "setup",
+    statusLabel: "Setup required",
     color: "bg-fuchsia-700",
     source: "naijastream_home_hub"
   },
@@ -117,6 +184,11 @@ export const verticals = [
     href: "/wallet",
     icon: Wallet,
     label: "Wallet, escrow, payouts",
+    description: "One balance for payments, escrow and payouts.",
+    image: "/generated/module-wallet.svg",
+    accent: "#34d399",
+    status: "live",
+    statusLabel: "Live",
     color: "bg-green-700",
     source: "naijapay_consumer_wallet_home"
   },
@@ -126,10 +198,15 @@ export const verticals = [
     href: "/aura-ai",
     icon: Bot,
     label: "Concierge and support",
+    description: "Help across the ecosystem, only when configured.",
+    image: "/generated/module-aura.svg",
+    accent: "#22d3ee",
+    status: "setup",
+    statusLabel: "Setup required",
     color: "bg-indigo-700",
     source: "aura_ai_concierge_hub"
   }
-] as const;
+];
 
 export const listings: Listing[] = [
   {

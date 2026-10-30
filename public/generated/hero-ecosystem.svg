@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="640" height="480" role="img" aria-label="Original NaijaDeals artwork: a warm Lagos evening skyline with a phone showing the NaijaDeals ecosystem">
+  <defs>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.05"/></feComponentTransfer><feComposite in2="SourceGraphic" operator="over"/></filter>
+    <linearGradient id="bgHero" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#04140f"/><stop offset="0.55" stop-color="#0b3b2c"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
+      <linearGradient id="heroPhone" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0f172a"/><stop offset="1" stop-color="#020617"/></linearGradient>
+      <linearGradient id="heroGlow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbbf24" stop-opacity="0.6"/><stop offset="1" stop-color="#f59e0b" stop-opacity="0"/></linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bgHero)"/>
+    <rect x="0" y="250" width="640" height="230" fill="url(#heroGlow)" opacity="0.35"/>
+    <circle cx="520" cy="120" r="64" fill="#fde68a" opacity="0.9"/>
+    <circle cx="520" cy="120" r="150" fill="#fbbf24" opacity="0.12" filter="url(#soft)"/>
+    <g fill="#04241a" opacity="0.85">
+      <rect x="20" y="250" width="70" height="230"/><rect x="106" y="286" width="52" height="194"/>
+      <rect x="420" y="262" width="64" height="218"/><rect x="500" y="226" width="48" height="254"/><rect x="564" y="276" width="60" height="204"/>
+    </g>
+    <g fill="#fbbf24" opacity="0.55">
+      <rect x="36" y="274" width="8" height="8"/><rect x="58" y="274" width="8" height="8"/><rect x="36" y="300" width="8" height="8"/>
+      <rect x="432" y="286" width="7" height="7"/><rect x="452" y="286" width="7" height="7"/><rect x="432" y="310" width="7" height="7"/>
+      <rect x="512" y="250" width="6" height="6"/><rect x="530" y="250" width="6" height="6"/><rect x="512" y="272" width="6" height="6"/>
+    </g>
+    <path d="M0 372 h640 v108 h-640z" fill="#031a12"/>
+    <path d="M0 372 h640" stroke="#0f766e" stroke-width="3"/>
+    <g transform="translate(196 96)">
+      <rect x="0" y="0" width="248" height="366" rx="36" fill="url(#heroPhone)" stroke="#134e4a" stroke-width="6"/>
+      <rect x="14" y="14" width="220" height="338" rx="26" fill="#052e22"/>
+      <rect x="92" y="26" width="64" height="8" rx="4" fill="#134e4a"/>
+      <circle cx="38" cy="66" r="14" fill="#fbbf24"/>
+      <text x="38" y="72" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="900" fill="#052e22">N</text>
+      <rect x="60" y="58" width="86" height="8" rx="4" fill="#a7f3d0" opacity="0.8"/>
+      <rect x="60" y="72" width="54" height="6" rx="3" fill="#34d399" opacity="0.45"/>
+      <rect x="30" y="96" width="188" height="96" rx="18" fill="#064e3b"/>
+      <circle cx="70" cy="140" r="22" fill="#fbbf24" opacity="0.9"/>
+      <rect x="104" y="122" width="92" height="10" rx="5" fill="#d1fae5" opacity="0.8"/>
+      <rect x="104" y="142" width="64" height="8" rx="4" fill="#6ee7b7" opacity="0.5"/>
+      <rect x="104" y="158" width="76" height="8" rx="4" fill="#6ee7b7" opacity="0.3"/>
+      <g transform="translate(30 210)">
+        <g transform="translate(0 0)"><rect x="0" y="0" width="188" height="36" rx="12" fill="#0b3b2c"/><circle cx="20" cy="18" r="9" fill="#fbbf24" opacity="0.9"/><rect x="40" y="11" width="70" height="6" rx="3" fill="#d1fae5" opacity="0.55"/><rect x="40" y="23" width="44" height="4" rx="2" fill="#d1fae5" opacity="0.3"/><path d="M166 18 h10" stroke="#6ee7b7" stroke-width="2"/></g><g transform="translate(0 44)"><rect x="0" y="0" width="188" height="36" rx="12" fill="#0b3b2c"/><circle cx="20" cy="18" r="9" fill="#34d399" opacity="0.9"/><rect x="40" y="11" width="70" height="6" rx="3" fill="#d1fae5" opacity="0.55"/><rect x="40" y="23" width="44" height="4" rx="2" fill="#d1fae5" opacity="0.3"/><path d="M166 18 h10" stroke="#6ee7b7" stroke-width="2"/></g><g transform="translate(0 88)"><rect x="0" y="0" width="188" height="36" rx="12" fill="#0b3b2c"/><circle cx="20" cy="18" r="9" fill="#38bdf8" opacity="0.9"/><rect x="40" y="11" width="70" height="6" rx="3" fill="#d1fae5" opacity="0.55"/><rect x="40" y="23" width="44" height="4" rx="2" fill="#d1fae5" opacity="0.3"/><path d="M166 18 h10" stroke="#6ee7b7" stroke-width="2"/></g><g transform="translate(0 132)"><rect x="0" y="0" width="188" height="36" rx="12" fill="#0b3b2c"/><circle cx="20" cy="18" r="9" fill="#f472b6" opacity="0.9"/><rect x="40" y="11" width="70" height="6" rx="3" fill="#d1fae5" opacity="0.55"/><rect x="40" y="23" width="44" height="4" rx="2" fill="#d1fae5" opacity="0.3"/><path d="M166 18 h10" stroke="#6ee7b7" stroke-width="2"/></g>
+      </g>
+    </g>
+    <g transform="translate(54 150)" opacity="0.95">
+      <rect x="0" y="0" width="118" height="46" rx="12" fill="#fbbf24"/>
+      <circle cx="23" cy="23" r="10" fill="#78350f"/><rect x="40" y="14" width="60" height="6" rx="3" fill="#78350f" opacity="0.7"/><rect x="40" y="28" width="40" height="5" rx="2.5" fill="#78350f" opacity="0.4"/>
+    </g>
+    <g transform="translate(470 236)" opacity="0.95">
+      <rect x="0" y="0" width="120" height="46" rx="12" fill="#ecfdf5"/>
+      <circle cx="23" cy="23" r="10" fill="#0f766e"/><rect x="40" y="14" width="62" height="6" rx="3" fill="#065f46" opacity="0.7"/><rect x="40" y="28" width="38" height="5" rx="2.5" fill="#065f46" opacity="0.4"/>
+    </g>
+    <g transform="translate(480 316)">
+      <circle cx="0" cy="0" r="26" fill="#34d399" opacity="0.9"/><path d="M-9 0 l6 7 12 -15" stroke="#04241a" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </g>
+    <rect width="640" height="480" filter="url(#grain)" opacity="0.55"/>
+</svg>

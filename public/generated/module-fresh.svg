@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="640" height="480" role="img" aria-label="Original NaijaDeals artwork: a basket of fresh Nigerian produce with tomatoes, plantain and leafy greens">
+  <defs>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.05"/></feComponentTransfer><feComposite in2="SourceGraphic" operator="over"/></filter>
+    <linearGradient id="bgFresh" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#052e16"/><stop offset="0.55" stop-color="#166534"/><stop offset="1" stop-color="#bef264"/></linearGradient>
+      <linearGradient id="basket" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d97706"/><stop offset="1" stop-color="#7c2d12"/></linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bgFresh)"/>
+    <circle cx="500" cy="100" r="120" fill="#d9f99d" opacity="0.18" filter="url(#soft)"/>
+    <g opacity="0.25" stroke="#bbf7d0" stroke-width="2" fill="none">
+      <path d="M0 420 q160 -60 320 0 t320 0"/><path d="M40 450 q140 -50 280 0 t280 0"/>
+    </g>
+    <g transform="translate(112 130)">
+      <path d="M0 150 h416 l-42 116 q-8 18 -28 18 h-276 q-20 0 -28 -18z" fill="url(#basket)"/>
+      <g stroke="#92400e" stroke-width="6" opacity="0.7">
+        <path d="M26 186 h364 M38 226 h340 M56 262 h304"/>
+      </g>
+      <path d="M90 150 q0 -110 118 -110 q118 0 118 110" stroke="#a16207" stroke-width="14" fill="none"/>
+      <path d="M70 150 q0 -90 138 -90 q138 0 138 90" stroke="#d97706" stroke-width="7" fill="none" opacity="0.6"/>
+      <g>
+        <circle cx="86" cy="112" r="40" fill="#dc2626"/><circle cx="76" cy="102" r="10" fill="#f87171" opacity="0.6"/>
+        <path d="M86 72 q-2 -18 14 -22 q4 16 -14 22z" fill="#15803d"/>
+        <circle cx="166" cy="96" r="38" fill="#ea580c"/><circle cx="156" cy="86" r="9" fill="#fdba74" opacity="0.6"/>
+        <path d="M166 58 q-4 -16 12 -22 q6 16 -12 22z" fill="#15803d"/>
+        <path d="M250 136 q-44 -10 -30 -58 q40 -4 52 34 q-6 22 -22 24z" fill="#facc15"/>
+        <path d="M250 136 q-30 -18 -18 -48" stroke="#a16207" stroke-width="4" fill="none"/>
+        <path d="M330 152 q-40 -34 -8 -70 q40 8 40 48 q-8 24 -32 22z" fill="#22c55e"/>
+        <path d="M330 152 q-16 -32 8 -52" stroke="#166534" stroke-width="4" fill="none"/>
+        <circle cx="286" cy="120" r="24" fill="#f97316"/><circle cx="279" cy="112" r="6" fill="#fed7aa" opacity="0.7"/>
+      </g>
+    </g>
+    <g transform="translate(56 300) rotate(-18)" opacity="0.9">
+      <path d="M0 0 q40 -10 60 14 q-34 18 -60 -14z" fill="#65a30d"/>
+      <path d="M0 0 q-10 -32 18 -40 q14 26 -18 40z" fill="#4d7c0f"/>
+    </g>
+    <g transform="translate(488 330) rotate(12)" opacity="0.9">
+      <path d="M0 0 q36 -8 54 12 q-30 16 -54 -12z" fill="#84cc16"/>
+    </g>
+    <rect width="640" height="480" filter="url(#grain)" opacity="0.55"/>
+</svg>
