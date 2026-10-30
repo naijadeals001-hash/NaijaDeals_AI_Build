@@ -1,27 +1,32 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowLeft, BadgeCheck, Info, ShieldCheck, Wallet } from "lucide-react";
 import { verticals, type Vertical } from "@/lib/data/ecosystem";
 import { ModuleCard } from "@/components/sections/ecosystem-home";
+import { useLocale } from "@/lib/i18n/locale-provider";
+import type { DictionaryKey } from "@/lib/i18n/dictionary";
 
-const groups: Array<{ title: string; description: string; keys: Vertical["key"][] }> = [
+const groups: Array<{ titleKey: DictionaryKey; bodyKey: DictionaryKey; keys: Vertical["key"][] }> = [
   {
-    title: "Shop and everyday needs",
-    description: "Physical goods, food and groceries delivered to your address.",
+    titleKey: "products.group1",
+    bodyKey: "products.group1Body",
     keys: ["shop", "eats", "fresh", "send"]
   },
   {
-    title: "Move, stay and work",
-    description: "Rides, shared journeys, vehicle hire and places to stay.",
+    titleKey: "products.group2",
+    bodyKey: "products.group2Body",
     keys: ["drive", "stay", "gigs"]
   },
   {
-    title: "Money, media and help",
-    description: "Payments, creator content and the Aura assistant.",
+    titleKey: "products.group3",
+    bodyKey: "products.group3Body",
     keys: ["wallet", "stream", "aura"]
   }
 ];
 
 export function ProductsPage() {
+  const { t } = useLocale();
   const liveCount = verticals.filter((vertical) => vertical.status === "live").length;
 
   return (
@@ -31,41 +36,38 @@ export function ProductsPage() {
           href="/"
           className="inline-flex min-h-9 items-center gap-1.5 text-sm font-bold text-muted transition hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to home
+          <ArrowLeft className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
+          {t("common.backHome")}
         </Link>
         <header className="mt-3">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Products</p>
-          <h1 className="mt-1 font-display text-3xl font-extrabold sm:text-4xl">The NaijaDeals ecosystem</h1>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">{t("home.productsEyebrow")}</p>
+          <h1 className="mt-1 font-display text-3xl font-extrabold sm:text-4xl">{t("products.title")}</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted sm:text-base">
-            {verticals.length} services share one account, one wallet and one delivery network. {liveCount} are connected
-            to live backend data in this environment; the rest open a status page that names exactly what is missing.
+            {t("products.intro", { count: verticals.length, live: liveCount })}
           </p>
         </header>
       </div>
 
       <section className="grid gap-3 rounded-2xl border border-border-soft bg-canvas p-4 sm:grid-cols-3 sm:p-5">
-        <StatusNote icon={BadgeCheck} title="Live" body="Connected to real database records and server APIs." tone="live" />
-        <StatusNote icon={Info} title="Setup required" body="The route opens and states the missing provider, approval or operational data." tone="setup" />
-        <StatusNote icon={ShieldCheck} title="Nothing faked" body="No invented tracking, reviews, stock, revenue or confirmations anywhere." tone="neutral" />
+        <StatusNote icon={BadgeCheck} title={t("status.live")} body={t("products.legendLive")} tone="live" />
+        <StatusNote icon={Info} title={t("status.setup")} body={t("products.legendSetup")} tone="setup" />
+        <StatusNote icon={ShieldCheck} title={t("products.honestTitle")} body={t("products.legendHonest")} tone="neutral" />
       </section>
 
       {groups.map((group) => {
         const items = group.keys
           .map((key) => verticals.find((vertical) => vertical.key === key))
           .filter((vertical): vertical is Vertical => Boolean(vertical));
+        const headingId = `group-${group.titleKey.replace(/\./g, "-")}`;
 
         return (
-          <section key={group.title} aria-labelledby={`group-${group.title.replace(/\s+/g, "-").toLowerCase()}`}>
+          <section key={group.titleKey} aria-labelledby={headingId}>
             <div className="flex items-baseline justify-between gap-3">
               <div>
-                <h2
-                  id={`group-${group.title.replace(/\s+/g, "-").toLowerCase()}`}
-                  className="font-display text-xl font-extrabold sm:text-2xl"
-                >
-                  {group.title}
+                <h2 id={headingId} className="font-display text-xl font-extrabold sm:text-2xl">
+                  {t(group.titleKey)}
                 </h2>
-                <p className="mt-1 text-sm text-muted">{group.description}</p>
+                <p className="mt-1 text-sm text-muted">{t(group.bodyKey)}</p>
               </div>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
@@ -83,16 +85,13 @@ export function ProductsPage() {
             <Wallet className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>
-            <h2 className="font-display text-xl font-extrabold">One wallet across every service</h2>
-            <p className="mt-1 text-sm text-muted">
-              NaijaPay is the shared money layer. When a service is connected, payments are verified on the server,
-              recorded in the ledger and protected by escrow where the workflow requires it.
-            </p>
+            <h2 className="font-display text-xl font-extrabold">{t("products.walletTitle")}</h2>
+            <p className="mt-1 text-sm text-muted">{t("products.walletBody")}</p>
             <Link
               href="/wallet"
               className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm font-bold text-white transition hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
-              Open NaijaPay
+              {t("products.openWallet")}
             </Link>
           </div>
         </div>

@@ -3,6 +3,7 @@
 Last updated: 2026-10-30
 Branch: `naijashop-marketplace`
 Baseline commit: `d996d224` (Correct stale verification claims in Amazon behaviour record)
+Latest increment commit: `d9fc004a` (ecosystem homepage, products grid, original artwork)
 
 This tracker separates three states so a screen existing is never confused with a
 service working:
@@ -27,6 +28,23 @@ service working:
 | Honest module states | Prompt requirement | `lib/data/ecosystem.ts` status + `components/sections/generic-page.tsx` status pages | `/naijaeats`, `/naijafresh`, `/naijadrive`, `/naijagigs`, `/naijastay`, `/naijastream`, `/aura-ai` return 200 and name the missing dependency | Build the services or keep status until contracted |
 
 Test evidence: `npm run qa:ecosystem` against `http://localhost:3100` → **25/25 checks passed**.
+
+---
+
+## Increment 2 — country, city, language and currency context
+
+| Requirement | Implementation | Acceptance test / result | Remaining work |
+| --- | --- | --- | --- |
+| Shared country/city selection, persisted and validated | `lib/config/regions.ts` (cities per country), `lib/i18n/server.ts` (cookie reading + validation), `lib/i18n/locale-provider.tsx` | Cookie-driven render verified by `npm run qa:locale`; invalid values fall back to `NG` / `Lagos` | Real geolocation and per-country catalogues |
+| Language switcher in the shell, reachable on mobile | `components/shell/locale-switcher.tsx`; wired into `app-shell.tsx` header | Playwright opens the panel and switches to Arabic; cookie persists; heading translates — 27/27 checks | Translate checkout, orders, seller and admin copy |
+| Swahili added | Full dictionary in `lib/i18n/dictionary.ts` | `qa:locale`: `lang="sw"`, Swahili hero/nav labels at 390 px and 1440 px, 0 px overflow | Native-speaker review |
+| Arabic added with RTL | Full dictionary; `<html lang="ar" dir="rtl">`; `rtl:` layout classes for sidebar, main, footer, switcher, arrows | `qa:locale`: RTL document, Arabic hero/nav, sidebar right-aligned on desktop, 0 px overflow, no console errors | Native-speaker review; RTL polish on commerce pages |
+| Currency context honest about what is charged | Selector shows country currency but states “Prices are charged in NGN”; checkout continues to charge NGN kobo | Locale panel copy; no converted price is displayed anywhere | Enable additional selling currencies with real FX/settlement |
+| Service availability by country | Delivery availability shown from `lib/config/commerce.ts` (`deliveryEnabled`) | Nigeria shows available; other countries show not configured | Country-by-country provider onboarding |
+
+Test evidence: `npm run qa:locale` against `http://localhost:3100` → **27/27 checks passed**
+(English, Swahili, Arabic × mobile 390×844 and desktop 1440×1000, plus live switcher).
+Screenshots: `qa-artifacts/locale/`.
 
 ---
 
@@ -58,7 +76,7 @@ Test evidence: `npm run qa:ecosystem` against `http://localhost:3100` → **25/2
 | 3 | Core customer and partner workflows | Test-verified | `npm run test:marketplace` against `localhost:3001` with `ENABLE_TEST_PAYMENTS=true`: catalogue, customer purchase, seller fulfilment, courier delivery and escrow release pass |
 | 4 | Control Center actions and permissions | Test-verified | Marketplace suite: auth/RBAC enforced, seller onboarding + admin approval, cross-tenant access rejected |
 | 5 | Persistence after refresh/restart | Test-verified | The suite writes orders/products/deliveries to PostgreSQL and reads them back; DB has 2 migrations applied and is up to date |
-| 6 | Mobile usability, accessibility, performance | Partial | 390 px and 1440 px screenshots, 0 px overflow on all checked routes, whole-card links, skip link, focus styles; Lighthouse/axe not yet run |
+| 6 | Mobile usability, accessibility, performance | Partial | 390 px and 1440 px screenshots for English, Swahili and Arabic; 0 px overflow; whole-card links, skip link, focus styles, RTL shell; Lighthouse/axe not yet run |
 | 7 | Failed payments, duplicate callbacks, retries | Test-verified | Marketplace suite: failed wallet payment rejected and order stays unpaid; duplicate callback idempotent; invalid/unconfigured webhook signatures rejected |
 | 8 | Concurrent stock requests | Test-verified | Marketplace suite: concurrent checkout cannot oversell a one-unit product |
 | 9 | Cancellation, refund, inventory restoration | Test-verified | Marketplace suite: paid cancellation refunds and restocks exactly once |
@@ -73,10 +91,14 @@ Marketplace verification: 13/13 passed
 
 $ npm run qa:ecosystem              # QA_BASE_URL=http://localhost:3100
 25/25 checks passed
+
+$ npm run qa:locale                 # QA_BASE_URL=http://localhost:3100
+27/27 checks passed
 ```
 
 Artifacts: `qa-artifacts/ecosystem/*.png` (mobile 390×844 and desktop 1440×1000 for
-`/`, `/products`, `/naijashop`, `/naijadrive`, `/naijafresh`).
+`/`, `/products`, `/naijashop`, `/naijadrive`, `/naijafresh`) and
+`qa-artifacts/locale/*.png` (English, Swahili, Arabic at 390×844 and 1440×1000).
 
 Not yet verified: Lighthouse performance budget, axe audit, offline behaviour, and any
 run against real provider credentials.
@@ -120,12 +142,13 @@ ECC and Soup are not installed. See `docs/reference-and-tooling-evidence.md`.
 
 ## Next increments (ordered)
 
-1. Countries, cities, language and currency context shared by shell and modules.
+1. ~~Countries, cities, language and currency context shared by shell and modules.~~ Done in Increment 2.
 2. NaijaDrive: quote → request → driver accept → trip states → receipt, with DB models,
    RBAC, cancellation and concurrency tests.
-3. NaijaGigs and NaijaStay with real inventory and double-booking protection.
-4. NaijaEats and NaijaFresh with partner-supplied catalogues only.
-5. Unified Control Center expansion: geography, provider connection status, finance,
+3. Translate checkout, orders, seller and admin flows into Swahili and Arabic.
+4. NaijaGigs and NaijaStay with real inventory and double-booking protection.
+5. NaijaEats and NaijaFresh with partner-supplied catalogues only.
+6. Unified Control Center expansion: geography, provider connection status, finance,
    disputes, reconciliation, audit.
-6. NaijaStream and Aura only when licensed media and a model provider exist.
-7. PWA manifest, offline states, Lighthouse/axe audits, full marketplace regression.
+7. NaijaStream and Aura only when licensed media and a model provider exist.
+8. PWA manifest, offline states, Lighthouse/axe audits, full marketplace regression.

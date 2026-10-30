@@ -16,27 +16,30 @@ import {
   LogOut
 } from "lucide-react";
 import { verticals } from "@/lib/data/ecosystem";
+import { useLocale } from "@/lib/i18n/locale-provider";
+import { LocaleSwitcher } from "@/components/shell/locale-switcher";
 import type { SessionUser } from "@/lib/api-client";
-
-const topLinks = [
-  { href: "/", label: "Home" },
-  { href: "/products", label: "Products" },
-  { href: "/naijashop", label: "Shop" },
-  { href: "/sell", label: "Sell" }
-];
-
-const bottomLinks = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/products", label: "Products", icon: LayoutGrid },
-  { href: "/cart", label: "Cart", icon: ShoppingCart },
-  { href: "/orders", label: "Orders", icon: PackageCheck },
-  { href: "/account", label: "Account", icon: UserCircle }
-];
 
 export function AppShell({ children, user }: { children: React.ReactNode; user: SessionUser | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { t } = useLocale();
+
+  const topLinks = [
+    { href: "/", label: t("nav.home") },
+    { href: "/products", label: t("nav.products") },
+    { href: "/naijashop", label: t("nav.shop") },
+    { href: "/sell", label: t("nav.sell") }
+  ];
+
+  const bottomLinks = [
+    { href: "/", label: t("nav.home"), icon: Home },
+    { href: "/products", label: t("nav.products"), icon: LayoutGrid },
+    { href: "/cart", label: t("nav.cart"), icon: ShoppingCart },
+    { href: "/orders", label: t("nav.orders"), icon: PackageCheck },
+    { href: "/account", label: t("nav.account"), icon: UserCircle }
+  ];
 
   const closeMenu = () => setMobileMenuOpen(false);
 
@@ -50,12 +53,15 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
 
   return (
     <div className="min-h-screen bg-surface text-ink">
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-white">
-        Skip to content
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-white rtl:focus:left-auto rtl:focus:right-4"
+      >
+        {t("common.skip")}
       </a>
       <header className="sticky top-0 z-40 border-b border-border-soft bg-canvas/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 lg:px-8">
-          <Link href="/" className="flex items-center gap-2">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 sm:gap-3 lg:px-8">
+          <Link href="/" className="flex shrink-0 items-center gap-2">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-sm font-black text-white shadow-lift">ND</span>
             <span className="hidden font-display text-xl font-extrabold text-primary sm:inline">NaijaDeals</span>
           </Link>
@@ -64,17 +70,19 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={isActive(link.href) ? "page" : undefined}
                 className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${isActive(link.href) ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-low"}`}
               >
                 {link.label}
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-1">
-            <Link href="/search" className="rounded-full p-2 text-muted hover:bg-surface-low" aria-label="Search products">
+          <div className="flex items-center gap-0.5 sm:gap-1">
+            <LocaleSwitcher />
+            <Link href="/search" className="rounded-full p-2 text-muted hover:bg-surface-low" aria-label={t("nav.search")}>
               <Search className="h-5 w-5" />
             </Link>
-            <Link href="/cart" className="rounded-full p-2 text-muted hover:bg-surface-low" aria-label="Shopping cart">
+            <Link href="/cart" className="rounded-full p-2 text-muted hover:bg-surface-low" aria-label={t("nav.cart")}>
               <ShoppingCart className="h-5 w-5" />
             </Link>
             {user ? (
@@ -89,20 +97,20 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
                 <button
                   onClick={signOut}
                   className="rounded-full p-2 text-muted hover:bg-surface-low"
-                  aria-label="Sign out"
-                  title="Sign out"
+                  aria-label={t("common.signOut")}
+                  title={t("common.signOut")}
                 >
                   <LogOut className="h-5 w-5" />
                 </button>
               </div>
             ) : (
-              <Link href="/login" className="rounded-full bg-primary px-4 py-2 text-sm font-bold text-white">
-                Sign in
+              <Link href="/login" className="rounded-full bg-primary px-3 py-2 text-sm font-bold text-white sm:px-4">
+                {t("common.signIn")}
               </Link>
             )}
             <button
               className="rounded-full p-2 text-muted hover:bg-surface-low lg:hidden"
-              aria-label="Menu"
+              aria-label={t("common.menu")}
               aria-expanded={mobileMenuOpen}
               onClick={() => setMobileMenuOpen((open) => !open)}
             >
@@ -121,29 +129,29 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
               </Link>
             ))}
             <Link href="/orders" onClick={closeMenu} className="rounded-xl bg-surface-low px-4 py-3 text-sm font-bold">
-              Orders
+              {t("nav.orders")}
             </Link>
             <Link href="/account" onClick={closeMenu} className="rounded-xl bg-surface-low px-4 py-3 text-sm font-bold">
-              Account
+              {t("nav.account")}
             </Link>
           </div>
         </div>
       ) : null}
 
-      <aside className="fixed left-0 top-16 z-30 hidden h-[calc(100vh-4rem)] w-64 overflow-y-auto border-r border-border-soft bg-canvas px-4 py-5 lg:block">
+      <aside className="fixed left-0 top-16 z-30 hidden h-[calc(100vh-4rem)] w-64 overflow-y-auto border-r border-border-soft bg-canvas px-4 py-5 rtl:left-auto rtl:right-0 rtl:border-l rtl:border-r-0 lg:block">
         <div className="mb-5 rounded-xl bg-primary-soft p-4">
           {user ? (
             <>
-              <p className="text-xs font-bold uppercase tracking-wide text-primary">Signed in</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-primary">{t("common.signedIn")}</p>
               <p className="mt-1 font-bold">{user.name}</p>
               <p className="mt-1 text-xs text-muted">{user.email}</p>
             </>
           ) : (
             <>
-              <p className="text-xs font-bold uppercase tracking-wide text-primary">Welcome</p>
-              <p className="mt-1 font-bold">Sign in to buy and sell</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-primary">{t("common.welcome")}</p>
+              <p className="mt-1 font-bold">{t("common.signInPrompt")}</p>
               <Link href="/login" className="mt-2 inline-block text-xs font-bold text-primary underline">
-                Sign in or create an account
+                {t("common.signInLink")}
               </Link>
             </>
           )}
@@ -154,7 +162,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
             className="flex items-center gap-3 rounded-xl bg-primary-soft px-3 py-3 text-sm font-extrabold text-primary"
           >
             <LayoutGrid className="h-5 w-5" aria-hidden="true" />
-            <span>All products</span>
+            <span>{t("common.allProducts")}</span>
           </Link>
           {verticals.map((vertical) => {
             const Icon = vertical.icon;
@@ -174,18 +182,18 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
         </nav>
         <Link href="/sell" className="mt-5 flex items-center justify-center gap-2 rounded-xl bg-night px-4 py-3 text-sm font-bold text-white">
           <Store className="h-4 w-4" />
-          Sell on NaijaDeals
+          {t("common.sellOn")}
         </Link>
       </aside>
 
-      <main id="main-content" className="mx-auto max-w-7xl px-4 pb-28 pt-6 lg:ml-64 lg:px-8">
+      <main id="main-content" className="mx-auto max-w-7xl px-4 pb-28 pt-6 lg:ml-64 lg:px-8 lg:rtl:ml-0 lg:rtl:mr-64">
         {children}
       </main>
 
-      <footer className="hidden border-t border-border-soft bg-canvas py-8 lg:block lg:ml-64">
+      <footer className="hidden border-t border-border-soft bg-canvas py-8 lg:ml-64 lg:block lg:rtl:ml-0 lg:rtl:mr-64">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-8 text-sm text-muted">
           <span>NaijaDeals.com</span>
-          <span>Prices in NGN kobo · Payments verified server-side · Delivery by NaijaSend</span>
+          <span>{t("common.footer", { currency: "NGN" })}</span>
         </div>
       </footer>
 

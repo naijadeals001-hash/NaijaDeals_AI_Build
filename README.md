@@ -45,6 +45,28 @@ npm run art:generate
 The scripts write `public/generated/*.svg` and `public/products/*.svg` and use no
 network access or third-party assets.
 
+## Languages, country and currency
+
+The header carries an accessible language/country/city switcher. The shared shell,
+homepage and products experience are translated into:
+
+- English (`en`)
+- Swahili (`sw`) — Kiswahili
+- Arabic (`ar`) — العربية, rendered right-to-left
+
+Selection is stored in `nd_lang`, `nd_country` and `nd_city` cookies, validated on the
+server and applied to `<html lang dir>`. Only languages with a complete shared-string
+set are offered; commerce pages, checkout and admin copy remain English until they are
+translated. Prices are always charged in NGN kobo today, and the switcher says so
+instead of showing a converted figure without an FX source.
+
+Verify with:
+
+```powershell
+$env:QA_BASE_URL="http://localhost:3100"
+npm run qa:locale
+```
+
 ## Local setup
 
 Requirements: Node.js 20+, PostgreSQL 14+.
