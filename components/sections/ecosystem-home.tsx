@@ -37,7 +37,7 @@ function Hero() {
   return (
     <section className="relative overflow-hidden rounded-3xl bg-[#04140f] text-white">
       <img
-        src="/generated/hero-ecosystem.svg"
+        src="/real-photography/hero-ecosystem.jpg"
         alt="Illustration of a warm Lagos evening skyline with the NaijaDeals app showing shop, ride, pay and delivery services"
         width={640}
         height={480}
@@ -184,7 +184,7 @@ export function ModuleCard({ vertical }: { vertical: Vertical }) {
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface-low">
         <img
           src={vertical.image}
-          alt={`Original NaijaDeals artwork for ${vertical.name}`}
+          alt={`${vertical.name} — ${description}`}
           width={640}
           height={480}
           loading="lazy"

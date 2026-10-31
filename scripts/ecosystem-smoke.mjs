@@ -47,14 +47,36 @@ for (const [name, href] of modules) {
   );
 }
 
+// Verify the photography the homepage actually renders, and that the homepage
+// markup points at those files (guards against a stale build directory).
 const art = [
   "hero-ecosystem",
   ...["shop", "eats", "fresh", "drive", "send", "gigs", "stay", "stream", "wallet", "aura"].map((key) => `module-${key}`)
 ];
+const ART_EXT = "jpg";
+const MAX_PHOTO_BYTES = 300 * 1024;
 for (const file of art) {
-  const response = await fetch(`${baseUrl}/generated/${file}.svg`);
-  record(`artwork ${file}`, response.ok && (response.headers.get("content-type") ?? "").includes("svg"), `status ${response.status}`);
+  const response = await fetch(`${baseUrl}/real-photography/${file}.${ART_EXT}`);
+  const type = response.headers.get("content-type") ?? "";
+  const bytes = Number(response.headers.get("content-length") ?? 0);
+  const kilobytes = Math.round(bytes / 1024);
+  record(
+    `photography ${file}`,
+    response.ok && type.startsWith("image/") && bytes > 0 && bytes < MAX_PHOTO_BYTES,
+    `status ${response.status}, type ${type}, ${kilobytes} KB (limit ${MAX_PHOTO_BYTES / 1024} KB)`
+  );
 }
+
+const homeResponse = await fetch(baseUrl);
+const homeHtml = await homeResponse.text();
+for (const file of art) {
+  const referenced = homeHtml.includes(`/real-photography/${file}.${ART_EXT}`);
+  if (file !== "hero-ecosystem") {
+    record(`home references ${file}`, referenced, referenced ? "present" : "missing from homepage HTML");
+  }
+}
+record("home hero uses real photography", homeHtml.includes(`/real-photography/hero-ecosystem.${ART_EXT}`), "hero markup");;
+record("home no longer uses legacy svg art", !homeHtml.includes("/generated/module-"), "legacy svg check");
 
 const browser = await chromium.launch({ executablePath: chromePath });
 const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
