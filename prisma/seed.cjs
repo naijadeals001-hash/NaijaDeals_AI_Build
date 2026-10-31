@@ -233,6 +233,9 @@ async function main() {
     prisma.auditLog.deleteMany(),
     prisma.systemEvent.deleteMany(),
     prisma.wallet.deleteMany(),
+    prisma.rideEvent.deleteMany(),
+    prisma.ride.deleteMany(),
+    prisma.driverProfile.deleteMany(),
     prisma.courier.deleteMany(),
     prisma.vendor.deleteMany(),
     prisma.userRole.deleteMany(),
@@ -244,7 +247,8 @@ async function main() {
     { name: "admin", description: "Control Center administrator" },
     { name: "customer", description: "Buyer account" },
     { name: "vendor", description: "Seller operator" },
-    { name: "courier", description: "Courier operator" }
+    { name: "courier", description: "Courier operator" },
+    { name: "driver", description: "NaijaDrive driver" }
   ];
   const roles = {};
   for (const role of roleData) {
@@ -255,7 +259,8 @@ async function main() {
     admin: hashPassword("AdminPass123!"),
     seller: hashPassword("SellerPass123!"),
     courier: hashPassword("CourierPass123!"),
-    customer: hashPassword("CustomerPass123!")
+    customer: hashPassword("CustomerPass123!"),
+    driver: hashPassword("DriverPass123!")
   };
 
   const admin = await prisma.user.create({
@@ -315,6 +320,30 @@ async function main() {
       passwordHash: passwordHashes.courier,
       verifiedAt: new Date(),
       roles: { create: { roleId: roles.courier.id } }
+    }
+  });
+
+  const driverUser = await prisma.user.create({
+    data: {
+      email: "driver@naijadeals.local",
+      name: "Test Driver",
+      phone: "08020000005",
+      actorType: "DRIVER",
+      passwordHash: passwordHashes.driver,
+      verifiedAt: new Date(),
+      roles: { create: { roleId: roles.driver.id } }
+    }
+  });
+
+  const driverUser2 = await prisma.user.create({
+    data: {
+      email: "driver2@naijadeals.local",
+      name: "Second Test Driver",
+      phone: "08020000006",
+      actorType: "DRIVER",
+      passwordHash: passwordHashes.driver,
+      verifiedAt: new Date(),
+      roles: { create: { roleId: roles.driver.id } }
     }
   });
 
@@ -431,12 +460,40 @@ async function main() {
   await prisma.wallet.create({ data: { ownerType: "VENDOR", vendorId: vendor1.id, availableKobo: 0n, heldKobo: 0n } });
   await prisma.wallet.create({ data: { ownerType: "VENDOR", vendorId: vendor2.id, availableKobo: 0n, heldKobo: 0n } });
   await prisma.wallet.create({ data: { ownerType: "COURIER", userId: courierUser.id, availableKobo: 0n, heldKobo: 0n } });
+  await prisma.wallet.create({ data: { ownerType: "DRIVER", userId: driverUser.id, availableKobo: 0n, heldKobo: 0n } });
+  await prisma.wallet.create({ data: { ownerType: "DRIVER", userId: driverUser2.id, availableKobo: 0n, heldKobo: 0n } });
 
   const courier = await prisma.courier.create({
     data: {
       userId: courierUser.id,
       name: "Test Courier",
       phone: "08020000003",
+      active: true
+    }
+  });
+
+  const driver = await prisma.driverProfile.create({
+    data: {
+      userId: driverUser.id,
+      licenseNumber: "LAG-DRV-0001",
+      status: "approved",
+      vehicleClass: "comfort",
+      vehicleMake: "Toyota",
+      vehicleModel: "Camry",
+      vehiclePlate: "LSD-482-XA",
+      active: true
+    }
+  });
+
+  const driver2 = await prisma.driverProfile.create({
+    data: {
+      userId: driverUser2.id,
+      licenseNumber: "LAG-DRV-0002",
+      status: "approved",
+      vehicleClass: "economy",
+      vehicleMake: "Honda",
+      vehicleModel: "Accord",
+      vehiclePlate: "KJA-771-YB",
       active: true
     }
   });
@@ -451,6 +508,7 @@ async function main() {
         products: products.length,
         vendors: 2,
         courier: courier.id,
+        drivers: [driver.id, driver2.id],
         walletFixtureKobo: "2500000"
       }
     }
@@ -465,7 +523,9 @@ async function main() {
           seller: "seller@naijadeals.local / SellerPass123!",
           seller2: "seller2@naijadeals.local / SellerPass123!",
           courier: "courier@naijadeals.local / CourierPass123!",
-          customer: "customer@naijadeals.local / CustomerPass123!"
+          customer: "customer@naijadeals.local / CustomerPass123!",
+          driver: "driver@naijadeals.local / DriverPass123!",
+          driver2: "driver2@naijadeals.local / DriverPass123!"
         },
         products: products.length,
         vendors: [vendor1.slug, vendor2.slug],

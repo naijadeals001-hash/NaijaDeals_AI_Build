@@ -25,6 +25,43 @@ a {
   text-decoration: none;
 }
 
+/**
+ * Leaflet renders its panes at z-index 400-700. Isolating the container keeps the
+ * map from painting over the pick-up menu, the sticky header or the mobile nav.
+ */
+.leaflet-container {
+  z-index: 0;
+  isolation: isolate;
+  font-family: inherit;
+  background: #edeef0;
+}
+
+/* The markers are fully styled inline; strip Leaflet's default divIcon chrome. */
+.nd-map-pin {
+  background: transparent;
+  border: 0;
+}
+
+.leaflet-container .leaflet-control-attribution {
+  font-size: 9px;
+}
+
+/* Landmark name pills attached to each pin. */
+.leaflet-tooltip.nd-map-tooltip {
+  padding: 4px 9px;
+  border: 1px solid #d8dfd8;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.16);
+  color: #191c1e;
+  font: 700 11px/1.2 Inter, system-ui, sans-serif;
+  white-space: nowrap;
+}
+
+.leaflet-tooltip.nd-map-tooltip::before {
+  display: none;
+}
+
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }

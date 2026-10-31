@@ -11,6 +11,7 @@ enum ActorType {
   CUSTOMER
   VENDOR
   COURIER
+  DRIVER
   ADMIN
   SYSTEM
 }
@@ -161,6 +162,8 @@ model User {
   reviews           Review[]
   sellerApplication SellerApplication?
   returnRequests    ReturnRequest[]
+  driverProfile     DriverProfile?
+  rides             Ride[]             @relation("RiderRides")
 }
 
 model Role {
@@ -673,4 +676,102 @@ model Payout {
   vendor      Vendor       @relation(fields: [vendorId], references: [id])
 
   @@index([vendorId, status])
+}
+
+enum DriverStatus {
+  pending
+  approved
+  suspended
+}
+
+enum RideStatus {
+  requested
+  driver_assigned
+  driver_arriving
+  in_progress
+  completed
+  cancelled
+}
+
+enum RidePaymentMethod {
+  cash
+  wallet
+}
+
+enum RidePaymentStatus {
+  pending
+  held
+  paid
+  refunded
+}
+
+model DriverProfile {
+  id            String       @id @default(cuid())
+  userId        String       @unique
+  licenseNumber String
+  status        DriverStatus @default(pending)
+  vehicleClass  String       @default("economy")
+  vehicleMake   String
+  vehicleModel  String
+  vehiclePlate  String
+  active        Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  user          User         @relation(fields: [userId], references: [id])
+  rides         Ride[]
+
+  @@index([status, active])
+}
+
+model Ride {
+  id                 String            @id @default(cuid())
+  rideNumber         String            @unique
+  riderId            String
+  driverId           String?
+  status             RideStatus        @default(requested)
+  pickupLabel        String
+  pickupAddress      String
+  pickupLat          Float
+  pickupLng          Float
+  dropoffLabel       String
+  dropoffAddress     String
+  dropoffLat         Float
+  dropoffLng         Float
+  vehicleClass       String
+  distanceMeters     Int
+  durationMinutes    Int
+  fareKobo           BigInt
+  currency           String            @default("NGN")
+  paymentMethod      RidePaymentMethod
+  paymentStatus      RidePaymentStatus @default(pending)
+  paymentReference   String?
+  requestedAt        DateTime          @default(now())
+  acceptedAt         DateTime?
+  arrivedAt          DateTime?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  cancellationReason String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  rider              User              @relation("RiderRides", fields: [riderId], references: [id])
+  driver             DriverProfile?    @relation(fields: [driverId], references: [id])
+  events             RideEvent[]
+
+  @@index([riderId, status])
+  @@index([driverId, status])
+  @@index([status, createdAt])
+}
+
+model RideEvent {
+  id          String     @id @default(cuid())
+  rideId      String
+  status      RideStatus
+  label       String
+  description String
+  actorId     String?
+  createdAt   DateTime   @default(now())
+  ride        Ride       @relation(fields: [rideId], references: [id], onDelete: Cascade)
+
+  @@index([rideId, createdAt])
 }

@@ -10,10 +10,12 @@
     "type-check": "tsc --noEmit",
     "qa:visual": "node scripts/visual-qa.mjs",
     "qa:ecosystem": "node scripts/ecosystem-smoke.mjs",
+    "qa:drive-map": "node scripts/drive-map-qa.mjs",
     "qa:locale": "node scripts/locale-qa.mjs",
     "art:generate": "node scripts/generate-ecosystem-art.mjs && node scripts/generate-product-art.mjs",
     "prisma:seed": "prisma db seed",
     "test:marketplace": "tsx scripts/marketplace-tests.ts",
+    "test:drive": "tsx scripts/drive-tests.ts",
     "engine:verify": "tsx scripts/marketplace-tests.ts"
   },
   "prisma": {
@@ -26,16 +28,19 @@
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",
     "clsx": "^2.1.1",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
     "next": "^14.2.4",
     "postcss": "^8.4.39",
     "prisma": "^6.19.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "sharp": "^0.35.5",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.5.3"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.35",
     "playwright-core": "^1.60.0",

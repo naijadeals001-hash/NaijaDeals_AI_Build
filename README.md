@@ -26,13 +26,18 @@ tracking events in the seed data.
   when `ENABLE_TEST_PAYMENTS=true` and `NODE_ENV !== "production"`.
 - Seller dashboard: products, stock, orders, fulfilment states, returns, payouts.
 - Courier dashboard: assigned deliveries, pickup, transit, delivered and failed states.
+- NaijaDrive: Lagos ride booking with a fare quote locked at request, cash or NaijaPay
+  wallet payment, one active ride per rider, single-driver acceptance, real trip events,
+  driver release, cancellation with hold refund, and a driver board at `/driver`.
+  Booking uses a live OpenStreetMap map plus an offline landmark search with Lagos
+  aliases, and the fare is itemised before you book. See "NaijaDrive specifics" below.
 - Admin dashboard: orders, seller applications, vendors, products, payments, couriers,
-  delivery assignment, payouts and audit trail.
+  rides, delivery assignment, payouts and audit trail.
 - Honest configuration states for NaijaEats, NaijaSend and other ecosystem verticals:
   unconfigured services say so instead of showing dead buttons or invented activity.
-- Ecosystem homepage and `/products` grid with original generated artwork for every
-  module card, whole-card links, mobile bottom navigation and honest live/setup labels.
-  See `docs/ecosystem-delivery-tracker.md` for module-by-module status.
+- Ecosystem homepage and `/products` grid with the owner's real Nigerian photography on
+  every module card, whole-card links, mobile bottom navigation and honest live/setup
+  labels. See `docs/ecosystem-delivery-tracker.md` for module-by-module status.
 
 ## Ecosystem artwork
 
@@ -115,6 +120,8 @@ fixtures. It creates **no** orders, payments, reviews or revenue.
 | Seller (Ikeja Mobile Hub) | `seller@naijadeals.local` | `SellerPass123!` |
 | Seller (Yaba Home & Living) | `seller2@naijadeals.local` | `SellerPass123!` |
 | Courier | `courier@naijadeals.local` | `CourierPass123!` |
+| Driver (Comfort) | `driver@naijadeals.local` | `DriverPass123!` |
+| Driver (Economy) | `driver2@naijadeals.local` | `DriverPass123!` |
 | Customer | `customer@naijadeals.local` | `CustomerPass123!` |
 
 The customer account has a **₦25,000 local test wallet balance** (2,500,000 kobo)
@@ -164,9 +171,10 @@ In a second terminal:
 ```powershell
 $env:TEST_BASE_URL="http://localhost:3100"
 npm run test:marketplace
+npm run test:drive
 ```
 
-The suite covers:
+The marketplace suite covers:
 
 1. Public catalog, categories and storefront pages.
 2. Authentication, roles and server-side RBAC.
@@ -182,6 +190,44 @@ The suite covers:
 12. Webhook signature rejection when invalid or unconfigured.
 13. Mobile and accessibility shell markers.
 
+The NaijaDrive suite covers:
+
+1. Public fare quotes in integer NGN kobo and rejection of invalid routes/classes.
+2. An anonymous rider cannot request a ride.
+3. A wallet ride holds the fare; a duplicate active request is rejected.
+4. Cross-account read/cancel is refused and non-drivers cannot use driver endpoints.
+5. Two drivers racing for one ride produce exactly one winner.
+6. Invalid trip transitions are rejected.
+7. Trip completion releases the wallet hold exactly once; duplicate completion does not double-pay.
+8. Cancellation restores the hold; duplicate cancel is safe.
+9. Cash stays due until the driver records collection; recording twice is safe.
+10. A driver can release an accepted ride back to the queue.
+11. Non-admins cannot use admin ride endpoints; an administrator can cancel a live ride with refund.
+
+### NaijaDrive specifics
+
+These are deliberate choices, not gaps to be discovered later:
+
+- **The map is real but never load-bearing.** Tiles come from OpenStreetMap via Leaflet.
+  If four tiles fail, the map replaces itself with a vector diagram of the same two
+  landmarks, says so, and offers Retry. "Low data" mode skips tiles entirely and is
+  remembered per device. Booking and pricing never depend on the map.
+- **The line between the pins is not a route.** It joins the two landmarks in a straight
+  dashed line and the caption says exactly that. There is no turn-by-turn navigation,
+  because no routing engine is configured.
+- **Search is local.** Every Lagos landmark ships with the app along with the names people
+  actually type (`CV`, `VI`, `Tejuosho`, `Mile 2`). No geocoding call, no invented street
+  address, and it works offline.
+- **Location snaps, it does not pretend.** "Use my location" takes real device coordinates
+  and selects the nearest bookable landmark, stating the real distance. Outside Lagos it
+  refuses and changes nothing.
+- **Fares are itemised before booking.** Base, distance, time and the ₦50 rounding
+  adjustment always sum to the quoted total, and the server recomputes the fare when the
+  ride is requested.
+- **No fabricated ride state.** There is no fake driver movement, no invented PIN and no
+  simulated tracking. The rider sees server events, the driver's real plate and a `tel:`
+  link, and the page says when a driver released the ride back to the queue.
+
 Visual QA:
 
 ```powershell
@@ -196,9 +242,16 @@ $env:QA_BASE_URL="http://localhost:3100"
 npm run qa:ecosystem
 ```
 
-Visual QA uses local Chrome through `playwright-core` and runs seven passes: public pages
-anonymously, customer pages while signed in, seller/courier/admin dashboards while signed
-in, and the role dashboards again anonymously to prove they redirect to `/login`. It checks
+NaijaDrive map and landmark picker (browser behaviour that server HTML cannot prove):
+
+```powershell
+$env:QA_BASE_URL="http://localhost:3100"
+npm run qa:drive-map
+```
+
+Visual QA uses local Chrome through `playwright-core` and runs eight passes: public pages
+anonymously, customer pages while signed in, seller/courier/driver/admin dashboards while
+signed in, and the role dashboards again anonymously to prove they redirect to `/login`. It checks
 mobile, tablet and desktop widths for HTTP status, empty rendering, horizontal overflow,
 broken images, console errors and broken internal links, and writes screenshots plus a
 report to `qa-artifacts/`.
@@ -216,13 +269,19 @@ The comparison fails if any admin count or recorded order ID changes across the 
 
 ## Local vs live verification
 
-- **Verified locally:** migrations, seed, type-check, production build, marketplace
-  test suite, authenticated visual QA, persistence across a server restart, and the
-  running preview server.
+- **Verified locally:** migrations, seed, type-check, production build, the marketplace
+  suite (13/13), the NaijaDrive API suite (20/20), the NaijaDrive map and picker browser
+  suite (17/17), the ecosystem smoke test (37/37), the locale suite (27/27),
+  authenticated visual QA, persistence across a server restart, and the running preview
+  server at `http://localhost:3100`.
+- **Verified against real map tiles but not deployed:** the Leaflet map fetched live
+  OpenStreetMap tiles while the browser suite ran. Nothing was deployed, so no
+  production tile-origin, rate-limit or offline behaviour has been observed.
 - **Not verified live:** no production deployment was performed. Real Paystack,
-  Flutterwave, SMS/email, maps, storage and delivery-provider integrations require
-  credentials and provider-side webhook configuration that are not present in this
-  environment. They remain honest "not configured" states.
+  Flutterwave, SMS/email, storage and delivery-provider integrations require credentials
+  and provider-side webhook configuration that are not present in this environment. They
+  remain honest "not configured" states. NaijaDrive dispatch is real server state, but
+  no live driver fleet exists here: drivers sign in with the fixture accounts above.
 
 The verification suite creates real rows in the local database while it runs. Run
 `npm run prisma:seed` afterwards to return the preview to fixture-only state.

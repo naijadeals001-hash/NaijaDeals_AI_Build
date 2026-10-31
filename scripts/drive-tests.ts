@@ -141,6 +141,18 @@ async function main() {
     assert(quote.distanceMeters > 0, "distance must be positive");
     assert(quote.currency === "NGN", `currency should be NGN, got ${quote.currency}`);
     assert(quote.vehicleClass.id === "bike", "quote did not return the chosen class");
+
+    // The itemised fare must reconcile exactly to the number the rider is quoted.
+    const breakdown = quote.breakdown;
+    assert(breakdown, "quote is missing a fare breakdown");
+    const itemised =
+      breakdown.baseKobo + breakdown.distanceKobo + breakdown.timeKobo + breakdown.adjustmentKobo;
+    assert(
+      itemised === quote.fareKobo,
+      `breakdown ${JSON.stringify(breakdown)} sums to ${itemised}, not ${quote.fareKobo}`
+    );
+    assert(Number.isInteger(breakdown.adjustmentKobo), "rounding adjustment must be integer kobo");
+
     walletQuote = quote;
   });
 

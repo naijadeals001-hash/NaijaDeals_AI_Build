@@ -13,9 +13,10 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
-  MapPin,
+  LocateFixed,
   Navigation,
   ReceiptText,
+  Share2,
   ShieldCheck,
   Users,
   Wallet,
@@ -28,7 +29,16 @@ import {
   type ApiDriveQuote,
   type ApiRide
 } from "@/lib/api-client";
-import { DRIVE_CITY, DRIVE_PLACES, VEHICLE_CLASSES, type VehicleClassId } from "@/lib/config/drive";
+import {
+  DRIVE_CITY,
+  VEHICLE_CLASSES,
+  findPlace,
+  formatDistanceShort,
+  nearestPlace,
+  type VehicleClassId
+} from "@/lib/config/drive";
+import { DriveMap } from "./drive-map";
+import { PlacePicker } from "./place-picker";
 
 type Viewer = { name: string; isDriver: boolean } | null;
 type LoadState = "idle" | "loading" | "ready" | "error";
@@ -61,6 +71,13 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [lowData, setLowData] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [locationNotice, setLocationNotice] = useState("");
+
+  const pickupPlace = useMemo(() => findPlace(pickup), [pickup]);
+  const dropoffPlace = useMemo(() => findPlace(dropoff), [dropoff]);
 
   const activeRide = useMemo(() => rides.find(isActive) ?? null, [rides]);
   const lastCompleted = useMemo(() => rides.find((ride) => ride.status === "completed") ?? null, [rides]);
@@ -90,6 +107,90 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
     }, 10000);
     return () => window.clearInterval(timer);
   }, [activeRide, loadRides, viewer]);
+
+  // Device-local preferences only. Nothing here is server state.
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem("nd_drive_recent") ?? "[]");
+      if (Array.isArray(stored)) {
+        setRecentIds(
+          stored
+            .filter((item): item is string => typeof item === "string" && Boolean(findPlace(item)))
+            .slice(0, 5)
+        );
+      }
+      setLowData(window.localStorage.getItem("nd_drive_low_data") === "1");
+    } catch {
+      // Storage can be blocked; booking must still work without it.
+    }
+  }, []);
+
+  function rememberPlace(placeId: string) {
+    setRecentIds((current) => {
+      const next = [placeId, ...current.filter((id) => id !== placeId)].slice(0, 5);
+      try {
+        window.localStorage.setItem("nd_drive_recent", JSON.stringify(next));
+      } catch {
+        // Ignore a full or blocked storage area.
+      }
+      return next;
+    });
+  }
+
+  function changeLowData(next: boolean) {
+    setLowData(next);
+    try {
+      window.localStorage.setItem("nd_drive_low_data", next ? "1" : "0");
+    } catch {
+      // Ignore a full or blocked storage area.
+    }
+  }
+
+  /**
+   * Snap the device position to the nearest bookable landmark. The coordinates are
+   * real, from the browser; the landmark is the closest one we can actually price.
+   * No address is invented and nothing is booked automatically.
+   */
+  function useMyLocation() {
+    if (!("geolocation" in navigator)) {
+      setLocationNotice("This browser cannot share your location. Pick a landmark instead.");
+      return;
+    }
+    setLocating(true);
+    setLocationNotice("");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocating(false);
+        const nearest = nearestPlace({ lat: position.coords.latitude, lng: position.coords.longitude });
+        if (!nearest) {
+          setLocationNotice("Your position is outside the landmarks NaijaDrive can book from.");
+          return;
+        }
+        if (nearest.distanceMeters > 25000) {
+          setLocationNotice(
+            `You are ${formatDistanceShort(nearest.distanceMeters)} from the nearest bookable landmark (${nearest.place.label}). NaijaDrive only books inside Lagos, so nothing was changed.`
+          );
+          return;
+        }
+        setPickup(nearest.place.id);
+        rememberPlace(nearest.place.id);
+        setLocationNotice(
+          nearest.distanceMeters < 150
+            ? `Pick-up set to ${nearest.place.label}, where you are.`
+            : `NaijaDrive books between named landmarks, so pick-up is set to the nearest one: ${nearest.place.label}, ${formatDistanceShort(nearest.distanceMeters)} from your position.`
+        );
+      },
+      (geoError) => {
+        setLocating(false);
+        setLocationNotice(
+          geoError.code === geoError.PERMISSION_DENIED
+            ? "Location permission was denied. Pick a landmark instead — booking never needs your GPS."
+            : "Your location could not be read. Pick a landmark instead."
+        );
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    );
+  }
 
   useEffect(() => {
     if (pickup === dropoff) {
@@ -143,6 +244,8 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
         paymentMethod
       });
       setRides((current) => [ride, ...current]);
+      rememberPlace(pickup);
+      rememberPlace(dropoff);
       setNotice(`Ride ${ride.rideNumber} requested. A driver can now accept it.`);
     } catch (err) {
       if (err instanceof ApiRequestError) setError(err.message);
@@ -206,10 +309,10 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
           </div>
           <div className="relative min-h-48 lg:min-h-full">
             <img
-              src="/generated/module-drive.svg"
-              alt="Original NaijaDeals artwork of a Lagos ride at dusk"
-              width={640}
-              height={480}
+              src="/real-photography/module-drive.jpg"
+              alt="A Lagos street at dusk with traffic and city lights, photographed in Nigeria"
+              width={1024}
+              height={768}
               className="h-full w-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-night/60 to-transparent lg:bg-gradient-to-r lg:from-night lg:to-transparent" />
@@ -247,30 +350,39 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
             Where are you going?
           </h2>
           <p className="mt-1 text-sm text-muted">
-            NaijaDrive currently books inside Lagos only. Every fare is calculated from the selected
-            points and vehicle class.
+            Search a Lagos landmark, or use your location to snap to the nearest one. Every fare is
+            calculated by the server from the two points and the vehicle class.
           </p>
 
           <div className="mt-4 space-y-3">
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-wide text-muted">Pick-up</span>
-              <span className="relative mt-1 block">
-                <span className="absolute left-3 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-primary rtl:left-auto rtl:right-3" aria-hidden="true" />
-                <select
-                  value={pickup}
-                  onChange={(event) => setPickup(event.target.value)}
-                  className="min-h-12 w-full rounded-xl border border-border-soft bg-surface-low pl-8 pr-3 text-sm font-semibold outline-none focus:border-primary rtl:pl-3 rtl:pr-8"
-                >
-                  {DRIVE_PLACES.map((place) => (
-                    <option key={place.id} value={place.id}>
-                      {place.label}
-                    </option>
-                  ))}
-                </select>
-              </span>
-            </label>
+            <PlacePicker
+              id="drive-pickup"
+              label="Pick-up"
+              value={pickup}
+              onChange={(placeId) => {
+                setPickup(placeId);
+                rememberPlace(placeId);
+              }}
+              accent="pickup"
+              recentIds={recentIds}
+              counterpartId={dropoff}
+            />
 
-            <div className="flex justify-center">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={useMyLocation}
+                disabled={locating}
+                className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border-soft bg-canvas px-3 text-xs font-bold text-muted transition hover:border-primary/40 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
+              >
+                {locating ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <LocateFixed className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {locating ? "Finding you…" : "Use my location"}
+              </button>
+
               <button
                 type="button"
                 onClick={swapPlaces}
@@ -282,23 +394,34 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
               </button>
             </div>
 
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-wide text-muted">Drop-off</span>
-              <span className="relative mt-1 block">
-                <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary rtl:left-auto rtl:right-3" aria-hidden="true" />
-                <select
-                  value={dropoff}
-                  onChange={(event) => setDropoff(event.target.value)}
-                  className="min-h-12 w-full rounded-xl border border-border-soft bg-surface-low pl-9 pr-3 text-sm font-semibold outline-none focus:border-primary rtl:pl-3 rtl:pr-9"
-                >
-                  {DRIVE_PLACES.map((place) => (
-                    <option key={place.id} value={place.id}>
-                      {place.label}
-                    </option>
-                  ))}
-                </select>
-              </span>
-            </label>
+            {locationNotice ? (
+              <p role="status" className="rounded-xl bg-surface-low p-2.5 text-[11px] font-semibold leading-snug text-muted">
+                {locationNotice}
+              </p>
+            ) : null}
+
+            <PlacePicker
+              id="drive-dropoff"
+              label="Drop-off"
+              value={dropoff}
+              onChange={(placeId) => {
+                setDropoff(placeId);
+                rememberPlace(placeId);
+              }}
+              accent="dropoff"
+              recentIds={recentIds}
+              counterpartId={pickup}
+            />
+          </div>
+
+          <div className="mt-4">
+            <DriveMap
+              pickup={pickupPlace}
+              dropoff={dropoffPlace}
+              roadDistanceMeters={quote?.distanceMeters ?? null}
+              lowData={lowData}
+              onLowDataChange={changeLowData}
+            />
           </div>
 
           <fieldset className="mt-5">
@@ -385,26 +508,29 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
                 {quoteError}
               </p>
             ) : quote ? (
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-muted">Estimated fare</p>
-                  <p className="font-display text-3xl font-extrabold text-primary">{koboToNaira(quote.fareKobo, quote.currency)}</p>
-                  <p className="mt-1 flex flex-wrap items-center gap-3 text-xs font-semibold text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      <Navigation className="h-3.5 w-3.5" aria-hidden="true" />
-                      {(quote.distanceMeters / 1000).toFixed(1)} km
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-                      about {quote.durationMinutes} min
-                    </span>
-                    <span>{quote.vehicleClass.label}</span>
+              <>
+                <RouteChips from={quote.pickup.label} to={quote.dropoff.label} />
+                <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-muted">Estimated fare</p>
+                    <p className="font-display text-3xl font-extrabold text-primary">{koboToNaira(quote.fareKobo, quote.currency)}</p>
+                    <p className="mt-1 flex flex-wrap items-center gap-3 text-xs font-semibold text-muted">
+                      <span className="inline-flex items-center gap-1">
+                        <Navigation className="h-3.5 w-3.5" aria-hidden="true" />
+                        {(quote.distanceMeters / 1000).toFixed(1)} km
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                        about {quote.durationMinutes} min
+                      </span>
+                      <span>{quote.vehicleClass.label}</span>
+                    </p>
+                  </div>
+                  <p className="text-[11px] leading-snug text-muted">
+                    Estimate includes a road-distance factor. The fare is locked when you request.
                   </p>
                 </div>
-                <p className="text-[11px] leading-snug text-muted">
-                  Estimate includes a road-distance factor. The fare is locked when you request.
-                </p>
-              </div>
+              </>
             ) : null}
           </div>
 
@@ -443,6 +569,8 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
           )}
 
           {lastCompleted ? <ReceiptCard ride={lastCompleted} /> : null}
+
+          {quote && quoteState === "ready" ? <FareBreakdown quote={quote} /> : null}
 
           {viewer ? (
             <section aria-labelledby="recent-heading" className="rounded-2xl border border-border-soft bg-canvas p-4">
@@ -504,6 +632,17 @@ function ActiveRideCard({
   canCancel: boolean;
   onCancel: () => void;
 }) {
+  // The server writes a "released" event when a driver hands the ride back. That is
+  // the automatic reassignment both major competitors get wrong, so the rider is told
+  // it happened rather than being left to notice the driver name changed.
+  const wasReassigned = (ride.events ?? []).some((event) => /released/i.test(event.label));
+  const shareText = [
+    `NaijaDrive trip ${ride.rideNumber}`,
+    `${ride.pickupLabel} → ${ride.dropoffLabel}`,
+    `Status: ${ride.status.replaceAll("_", " ")}`,
+    `Fare: ${koboToNaira(ride.fareKobo, ride.currency)} (${ride.paymentMethod === "wallet" ? "NaijaPay" : "cash"})`
+  ].join("\n");
+
   return (
     <section aria-labelledby="active-ride-heading" className="rounded-2xl border border-primary/20 bg-canvas p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
@@ -519,31 +658,44 @@ function ActiveRideCard({
         </span>
       </div>
 
-      <dl className="mt-4 space-y-2 text-sm">
-        <div className="flex gap-2">
-          <dt className="w-16 shrink-0 text-xs font-black uppercase tracking-wide text-muted">From</dt>
-          <dd className="min-w-0 break-words font-semibold">{ride.pickupLabel}</dd>
-        </div>
-        <div className="flex gap-2">
-          <dt className="w-16 shrink-0 text-xs font-black uppercase tracking-wide text-muted">To</dt>
-          <dd className="min-w-0 break-words font-semibold">{ride.dropoffLabel}</dd>
-        </div>
-        <div className="flex gap-2">
-          <dt className="w-16 shrink-0 text-xs font-black uppercase tracking-wide text-muted">Fare</dt>
-          <dd className="font-extrabold text-primary">{koboToNaira(ride.fareKobo, ride.currency)}</dd>
-        </div>
-      </dl>
+      <div className="mt-4 rounded-xl bg-surface-low p-3">
+        <RouteChips from={ride.pickupLabel} to={ride.dropoffLabel} />
+        <p className="mt-2 text-sm font-extrabold text-primary">{koboToNaira(ride.fareKobo, ride.currency)}</p>
+      </div>
+
+      {ride.status === "requested" ? (
+        <p className="mt-3 rounded-xl border border-primary/20 bg-primary-soft p-3 text-xs font-semibold leading-snug text-primary">
+          {wasReassigned
+            ? "A driver released this ride, so it went straight back to approved drivers automatically. You do not need to request again, and you will not be charged twice."
+            : "Your request is open to approved Lagos drivers. Cancel any time before the trip starts and no fare is charged."}
+        </p>
+      ) : null}
 
       {ride.driver ? (
         <div className="mt-4 rounded-xl bg-surface-low p-3">
           <p className="text-xs font-black uppercase tracking-wide text-muted">Your driver</p>
           <p className="mt-1 text-sm font-extrabold">
-            {ride.driver.user?.name ?? "Verified driver"} · {ride.driver.vehicleMake} {ride.driver.vehicleModel}
+            {ride.driver.user?.name ?? "Verified driver"}
           </p>
           <p className="text-xs text-muted">
-            Plate {ride.driver.vehiclePlate}
-            {ride.driver.user?.phone ? ` · ${ride.driver.user.phone}` : ""}
+            {ride.driver.vehicleMake} {ride.driver.vehicleModel}
           </p>
+          <p className="mt-2 inline-flex items-center rounded-lg border border-ink/20 bg-canvas px-3 py-1.5 font-display text-base font-extrabold tracking-widest">
+            {ride.driver.vehiclePlate}
+          </p>
+          <p className="mt-2 text-[11px] leading-snug text-muted">
+            Match this plate before you get in. NaijaDrive never asks you to pay a driver anything other
+            than the fare shown above.
+          </p>
+          {ride.driver.user?.phone ? (
+            <a
+              href={`tel:${ride.driver.user.phone}`}
+              className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-canvas px-3 text-xs font-bold text-primary"
+            >
+              <Navigation className="h-3.5 w-3.5" aria-hidden="true" />
+              Call {ride.driver.user.phone}
+            </a>
+          ) : null}
         </div>
       ) : (
         <p className="mt-4 rounded-xl bg-surface-low p-3 text-sm text-muted">
@@ -554,24 +706,112 @@ function ActiveRideCard({
 
       <RideTimeline ride={ride} />
 
+      <a
+        href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-soft bg-canvas px-4 text-sm font-bold text-primary"
+      >
+        <Share2 className="h-4 w-4" aria-hidden="true" />
+        Share this trip
+      </a>
+
       {canCancel ? (
         <button
           type="button"
           onClick={onCancel}
           disabled={busy === `cancel-${ride.id}`}
-          className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-crimson/30 bg-crimson-soft px-4 text-sm font-bold text-crimson disabled:opacity-50"
+          className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-crimson/30 bg-crimson-soft px-4 text-sm font-bold text-crimson disabled:opacity-50"
         >
           {busy === `cancel-${ride.id}` ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <XCircle className="h-4 w-4" aria-hidden="true" />}
           Cancel ride
         </button>
       ) : (
-        <p className="mt-4 flex items-start gap-2 rounded-xl bg-surface-low p-3 text-xs text-muted">
+        <p className="mt-2 flex items-start gap-2 rounded-xl bg-surface-low p-3 text-xs text-muted">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           A trip already in progress cannot be cancelled from this page. Contact support if there is a
           safety issue.
         </p>
       )}
     </section>
+  );
+}
+
+/**
+ * Itemised fare. Competitors show a single number before you book and the breakdown
+ * only afterwards; this shows the arithmetic up front, from the server's own quote.
+ * The four parts always sum to the quoted total.
+ */
+function FareBreakdown({ quote }: { quote: ApiDriveQuote }) {
+  const parts = quote.breakdown;
+  if (!parts) return null;
+
+  const rows = [
+    { label: `Base fare · ${quote.vehicleClass.label}`, value: parts.baseKobo },
+    { label: `Distance · ${(quote.distanceMeters / 1000).toFixed(1)} km`, value: parts.distanceKobo },
+    { label: `Time · about ${quote.durationMinutes} min`, value: parts.timeKobo }
+  ];
+
+  return (
+    <section aria-labelledby="fare-breakdown-heading" className="rounded-2xl border border-border-soft bg-canvas p-4 sm:p-5">
+      <h2 id="fare-breakdown-heading" className="font-display text-lg font-extrabold">
+        How this fare is built
+      </h2>
+      <p className="mt-1 text-xs text-muted">
+        Calculated by the server from these two landmarks. The same number is recalculated when you
+        request, and that is the amount locked for the trip.
+      </p>
+
+      <dl className="mt-3 space-y-2 text-sm">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-baseline justify-between gap-3">
+            <dt className="text-muted">{row.label}</dt>
+            <dd className="shrink-0 font-semibold">{koboToNaira(row.value, quote.currency)}</dd>
+          </div>
+        ))}
+        {parts.adjustmentKobo !== 0 ? (
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="text-muted">Rounded to the nearest ₦50</dt>
+            <dd className="shrink-0 font-semibold">
+              {parts.adjustmentKobo < 0 ? "−" : "+"}
+              {koboToNaira(Math.abs(parts.adjustmentKobo), quote.currency)}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+
+      <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-border-soft pt-3">
+        <span className="text-sm font-extrabold">Total</span>
+        <span className="font-display text-xl font-extrabold text-primary">
+          {koboToNaira(quote.fareKobo, quote.currency)}
+        </span>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Trip endpoints encoded three ways at once — shape, colour and a text label — so the
+ * route survives colour blindness and a greyscale printout. Encoding the ends with a
+ * colour alone is the specific defect this avoids.
+ */
+function RouteChips({ from, to }: { from: string; to: string }) {
+  return (
+    <ul className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 text-xs font-bold">
+      <li className="flex min-w-0 items-center gap-1.5">
+        <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-primary ring-2 ring-primary/25" />
+        <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-muted">Pick-up</span>
+        <span className="min-w-0 break-words">{from}</span>
+      </li>
+      <li aria-hidden="true" className="text-muted">
+        →
+      </li>
+      <li className="flex min-w-0 items-center gap-1.5">
+        <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-[2px] bg-night" />
+        <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-muted">Drop-off</span>
+        <span className="min-w-0 break-words">{to}</span>
+      </li>
+    </ul>
   );
 }
 

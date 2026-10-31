@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { SessionUser } from "./session";
-import { getSessionUser, isAdmin, isCourier, isVendor } from "./session";
+import { getSessionUser, isAdmin, isCourier, isDriver, isVendor } from "./session";
 
 export class ApiError extends Error {
   status: number;
@@ -38,6 +38,12 @@ export async function requireVendor(): Promise<SessionUser> {
 export async function requireCourier(): Promise<SessionUser> {
   const user = await requireUser();
   if (!isCourier(user)) throw new ApiError(403, "forbidden", "Courier access is required.");
+  return user;
+}
+
+export async function requireDriver(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!isDriver(user)) throw new ApiError(403, "forbidden", "Driver access is required.");
   return user;
 }
 

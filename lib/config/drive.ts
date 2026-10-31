@@ -14,12 +14,23 @@ export const DRIVE_COUNTRY = "NG";
 export const DRIVE_CITY = "Lagos";
 export const DRIVE_CURRENCY = "NGN";
 
+/**
+ * Bookable zones group landmarks along the axes Lagos drivers actually think in.
+ * Used for grouping the pick-up search list, never for pricing.
+ */
+export const DRIVE_ZONES = ["Ikeja", "Mainland", "Island", "Lekki–Ajah"] as const;
+export type DriveZone = (typeof DRIVE_ZONES)[number];
+
 export type DrivePlace = {
   id: string;
   label: string;
   address: string;
   lat: number;
   lng: number;
+  /** Landmark grouping shown in the picker. */
+  zone: DriveZone;
+  /** Names Lagosians actually type, so search works without exact wording. */
+  aliases: string[];
 };
 
 export const DRIVE_PLACES: DrivePlace[] = [
@@ -28,98 +39,126 @@ export const DRIVE_PLACES: DrivePlace[] = [
     label: "Computer Village, Ikeja",
     address: "Adeniyi Jones Road, Computer Village, Ikeja, Lagos",
     lat: 6.5965,
-    lng: 3.3421
+    lng: 3.3421,
+    zone: "Ikeja",
+    aliases: ["CV", "Ikeja market", "phone market", "Otigba"]
   },
   {
     id: "ikeja-city-mall",
     label: "Ikeja City Mall",
     address: "Obafemi Awolowo Way, Alausa, Ikeja, Lagos",
     lat: 6.6026,
-    lng: 3.3579
+    lng: 3.3579,
+    zone: "Ikeja",
+    aliases: ["ICM", "Alausa mall", "Shoprite Alausa"]
   },
   {
     id: "mmia",
     label: "Murtala Muhammed Airport",
     address: "Murtala Muhammed International Airport, Ikeja, Lagos",
     lat: 6.5774,
-    lng: 3.3212
+    lng: 3.3212,
+    zone: "Ikeja",
+    aliases: ["airport", "MMIA", "local airport", "international airport", "Ikeja airport"]
   },
   {
     id: "allen-avenue",
     label: "Allen Avenue",
     address: "Allen Avenue, Ikeja, Lagos",
     lat: 6.6006,
-    lng: 3.3515
+    lng: 3.3515,
+    zone: "Ikeja",
+    aliases: ["Allen", "Allen roundabout"]
   },
   {
     id: "yaba-tejuosho",
     label: "Tejuosho, Yaba",
     address: "Tejuosho Market, Yaba, Lagos",
     lat: 6.5005,
-    lng: 3.3755
+    lng: 3.3755,
+    zone: "Mainland",
+    aliases: ["Tejuosho", "Yaba market", "Yabatech", "Herbert Macaulay"]
   },
   {
     id: "surulere",
     label: "Surulere, Shoprite",
     address: "Shoprite Surulere, Eric Moore Road, Lagos",
     lat: 6.4969,
-    lng: 3.3481
+    lng: 3.3481,
+    zone: "Mainland",
+    aliases: ["Surulere", "Eric Moore", "Shoprite Surulere", "Stadium"]
   },
   {
     id: "victoria-island",
     label: "Bar Beach, Victoria Island",
     address: "Bar Beach, Ahmadu Bello Way, Victoria Island, Lagos",
     lat: 6.4281,
-    lng: 3.4219
+    lng: 3.4219,
+    zone: "Island",
+    aliases: ["VI", "Bar Beach", "Ahmadu Bello Way", "Eko Hotel"]
   },
   {
     id: "lekki-phase-1",
     label: "Lekki Phase 1",
     address: "Admiralty Way, Lekki Phase 1, Lagos",
     lat: 6.4478,
-    lng: 3.4723
+    lng: 3.4723,
+    zone: "Lekki–Ajah",
+    aliases: ["Lekki 1", "Admiralty Way", "Lekki Phase One"]
   },
   {
     id: "ikoyi-falomo",
     label: "Falomo, Ikoyi",
     address: "Falomo Roundabout, Ikoyi, Lagos",
     lat: 6.449,
-    lng: 3.433
+    lng: 3.433,
+    zone: "Island",
+    aliases: ["Falomo", "Ikoyi", "Awolowo Road"]
   },
   {
     id: "gbagada",
     label: "Gbagada",
     address: "Gbagada Expressway, Lagos",
     lat: 6.5556,
-    lng: 3.3833
+    lng: 3.3833,
+    zone: "Mainland",
+    aliases: ["Gbagada Expressway", "Ifako", "Soluade"]
   },
   {
     id: "maryland",
     label: "Maryland Mall",
     address: "Maryland Mall, Ikorodu Road, Lagos",
     lat: 6.573,
-    lng: 3.366
+    lng: 3.366,
+    zone: "Mainland",
+    aliases: ["Maryland", "Ikorodu Road", "Mende"]
   },
   {
     id: "apapa",
     label: "Apapa Wharf",
     address: "Wharf Road, Apapa, Lagos",
     lat: 6.4489,
-    lng: 3.3596
+    lng: 3.3596,
+    zone: "Mainland",
+    aliases: ["Apapa", "Wharf", "port", "Tin Can"]
   },
   {
     id: "festac",
     label: "Festac Town",
     address: "Festac Town, Amuwo Odofin, Lagos",
     lat: 6.4667,
-    lng: 3.2833
+    lng: 3.2833,
+    zone: "Mainland",
+    aliases: ["Festac", "Amuwo", "Mile 2", "2nd Avenue"]
   },
   {
     id: "ajah",
     label: "Ajah, Awoyaya",
     address: "Lekki-Epe Expressway, Ajah, Lagos",
     lat: 6.4667,
-    lng: 3.5667
+    lng: 3.5667,
+    zone: "Lekki–Ajah",
+    aliases: ["Ajah", "Awoyaya", "Lekki-Epe", "Sangotedo", "Abraham Adesanya"]
   }
 ];
 
@@ -174,6 +213,17 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
   }
 ];
 
+export type DriveFareBreakdown = {
+  /** Base fare for the chosen class. */
+  baseKobo: number;
+  /** Distance component before rounding. */
+  distanceKobo: number;
+  /** Estimated time component before rounding. */
+  timeKobo: number;
+  /** Rounding applied to reach the quoted fare. May be negative. */
+  adjustmentKobo: number;
+};
+
 export type DriveQuote = {
   pickup: DrivePlace;
   dropoff: DrivePlace;
@@ -182,10 +232,77 @@ export type DriveQuote = {
   durationMinutes: number;
   fareKobo: number;
   currency: string;
+  /**
+   * The same fare, itemised. baseKobo + distanceKobo + timeKobo + adjustmentKobo
+   * always equals fareKobo exactly, so the rider can check the arithmetic.
+   */
+  breakdown: DriveFareBreakdown;
 };
 
 export function findPlace(id: string | null | undefined) {
   return DRIVE_PLACES.find((place) => place.id === id) ?? null;
+}
+
+/** Lowercase, strip accents and collapse whitespace so "Lekki—Ajah" matches "lekki ajah". */
+function normalize(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * Offline landmark search. Runs on bundled data only — no geocoding service, no
+ * network round trip — so it keeps working on a 2G connection or with the map
+ * tiles switched off entirely.
+ */
+export function searchPlaces(query: string, places: DrivePlace[] = DRIVE_PLACES): DrivePlace[] {
+  const needle = normalize(query);
+  if (!needle) return places;
+
+  const scored: Array<{ place: DrivePlace; score: number }> = [];
+  for (const place of places) {
+    const label = normalize(place.label);
+    const aliasHit = place.aliases.some((alias) => normalize(alias).includes(needle));
+    const addressHit = normalize(place.address).includes(needle);
+    const zoneHit = normalize(place.zone).includes(needle);
+
+    let score: number | null = null;
+    if (label.startsWith(needle)) score = 0;
+    else if (label.includes(needle)) score = 1;
+    else if (aliasHit) score = 2;
+    else if (zoneHit) score = 3;
+    else if (addressHit) score = 4;
+    if (score !== null) scored.push({ place, score });
+  }
+
+  return scored.sort((a, b) => a.score - b.score || a.place.label.localeCompare(b.place.label)).map((entry) => entry.place);
+}
+
+/**
+ * Snap real device coordinates to the closest bookable landmark. NaijaDrive books
+ * between named places, so this never invents an address: it reports the landmark
+ * that was actually nearest and how far away it is.
+ */
+export function nearestPlace(
+  point: { lat: number; lng: number },
+  places: DrivePlace[] = DRIVE_PLACES
+): { place: DrivePlace; distanceMeters: number } | null {
+  let best: { place: DrivePlace; distanceMeters: number } | null = null;
+  for (const place of places) {
+    const distanceMeters = haversineMeters(point, place);
+    if (!best || distanceMeters < best.distanceMeters) best = { place, distanceMeters };
+  }
+  return best;
+}
+
+/** Short human distance used in the picker and map: "350 m" or "2.4 km". */
+export function formatDistanceShort(meters: number) {
+  if (!Number.isFinite(meters) || meters < 0) return "—";
+  if (meters < 950) return `${Math.round(meters / 10) * 10} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
 }
 
 export function findVehicleClass(id: string | null | undefined) {
@@ -224,8 +341,9 @@ export function quoteDrive(input: {
   const distanceMeters = Math.round(haversineMeters(pickup, dropoff) * ROAD_FACTOR);
   const distanceKm = distanceMeters / 1000;
   const durationMinutes = Math.max(4, Math.ceil((distanceKm / AVERAGE_KMH) * 60) + 3);
-  const rawKobo =
-    vehicleClass.baseKobo + vehicleClass.perKmKobo * distanceKm + vehicleClass.perMinuteKobo * durationMinutes;
+  const distanceKobo = Math.round(vehicleClass.perKmKobo * distanceKm);
+  const timeKobo = vehicleClass.perMinuteKobo * durationMinutes;
+  const rawKobo = vehicleClass.baseKobo + distanceKobo + timeKobo;
   // Round to the nearest NGN 50 so the quote reads like a real fare, while staying integer kobo.
   const fareKobo = Math.max(vehicleClass.baseKobo, Math.round(rawKobo / 5000) * 5000);
 
@@ -236,6 +354,12 @@ export function quoteDrive(input: {
     distanceMeters,
     durationMinutes,
     fareKobo,
-    currency: DRIVE_CURRENCY
+    currency: DRIVE_CURRENCY,
+    breakdown: {
+      baseKobo: vehicleClass.baseKobo,
+      distanceKobo,
+      timeKobo,
+      adjustmentKobo: fareKobo - rawKobo
+    }
   };
 }

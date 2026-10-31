@@ -76,10 +76,15 @@ export function isCourier(user: SessionUser) {
   return user.actorType === "COURIER" || roleNames(user).includes("courier");
 }
 
-export function primaryRole(user: SessionUser): "admin" | "vendor" | "courier" | "customer" {
+export function isDriver(user: SessionUser) {
+  return user.actorType === "DRIVER" || roleNames(user).includes("driver");
+}
+
+export function primaryRole(user: SessionUser): "admin" | "vendor" | "courier" | "driver" | "customer" {
   if (isAdmin(user)) return "admin";
   if (isVendor(user)) return "vendor";
   if (isCourier(user)) return "courier";
+  if (isDriver(user)) return "driver";
   return "customer";
 }
 

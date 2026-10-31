@@ -251,6 +251,78 @@ function withParams(path: string, params?: Record<string, string | undefined>) {
   return qs ? `${path}?${qs}` : path;
 }
 
+export type ApiRideEvent = {
+  id: string;
+  status: string;
+  label: string;
+  description: string;
+  createdAt: string;
+};
+
+export type ApiRide = {
+  id: string;
+  rideNumber: string;
+  status: string;
+  pickupLabel: string;
+  pickupAddress: string;
+  dropoffLabel: string;
+  dropoffAddress: string;
+  vehicleClass: string;
+  distanceMeters: number;
+  durationMinutes: number;
+  fareKobo: ApiMoney;
+  currency: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  requestedAt: string;
+  acceptedAt?: string | null;
+  arrivedAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  cancelledAt?: string | null;
+  cancellationReason?: string | null;
+  driver?: {
+    id: string;
+    vehicleMake: string;
+    vehicleModel: string;
+    vehiclePlate: string;
+    phone?: string;
+    user?: { id: string; name: string; phone: string | null };
+  } | null;
+  rider?: { id: string; name: string; phone: string | null } | null;
+  events?: ApiRideEvent[];
+};
+
+export type ApiDriveQuote = {
+  pickup: { id: string; label: string; address: string };
+  dropoff: { id: string; label: string; address: string };
+  vehicleClass: { id: string; label: string; description: string; seats: number };
+  distanceMeters: number;
+  durationMinutes: number;
+  fareKobo: ApiMoney;
+  currency: string;
+  breakdown?: {
+    baseKobo: number;
+    distanceKobo: number;
+    timeKobo: number;
+    adjustmentKobo: number;
+  };
+};
+
+export type ApiDriverBoard = {
+  driver: {
+    id: string;
+    status: string;
+    vehicleClass: string;
+    vehicleMake: string;
+    vehicleModel: string;
+    vehiclePlate: string;
+  };
+  open: ApiRide[];
+  active: ApiRide[];
+  recent: ApiRide[];
+};
+
 export const apiClient = {
   me: () => requestJson<{ user: SessionUser | null }>("/api/auth/me"),
   login: (email: string, password: string) =>
@@ -366,7 +438,34 @@ export const apiClient = {
     requestJson<Record<string, unknown>>(`/api/courier/deliveries/${id}/status`, {
       method: "POST",
       body: JSON.stringify({ status, note, proofCode })
-    })
+    }),
+
+  driveQuote: (pickup: string, dropoff: string, vehicleClass: string) =>
+    requestJson<ApiDriveQuote>(
+      withParams("/api/drive/quote", { pickup, dropoff, vehicleClass })
+    ),
+  driveRides: () => requestJson<ApiRide[]>("/api/drive/rides"),
+  driveRequestRide: (input: {
+    pickupId: string;
+    dropoffId: string;
+    vehicleClass: string;
+    paymentMethod: "cash" | "wallet";
+  }) => requestJson<ApiRide>("/api/drive/rides", { method: "POST", body: JSON.stringify(input) }),
+  driveCancelRide: (id: string, reason?: string) =>
+    requestJson<ApiRide>(`/api/drive/rides/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) }),
+  driverRides: () => requestJson<ApiDriverBoard>("/api/drive/driver/rides"),
+  driverAcceptRide: (id: string) =>
+    requestJson<ApiRide>(`/api/drive/driver/rides/${id}/accept`, { method: "POST" }),
+  driverRideStatus: (id: string, status: "driver_arriving" | "in_progress" | "completed") =>
+    requestJson<ApiRide>(`/api/drive/driver/rides/${id}/status`, { method: "POST", body: JSON.stringify({ status }) }),
+  driverReleaseRide: (id: string, reason?: string) =>
+    requestJson<ApiRide>(`/api/drive/driver/rides/${id}/release`, { method: "POST", body: JSON.stringify({ reason }) }),
+  driverCashCollected: (id: string) =>
+    requestJson<ApiRide>(`/api/drive/driver/rides/${id}/cash`, { method: "POST" }),
+
+  adminRides: () => requestJson<{ rides: ApiRide[] }>("/api/admin/rides"),
+  adminCancelRide: (id: string, reason?: string) =>
+    requestJson<ApiRide>(`/api/admin/rides/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) })
 };
 
 export function koboToNaira(value: ApiMoney, currency = "NGN") {

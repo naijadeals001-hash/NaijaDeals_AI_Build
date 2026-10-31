@@ -148,6 +148,7 @@ function EcosystemPage() {
     { name: "NaijaShop", href: "/naijashop", detail: "Products, cart, checkout, escrow, orders and reviews.", icon: ShoppingBag, live: true },
     { name: "NaijaPay", href: "/wallet", detail: "Wallet balance, transactions and escrow holds.", icon: PackageCheck, live: true },
     { name: "NaijaSend", href: "/naijasend", detail: "Manual courier workflow with tracked delivery events.", icon: Truck, live: true },
+    { name: "NaijaDrive", href: "/naijadrive", detail: "Lagos ride booking with fare held in NaijaPay and real driver acceptance.", icon: Truck, live: true },
     { name: "NaijaEats", href: "/naijaeats", detail: "No restaurant or dispatch provider is configured.", icon: ChefHat, live: false }
   ];
 
@@ -188,12 +189,6 @@ const verticalCopy: Record<string, { name: string; description: string; requirem
     description: "Hotel and shortlet bookings.",
     requirement: "Property inventory, availability calendars and host payout accounts are not configured in this environment.",
     icon: PackageCheck
-  },
-  naijadrive: {
-    name: "NaijaDrive",
-    description: "Ride hailing, shared journeys and chauffeur bookings.",
-    requirement: "Driver onboarding, vehicle compliance, live map matching and dispatch integrations are not configured in this environment.",
-    icon: Truck
   },
   naijastream: {
     name: "NaijaStream",

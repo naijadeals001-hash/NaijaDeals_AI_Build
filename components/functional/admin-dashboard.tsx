@@ -9,10 +9,11 @@ import {
   koboToNaira,
   statusLabel,
   type AdminOverview,
-  type ApiOrder
+  type ApiOrder,
+  type ApiRide
 } from "@/lib/api-client";
 
-type Tab = "overview" | "orders" | "applications" | "products" | "payments" | "users" | "deliveries" | "payouts" | "audit";
+type Tab = "overview" | "orders" | "applications" | "products" | "payments" | "users" | "deliveries" | "rides" | "payouts" | "audit";
 
 const tabs: Array<{ id: Tab; label: string }> = [
   { id: "overview", label: "Overview" },
@@ -22,6 +23,7 @@ const tabs: Array<{ id: Tab; label: string }> = [
   { id: "payments", label: "Payments" },
   { id: "users", label: "Users" },
   { id: "deliveries", label: "Deliveries" },
+  { id: "rides", label: "Rides" },
   { id: "payouts", label: "Payouts" },
   { id: "audit", label: "Audit log" }
 ];
@@ -35,6 +37,7 @@ export function AdminDashboard() {
   const [payments, setPayments] = useState<Array<Record<string, unknown>>>([]);
   const [users, setUsers] = useState<Array<Record<string, unknown>>>([]);
   const [couriers, setCouriers] = useState<Array<Record<string, unknown>>>([]);
+  const [rides, setRides] = useState<ApiRide[]>([]);
   const [payouts, setPayouts] = useState<Array<Record<string, unknown>>>([]);
   const [vendors, setVendors] = useState<Array<Record<string, unknown>>>([]);
   const [audit, setAudit] = useState<Array<Record<string, unknown>>>([]);
@@ -45,7 +48,7 @@ export function AdminDashboard() {
 
   const load = useCallback(async () => {
     try {
-      const [ov, ord, apps, prods, pays, usrs, cours, outs, vends, logs] = await Promise.all([
+      const [ov, ord, apps, prods, pays, usrs, cours, outs, vends, logs, rideList] = await Promise.all([
         apiClient.adminOverview(),
         apiClient.adminOrders(),
         apiClient.adminApplications(),
@@ -55,7 +58,8 @@ export function AdminDashboard() {
         apiClient.adminCouriers(),
         apiClient.adminPayouts(),
         apiClient.adminVendors(),
-        apiClient.adminAuditLogs()
+        apiClient.adminAuditLogs(),
+        apiClient.adminRides()
       ]);
       setOverview(ov);
       setOrders(ord);
@@ -67,6 +71,7 @@ export function AdminDashboard() {
       setPayouts(outs);
       setVendors(vends);
       setAudit(logs);
+      setRides(rideList.rides);
       setStatus("ready");
     } catch (err) {
       if (err instanceof ApiRequestError && (err.status === 401 || err.status === 403)) setStatus("forbidden");
@@ -446,6 +451,58 @@ export function AdminDashboard() {
             ))
           )}
           {orders.every((order) => (order.deliveries ?? []).length === 0) ? <p className="text-sm text-muted">No deliveries.</p> : null}
+        </section>
+      ) : null}
+
+      {tab === "rides" ? (
+        <section className="space-y-3">
+          <p className="text-sm text-muted">
+            Every NaijaDrive ride, newest first. Cancelling here refunds a NaijaPay hold for rides that have not
+            started and records an administrator audit entry.
+          </p>
+          {rides.length === 0 ? <p className="text-sm text-muted">No rides yet.</p> : null}
+          {rides.map((ride) => {
+            const cancellable = ["requested", "driver_assigned", "driver_arriving"].includes(ride.status);
+            return (
+              <article key={ride.id} className="rounded-2xl border border-border-soft bg-canvas p-4">
+                <div className="flex flex-wrap justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-bold">
+                      {ride.rideNumber} · {ride.pickupLabel} → {ride.dropoffLabel}
+                    </p>
+                    <p className="text-xs text-muted">
+                      {statusLabel(ride.status)} · {ride.vehicleClass} · {koboToNaira(ride.fareKobo, ride.currency)} ·{" "}
+                      {ride.paymentMethod === "wallet" ? "NaijaPay" : "Cash"} · payment {statusLabel(ride.paymentStatus)}
+                    </p>
+                    <p className="text-xs text-muted">
+                      Rider {ride.rider?.name ?? "—"}
+                      {ride.driver?.user?.name ? ` · Driver ${ride.driver.user.name}` : " · No driver assigned"}
+                      {ride.cancellationReason ? ` · ${ride.cancellationReason}` : ""}
+                    </p>
+                  </div>
+                  {cancellable ? (
+                    <button
+                      disabled={busy === `${ride.id}-admin-cancel`}
+                      onClick={() =>
+                        void run(
+                          `${ride.id}-admin-cancel`,
+                          () => apiClient.adminCancelRide(ride.id, "Cancelled by the Control Center."),
+                          `Ride ${ride.rideNumber} cancelled.`
+                        )
+                      }
+                      className="min-h-9 rounded-lg border border-crimson/40 px-3 text-xs font-bold text-crimson"
+                    >
+                      {busy === `${ride.id}-admin-cancel` ? "Cancelling…" : "Cancel ride"}
+                    </button>
+                  ) : (
+                    <span className="self-start rounded-full bg-surface-low px-3 py-1 text-xs font-bold text-muted">
+                      {ride.status === "completed" ? "Completed" : ride.status === "cancelled" ? "Cancelled" : "In progress"}
+                    </span>
+                  )}
+                </div>
+              </article>
+            );
+          })}
         </section>
       ) : null}
 

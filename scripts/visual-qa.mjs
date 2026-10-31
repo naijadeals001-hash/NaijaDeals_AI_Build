@@ -31,6 +31,10 @@ const accounts = {
   admin: {
     email: process.env.QA_ADMIN_EMAIL ?? "admin@naijadeals.local",
     password: process.env.QA_ADMIN_PASSWORD ?? "AdminPass123!"
+  },
+  driver: {
+    email: process.env.QA_DRIVER_EMAIL ?? "driver@naijadeals.local",
+    password: process.env.QA_DRIVER_PASSWORD ?? "DriverPass123!"
   }
 };
 
@@ -43,6 +47,7 @@ const publicRoutes = [
   "/sell",
   "/naijaeats",
   "/naijasend",
+  "/naijadrive",
   "/business/shop",
   "/business/eats",
   "/business/gigs",
@@ -63,6 +68,7 @@ const customerRoutes = ["/cart", "/checkout", "/account", "/orders", "/wallet"];
 const roleRoutes = [
   { route: "/seller", account: "seller" },
   { route: "/courier", account: "courier" },
+  { route: "/driver", account: "driver" },
   { route: "/admin", account: "admin" },
   { route: "/super-admin", account: "admin" }
 ];

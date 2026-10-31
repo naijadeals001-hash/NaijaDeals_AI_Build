@@ -41,7 +41,7 @@ export function availablePaymentMethods(countryCode: string) {
   return listPaymentMethods(countryCode).filter((method) => method.configured && method.supportsCountry);
 }
 
-export async function ensureWallet(tx: Db, input: { userId?: string; vendorId?: string; ownerType: "CUSTOMER" | "VENDOR" | "COURIER" | "SYSTEM" }) {
+export async function ensureWallet(tx: Db, input: { userId?: string; vendorId?: string; ownerType: "CUSTOMER" | "VENDOR" | "COURIER" | "DRIVER" | "SYSTEM" }) {
   const existing = await tx.wallet.findFirst({
     where: input.userId ? { userId: input.userId } : input.vendorId ? { vendorId: input.vendorId } : { ownerType: "SYSTEM" }
   });

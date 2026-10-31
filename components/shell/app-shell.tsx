@@ -184,6 +184,22 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
           <Store className="h-4 w-4" />
           {t("common.sellOn")}
         </Link>
+        {user && (user.roles.includes("driver") || user.actorType === "DRIVER") ? (
+          <Link
+            href="/driver"
+            className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-border-soft px-4 py-3 text-sm font-bold text-primary"
+          >
+            Driver board
+          </Link>
+        ) : null}
+        {user && (user.roles.includes("courier") || user.actorType === "COURIER") ? (
+          <Link
+            href="/courier"
+            className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-border-soft px-4 py-3 text-sm font-bold text-primary"
+          >
+            Courier dashboard
+          </Link>
+        ) : null}
       </aside>
 
       <main id="main-content" className="mx-auto max-w-7xl px-4 pb-28 pt-6 lg:ml-64 lg:px-8 lg:rtl:ml-0 lg:rtl:mr-64">

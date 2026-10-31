@@ -12,7 +12,9 @@ const explicitRoutes = new Set([
   "wallet",
   "account",
   "naijaeats",
-  "naijasend"
+  "naijasend",
+  "naijadrive",
+  "driver"
 ]);
 
 export function generateStaticParams() {
