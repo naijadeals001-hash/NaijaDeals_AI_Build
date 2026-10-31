@@ -1,0 +1,631 @@
+import { randomBytes } from "node:crypto";
+import type { Prisma, RidePaymentMethod, RideStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { ApiError } from "@/lib/auth/guard";
+import { quoteDrive } from "@/lib/config/drive";
+import { ensureWallet } from "@/lib/payments/service";
+import { recordAudit } from "./audit.service";
+import { recordSystemEvent } from "./event.service";
+import { postBalancedTransaction } from "./wallet.service";
+
+type Db = Prisma.TransactionClient | typeof prisma;
+
+const rideInclude = {
+  driver: {
+    include: {
+      user: { select: { id: true, name: true, phone: true } }
+    }
+  },
+  rider: { select: { id: true, name: true, phone: true } },
+  events: { orderBy: { createdAt: "asc" } }
+} satisfies Prisma.RideInclude;
+
+const openRideSelect = {
+  id: true,
+  rideNumber: true,
+  status: true,
+  pickupLabel: true,
+  pickupAddress: true,
+  dropoffLabel: true,
+  dropoffAddress: true,
+  vehicleClass: true,
+  distanceMeters: true,
+  durationMinutes: true,
+  fareKobo: true,
+  currency: true,
+  paymentMethod: true,
+  paymentStatus: true,
+  requestedAt: true,
+  acceptedAt: true
+} satisfies Prisma.RideSelect;
+
+export const rideStatusLabel: Record<RideStatus, string> = {
+  requested: "Looking for a driver",
+  driver_assigned: "Driver assigned",
+  driver_arriving: "Driver arriving",
+  in_progress: "Trip in progress",
+  completed: "Trip completed",
+  cancelled: "Ride cancelled"
+};
+
+const rideTransitions: Record<RideStatus, RideStatus[]> = {
+  requested: ["driver_assigned", "cancelled"],
+  driver_assigned: ["driver_arriving", "in_progress", "cancelled"],
+  driver_arriving: ["in_progress", "cancelled"],
+  in_progress: ["completed"],
+  completed: [],
+  cancelled: []
+};
+
+const cancellable: RideStatus[] = ["requested", "driver_assigned", "driver_arriving"];
+
+function assertRideTransition(from: RideStatus, to: RideStatus) {
+  if (from === to) return;
+  if (!rideTransitions[from]?.includes(to)) {
+    throw new ApiError(409, "invalid_transition", `Cannot move ride from ${from} to ${to}.`);
+  }
+}
+
+function newRideNumber() {
+  const stamp = Date.now().toString(36).toUpperCase().slice(-6);
+  const suffix = randomBytes(3).toString("hex").toUpperCase();
+  return `NDR-${stamp}-${suffix}`;
+}
+
+async function addRideEvent(
+  tx: Db,
+  input: { rideId: string; status: RideStatus; label: string; description: string; actorId?: string | null }
+) {
+  return tx.rideEvent.create({
+    data: {
+      rideId: input.rideId,
+      status: input.status,
+      label: input.label,
+      description: input.description,
+      actorId: input.actorId ?? null
+    }
+  });
+}
+
+async function loadRide(tx: Db, rideId: string) {
+  const ride = await tx.ride.findUnique({ where: { id: rideId }, include: rideInclude });
+  if (!ride) throw new ApiError(404, "ride_not_found", "Ride not found.");
+  return ride;
+}
+
+export function getQuote(input: {
+  pickupId: string | null | undefined;
+  dropoffId: string | null | undefined;
+  vehicleClassId: string | null | undefined;
+}) {
+  const quote = quoteDrive(input);
+  if (!quote) {
+    throw new ApiError(
+      400,
+      "invalid_route",
+      "Choose two different Lagos pick-up and drop-off points and a valid vehicle class."
+    );
+  }
+  return quote;
+}
+
+export async function requestRide(input: {
+  riderId: string;
+  pickupId: string;
+  dropoffId: string;
+  vehicleClassId: string;
+  paymentMethod: RidePaymentMethod;
+}) {
+  const quote = getQuote(input);
+  if (input.paymentMethod !== "cash" && input.paymentMethod !== "wallet") {
+    throw new ApiError(400, "invalid_payment_method", "Choose cash or NaijaPay wallet.");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    // Serialise requests per rider so two taps cannot create two active rides.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${input.riderId}))`;
+    const activeRide = await tx.ride.findFirst({
+      where: {
+        riderId: input.riderId,
+        status: { in: ["requested", "driver_assigned", "driver_arriving", "in_progress"] }
+      },
+      select: { id: true, rideNumber: true, status: true }
+    });
+    if (activeRide) {
+      throw new ApiError(409, "active_ride_exists", `Ride ${activeRide.rideNumber} is still active. Finish or cancel it first.`);
+    }
+
+    let ride = await tx.ride.create({
+      data: {
+        rideNumber: newRideNumber(),
+        riderId: input.riderId,
+        status: "requested",
+        pickupLabel: quote.pickup.label,
+        pickupAddress: quote.pickup.address,
+        pickupLat: quote.pickup.lat,
+        pickupLng: quote.pickup.lng,
+        dropoffLabel: quote.dropoff.label,
+        dropoffAddress: quote.dropoff.address,
+        dropoffLat: quote.dropoff.lat,
+        dropoffLng: quote.dropoff.lng,
+        vehicleClass: quote.vehicleClass.id,
+        distanceMeters: quote.distanceMeters,
+        durationMinutes: quote.durationMinutes,
+        fareKobo: BigInt(quote.fareKobo),
+        currency: quote.currency,
+        paymentMethod: input.paymentMethod,
+        paymentStatus: "pending"
+      }
+    });
+
+    if (input.paymentMethod === "wallet") {
+      const riderWallet = await ensureWallet(tx, { userId: input.riderId, ownerType: "CUSTOMER" });
+      const fare = BigInt(quote.fareKobo);
+      const locked = await tx.$queryRaw<Array<{ availableKobo: bigint }>>`
+        SELECT "availableKobo" FROM "Wallet" WHERE id = ${riderWallet.id} FOR UPDATE
+      `;
+      if (!locked[0] || locked[0].availableKobo < fare) {
+        throw new ApiError(
+          402,
+          "insufficient_wallet",
+          "NaijaPay wallet balance is below this fare. Top up or choose cash."
+        );
+      }
+      await tx.wallet.update({
+        where: { id: riderWallet.id },
+        data: { availableKobo: { decrement: fare }, heldKobo: { increment: fare } }
+      });
+      const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
+      await tx.wallet.update({ where: { id: platform.id }, data: { heldKobo: { increment: fare } } });
+
+      const reference = `RIDE-${ride.id}-HOLD`;
+      await postBalancedTransaction({
+        tx,
+        actorId: input.riderId,
+        walletId: riderWallet.id,
+        type: "hold",
+        amountKobo: fare,
+        reference,
+        description: `Fare hold for ${ride.rideNumber}`,
+        entries: [
+          { walletId: riderWallet.id, direction: "DEBIT", amountKobo: fare, memo: "Ride fare held from rider wallet" },
+          { walletId: platform.id, direction: "CREDIT", amountKobo: fare, memo: "Ride fare held in platform escrow" }
+        ]
+      });
+      ride = await tx.ride.update({
+        where: { id: ride.id },
+        data: { paymentStatus: "held", paymentReference: reference }
+      });
+    }
+
+    await addRideEvent(tx, {
+      rideId: ride.id,
+      status: "requested",
+      label: rideStatusLabel.requested,
+      description:
+        input.paymentMethod === "wallet"
+          ? `Ride requested. ${quote.currency} fare held in NaijaPay until the trip is completed.`
+          : "Ride requested. Fare is payable in cash to the driver at the end of the trip.",
+      actorId: input.riderId
+    });
+    await recordSystemEvent({
+      tx,
+      type: "ride.requested",
+      actorId: input.riderId,
+      entity: "Ride",
+      entityId: ride.id,
+      payload: { rideNumber: ride.rideNumber, paymentMethod: input.paymentMethod, fareKobo: ride.fareKobo.toString() }
+    });
+    await recordAudit({
+      tx,
+      actorId: input.riderId,
+      action: "ride.requested",
+      entity: "Ride",
+      entityId: ride.id,
+      metadata: { rideNumber: ride.rideNumber, fareKobo: ride.fareKobo.toString() }
+    });
+
+    return loadRide(tx, ride.id);
+  });
+}
+
+async function refundRideHold(
+  tx: Db,
+  ride: {
+    id: string;
+    riderId: string;
+    fareKobo: bigint;
+    paymentMethod: RidePaymentMethod;
+    paymentStatus: string;
+  },
+  actorId: string
+) {
+  if (ride.paymentMethod !== "wallet" || ride.paymentStatus !== "held") return null;
+  const riderWallet = await ensureWallet(tx, { userId: ride.riderId, ownerType: "CUSTOMER" });
+  const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
+  const fare = ride.fareKobo;
+
+  const riderRelease = await tx.wallet.updateMany({
+    where: { id: riderWallet.id, heldKobo: { gte: fare } },
+    data: { heldKobo: { decrement: fare }, availableKobo: { increment: fare } }
+  });
+  const platformRelease = await tx.wallet.updateMany({
+    where: { id: platform.id, heldKobo: { gte: fare } },
+    data: { heldKobo: { decrement: fare } }
+  });
+  if (riderRelease.count === 0 || platformRelease.count === 0) {
+    throw new ApiError(409, "hold_conflict", "The ride fare hold is no longer available to refund.");
+  }
+
+  const reference = `RIDE-${ride.id}-REFUND`;
+  await postBalancedTransaction({
+    tx,
+    actorId,
+    walletId: riderWallet.id,
+    type: "refund",
+    amountKobo: fare,
+    reference,
+    description: `Ride fare returned for ${ride.id}`,
+    entries: [
+      { walletId: platform.id, direction: "DEBIT", amountKobo: fare, memo: "Ride fare hold returned" },
+      { walletId: riderWallet.id, direction: "CREDIT", amountKobo: fare, memo: "Ride fare refunded to rider wallet" }
+    ]
+  });
+  return reference;
+}
+
+export async function cancelRide(input: {
+  actorId: string;
+  isAdmin: boolean;
+  rideId: string;
+  reason?: string | null;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const ride = await loadRide(tx, input.rideId);
+    if (!input.isAdmin && ride.riderId !== input.actorId) {
+      throw new ApiError(403, "forbidden", "This ride belongs to another account.");
+    }
+
+    if (ride.status === "cancelled") return ride;
+    if (!cancellable.includes(ride.status)) {
+      throw new ApiError(
+        409,
+        "ride_in_progress",
+        ride.status === "in_progress"
+          ? "A trip in progress cannot be cancelled here. Contact support if there is a safety issue."
+          : "This ride can no longer be cancelled."
+      );
+    }
+
+    const updated = await tx.ride.updateMany({
+      where: { id: ride.id, status: ride.status },
+      data: {
+        status: "cancelled",
+        cancelledAt: new Date(),
+        cancellationReason: input.reason?.slice(0, 300) || "Cancelled by rider."
+      }
+    });
+    if (updated.count === 0) throw new ApiError(409, "ride_changed", "The ride changed while cancelling. Reload and try again.");
+
+    const reference = await refundRideHold(tx, ride, input.actorId);
+    if (reference) {
+      await tx.ride.update({ where: { id: ride.id }, data: { paymentStatus: "refunded", paymentReference: reference } });
+    }
+
+    await addRideEvent(tx, {
+      rideId: ride.id,
+      status: "cancelled",
+      label: rideStatusLabel.cancelled,
+      description: reference
+        ? `Ride cancelled. ${ride.fareKobo.toString()} kobo returned to the rider wallet.`
+        : `Ride cancelled. ${input.reason || "No fare was charged."}`,
+      actorId: input.actorId
+    });
+    await recordSystemEvent({
+      tx,
+      type: "ride.cancelled",
+      actorId: input.actorId,
+      entity: "Ride",
+      entityId: ride.id,
+      payload: { refunded: Boolean(reference) }
+    });
+    await recordAudit({
+      tx,
+      actorId: input.actorId,
+      action: input.isAdmin ? "ride.cancelled_by_admin" : "ride.cancelled",
+      entity: "Ride",
+      entityId: ride.id,
+      metadata: { refunded: Boolean(reference), reason: input.reason ?? null }
+    });
+
+    return loadRide(tx, ride.id);
+  });
+}
+
+export async function getDriverForUser(userId: string) {
+  const driver = await prisma.driverProfile.findUnique({ where: { userId } });
+  if (!driver) throw new ApiError(403, "not_a_driver", "No driver profile is linked to this account.");
+  if (driver.status !== "approved" || !driver.active) {
+    throw new ApiError(403, "driver_not_approved", "This driver profile is not approved for trips.");
+  }
+  return driver;
+}
+
+export async function acceptRide(input: { userId: string; rideId: string }) {
+  const driver = await getDriverForUser(input.userId);
+  return prisma.$transaction(async (tx) => {
+    const ride = await tx.ride.findUnique({ where: { id: input.rideId } });
+    if (!ride) throw new ApiError(404, "ride_not_found", "Ride not found.");
+    if (ride.status === "cancelled") throw new ApiError(409, "ride_cancelled", "This ride was cancelled by the rider.");
+
+    const accepted = await tx.ride.updateMany({
+      where: { id: input.rideId, status: "requested", driverId: null },
+      data: { driverId: driver.id, status: "driver_assigned", acceptedAt: new Date() }
+    });
+    if (accepted.count === 0) {
+      throw new ApiError(409, "ride_taken", "Another driver has already accepted this ride, or it is no longer available.");
+    }
+
+    await addRideEvent(tx, {
+      rideId: ride.id,
+      status: "driver_assigned",
+      label: rideStatusLabel.driver_assigned,
+      description: `${driver.vehicleMake} ${driver.vehicleModel} (${driver.vehiclePlate}) accepted the ride.`,
+      actorId: input.userId
+    });
+    await recordSystemEvent({
+      tx,
+      type: "ride.driver_assigned",
+      actorId: input.userId,
+      entity: "Ride",
+      entityId: ride.id,
+      payload: { driverId: driver.id }
+    });
+    await recordAudit({
+      tx,
+      actorId: input.userId,
+      action: "ride.driver_assigned",
+      entity: "Ride",
+      entityId: ride.id,
+      metadata: { driverId: driver.id }
+    });
+
+    return loadRide(tx, ride.id);
+  });
+}
+
+async function releaseHoldToDriver(
+  tx: Db,
+  ride: { id: string; fareKobo: bigint; paymentMethod: RidePaymentMethod; paymentStatus: string; riderId: string },
+  driverUserId: string,
+  actorId: string
+) {
+  if (ride.paymentMethod !== "wallet" || ride.paymentStatus !== "held") return null;
+  const fare = ride.fareKobo;
+  const riderWallet = await ensureWallet(tx, { userId: ride.riderId, ownerType: "CUSTOMER" });
+  const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
+  const driverWallet = await ensureWallet(tx, { userId: driverUserId, ownerType: "DRIVER" });
+
+  const riderRelease = await tx.wallet.updateMany({
+    where: { id: riderWallet.id, heldKobo: { gte: fare } },
+    data: { heldKobo: { decrement: fare } }
+  });
+  const platformRelease = await tx.wallet.updateMany({
+    where: { id: platform.id, heldKobo: { gte: fare } },
+    data: { heldKobo: { decrement: fare } }
+  });
+  if (riderRelease.count === 0 || platformRelease.count === 0) {
+    throw new ApiError(409, "hold_conflict", "The ride fare hold is no longer available to release.");
+  }
+  await tx.wallet.update({ where: { id: driverWallet.id }, data: { availableKobo: { increment: fare } } });
+
+  const reference = `RIDE-${ride.id}-RELEASE`;
+  await postBalancedTransaction({
+    tx,
+    actorId,
+    walletId: driverWallet.id,
+    type: "release",
+    amountKobo: fare,
+    reference,
+    description: `Ride fare paid to driver for ${ride.id}`,
+    entries: [
+      { walletId: platform.id, direction: "DEBIT", amountKobo: fare, memo: "Ride fare hold released" },
+      { walletId: driverWallet.id, direction: "CREDIT", amountKobo: fare, memo: "Ride fare paid to driver" }
+    ]
+  });
+  return reference;
+}
+
+export async function driverUpdateRideStatus(input: {
+  userId: string;
+  rideId: string;
+  status: Extract<RideStatus, "driver_arriving" | "in_progress" | "completed">;
+}) {
+  const driver = await getDriverForUser(input.userId);
+
+  return prisma.$transaction(async (tx) => {
+    const ride = await loadRide(tx, input.rideId);
+    if (ride.driverId !== driver.id) throw new ApiError(403, "forbidden", "This ride is assigned to another driver.");
+    if (ride.status === "completed" && input.status === "completed") return ride;
+
+    assertRideTransition(ride.status, input.status);
+    if (input.status === "completed") {
+      if (ride.status !== "in_progress") throw new ApiError(409, "trip_not_started", "Start the trip before completing it.");
+    }
+
+    const now = new Date();
+    const updated = await tx.ride.updateMany({
+      where: { id: ride.id, driverId: driver.id, status: ride.status },
+      data: {
+        status: input.status,
+        ...(input.status === "driver_arriving" ? { arrivedAt: now } : {}),
+        ...(input.status === "in_progress" ? { startedAt: ride.startedAt ?? now } : {}),
+        ...(input.status === "completed" ? { completedAt: now } : {})
+      }
+    });
+    if (updated.count === 0) throw new ApiError(409, "ride_changed", "The ride changed while updating. Reload and try again.");
+
+    let paymentReference: string | null = null;
+    if (input.status === "completed") {
+      paymentReference = await releaseHoldToDriver(tx, ride, ride.driver?.user.id ?? driver.userId, input.userId);
+      await tx.ride.update({
+        where: { id: ride.id },
+        data: paymentReference
+          ? { paymentStatus: "paid", paymentReference }
+          : { paymentStatus: ride.paymentMethod === "cash" ? "pending" : ride.paymentStatus }
+      });
+    }
+
+    const description =
+      input.status === "driver_arriving"
+        ? "Driver has arrived at the pick-up point."
+        : input.status === "in_progress"
+          ? "Trip started. The fare was locked at request time."
+          : paymentReference
+            ? "Trip completed. Fare released from the rider wallet to the driver."
+            : "Trip completed. Cash fare is due to the driver.";
+
+    await addRideEvent(tx, {
+      rideId: ride.id,
+      status: input.status,
+      label: rideStatusLabel[input.status],
+      description,
+      actorId: input.userId
+    });
+    await recordSystemEvent({
+      tx,
+      type: `ride.${input.status}`,
+      actorId: input.userId,
+      entity: "Ride",
+      entityId: ride.id,
+      payload: { paymentReference }
+    });
+    await recordAudit({
+      tx,
+      actorId: input.userId,
+      action: `ride.${input.status}`,
+      entity: "Ride",
+      entityId: ride.id,
+      metadata: { paymentReference }
+    });
+
+    return loadRide(tx, ride.id);
+  });
+}
+
+export async function releaseRide(input: { userId: string; rideId: string; reason?: string | null }) {
+  const driver = await getDriverForUser(input.userId);
+  return prisma.$transaction(async (tx) => {
+    const ride = await loadRide(tx, input.rideId);
+    if (ride.driverId !== driver.id) throw new ApiError(403, "forbidden", "This ride is assigned to another driver.");
+    if (!["driver_assigned", "driver_arriving"].includes(ride.status)) {
+      throw new ApiError(409, "cannot_release", "Only an accepted ride that has not started can be released.");
+    }
+
+    const updated = await tx.ride.updateMany({
+      where: { id: ride.id, driverId: driver.id, status: ride.status },
+      data: { status: "requested", driverId: null, acceptedAt: null, arrivedAt: null }
+    });
+    if (updated.count === 0) throw new ApiError(409, "ride_changed", "The ride changed while releasing. Reload and try again.");
+
+    await addRideEvent(tx, {
+      rideId: ride.id,
+      status: "requested",
+      label: "Driver released the ride",
+      description: input.reason?.slice(0, 300) || "The ride is open again for another driver.",
+      actorId: input.userId
+    });
+    await recordAudit({
+      tx,
+      actorId: input.userId,
+      action: "ride.driver_released",
+      entity: "Ride",
+      entityId: ride.id,
+      metadata: { reason: input.reason ?? null }
+    });
+
+    return loadRide(tx, ride.id);
+  });
+}
+
+export async function markCashCollected(input: { userId: string; rideId: string }) {
+  const driver = await getDriverForUser(input.userId);
+  return prisma.$transaction(async (tx) => {
+    const ride = await loadRide(tx, input.rideId);
+    if (ride.driverId !== driver.id) throw new ApiError(403, "forbidden", "This ride is assigned to another driver.");
+    if (ride.paymentMethod !== "cash") throw new ApiError(409, "not_cash", "This ride was paid from the wallet.");
+    if (ride.status !== "completed") throw new ApiError(409, "trip_not_complete", "Cash can only be recorded after the trip is completed.");
+    if (ride.paymentStatus === "paid") return ride;
+
+    const updated = await tx.ride.updateMany({
+      where: { id: ride.id, paymentStatus: "pending" },
+      data: { paymentStatus: "paid", paymentReference: `RIDE-${ride.id}-CASH` }
+    });
+    if (updated.count === 0) throw new ApiError(409, "payment_changed", "The ride payment changed. Reload and try again.");
+
+    await addRideEvent(tx, {
+      rideId: ride.id,
+      status: "completed",
+      label: "Cash fare recorded",
+      description: "Driver confirmed the cash fare was collected from the rider.",
+      actorId: input.userId
+    });
+    await recordAudit({
+      tx,
+      actorId: input.userId,
+      action: "ride.cash_collected",
+      entity: "Ride",
+      entityId: ride.id,
+      metadata: { fareKobo: ride.fareKobo.toString() }
+    });
+
+    return loadRide(tx, ride.id);
+  });
+}
+
+export async function listRidesForRider(riderId: string) {
+  return prisma.ride.findMany({
+    where: { riderId },
+    include: rideInclude,
+    orderBy: { createdAt: "desc" },
+    take: 30
+  });
+}
+
+export async function getRideForUser(input: { userId: string; isAdmin: boolean; rideId: string }) {
+  const ride = await loadRide(prisma, input.rideId);
+  if (input.isAdmin || ride.riderId === input.userId || ride.driver?.user.id === input.userId) return ride;
+  throw new ApiError(403, "forbidden", "This ride belongs to another account.");
+}
+
+export async function listDriverRides(userId: string) {
+  const driver = await getDriverForUser(userId);
+  const [open, active, recent] = await Promise.all([
+    prisma.ride.findMany({
+      where: { status: "requested" },
+      select: openRideSelect,
+      orderBy: { requestedAt: "asc" },
+      take: 50
+    }),
+    prisma.ride.findMany({
+      where: { driverId: driver.id, status: { in: ["driver_assigned", "driver_arriving", "in_progress"] } },
+      include: rideInclude,
+      orderBy: { acceptedAt: "desc" }
+    }),
+    prisma.ride.findMany({
+      where: { driverId: driver.id, status: { in: ["completed", "cancelled"] } },
+      include: rideInclude,
+      orderBy: { createdAt: "desc" },
+      take: 10
+    })
+  ]);
+  return { driver, open, active, recent };
+}
+
+export async function listAllRides() {
+  return prisma.ride.findMany({
+    include: rideInclude,
+    orderBy: { createdAt: "desc" },
+    take: 100
+  });
+}
