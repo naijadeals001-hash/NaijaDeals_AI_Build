@@ -157,7 +157,7 @@ export const verticals: Vertical[] = [
     icon: Building2,
     label: "Hotels, shortlets, apartments",
     description: "Shortlets and hotels scored for power and safety.",
-    image: "/real-photography/module-stay.jpg", // TODO(blocked): real NaijaStay accommodation photograph required. Current source is "NaijaEats Nigerian Family Feast" (food), which does not represent hotels or shortlets.
+    image: "/real-photography/module-stay.jpg", // Original NaijaDeals artwork: a modern Lagos shortlet at dusk. Generated illustration (not a photograph); replace with supplied accommodation photography when available.
     accent: "#c084fc",
     status: "setup",
     statusLabel: "Setup required",
@@ -171,7 +171,7 @@ export const verticals: Vertical[] = [
     icon: Headphones,
     label: "Music, video, creators",
     description: "African charts, creator rooms and licensed audio.",
-    image: "/real-photography/module-stream.jpg", // TODO(blocked): real NaijaStream music/creator photograph required. Current source is "NaijaEats Lagos Twilight Feast" (food), which does not represent music or creators.
+    image: "/real-photography/module-stream.jpg", // Original NaijaDeals artwork: headphones, vinyl and a waveform for African creators. Generated illustration (not a photograph); replace with supplied music photography when available.
     accent: "#f472b6",
     status: "setup",
     statusLabel: "Setup required",
@@ -199,7 +199,7 @@ export const verticals: Vertical[] = [
     icon: Bot,
     label: "Concierge and support",
     description: "Help across the ecosystem, only when configured.",
-    image: "/real-photography/module-aura.jpg", // TODO(blocked): real Aura AI concierge/support photograph required. Current source is "Lagos Rooftop Solar Installation" (energy), which does not represent a shopping/logistics/support concierge.
+    image: "/real-photography/module-aura.jpg", // Original NaijaDeals artwork: an assistant orb with chat bubbles for concierge and support. Generated illustration (not a photograph); replace with supplied support photography when available.
     accent: "#22d3ee",
     status: "setup",
     statusLabel: "Setup required",

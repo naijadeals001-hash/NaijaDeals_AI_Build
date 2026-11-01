@@ -10,6 +10,7 @@ import {
 } from "@/lib/config/drive";
 import { ensureWallet } from "@/lib/payments/service";
 import { recordAudit } from "./audit.service";
+import { startDriveSweeper } from "./drive-sweeper";
 import { recordSystemEvent } from "./event.service";
 import { postBalancedTransaction } from "./wallet.service";
 
@@ -421,6 +422,16 @@ export async function acceptRide(input: { userId: string; rideId: string }) {
     if (!ride) throw new ApiError(404, "ride_not_found", "Ride not found.");
     if (ride.status === "cancelled") throw new ApiError(409, "ride_cancelled", "This ride was cancelled by the rider.");
 
+    // A deadline can pass without anyone reading the ride. Release it inside this
+    // transaction so a driver offering to take over is never told it is taken forever.
+    if (
+      (ride.status === "driver_assigned" || ride.status === "driver_arriving") &&
+      ride.assignmentExpiresAt &&
+      ride.assignmentExpiresAt.getTime() < Date.now()
+    ) {
+      await releaseExpiredRide(tx, ride, new Date());
+    }
+
     const accepted = await tx.ride.updateMany({
       where: { id: input.rideId, status: "requested", driverId: null },
       data: {
@@ -512,10 +523,15 @@ export async function driverUpdateRideStatus(input: {
 }) {
   const driver = await getDriverForUser(input.userId);
 
-  return prisma.$transaction(async (tx) => {
+  // The transaction reports what happened instead of throwing on expiry. A throw
+  // inside `$transaction` rolls the release back, so the 409 has to be raised after
+  // the release has been committed.
+  const result = await prisma.$transaction(async (tx) => {
     const ride = await loadRide(tx, input.rideId);
     if (ride.driverId !== driver.id) throw new ApiError(403, "forbidden", "This ride is assigned to another driver.");
-    if (ride.status === "completed" && input.status === "completed") return ride;
+    if (ride.status === "completed" && input.status === "completed") {
+      return { outcome: "ok" as const, ride };
+    }
 
     assertRideTransition(ride.status, input.status);
     if (input.status === "completed") {
@@ -523,8 +539,22 @@ export async function driverUpdateRideStatus(input: {
     }
 
     const now = new Date();
+    /** Transitions out of an assignment must not revive a deadline that already passed. */
+    const assignmentPending = ride.status === "driver_assigned" || ride.status === "driver_arriving";
     const updated = await tx.ride.updateMany({
-      where: { id: ride.id, driverId: driver.id, status: ride.status },
+      where: {
+        id: ride.id,
+        driverId: driver.id,
+        status: ride.status,
+        ...(assignmentPending
+          ? {
+              OR: [
+                { assignmentExpiresAt: null },
+                { assignmentExpiresAt: { gte: now } }
+              ]
+            }
+          : {})
+      },
       data: {
         status: input.status,
         ...(input.status === "driver_arriving"
@@ -536,7 +566,15 @@ export async function driverUpdateRideStatus(input: {
         ...(input.status === "completed" ? { completedAt: now, assignmentExpiresAt: null } : {})
       }
     });
-    if (updated.count === 0) throw new ApiError(409, "ride_changed", "The ride changed while updating. Reload and try again.");
+    if (updated.count === 0) {
+      // The conditional update lost. If the deadline is what closed the door, release
+      // the ride inside this transaction and report it, so the release commits before
+      // the caller sees the 409.
+      if (assignmentPending && (await releaseExpiredRide(tx, ride, now))) {
+        return { outcome: "expired" as const };
+      }
+      return { outcome: "changed" as const };
+    }
 
     let paymentReference: string | null = null;
     if (input.status === "completed") {
@@ -582,8 +620,20 @@ export async function driverUpdateRideStatus(input: {
       metadata: { paymentReference }
     });
 
-    return loadRide(tx, ride.id);
+    return { outcome: "ok" as const, ride: await loadRide(tx, ride.id) };
   });
+
+  if (result.outcome === "expired") {
+    throw new ApiError(
+      409,
+      "assignment_expired",
+      "This assignment expired and the ride went back to the open queue. Nothing extra was charged."
+    );
+  }
+  if (result.outcome === "changed") {
+    throw new ApiError(409, "ride_changed", "The ride changed while updating. Reload and try again.");
+  }
+  return result.ride;
 }
 
 export async function releaseRide(input: { userId: string; rideId: string; reason?: string | null }) {
@@ -663,15 +713,62 @@ export async function markCashCollected(input: { userId: string; rideId: string 
 }
 
 /**
+ * Release one ride if its assignment deadline has genuinely passed.
+ *
+ * The conditional update re-checks status, driver and deadline in the same statement
+ * that changes the row, so a sweep racing a driver (or another sweep) can only win
+ * once. Returns the ride id when this call did the release, otherwise null.
+ */
+async function releaseExpiredRide(
+  tx: Db,
+  ride: { id: string; rideNumber: string; status: RideStatus; driverId: string | null },
+  now: Date
+) {
+  const updated = await tx.ride.updateMany({
+    where: {
+      id: ride.id,
+      status: ride.status,
+      driverId: ride.driverId,
+      assignmentExpiresAt: { lt: now }
+    },
+    data: {
+      status: "requested",
+      driverId: null,
+      acceptedAt: null,
+      arrivedAt: null,
+      assignmentExpiresAt: null
+    }
+  });
+  if (updated.count === 0) return null;
+
+  await addRideEvent(tx, {
+    rideId: ride.id,
+    status: "requested",
+    label: "Driver did not respond in time",
+    description: `The assigned driver made no progress for ${DRIVE_ASSIGNMENT_GRACE_MINUTES} minutes, so the ride went back to the open queue automatically. Nothing extra was charged and you do not need to request again.`,
+    actorId: null
+  });
+  await recordAudit({
+    tx,
+    actorId: null,
+    action: "ride.assignment_expired",
+    entity: "Ride",
+    entityId: ride.id,
+    metadata: { rideNumber: ride.rideNumber, previousDriverId: ride.driverId }
+  });
+  return ride.id;
+}
+
+/**
  * Return rides whose assigned driver has gone silent to the open queue.
  *
- * There is no background worker in this deployment, so the sweep runs lazily at the
- * start of every read that a client polls: the rider's ride list, the driver board and
- * the Control Center. A ride can therefore only appear stale until the next client
- * read, which is the same moment anybody could notice it.
+ * Two things call this: a periodic server sweep (see `instrumentation.ts`, every 30
+ * seconds) and the start of every ride read that a client polls. The periodic sweep
+ * means an idle ride returns even when nobody is looking at it; the read-time sweep
+ * keeps a client from ever seeing a deadline that has already passed.
  *
- * Each release is guarded by the exact status and deadline that were read, so two
- * concurrent sweeps (or a sweep racing the driver) release a ride at most once.
+ * Each release is guarded by the exact status, driver and deadline that were read, so
+ * two concurrent sweeps (or a sweep racing the driver) release a ride at most once.
  */
 export async function releaseExpiredAssignments(now: Date = new Date()) {
   const stale = await prisma.ride.findMany({
@@ -687,41 +784,7 @@ export async function releaseExpiredAssignments(now: Date = new Date()) {
   const released: string[] = [];
   for (const ride of stale) {
     try {
-      const changed = await prisma.$transaction(async (tx) => {
-        const updated = await tx.ride.updateMany({
-          where: {
-            id: ride.id,
-            status: ride.status,
-            driverId: ride.driverId,
-            assignmentExpiresAt: { lt: now }
-          },
-          data: {
-            status: "requested",
-            driverId: null,
-            acceptedAt: null,
-            arrivedAt: null,
-            assignmentExpiresAt: null
-          }
-        });
-        if (updated.count === 0) return null;
-
-        await addRideEvent(tx, {
-          rideId: ride.id,
-          status: "requested",
-          label: "Driver did not respond in time",
-          description: `The assigned driver made no progress for ${DRIVE_ASSIGNMENT_GRACE_MINUTES} minutes, so the ride went back to the open queue automatically. Nothing extra was charged and you do not need to request again.`,
-          actorId: null
-        });
-        await recordAudit({
-          tx,
-          actorId: null,
-          action: "ride.assignment_expired",
-          entity: "Ride",
-          entityId: ride.id,
-          metadata: { rideNumber: ride.rideNumber, previousDriverId: ride.driverId }
-        });
-        return ride.id;
-      });
+      const changed = await prisma.$transaction((tx) => releaseExpiredRide(tx, ride, now));
       if (changed) released.push(changed);
     } catch {
       // Another sweep or the driver won the race. The ride is already moving on.
@@ -742,6 +805,9 @@ export async function listRidesForRider(riderId: string) {
 }
 
 export async function getRideForUser(input: { userId: string; isAdmin: boolean; rideId: string }) {
+  // Keep a single-ride read honest too: never return an assignment whose deadline
+  // has already passed.
+  await releaseExpiredAssignments();
   const ride = await loadRide(prisma, input.rideId);
   if (input.isAdmin || ride.riderId === input.userId || ride.driver?.user.id === input.userId) return ride;
   throw new ApiError(403, "forbidden", "This ride belongs to another account.");
@@ -888,3 +954,10 @@ export async function deleteSavedPlace(input: { userId: string; id: string }) {
   });
   return { deleted: true };
 }
+
+/*
+ * Start the background expiry sweeper the first time this module is loaded by a Node
+ * server. Read-time sweeps still exist; this is what guarantees an idle ride returns
+ * even when no client polls. The timer is unref'd and guarded once per process.
+ */
+startDriveSweeper(releaseExpiredAssignments);

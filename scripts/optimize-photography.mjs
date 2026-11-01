@@ -18,12 +18,11 @@ const outDir = path.join(process.cwd(), "public", "real-photography");
 
 /** Source photograph -> published file name.
  *
- * BLOCKED IMAGERY: three module cards still lack a context-appropriate original
- * photograph. They keep their dedicated files so modules stay distinguishable, but
- * each is a known mismatch until real photography is supplied:
- *   module-stay   <- "NaijaEats Nigerian Family Feast"   (needs accommodation)
- *   module-stream <- "NaijaEats Lagos Twilight Feast"    (needs music/creators)
- *   module-aura   <- "Lagos Rooftop Solar Installation"  (needs concierge/support)
+ * NaijaStay, NaijaStream and Aura AI are deliberately absent: their cards use the
+ * original generated NaijaDeals artwork in `public/generated/`, rasterised by
+ * `scripts/render-module-art.mjs`. Keeping them out of this map means re-running this
+ * photography script can never overwrite those three with an unrelated food or solar
+ * photograph again.
  */
 const mapping = {
   "NaijaShop Electronics Market in Nigeria.png": "module-shop",
@@ -32,10 +31,7 @@ const mapping = {
   "NaijaDrive at Lagos Sunset.png": "module-drive",
   "NaijaSend Delivery in Lagos.png": "module-send",
   "NaijaGigs AC Repair in Lagos.png": "module-gigs",
-  "NaijaEats Nigerian Family Feast.png": "module-stay",
-  "NaijaEats Lagos Twilight Feast.png": "module-stream",
   "NaijaWallet Market Payments in Nigeria.png": "module-wallet",
-  "Lagos Rooftop Solar Installation.png": "module-aura",
   "NaijaEats Jollof Feast.png": "hero-ecosystem"
 };
 

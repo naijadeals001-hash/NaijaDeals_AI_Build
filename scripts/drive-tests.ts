@@ -1,4 +1,6 @@
-﻿/**
+﻿import { PrismaClient } from "@prisma/client";
+
+/**
  * NaijaDrive end-to-end verification against a running local server.
  *
  * Usage:
@@ -11,6 +13,24 @@
  */
 
 const BASE = (process.env.TEST_BASE_URL || "http://localhost:3001").replace(/\/$/, "");
+
+/**
+ * The API intentionally has no "set a deadline in the past" endpoint, so these
+ * expiry tests move the clock in the database directly. Every other assertion still
+ * goes through HTTP.
+ */
+const db = new PrismaClient();
+
+async function forceDeadline(rideId: string, when: Date) {
+  await db.ride.update({ where: { id: rideId }, data: { assignmentExpiresAt: when } });
+}
+
+async function readRideRow(rideId: string) {
+  return db.ride.findUnique({
+    where: { id: rideId },
+    select: { status: true, driverId: true, startedAt: true, assignmentExpiresAt: true }
+  });
+}
 
 type Json = Record<string, any>;
 
@@ -553,12 +573,157 @@ async function main() {
     assert(after.held === before.held, "held balance was not fully restored");
   });
 
+  await step("An expired assignment is released when another driver accepts", async () => {
+    const request = await customer.post("/api/drive/rides", {
+      pickupId: "maryland",
+      dropoffId: "apapa",
+      vehicleClass: "economy",
+      paymentMethod: "cash"
+    });
+    isStatus(request, 201, "expired accept request");
+    const ride = request.body as Json;
+    isStatus(await driver1.post(`/api/drive/driver/rides/${ride.id}/accept`), 200, "first driver accepts");
+
+    // Nobody reads the ride after this point: acceptance itself must notice the expiry.
+    await forceDeadline(ride.id, new Date(Date.now() - 1000));
+
+    const second = await driver2.post(`/api/drive/driver/rides/${ride.id}/accept`);
+    isStatus(second, 200, "second driver accepts expired assignment");
+    const accepted = second.body as Json;
+    assert(accepted.status === "driver_assigned", `expired assignment was not accepted: ${accepted.status}`);
+    assert(
+      new Date(accepted.assignmentExpiresAt).getTime() > Date.now(),
+      "the new acceptance did not receive a future deadline"
+    );
+
+    await driver2.post(`/api/drive/driver/rides/${ride.id}/release`, { reason: "Expiry test cleanup" });
+    await customer.post(`/api/drive/rides/${ride.id}/cancel`, { reason: "Expiry test cleanup" });
+  });
+
+  await step("A driver cannot advance a ride whose deadline has passed", async () => {
+    const request = await customer.post("/api/drive/rides", {
+      pickupId: "yaba-tejuosho",
+      dropoffId: "lekki-phase-1",
+      vehicleClass: "economy",
+      paymentMethod: "cash"
+    });
+    isStatus(request, 201, "expired advance request");
+    const ride = request.body as Json;
+    isStatus(await driver1.post(`/api/drive/driver/rides/${ride.id}/accept`), 200, "expired advance accept");
+    await forceDeadline(ride.id, new Date(Date.now() - 1000));
+
+    const arriving = await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, {
+      status: "driver_arriving"
+    });
+    isStatus(arriving, 409, "expired driver arriving rejected");
+    assert(
+      JSON.stringify(arriving.body).includes("assignment_expired"),
+      `expected assignment_expired, got ${JSON.stringify(arriving.body)}`
+    );
+
+    const row = await readRideRow(ride.id);
+    assert(row?.status === "requested", `expired ride was not returned to the queue: ${row?.status}`);
+    assert(row?.driverId === null, "expired ride still has a driver attached");
+
+    await customer.post(`/api/drive/rides/${ride.id}/cancel`, { reason: "Expiry test cleanup" });
+  });
+
+  await step("Expiry never requeues a trip that has already started", async () => {
+    const request = await customer.post("/api/drive/rides", {
+      pickupId: "ikeja-city-mall",
+      dropoffId: "maryland",
+      vehicleClass: "economy",
+      paymentMethod: "cash"
+    });
+    isStatus(request, 201, "started expiry request");
+    const ride = request.body as Json;
+    isStatus(await driver1.post(`/api/drive/driver/rides/${ride.id}/accept`), 200, "started expiry accept");
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "driver_arriving" }),
+      200,
+      "started expiry arriving"
+    );
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "in_progress" }),
+      200,
+      "started expiry in progress"
+    );
+
+    // Simulate a stale deadline still sitting on a moving trip, then force a sweep
+    // through a read. It must be ignored because the status is already in_progress.
+    await forceDeadline(ride.id, new Date(Date.now() - 1000));
+    isStatus(await customer.get("/api/drive/rides"), 200, "started expiry rider read");
+
+    const row = await readRideRow(ride.id);
+    assert(row?.status === "in_progress", `a started trip was requeued: ${row?.status}`);
+    assert(row?.driverId !== null, "a started trip lost its driver");
+
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "completed" }),
+      200,
+      "started expiry complete"
+    );
+  });
+
+  await step("Simultaneous start and expiry cannot requeue a started trip", async () => {
+    const outcomes: string[] = [];
+    for (let index = 0; index < 4; index += 1) {
+      const request = await customer.post("/api/drive/rides", {
+        pickupId: "maryland",
+        dropoffId: "apapa",
+        vehicleClass: "economy",
+        paymentMethod: "cash"
+      });
+      isStatus(request, 201, `race ${index} request`);
+      const ride = request.body as Json;
+      isStatus(await driver1.post(`/api/drive/driver/rides/${ride.id}/accept`), 200, `race ${index} accept`);
+      isStatus(
+        await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "driver_arriving" }),
+        200,
+        `race ${index} arriving`
+      );
+
+      // Deadline 150ms ahead, then fire the trip start and a sweeping read together.
+      await forceDeadline(ride.id, new Date(Date.now() + 150));
+      const [start] = await Promise.all([
+        driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "in_progress" }),
+        customer.get("/api/drive/rides")
+      ]);
+
+      const row = await readRideRow(ride.id);
+      outcomes.push(`${start.status}:${row?.status}:${row?.startedAt ? "started" : "not-started"}`);
+
+      assert(
+        !(row?.status === "requested" && row.startedAt),
+        `a started trip was requeued: ${JSON.stringify(row)}`
+      );
+
+      if (row?.status === "in_progress") {
+        assert(row.driverId, "an in-progress trip lost its driver");
+        assert(start.status === 200, `trip started but the driver got HTTP ${start.status}`);
+        isStatus(
+          await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "completed" }),
+          200,
+          `race ${index} complete`
+        );
+      } else {
+        assert(row?.status === "requested", `unexpected race state: ${JSON.stringify(row)}`);
+        assert(row.driverId === null, "a requeued race ride kept its driver");
+        assert(start.status === 409, `expired start should be rejected, got ${start.status}`);
+        await customer.post(`/api/drive/rides/${ride.id}/cancel`, { reason: "Race test cleanup" });
+      }
+    }
+    console.log(`      race outcomes (start:status:started): ${outcomes.join(", ")}`);
+  });
+
   const passed = results.filter((item) => item.ok).length;
   console.log(`\n${passed}/${results.length} checks passed`);
   if (passed !== results.length) {
     console.error(JSON.stringify(results.filter((item) => !item.ok), null, 2));
+    await db.$disconnect();
     process.exit(1);
   }
+  await db.$disconnect();
 }
 
 main().catch((error) => {
