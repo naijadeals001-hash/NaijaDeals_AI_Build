@@ -20,7 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { koboToNaira } from "@/lib/api-client";
+import { koboToNaira, apiClient } from "@/lib/api-client";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
 type Tab = "overview" | "orders" | "applications" | "products" | "payments" | "users" | "deliveries" | "rides" | "payouts" | "audit";
@@ -132,133 +132,43 @@ interface AuditEntry {
 interface AdminDashboardProps {
   initialTab?: Tab;
   onTabChange?: (tab: Tab) => void;
+  overview?: AdminOverview;
+  orders?: OrderSummary[];
+  applications?: ApplicationSummary[];
+  products?: ProductSummary[];
+  payments?: PaymentSummary[];
+  users?: UserSummary[];
+  rides?: RideSummary[];
+  audit?: AuditEntry[];
+  payouts?: PaymentSummary[];
 }
 
 export function AdminDashboard({
   initialTab = "overview",
   onTabChange,
+  overview,
+  orders,
+  applications,
+  products,
+  payments,
+  users,
+  rides,
+  audit,
+  payouts,
 }: AdminDashboardProps = {}) {
   const [tab, setTab] = useState<Tab>(initialTab);
-  const [overview, setOverview] = useState<AdminOverview | null>({
-    users: 1240,
-    vendors: 85,
-    products: 1420,
-    orders: 310,
-    paidOrders: 295,
-    pendingApplications: 4,
-    lowStock: 12,
-    openReturns: 2,
-    grossVerifiedKobo: 1450000000n as unknown as number,
-    refundedKobo: 2500000n as unknown as number,
-    refundCount: 3,
-    completedPaymentCount: 295,
-    escrowHeldKobo: 45000000n as unknown as number,
-    paymentMethods: [
-      { id: "paystack", label: "Paystack", configured: true },
-      { id: "flutterwave", label: "Flutterwave", configured: true },
-      { id: "naijapay", label: "NaijaPay Wallet", configured: true }
-    ]
-  });
-  const [orders, setOrders] = useState<OrderSummary[]>([
-    {
-      id: "ord-1",
-      orderNumber: "ND-2026-9981",
-      customer: { name: "Oluwaseun Adebayo", email: "oluwaseun@example.com" },
-      vendor: { name: "Ikeja Mobile Hub" },
-      status: "paid",
-      paymentStatus: "paid",
-      totalKobo: 14500000n as unknown as number,
-      deliveries: [{ id: "del-1", status: "dispatched", provider: "Gokada", pickupAddress: "Computer Village, Ikeja" }]
-    }
-  ]);
-  const [applications, setApplications] = useState<ApplicationSummary[]>([
-    {
-      id: "app-1",
-      businessName: "Lagos Gadgets Ltd",
-      status: "SUBMITTED",
-      user: { name: "Chinedu Okafor", email: "chinedu@lagosgadgets.test" },
-      market: "Computer Village",
-      pickupAddress: "Shop 12, Allen Avenue",
-      phone: "+234 803 123 4567"
-    }
-  ]);
-  const [products, setProducts] = useState<ProductSummary[]>([
-    {
-      id: "prod-1",
-      name: "TECNO Spark 20 128GB",
-      vendor: { name: "Ikeja Mobile Hub" },
-      priceKobo: 14500000n as unknown as number,
-      status: "ACTIVE",
-      stock: { quantity: 15, lowStockLevel: 5 }
-    }
-  ]);
-  const [payments, setPayments] = useState<PaymentSummary[]>([
-    {
-      id: "pay-1",
-      order: { orderNumber: "ND-2026-9981", vendor: { name: "Ikeja Mobile Hub" } },
-      provider: "paystack",
-      providerReference: "pstk_ref_891234",
-      amountKobo: 14500000n as unknown as number,
-      status: "success",
-      reference: "pstk_ref_891234"
-    }
-  ]);
-  const [users, setUsers] = useState<UserSummary[]>([
-    {
-      id: "usr-1",
-      name: "Admin User",
-      email: "admin@naijadeals.local",
-      actorType: "ADMIN",
-      roles: [{ role: { name: "Super Administrator" } }],
-      vendors: []
-    }
-  ]);
-  const [couriers, setCouriers] = useState<any[]>([
-    { id: "cour-1", name: "Gokada Express" }
-  ]);
-  const [rides, setRides] = useState<RideSummary[]>([
-    {
-      id: "ride-1",
-      rideNumber: "RD-4412",
-      pickupLabel: "Ikeja City Mall",
-      dropoffLabel: "Victoria Island",
-      status: "requested",
-      vehicleClass: "NaijaDrive Economy",
-      fareKobo: 350000n as unknown as number,
-      currency: "NGN",
-      paymentMethod: "wallet",
-      paymentStatus: "held",
-      rider: { name: "Emeka Obi" },
-      driver: { user: { name: "Tunde Bakare" } }
-    }
-  ]);
-  const [payouts, setPayouts] = useState<PaymentSummary[]>([
-    {
-      id: "payout-1",
-      vendor: { name: "Ikeja Mobile Hub" },
-      amountKobo: 120000000n as unknown as number,
-      status: "PENDING",
-      reference: "PAYOUT-2026-01",
-      order: {},
-      provider: "bank_transfer",
-      providerReference: ""
-    }
-  ]);
-  const [vendors, setVendors] = useState<any[]>([
-    { id: "vend-1", name: "Ikeja Mobile Hub" }
-  ]);
-  const [audit, setAudit] = useState<AuditEntry[]>([
-    {
-      id: "aud-1",
-      action: "ADMIN_LOGIN",
-      entity: "Session",
-      actor: { name: "Admin User" },
-      createdAt: new Date().toISOString()
-    }
-  ]);
-  const [status, setStatus] = useState<"loading" | "ready" | "error" | "forbidden">("ready");
-  const [error, setError] = useState("");
+  const [overviewState, setOverviewState] = useState<{ data: AdminOverview | null; loading: boolean; error: string }>({ data: overview ?? null, loading: false, error: "" });
+  const [ordersData] = useState<OrderSummary[]>(orders ?? []);
+  const [applicationsData] = useState<ApplicationSummary[]>(applications ?? []);
+  const [productsData] = useState<ProductSummary[]>(products ?? []);
+  const [paymentsData] = useState<PaymentSummary[]>(payments ?? []);
+  const [usersData] = useState<UserSummary[]>(users ?? []);
+  const [ridesData] = useState<RideSummary[]>(rides ?? []);
+  const [auditData] = useState<AuditEntry[]>(audit ?? []);
+  const [payoutsData] = useState<PaymentSummary[]>(payouts ?? []);
+  const [couriersData] = useState<any[]>([]);
   const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
   const { t } = useLocale();
   const router = useRouter();
@@ -319,18 +229,18 @@ export function AdminDashboard({
         ))}
       </div>
 
-      {tab === "overview" && overview && (
+      {tab === "overview" && overviewState.data && (
         <div className="space-y-6">
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              ["Total Users", overview.users],
-              ["Active Vendors", overview.vendors],
-              ["Total Products", overview.products],
-              ["Total Orders", overview.orders],
-              ["Paid Orders", overview.paidOrders],
-              ["Pending Applications", overview.pendingApplications],
-              ["Low Stock Items", overview.lowStock],
-              ["Open Returns", overview.openReturns]
+              ["Total Users", overviewState.data?.users],
+              ["Active Vendors", overviewState.data?.vendors],
+              ["Total Products", overviewState.data?.products],
+              ["Total Orders", overviewState.data?.orders],
+              ["Paid Orders", overviewState.data?.paidOrders],
+              ["Pending Applications", overviewState.data?.pendingApplications],
+              ["Low Stock Items", overviewState.data?.lowStock],
+              ["Open Returns", overviewState.data?.openReturns]
             ].map(([label, value]) => (
               <div key={String(label)} className="rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft">
                 <p className="text-xs font-black uppercase tracking-wide text-muted">{label}</p>
@@ -342,17 +252,17 @@ export function AdminDashboard({
           <section className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-2xl bg-night p-6 text-white shadow-soft">
               <p className="text-xs font-bold uppercase tracking-wider text-white/60">Verified payment volume</p>
-              <p className="mt-2 font-display text-3xl font-extrabold">{koboToNaira(overview.grossVerifiedKobo ?? 0)}</p>
-              <p className="mt-1 text-xs text-white/60">{overview.completedPaymentCount} completed payment(s)</p>
+              <p className="mt-2 font-display text-3xl font-extrabold">{koboToNaira(overviewState.data?.grossVerifiedKobo ?? 0)}</p>
+              <p className="mt-1 text-xs text-white/60">{overviewState.data?.completedPaymentCount} completed payment(s)</p>
             </div>
             <div className="rounded-2xl border border-border-soft bg-canvas p-6 shadow-soft">
               <p className="text-xs font-bold uppercase tracking-wider text-muted">Refunded amount</p>
-              <p className="mt-2 font-display text-3xl font-extrabold text-ink">{koboToNaira(overview.refundedKobo ?? 0)}</p>
-              <p className="mt-1 text-xs text-muted">{overview.refundCount} refund(s)</p>
+              <p className="mt-2 font-display text-3xl font-extrabold text-ink">{koboToNaira(overviewState.data?.refundedKobo ?? 0)}</p>
+              <p className="mt-1 text-xs text-muted">{overviewState.data?.refundCount} refund(s)</p>
             </div>
             <div className="rounded-2xl border border-border-soft bg-canvas p-6 shadow-soft">
               <p className="text-xs font-bold uppercase tracking-wider text-muted">Escrow held</p>
-              <p className="mt-2 font-display text-3xl font-extrabold text-ink">{koboToNaira(overview.escrowHeldKobo ?? 0)}</p>
+              <p className="mt-2 font-display text-3xl font-extrabold text-ink">{koboToNaira(overviewState.data?.escrowHeldKobo ?? 0)}</p>
               <p className="mt-1 text-xs text-muted">Active marketplace escrow</p>
             </div>
           </section>
@@ -360,7 +270,7 @@ export function AdminDashboard({
           <section className="rounded-2xl border border-border-soft bg-canvas p-6 shadow-soft">
             <h2 className="font-display text-lg font-extrabold text-ink">Payment provider configuration</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {overview.paymentMethods?.map((method) => (
+              {overviewState.data?.paymentMethods?.map((method) => (
                 <div key={method.id} className="flex items-center justify-between rounded-xl bg-surface-low p-4">
                   <span className="font-bold text-ink">{method.label}</span>
                   <span className={`rounded-full px-3 py-1 text-xs font-bold ${method.configured ? "bg-primary-soft text-primary" : "bg-amber-soft text-amber"}`}>
@@ -377,11 +287,11 @@ export function AdminDashboard({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl font-extrabold text-ink">Orders management</h2>
-            <span className="text-xs text-muted font-bold">{orders.length} total orders</span>
+            <span className="text-xs text-muted font-bold">{ordersData.length} total orders</span>
           </div>
-          {orders.length === 0 ? <p className="text-sm text-muted">No orders found.</p> : null}
+          {ordersData.length === 0 ? <p className="text-sm text-muted">No orders found.</p> : null}
           <div className="space-y-3">
-            {orders.map((order) => (
+            {ordersData.map((order) => (
               <article key={order.id} className="rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
@@ -432,11 +342,11 @@ export function AdminDashboard({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl font-extrabold text-ink">Seller applications</h2>
-            <span className="text-xs text-muted font-bold">{applications.length} pending review</span>
+            <span className="text-xs text-muted font-bold">{applicationsData.length} pending review</span>
           </div>
-          {applications.length === 0 ? <p className="text-sm text-muted">No seller applications.</p> : null}
+          {applicationsData.length === 0 ? <p className="text-sm text-muted">No seller applications.</p> : null}
           <div className="space-y-3">
-            {applications.map((app) => (
+            {applicationsData.map((app) => (
               <article key={app.id} className="rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
@@ -478,7 +388,7 @@ export function AdminDashboard({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl font-extrabold text-ink">Product catalog moderation</h2>
-            <span className="text-xs text-muted font-bold">{products.length} products listed</span>
+            <span className="text-xs text-muted font-bold">{productsData.length} products listed</span>
           </div>
           <div className="overflow-x-auto rounded-2xl border border-border-soft bg-canvas shadow-soft">
             <table className="w-full min-w-[720px] text-left text-sm">
@@ -493,7 +403,7 @@ export function AdminDashboard({
                 </tr>
               </thead>
               <tbody>
-                {products.map((prod) => (
+                {productsData.map((prod) => (
                   <tr key={prod.id} className="border-b border-border-soft hover:bg-surface-low/50">
                     <td className="py-3 px-4 font-bold text-ink">{prod.name}</td>
                     <td className="py-3 px-4 text-muted">{prod.vendor?.name}</td>
@@ -522,10 +432,10 @@ export function AdminDashboard({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl font-extrabold text-ink">Payment ledger</h2>
-            <span className="text-xs text-muted font-bold">{payments.length} verified transactions</span>
+            <span className="text-xs text-muted font-bold">{paymentsData.length} verified transactions</span>
           </div>
           <div className="space-y-3">
-            {payments.map((pay) => (
+            {paymentsData.map((pay) => (
               <div key={pay.id} className="flex flex-wrap items-center justify-between rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft">
                 <div>
                   <div className="flex items-center gap-2">
@@ -547,7 +457,7 @@ export function AdminDashboard({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl font-extrabold text-ink">User management</h2>
-            <span className="text-xs text-muted font-bold">{users.length} system users</span>
+            <span className="text-xs text-muted font-bold">{usersData.length} system users</span>
           </div>
           <div className="overflow-x-auto rounded-2xl border border-border-soft bg-canvas shadow-soft">
             <table className="w-full min-w-[640px] text-left text-sm">
@@ -561,7 +471,7 @@ export function AdminDashboard({
                 </tr>
               </thead>
               <tbody>
-                {users.map((usr) => (
+                {usersData.map((usr) => (
                   <tr key={usr.id} className="border-b border-border-soft hover:bg-surface-low/50">
                     <td className="py-3 px-4 font-bold text-ink">{usr.name}</td>
                     <td className="py-3 px-4 text-muted">{usr.email}</td>
@@ -582,11 +492,11 @@ export function AdminDashboard({
             <h2 className="font-display text-xl font-extrabold text-ink">Deliveries & Dispatch</h2>
             <span className="text-xs text-muted font-bold">Logistics monitoring</span>
           </div>
-          {orders.flatMap((o) => o.deliveries ?? []).length === 0 ? (
+          {ordersData.flatMap((o) => o.deliveries ?? []).length === 0 ? (
             <p className="text-sm text-muted">No active deliveries.</p>
           ) : null}
           <div className="space-y-3">
-            {orders.flatMap((o) => (o.deliveries ?? []).map((d) => (
+            {ordersData.flatMap((o) => (o.deliveries ?? []).map((d) => (
               <div key={d.id} className="rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
@@ -608,7 +518,7 @@ export function AdminDashboard({
                     className="h-10 rounded-xl border border-border-soft px-3 text-xs font-bold bg-canvas text-ink"
                   >
                     <option value="">Assign courier...</option>
-                    {couriers.map((c) => (
+                    {couriersData.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
@@ -623,10 +533,10 @@ export function AdminDashboard({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl font-extrabold text-ink">NaijaDrive Rides oversight</h2>
-            <span className="text-xs text-muted font-bold">{rides.length} active rides</span>
+            <span className="text-xs text-muted font-bold">{ridesData.length} active rides</span>
           </div>
           <div className="space-y-3">
-            {rides.map((ride) => (
+            {ridesData.map((ride) => (
               <article key={ride.id} className="rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
@@ -658,7 +568,7 @@ export function AdminDashboard({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl font-extrabold text-ink">Vendor Payouts</h2>
-            <span className="text-xs text-muted font-bold">{payouts.length} payout batches</span>
+            <span className="text-xs text-muted font-bold">{payoutsData.length} payout batches</span>
           </div>
           <div className="rounded-2xl border border-border-soft bg-canvas p-6 shadow-soft">
             <h3 className="font-display text-base font-extrabold text-ink">Create new payout batch</h3>
@@ -671,7 +581,7 @@ export function AdminDashboard({
             >
               <select name="vendorId" required className="h-11 rounded-xl border border-border-soft px-3 text-sm bg-canvas text-ink">
                 <option value="">Select vendor...</option>
-                {vendors.map((v) => (
+                {([] as Array<{ id: string; name: string }>).map((v) => (
                   <option key={v.id} value={v.id}>{v.name}</option>
                 ))}
               </select>
@@ -683,7 +593,7 @@ export function AdminDashboard({
             </form>
           </div>
           <div className="space-y-3">
-            {payouts.map((p) => (
+            {payoutsData.map((p) => (
               <div key={p.id} className="flex flex-wrap items-center justify-between rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft">
                 <div>
                   <div className="flex items-center gap-2">
@@ -711,10 +621,10 @@ export function AdminDashboard({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl font-extrabold text-ink">System audit log</h2>
-            <span className="text-xs text-muted font-bold">{audit.length} recent events</span>
+            <span className="text-xs text-muted font-bold">{auditData.length} recent events</span>
           </div>
           <div className="space-y-3">
-            {audit.map((entry) => (
+            {auditData.map((entry) => (
               <div key={entry.id} className="rounded-2xl border border-border-soft bg-canvas p-4 shadow-soft flex items-center justify-between">
                 <div>
                   <p className="font-bold text-ink">{entry.action} &bull; <span className="font-normal text-muted">{entry.entity}</span></p>

@@ -1,27 +1,50 @@
-import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { AdminDashboard } from "@/components/functional/admin-dashboard";
-import { AdminShell } from "@/components/functional/admin-shell";
-import { getSessionUser, isAdmin } from "@/lib/auth/session";
+import { headers } from "next/headers";
 
-export const metadata: Metadata = {
-  title: "Control Center",
-  description: "NaijaDeals administration for orders, sellers, payments, deliveries and payouts."
-};
+export default async function Page({
+  params,
+}: {
+  params: { tab?: string };
+}) {
+  // Server-side data fetching - use absolute URLs via headers
+  const headersList = await headers();
+  const host = headersList.get("host") ?? "localhost:3003";
+  const protocol = host.startsWith("localhost") ? "http" : "https";
+  const baseUrl = `${protocol}://${host}`;
 
-export const dynamic = "force-dynamic";
+  const fetchApi = async (path: string) => {
+    const res = await fetch(`${baseUrl}${path}`, {
+      headers: { Cookie: headersList.get("cookie") ?? "" },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  };
 
-export default async function Page() {
-  const user = await getSessionUser();
-  if (!user) redirect("/login?next=/admin");
-  if (!isAdmin(user)) redirect("/");
+  const overview = await fetchApi("/api/admin/overview");
+  const orders = await fetchApi("/api/admin/orders");
+  const applications = await fetchApi("/api/admin/applications");
+  const products = await fetchApi("/api/admin/products");
+  const payments = await fetchApi("/api/admin/payments");
+  const users = await fetchApi("/api/admin/users");
+  const rides = await fetchApi("/api/admin/rides");
+  const audit = await fetchApi("/api/admin/audit-logs");
+  const payouts = await fetchApi("/api/admin/payouts");
+
+  // Determine initial tab from pathname
+  const initialTab = params?.tab || "overview";
 
   return (
-    <AdminShell
-      user={{ name: user.name, email: user.email, actorType: user.actorType, roles: user.roles }}
-      pathname="/admin"
-    >
-      <AdminDashboard />
-    </AdminShell>
+    <AdminDashboard
+      initialTab={initialTab as "overview" | "orders" | "applications" | "products" | "payments" | "users" | "deliveries" | "rides" | "payouts" | "audit"}
+      overview={overview}
+      orders={orders}
+      applications={applications}
+      products={products}
+      payments={payments}
+      users={users}
+      rides={rides}
+      audit={audit}
+      payouts={payouts}
+    />
   );
 }

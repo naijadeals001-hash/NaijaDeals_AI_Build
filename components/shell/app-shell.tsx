@@ -26,6 +26,11 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useLocale();
 
+  // Skip AppShell for admin routes - they use AdminShell
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/super-admin")) {
+    return <>{children}</>;
+  }
+
   const topLinks = [
     { href: "/", label: t("nav.home") },
     { href: "/products", label: t("nav.products") },

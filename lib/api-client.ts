@@ -487,7 +487,7 @@ export const apiClient = {
 };
 
 export function koboToNaira(value: ApiMoney, currency = "NGN") {
-  const amount = typeof value === "string" ? Number(value) : value;
+  const amount = typeof value === "bigint" ? Number(value) : typeof value === "string" ? Number(value) : Number(value);
   const symbol = currency === "NGN" ? "₦" : `${currency} `;
   return `${symbol}${new Intl.NumberFormat("en-NG", { maximumFractionDigits: 2 }).format(amount / 100)}`;
 }

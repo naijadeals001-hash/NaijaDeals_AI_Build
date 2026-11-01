@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -34,7 +34,7 @@ export interface AdminUser {
   email: string;
   avatar?: string;
   actorType?: string;
-  roles?: Array<{ role: { name: string } }>;
+  roles?: string[];
   vendorIds?: string[];
 }
 
@@ -128,7 +128,34 @@ export function AdminShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>(["operations", "catalog", "finance", "people"]);
+  const [lastFocusedElement, setLastFocusedElement] = useState<HTMLElement | null>(null);
   const { t } = useLocale();
+
+  const closeSidebar = useCallback(() => {
+    setSidebarOpen(false);
+    // Restore focus to the menu button
+    if (lastFocusedElement) {
+      lastFocusedElement.focus();
+    }
+  }, [lastFocusedElement]);
+
+  const openSidebar = useCallback(() => {
+    // Store the currently focused element before opening
+    setLastFocusedElement(document.activeElement as HTMLElement);
+    setSidebarOpen(true);
+  }, []);
+
+  // Handle Escape key to close mobile sidebar
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && sidebarOpen) {
+        event.preventDefault();
+        closeSidebar();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [sidebarOpen, closeSidebar]);
 
   const isActive = (href: string) => {
     if (href === "#") return false;
@@ -148,7 +175,7 @@ export function AdminShell({
     router.refresh();
   }
 
-  const userRoles = user.roles?.map((r) => r.role.name) ?? [];
+  const userRoles = user.roles ?? [];
   const filteredNavItems = adminNavItems.filter((item) => {
     if (!item.roles) return true;
     return item.roles.some((role) => userRoles.includes(role) || user.actorType === role.toUpperCase());
@@ -323,7 +350,7 @@ export function AdminShell({
       {/* Mobile sidebar toggle */}
       <button
         className="fixed bottom-6 left-6 z-40 lg:hidden rounded-full bg-primary p-3 shadow-lift text-white"
-        onClick={() => setSidebarOpen(true)}
+        onClick={openSidebar}
         aria-label="Open navigation menu"
         aria-expanded={sidebarOpen}
       >
@@ -336,7 +363,7 @@ export function AdminShell({
           <div className="flex items-center gap-4">
             <button
               className="rounded-lg p-2 text-muted hover:bg-surface-low lg:hidden"
-              onClick={() => setSidebarOpen(true)}
+              onClick={openSidebar}
               aria-label="Open navigation menu"
             >
               <Menu className="h-5 w-5" />
