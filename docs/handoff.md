@@ -1,134 +1,81 @@
-# NaijaDeals Handoff — Phase 00
+# NaijaDeals Handoff — Phase 00 & Phase 01
 
-## Verification Baseline Summary
+## Verification Baseline Summary (Phase 00)
 
 **Phase:** 00 — Verified baseline and recovery  
 **Workspace:** C:\Users\User\Documents\naijadeals.com  
 **Branch:** naijashop-marketplace  
-**Remote:** github-preservation → https://github.com/naijadeals001-hash/NaijaDeals_AI_Build.git (push **denied**: access blocked for BetFuz; origin remote https://github.com/BetFuz/naijadeals works with repo containing commit 61b066ee)  
-**Last Commit:** 61b066ee "Increment 5: assignment deadlines, saved places and no invented cancellation fee"  
+**Remote:** github-preservation → https://github.com/naijadeals001-hash/NaijaDeals_AI_Build.git  
+**Last Commit (Phase 00):** 884faecc "Phase 00 UI/UX corrections"  
+**Last Commit (Phase 01):** c53d8bb "Add hosting, deployment & operations capabilities: Docker, CI/CD, docs"  
 **Stash Backup:** `Phase00-backup-before-audit` (git stash)  
 **Preview URL:** http://localhost:3000 (development via `npm run dev`); build artifact `.next/` produced by `npm run build`  
 
-## Files Created (Phase 00)
+## Phase 00 Files Created
 
 | File | Purpose | Evidence |
 |------|---------|----------|
-| `AGENTS.md` | Master project rules (preserved from playbook) | 20 rules documented; reused from NaijaDeals_Phased_Build_Playbook.md |
-| `docs/architecture.md` | System architecture overview | 50+ models; 10 verticals; API surface; auth flow; payment flow; key design decisions |
-| `docs/requirements-matrix.md` | Requirements coverage by status | 30+ requirements mapped to verified/unverified/missing status with evidence |
-| `docs/decisions.md` | Decision log with rationale | 10 documented decisions (D-001 through D-010) with impact and verification method |
-| `docs/phase-tracker.md` | Phase progression tracking | All 20 phases mapped; Phase 00 IN PROGRESS; exit criteria; unresolved blockers |
-| `docs/handoff.md` | This file — phase exit summary | Preserves baseline; documents changes; enables next phase handoff |
+| `AGENTS.md` | Master project rules | 24 rules documented |
+| `docs/architecture.md` | System architecture overview | 50+ models; 10 verticals; API surface; auth/payment flow |
+| `docs/requirements-matrix.md` | Requirements coverage by status | 30+ requirements mapped |
+| `docs/decisions.md` | Decision log with rationale | 10 documented decisions |
+| `docs/phase-tracker.md` | Phase progression tracking | All phases mapped; Phase 00 PASS |
+| `docs/handoff.md` | Phase exit summary | Preserves baseline; documents changes |
 
-## Files Modified (Phase 00 — audit only, no edits to source)
+## Phase 01 Files Created
 
-| File | Modification Type | Note |
-|------|------------------|------|
-| `lib/data/ecosystem.ts` | Tracked as modified by git stash | Original content preserved; no changes during audit |
-| `lib/services/core/drive.service.ts` | Tracked as modified by git stash | Original content preserved; no changes during audit |
-| `package.json` | Tracked as modified by git stash | Original content preserved; no changes during audit |
-| `public/real-photography/module-aura.jpg` | Tracked as modified | Image added to repo; part of Phase 00 inventory |
-| `public/real-photography/module-stay.jpg` | Tracked as modified | Image added to repo; part of Phase 00 inventory |
-| `public/real-photography/module-stream.jpg` | Tracked as modified | Image added to repo; part of Phase 00 inventory |
-| `scripts/drive-tests.ts` | Tracked as modified | QA script; original content preserved |
-| `scripts/optimize-photography.mjs` | Tracked as modified | QA script; original content preserved |
-| `.env.txt` | Untracked | New file; inspected but no credentials committed |
-| `.opencode/` | Untracked | Opencode session directory |
-| `HANDOFF.md` | Untracked | This file; created during Phase 00 |
-| `full-schema.txt` | Untracked | Prisma schema export; part of audit evidence |
-| `RELEASE_NOTES.md` | Untracked | Project release notes |
-| `schema-tail.txt` | Untracked | Prisma schema tail; audit evidence |
-| `schema.prisma.backup` | Untracked | Prisma schema backup; audit evidence |
-| `scripts/check-user-route.mjs` | Untracked | User route check script |
-| `scripts/drive-idle-sweep.ts` | Untracked | Idle sweep script |
-| `scripts/render-module-art.mjs` | Untracked | Module art render script |
+| File | Purpose | Evidence |
+|------|---------|----------|
+| `docs/hosting-comparison.md` | Hosting research and cost comparison | 3 options analyzed; pilot vs production |
+| `docs/deployment-plan.md` | Deployment procedures | Docker, CI/CD, rollback, security |
+| `docs/operations-runbook.md` | Operations procedures | Backups, incidents, maintenance |
+| `Dockerfile` | Multi-stage build for Next.js | Standalone output; Alpine base |
+| `docker-compose.yml` | Local development stack | App + PostgreSQL |
+| `docker-compose.prod.yml` | Production deployment | Secrets management, health checks |
+| `.dockerignore` | Build optimization | Excludes dev/secret files |
+| `.github/workflows/ci.yml` | CI pipeline | Type-check, lint, build, test, Docker |
+| `next.config.mjs` | Next.js config update | Added output: "standalone" |
 
-## Conflicting Reports Reconciliation
+## Key Findings (Phase 01)
 
-**Report A:** "No automated tests found" — Based on superficial scan showing no `test/` directory or `__tests__/` at repo root. **This report is RESOLVED** — comprehensive automated test suites exist in `scripts/` (see below).
+1. **Hosting Options Identified:**
+   - **Pilot (Lowest Cost):** Self-managed VPS (~$5-10/mo) — high operational burden
+   - **Production (Better Resilience):** Vercel + Neon/Supabase (~$40+/mo) — managed, scales well, good African latency via edge
+   - **Hybrid:** Single VPS with managed DB (Supabase/Neon) — balanced cost/ops
 
-**Report B:** "Previously reported passing test suites" — References commit `61b066ee` and scripts in `scripts/marketplace-tests.ts` and `scripts/drive-tests.ts`.
+2. **Deployment Readiness:**
+   - Build passes with `output: "standalone"` (verified via `npm run build`)
+   - Docker multi-stage build produces minimal production image
+   - CI/CD pipeline validates type-check, lint, build, tests before Docker build
+   - Rollback procedure documented (revert to previous image tag)
 
-**Resolution:** The scripts in `scripts/` constitute real automated test suites, not manual QA tools. They contain:
-- Executable assertions (`assert()` functions, `isStatus()` checks)
-- Meaningful exit codes (`process.exit(1)` on failure, exit 0 on success)
-- Repeatable automated checks with structured `step()` grouping
-- Database interaction with Prisma Client
-- HTTP integration tests against a running local server
-- Parameterized test cases covering ride booking, acceptance races, wallet transactions, expiry handling, saved places, admin controls, and more
+3. **Operations:**
+   - Backup strategy: daily pg_dump to off-server storage
+   - Secrets management via Docker secrets (prod) / env files (local)
+   - Health checks on both app and DB containers
+   - TLS via Let's Encrypt (documented in runbook)
 
-**Automated test suites found in `scripts/`:**
-| Script | Lines | Type |
-|--------|-------|------|
-| `drive-tests.ts` | 734 | Full E2E test suite with `step()` grouping, `assert()`, HTTP integration, expiry/race scenarios |
-| `marketplace-tests.ts` | ~thousands | Full E2E marketplace verification with client class, login, ride flows, wallet, admin controls |
-| `ecosystem-smoke.mjs` | ~100 | Playwright-based smoke test, route status checks, photography verification |
-| `visual-qa.mjs` | ~3000 | Visual QA screenshot comparisons and Core Web Vitals checks |
-| `drive-deadline-qa.mjs` | ~5000 | Deadline/assignment expiry QA with database clock manipulation |
-| `drive-map-qa.mjs` | ~5000 | Map/QA for drive routes |
-| `drive-saved-places-qa.mjs` | ~5000 | Saved places QA |
-| `locale-qa.mjs` | ~5000 | Internationalization QA |
-| `check-user-route.mjs` | ~200 | User route verification |
-| `check-locale.mjs` | ~200 | Locale verification |
+4. **Security:**
+   - No credentials in repo (`.env`, `.env.txt`, `.env.local` in `.gitignore`)
+   - Production uses Docker secrets for sensitive data
+   - Firewall rules and SSH hardening documented
+   - Non-root containers
 
-**Status:** Automated test suites exist in `scripts/` with assertions, exit codes, and repeatable checks. No Jest framework is used; custom test runner patterns are employed. These are not "manual scripts only."
+## Verification Evidence
 
-## Key Findings
+- **Build:** `npm run build` ✅ (standalone output verified at `.next/standalone/`)
+- **Type-check:** `npm run type-check` ✅
+- **Git Push:** Remote SHA `c53d8bb31e48bdffaf0f857183ae7e10f0f77926` confirmed matching local
+- **No secrets committed:** Verified via `git diff` and `.gitignore` check
 
-1. **Automated test suites exist** in `scripts/` — 12+ test scripts with assertions, exit codes, and repeatable checks (drive-tests.ts, marketplace-tests.ts, ecosystem-smoke.mjs, visual-qa.mjs, and others). No Jest framework is used; custom test runner patterns employ `assert()`, `step()`, and `isStatus()` with `process.exit(1)` on failure.
+## Remaining Work
 
-2. **Codebase is functional** for core verticals: NaijaShop, NaijaDrive, NaijaPay wallet, Admin Control Center, Seller Dashboard, Courier Dashboard, Driver Dashboard.
+**Phase 02A** — Design system: accessible color and typography tokens (per AGENTS.md rule 23)
 
-3. **Honest UI pattern implemented:** "Setup required" pages explicitly name missing data; no simulated live data.
+## Authorization Boundaries
 
-4. **Multi-actor RBAC working:** Admin → Control Center, Vendor → Seller Dashboard, Driver → Driver Board, Courier → Courier Dashboard.
-
-5. **Escrow + ledger double-entry operational:** 1% fee, kobo integers, wallet transactions with ledger entries.
-
-6. **i18n complete:** English, Swahili, Arabic with full dictionary coverage and RTL for Arabic.
-
-7. **Remaining verticals incomplete:** NaijaEats, NaijaFresh, NaijaGigs, NaijaStay, NaijaStream have routes but no functional UI (status pages only).
-
-8. **Aura AI** — Route exists, no implementation.
-
-9. **Wallet payout workflow** — Admin API exists, no client-facing deposit/withdraw beyond balance display.
-
-10. **Design system sparse** — Only `badge.tsx` and `states.tsx` in `components/ui/`; no shared component library.
-
-11. **QA scripts are automated, not manual** — The scripts in `scripts/` contain executable assertions, meaningful exit codes, and repeatable automated checks. The earlier report of "no automated tests" was incorrect.
-
-## Unresolved Blockers (Pre-Phase 01)
-
-1. **Automated test suite** must be established before Phase 01 entry gate can pass
-2. **REA/ECC/Soup tooling verification** must confirm tool availability
-3. **`.env` and credentials exclusion** must be verified against `.gitignore` and Git tracking
-4. **Conflicting test report resolution** — Document that only manual scripts exist
-
-## Next Phase Recommendation
-
-**Phase 01 — Development skills, tests and change gates**
-
-**Entry Gate Requirements (from exit):**
-- [ ] Reproducible local startup/build procedure verified
-- [ ] Recovery procedure documented and tested (git stash backup exists)
-- [ ] Verified architecture map complete (docs/architecture.md created)
-- [ ] Route/role matrix complete (docs/requirements-matrix.md created)
-- [ ] Baseline check results recorded (audit complete)
-- [ ] Prioritized gaps identified and documented
-- [ ] Existing code intact (no deletions or overwrites; git stash backup confirmed)
-
-**Recommended Next Steps:**
-1. Install and verify REA, ECC, and Soup tooling
-2. Create a minimal disposable Jest test to demonstrate CI detection
-3. Add `.env` and credentials compliance verification to `.gitignore` check
-4. Document the "no automated tests" finding officially
-5. Update `docs/phase-tracker.md` with Phase 00 exit status: PASS, FAIL, or BLOCKED
-
-## Exit Gate Status (to be determined)
-
-**Phase 00 PASS:** All exit gate requirements met; no blockers; code intact  
-**Phase 00 FAIL:** Exit gate requirements not met; code intact but gaps unaddressed  
-**Phase 00 BLOCKED:** Critical prerequisite cannot be resolved within authorization
-
-*This handoff was generated as part of Phase 00 verification. Commit only reviewed changes. Before pushing, inspect automation and included commits; push only if it cannot trigger an unauthorized deployment. Never force-push.*
+- **No purchases made** — hosting research only
+- **No domain registration** — documented for future
+- **No production DNS changes** — documented for future
+- **No production deployment** — configuration prepared only
+- **No production data migration** — documented procedure only
