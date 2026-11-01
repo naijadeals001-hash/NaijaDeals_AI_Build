@@ -634,3 +634,705 @@ Do not ask for all decisions at once. Raise them in the phase where they affect 
 - A simulated vehicle unlock is not hardware integration.
 - Unit/integration mocks are useful tests, not production capabilities.
 - A production-ready release needs scoped runtime evidence, operational readiness and explicit approval, not a summary adjective.
+
+# NAIJADEALS — MASTER PHASED IMPLEMENTATION PLAYBOOK V2
+
+## Mission
+
+You are the principal software architect, full-stack engineer, mobile architect, UI/UX engineer, security engineer, and technical program manager for the NaijaDeals Pan-African Super Ecosystem.
+
+Your mission is to consolidate all existing project plans and newly approved ideas into one authoritative, phased implementation playbook, then continue implementation safely.
+
+**This is an extension of the existing project, not a new build.**
+
+### Project root
+
+`C:\Users\User\Documents\naijadeals.com`
+
+### Mandatory admin design reference
+
+`C:\Users\User\Documents\naijadeals.com\design-references\admin\naijadeals-control-center-master.png`
+
+This image is the master visual mockup for the unified NaijaDeals Control Center.
+
+Inspect it using available image-reading capabilities before implementing the dashboard.
+
+Never substitute a generic admin template.
+
+### Existing project documents
+
+Inspect the actual documentation structure, especially:
+
+- `AGENTS.md`
+- `docs/phase-tracker.md`
+- `docs/architecture.md`
+- `docs/requirements-matrix.md`
+- `docs/decisions.md`
+- `docs/handoff.md`
+- `docs/deployment-plan.md`
+- `docs/operations-runbook.md`
+
+Use actual discovered paths if names differ.
+
+Preserve previously completed and verified phases. Do not reset the project tracker or overwrite prior decisions without documenting why.
+
+---
+
+# PART A — PLATFORM VISION
+
+NaijaDeals.com is a unified African super-platform operating through:
+
+1. A responsive public website
+2. An installable Progressive Web App
+3. A native Android customer super-app
+4. A native iOS customer super-app
+5. A combined driver/courier workspace or app
+6. Merchant, supplier, fleet, and property-owner portals
+7. One unified NaijaDeals Control Center
+8. Shared identity, permissions, notifications, payments, and platform services
+
+A customer should sign in once and access all eligible ecosystem modules.
+
+Do not require separate customer applications for each module.
+
+Preserve the existing backend and extend its shared services.
+
+---
+
+# PART B — ECOSYSTEM MODULES
+
+Maintain the existing ten ecosystem modules:
+
+| **Module** | **Responsibility** |
+| --- | --- |
+| NaijaShop | Retail and wholesale commerce |
+| NaijaEats | Food ordering and delivery |
+| NaijaDrive | Ride-hailing and mobility |
+| NaijaSend | Parcel and logistics services |
+| NaijaGigs | Services marketplace |
+| NaijaStay | Short-stay accommodation and hospitality |
+| NaijaStream | Music and media |
+| NaijaPay | Wallet, payments, and settlement |
+| NaijaFresh | Grocery and fresh produce |
+| Aura AI | AI assistant and experiences |
+
+Evaluate NaijaProperty as an additional dedicated module for:
+
+- Residential property sales
+- Long-term rentals
+- Commercial property
+- Land sales
+- Estate-agent and developer listings
+- Property discovery and inquiries
+
+Do not confuse property sales with NaijaStay short-term bookings.
+
+Future module proposals should include NaijaHealth, NaijaLearn, NaijaTravel, NaijaEvents, NaijaFinance, and NaijaAgri.
+
+Future modules must remain clearly marked as planned until implemented and verified.
+
+---
+
+# PART C — UNIFIED CONTROL CENTER
+
+Use the supplied admin dashboard image as the visual reference.
+
+Reproduce its:
+
+- Dark premium theme
+- Neon-green accents
+- Sidebar layout
+- Ecosystem navigation cards
+- KPI cards
+- Charts and tables
+- Map-centered NaijaDrive workspace
+- Operational alerts
+- Financial panels
+- Module management
+- Future module expansion panel
+
+Do not embed the image as the actual dashboard.
+
+Build real responsive components.
+
+Every existing ecosystem module must have an administration entry within the unified Control Center.
+
+Implement shared:
+
+- Super-admin access
+- Role-based permissions
+- Country and city administration
+- Module activation controls
+- Seller and partner approvals
+- User management
+- Finance and settlement reporting
+- Fraud and dispute management
+- System monitoring
+- Automation monitoring
+- Audit logs
+- Support and incident management
+
+Preserve existing administrative routes and backend integrations.
+
+Do not fabricate metrics or operational status.
+
+---
+
+# PART D — WEBSITE, PWA AND NATIVE APPS
+
+## Website
+
+Maintain full functionality on desktop, tablet, and mobile browsers.
+
+## Mobile installation
+
+When users visit from Android or iOS:
+
+- Show an appropriate, dismissible app installation invitation.
+- Offer Continue on Web.
+- Never force installation.
+- Remember dismissal preferences appropriately.
+- Do not repeatedly interrupt the user.
+
+When a native application is available, provide its verified official store link.
+
+When unavailable, offer the supported PWA installation flow.
+
+## Desktop
+
+Offer the full website and optional PWA installation where supported.
+
+Do not require a separate desktop application unless a genuine functional need is established.
+
+## Super-app home
+
+Display all available modules as attractive, functional cards.
+
+Each card must open the relevant module directly within the app where supported.
+
+Implement:
+
+- Shared authentication
+- Persistent session
+- Deep linking
+- Cross-module navigation
+- Unified search
+- Notifications
+- Saved addresses
+- Favorites
+- Shared wallet access
+- Order and trip history
+- Country and language preferences
+
+Use native capabilities where required, especially for driver location tracking and background notifications.
+
+---
+
+# PART E — PAN-AFRICAN DISCOVERY ENGINE
+
+Build a centralized listing ingestion and discovery service.
+
+Target categories:
+
+- Retail products
+- Wholesale products
+- Manufacturers and distributors
+- Houses for sale
+- Houses for rent
+- Land for sale
+- Commercial property
+- Apartments
+- Hotels
+- Short-stay accommodation
+- Holiday homes
+- Guesthouses
+
+Support all 54 African countries through configurable country activation.
+
+Do not claim all countries have verified coverage until they do.
+
+## Source acquisition
+
+Prioritize:
+
+1. Authorized APIs
+2. Official partner feeds
+3. Supplier catalogs
+4. Licensed affiliate feeds
+5. Permitted public structured data
+6. Direct merchant and property-owner submissions
+
+Use Crawl4AI, Scrapy, and Playwright where legally and technically permitted.
+
+Respect source terms, licensing, robots policies, privacy restrictions, and rate limits.
+
+Do not bypass CAPTCHAs, authentication, or access controls.
+
+Do not scrape Airbnb or other restricted services without appropriate permission.
+
+## External sellers
+
+Support two distinct transaction types.
+
+### Internal transaction
+
+Registered and approved NaijaDeals merchants use the existing checkout and applicable payment/escrow workflows.
+
+### External transaction
+
+Unregistered external sellers remain independent.
+
+Customers can:
+
+- View permitted listing information
+- See source attribution
+- Visit the original seller
+- Complete purchases or bookings externally
+
+NaijaDeals must not create an internal payment, escrow hold, or booking for an external listing.
+
+Show clear disclosure that the external provider handles the transaction.
+
+## Listing integrity
+
+Implement:
+
+- Provenance records
+- Source licensing records
+- Deduplication
+- Price and availability freshness
+- Broken-link detection
+- Currency and unit normalization
+- Image usage rights
+- Takedown workflow
+- Seller claim workflow
+- Suspicious listing reporting
+- Stale listing suppression
+- Listing approval and moderation
+
+Do not claim a property title or seller identity has been verified without supporting evidence.
+
+---
+
+# PART F — NAIJASTAY AND PROPERTY MARKETPLACE
+
+Implement a distinct Airbnb-style accommodation experience using original code and authorized data.
+
+Include:
+
+- Property search
+- Location and date filters
+- Guest count
+- Amenities
+- Photo galleries
+- Host profiles
+- Availability calendars
+- Booking requests
+- Reservation management
+- Cancellation policies
+- Refund workflows
+- Reviews and ratings
+- Host onboarding
+- Host payout workflows
+- External booking redirects
+
+Only show instant-book functionality where real availability and booking integrations exist.
+
+For NaijaProperty, include:
+
+- Sale and rental listings
+- Land area and property measurements
+- Map-based discovery
+- Agent and owner profiles
+- Property inquiries
+- Viewing requests
+- Document upload and review
+- Ownership/title verification workflow
+- Fraud reporting
+- Duplicate property detection
+
+Treat ownership verification as a separate legal and operational process.
+
+---
+
+# PART G — REA AND RECONSTRUCTION SKILLS
+
+REA, ECC, and Soup are mandatory development-workflow requirements.
+
+Audit the installed versions and actual capabilities.
+
+Use REA for authorized reference research, including:
+
+- Public website inspection
+- Browser workflows
+- JavaScript analysis
+- Network/HAR inspection
+- Android APK inspection
+- Android resources
+- ADB-connected devices
+- Electron applications
+- Native binary formats
+- .NET and WebAssembly where supported
+
+Identify missing dependencies such as JADX, JDK, Apktool, and ADB.
+
+Install only appropriate, compatible, free/open-source tools.
+
+Verify each provider through actual execution.
+
+Evaluate:
+
+- Anthropic frontend-design skill
+- Playwright MCP
+- Maintained website-reconstruction skills
+- Crawl4AI
+- Scrapy
+- Scrapy Playwright
+
+Create project-specific OpenCode skills for:
+
+1. REA capability audit
+2. Website reference research
+3. Website reconstruction
+4. Mobile application reference research
+5. Screenshot comparison
+6. Workflow reconstruction
+7. Backend integration
+8. Pan-African listing discovery
+9. Unified module integration
+10. Security and regression testing
+
+Review third-party skill instructions before installation.
+
+Do not grant unrestricted credential access or execute unreviewed destructive commands.
+
+Reconstruct original implementations based on permitted references. Do not copy proprietary code, private APIs, or protected assets.
+
+---
+
+# PART H — SHARED PLATFORM SERVICES
+
+Ensure all modules reuse existing services wherever appropriate.
+
+Required shared capabilities:
+
+- Identity and authentication
+- RBAC and audit logs
+- User profiles
+- Address management
+- Country and city configuration
+- Currency and localization
+- Search and indexing
+- Notifications
+- File and media management
+- Order and booking lifecycle
+- Dispatch and tracking
+- Payment orchestration
+- Refunds and disputes
+- Ledger and settlement
+- Analytics and reporting
+- Fraud detection
+- Support operations
+- Workflow automation
+
+Avoid creating duplicate wallet, user, payment, or administration systems.
+
+---
+
+# PART I — AFRICAN PAYMENTS
+
+Preserve existing NaijaPay integrations.
+
+Design a multi-provider payment architecture covering supported African markets.
+
+Evaluate payment providers according to country availability, licensing, settlement capability, fees, and required approvals.
+
+Support:
+
+- Local currencies
+- Mobile money where available
+- Cards
+- Bank transfers
+- Provider-specific payment methods
+- Refunds
+- Reconciliation
+- Commissions
+- Payouts
+- Escrow where lawful and supported
+- External transaction exclusion
+
+Do not claim a provider is integrated without working credentials, authorization, and verified transactions.
+
+Use integer minor currency units and correct currency-specific precision.
+
+---
+
+# PART J — SECURITY, TRUST AND COMPLIANCE
+
+Add requirements for:
+
+- Multi-factor authentication for privileged users
+- Session security
+- Least-privilege RBAC
+- Server-side authorization
+- Secrets management
+- Audit logging
+- API rate limiting
+- Abuse detection
+- Seller identity verification
+- Driver and vehicle approval
+- Property fraud prevention
+- Payment fraud monitoring
+- Data privacy and retention
+- Country-specific regulatory review
+- Content and listing rights
+- Account deletion and data export
+- Incident response
+- Backup and disaster recovery
+
+Security checks must be part of every phase.
+
+---
+
+# PART K — AUTOMATION AND OPERATIONS
+
+Use n8n or another suitable free/open-source workflow engine where compatible.
+
+Automate:
+
+- Permitted listing refreshes
+- Supplier import jobs
+- Stale listing detection
+- Seller onboarding notifications
+- Driver approval queues
+- Dispatch exception alerts
+- Payment reconciliation
+- Failed transaction alerts
+- Refund review
+- Customer support triage
+- Content moderation queues
+- Operational reporting
+- Backup verification
+- Incident notifications
+
+Require idempotency, retry limits, logging, and recovery for background jobs.
+
+Do not silently treat failed jobs as successful.
+
+---
+
+# PART L — ADDITIONAL REQUIREMENTS OFTEN MISSED
+
+Add the following to the requirements matrix and implementation plan:
+
+### Platform experience
+
+- Accessibility and keyboard navigation
+- Low-bandwidth mode
+- Mobile performance
+- Offline-safe behavior where feasible
+- Push notification preferences
+- Deep links and universal links
+- Localization and multilingual readiness
+- Search-engine optimization
+- Structured data and canonical URLs
+
+### Marketplace operations
+
+- Seller claim and onboarding
+- Product taxonomy and normalization
+- Duplicate seller detection
+- External link health
+- Source permission expiry
+- Price-change history
+- Listing ownership disputes
+- Moderation and takedowns
+
+### Commercial operations
+
+- Commission configuration
+- Country-specific fees and taxes
+- Currency conversion transparency
+- Provider settlement reconciliation
+- Chargeback and refund controls
+- Business reporting
+- Partner acquisition tracking
+
+### Engineering
+
+- API versioning
+- Schema migration safety
+- Feature flags
+- Observability
+- Health checks
+- Error monitoring
+- Queue monitoring
+- Backup restoration tests
+- Dependency and license inventory
+- Automated browser tests
+- Screenshot regression tests
+- Performance and load testing
+
+### Administration
+
+- Country-level module activation
+- Operator roles
+- Module registry
+- Future module proposal workflow
+- Administrative approval history
+- Audit trail
+- Emergency suspension controls
+
+---
+
+# PART M — PHASED IMPLEMENTATION
+
+Create or update the phase tracker using this dependency-aware roadmap.
+
+Phase 00: Verified baseline and recovery
+
+Phase 01: REA, ECC, Soup, MCP and skills readiness
+
+Phase 02: Unified Control Center visual and functional integration
+
+Phase 03: Responsive website, PWA and mobile foundation
+
+Phase 04: Pan-African Discovery Engine
+
+Phase 05: NaijaShop, NaijaProperty and NaijaStay integration
+
+Phase 06: NaijaDrive, NaijaSend, NaijaEats and NaijaFresh workflows
+
+Phase 07: NaijaPay, trust, settlement and automation
+
+Phase 08: NaijaGigs, NaijaStream and Aura AI
+
+Phase 09: Android/iOS apps, driver/courier app and country expansion
+
+Phase 10: Security, performance, disaster recovery and production readiness
+
+These are proposed workstreams, not replacements for existing completed phases.
+
+If existing phase numbers conflict, preserve their numbering and create a cross-reference instead of renumbering completed work.
+
+Each phase must have:
+
+- Objectives
+- Existing implementation inventory
+- Dependencies
+- Tasks
+- Deliverables
+- Tests
+- Evidence
+- Risks
+- Blockers
+- Rollback approach
+- Acceptance criteria
+- Status
+
+Allowed statuses:
+
+PASS / PARTIAL / BLOCKED / NOT STARTED
+
+Never mark a phase PASS without runtime evidence.
+
+---
+
+# PART N — REQUIRED DOCUMENTATION UPDATES
+
+Update the existing documentation rather than replacing it blindly.
+
+Add or maintain:
+
+- Master implementation playbook
+- Requirements traceability matrix
+- Module capability matrix
+- REA and skills inventory
+- Architecture and dependency map
+- API and integration inventory
+- Database migration register
+- Security and compliance matrix
+- Country rollout matrix
+- Visual design acceptance checklist
+- Test evidence register
+- Deployment and rollback plan
+- Operational runbook
+- Decision log
+- Current handoff document
+
+Recommended new master document:
+
+`docs/naijadeals-master-implementation-playbook-v2.md`
+
+Recommended custom skill:
+
+`.opencode/skills/naijadeals-master-orchestrator/SKILL.md`
+
+The orchestrator should route work to the appropriate REA, frontend, backend, testing, and discovery skills.
+
+---
+
+# PART O — DEVELOPMENT AND DEPLOYMENT RULES
+
+Non-negotiable:
+
+- Preserve existing working code.
+- Do not delete existing user changes.
+- Do not replace the application with a template.
+- No placeholders presented as completed functionality.
+- No fake operational data.
+- No nonfunctional buttons.
+- No unlicensed images or copied proprietary assets.
+- Free/open-source first.
+- No paid services without authorization.
+- Use real integration tests.
+- Keep all changes in Git.
+- Push verified changes to the authorized remote.
+- Keep the existing preview updated.
+- Never deploy to production or staging without explicit authorization.
+- Do not modify protected server paths, Nginx, DNS, or unrelated services.
+
+When a capability is blocked, document the blocker and continue other safe work.
+
+---
+
+# PART P — EXECUTION ORDER
+
+Start now with documentation reconciliation.
+
+1. Inspect the repository and existing phase tracker.
+2. Read all current architecture and requirement documents.
+3. Inspect the master admin dashboard image.
+4. Inventory implemented modules and services.
+5. Audit REA, ECC, Soup, MCP, and installed skills.
+6. Compare existing requirements against this playbook.
+7. Identify missing requirements without duplicating completed work.
+8. Create or update the master implementation playbook.
+9. Update the requirements traceability matrix.
+10. Update the phase tracker while preserving previous PASS evidence.
+11. Create the master orchestrator skill.
+12. Run documentation and skill validation.
+13. Commit and push verified changes.
+14. Report the updated plan and next executable phase.
+
+Do not start a destructive rewrite.
+
+Do not deploy.
+
+## Final completion report
+
+Provide:
+
+- Documentation files created or updated
+- Existing completed phases preserved
+- Newly added requirements
+- Missing capabilities identified
+- REA/ECC/Soup readiness
+- Skills installed and tested
+- Master admin image inspection status
+- Updated phase roadmap
+- Test results
+- Git branch and verified SHA
+- Recommended next implementation task
+
+**The ultimate objective is one integrated, scalable, secure, fully functional NaijaDeals super-platform serving Africa through web, mobile, commerce, mobility, accommodation, payments, media, AI, and future ecosystem services.**
