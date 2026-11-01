@@ -39,6 +39,7 @@ import {
 } from "@/lib/config/drive";
 import { DriveMap } from "./drive-map";
 import { PlacePicker } from "./place-picker";
+import { SavedPlaces } from "./saved-places";
 
 type Viewer = { name: string; isDriver: boolean } | null;
 type LoadState = "idle" | "loading" | "ready" | "error";
@@ -572,6 +573,8 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
 
           {quote && quoteState === "ready" ? <FareBreakdown quote={quote} /> : null}
 
+          {viewer ? <SavedPlaces /> : null}
+
           {viewer ? (
             <section aria-labelledby="recent-heading" className="rounded-2xl border border-border-soft bg-canvas p-4">
               <h2 id="recent-heading" className="font-display text-lg font-extrabold">
@@ -704,8 +707,11 @@ function ActiveRideCard({
         </p>
       )}
 
-      <RideTimeline ride={ride} />
+      {ride.assignmentExpiresAt && (ride.status === "driver_assigned" || ride.status === "driver_arriving") ? (
+        <AssignmentDeadline deadline={ride.assignmentExpiresAt} status={ride.status} />
+      ) : null}
 
+      <RideTimeline ride={ride} />
       <a
         href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
         target="_blank"
@@ -812,6 +818,41 @@ function RouteChips({ from, to }: { from: string; to: string }) {
         <span className="min-w-0 break-words">{to}</span>
       </li>
     </ul>
+  );
+}
+
+/**
+ * The rider's view of the driver's response deadline. The server releases a stale
+ * assignment the next time the ride is read, so this mirrors that rule honestly:
+ * a countdown while the clock runs, then an explicit "back in the queue" state.
+ */
+function AssignmentDeadline({ deadline, status }: { deadline: string; status: string }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const remaining = Math.max(0, Math.ceil((new Date(deadline).getTime() - now) / 1000));
+  const expired = remaining <= 0;
+  const target = status === "driver_assigned" ? "arrive" : "start the trip";
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining % 60;
+  const clock = minutes > 0 ? `${minutes} min ${String(seconds).padStart(2, "0")} s` : `${seconds} s`;
+
+  return (
+    <p
+      role="status"
+      aria-live="polite"
+      className={`mt-4 rounded-xl px-3 py-2 text-xs font-bold leading-snug ${
+        expired ? "bg-crimson-soft text-crimson" : "bg-surface-low text-muted"
+      }`}
+    >
+      {expired
+        ? "The driver missed the update deadline. The ride returns to approved drivers automatically — you are not charged extra and do not need to request again."
+        : `Your driver has ${clock} to ${target}. If they miss it, the ride returns to the open queue automatically.`}
+    </p>
   );
 }
 

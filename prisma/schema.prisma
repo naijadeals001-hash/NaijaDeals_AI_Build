@@ -92,6 +92,7 @@ enum WalletTransactionType {
   hold
   release
   refund
+  fee
   payout
 }
 
@@ -164,6 +165,7 @@ model User {
   returnRequests    ReturnRequest[]
   driverProfile     DriverProfile?
   rides             Ride[]             @relation("RiderRides")
+  savedPlaces       SavedPlace[]
 }
 
 model Role {
@@ -703,6 +705,7 @@ enum RidePaymentStatus {
   held
   paid
   refunded
+  partially_refunded
 }
 
 model DriverProfile {
@@ -752,6 +755,14 @@ model Ride {
   completedAt        DateTime?
   cancelledAt        DateTime?
   cancellationReason String?
+  /**
+   * When the assigned driver must make the next move before the ride returns to the
+   * open queue. Set on acceptance, reset on arrival, cleared once the trip starts.
+   * Null means no deadline (nothing assigned, or the trip is already moving).
+   */
+  assignmentExpiresAt DateTime?
+  /** Retained from the fare hold when the rider cancels after the driver set off. */
+  cancellationFeeKobo BigInt          @default(0)
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   rider              User              @relation("RiderRides", fields: [riderId], references: [id])
@@ -761,6 +772,7 @@ model Ride {
   @@index([riderId, status])
   @@index([driverId, status])
   @@index([status, createdAt])
+  @@index([status, assignmentExpiresAt])
 }
 
 model RideEvent {
@@ -774,4 +786,22 @@ model RideEvent {
   ride        Ride       @relation(fields: [rideId], references: [id], onDelete: Cascade)
 
   @@index([rideId, createdAt])
+}
+
+/**
+ * A rider's own nickname for a bookable Lagos landmark ("Mum's place", "Office").
+ * Stored per account so it follows the rider to any device, and never invents a
+ * new location: placeId must be one of the landmarks the fare engine can price.
+ */
+model SavedPlace {
+  id        String   @id @default(cuid())
+  userId    String
+  nickname  String
+  placeId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, nickname])
+  @@index([userId])
 }

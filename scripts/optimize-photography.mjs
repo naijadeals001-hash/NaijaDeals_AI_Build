@@ -16,7 +16,15 @@ const sourceDir =
   process.env.PHOTO_SOURCE_DIR ?? "C:\\Users\\User\\Documents\\Uber and Bolt\\pictures";
 const outDir = path.join(process.cwd(), "public", "real-photography");
 
-/** Source photograph -> published file name. */
+/** Source photograph -> published file name.
+ *
+ * BLOCKED IMAGERY: three module cards still lack a context-appropriate original
+ * photograph. They keep their dedicated files so modules stay distinguishable, but
+ * each is a known mismatch until real photography is supplied:
+ *   module-stay   <- "NaijaEats Nigerian Family Feast"   (needs accommodation)
+ *   module-stream <- "NaijaEats Lagos Twilight Feast"    (needs music/creators)
+ *   module-aura   <- "Lagos Rooftop Solar Installation"  (needs concierge/support)
+ */
 const mapping = {
   "NaijaShop Electronics Market in Nigeria.png": "module-shop",
   "Steaming Nigerian Jollof Rice Feast.png": "module-eats",

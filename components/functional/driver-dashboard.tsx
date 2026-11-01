@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -193,6 +193,7 @@ export function DriverDashboard() {
                     "Cash fare recorded."
                   )
                 }
+                onExpired={() => void load()}
               />
             ))}
           </div>
@@ -321,15 +322,47 @@ function DriverActiveRide({
   busy,
   onAction,
   onRelease,
-  onCash
+  onCash,
+  onExpired
 }: {
   ride: ApiRide;
   busy: string;
   onAction: (next: "driver_arriving" | "in_progress" | "completed", message: string) => void;
   onRelease: () => void;
   onCash: () => void;
+  onExpired: () => void;
 }) {
   const isActive = activeStatuses.includes(ride.status);
+
+  /* A live clock so the deadline ticks down between board refreshes. It only runs
+   * while a deadline is actually pending. */
+  const [now, setNow] = useState(() => Date.now());
+  const expiryNotified = useRef(false);
+
+  useEffect(() => {
+    if (!ride.assignmentExpiresAt) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [ride.assignmentExpiresAt]);
+
+  useEffect(() => {
+    expiryNotified.current = false;
+    setNow(Date.now());
+  }, [ride.assignmentExpiresAt]);
+
+  const deadline = ride.assignmentExpiresAt ? new Date(ride.assignmentExpiresAt).getTime() : null;
+  const remainingSeconds = deadline === null ? null : Math.max(0, Math.ceil((deadline - now) / 1000));
+  const expired = remainingSeconds !== null && remainingSeconds <= 0;
+
+  /* The server releases expired assignments the next time the board is read. Ask the
+   * parent to refresh exactly once when this ride crosses its deadline, so the rider
+   * is not left looking at a stale assignment. */
+  useEffect(() => {
+    if (!expired || expiryNotified.current) return;
+    expiryNotified.current = true;
+    onExpired();
+  }, [expired, onExpired]);
+
   const nextAction =
     ride.status === "driver_assigned"
       ? { status: "driver_arriving" as const, label: "I have arrived", message: "Arrival recorded." }
@@ -338,6 +371,9 @@ function DriverActiveRide({
         : ride.status === "in_progress"
           ? { status: "completed" as const, label: "Complete trip", message: "Trip completed and receipt created." }
           : null;
+
+  const deadlineVisible =
+    remainingSeconds !== null && (ride.status === "driver_assigned" || ride.status === "driver_arriving");
 
   return (
     <article className="rounded-2xl border border-primary/20 bg-canvas p-4">
@@ -388,6 +424,20 @@ function DriverActiveRide({
             {busy === `${ride.id}-release` ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
             Release ride
           </button>
+        ) : null}
+        {/* Assignment deadline: live countdown, then an explicit expired state. */}
+        {deadlineVisible ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className={`sm:col-span-2 rounded-lg px-2 py-1.5 text-[11px] font-bold ${
+              expired ? "bg-crimson-soft text-crimson" : "bg-surface-low text-muted"
+            }`}
+          >
+            {expired
+              ? "Deadline passed with no update. The ride returns to the open queue automatically, another driver can accept it, and nothing extra is charged to the rider."
+              : `${remainingSeconds} s left to update this ride. If no progress is made, it returns to the open queue automatically.`}
+          </p>
         ) : null}
       </div>
 

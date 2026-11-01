@@ -281,6 +281,10 @@ export type ApiRide = {
   completedAt?: string | null;
   cancelledAt?: string | null;
   cancellationReason?: string | null;
+  /** Deadline for the assigned driver's next action; null when nothing is pending. */
+  assignmentExpiresAt?: string | null;
+  /** Retained from the fare hold on a late cancellation, in integer kobo. */
+  cancellationFeeKobo?: ApiMoney;
   driver?: {
     id: string;
     vehicleMake: string;
@@ -307,6 +311,13 @@ export type ApiDriveQuote = {
     timeKobo: number;
     adjustmentKobo: number;
   };
+};
+
+export type ApiSavedPlace = {
+  id: string;
+  nickname: string;
+  placeId: string;
+  createdAt: string;
 };
 
 export type ApiDriverBoard = {
@@ -453,6 +464,13 @@ export const apiClient = {
   }) => requestJson<ApiRide>("/api/drive/rides", { method: "POST", body: JSON.stringify(input) }),
   driveCancelRide: (id: string, reason?: string) =>
     requestJson<ApiRide>(`/api/drive/rides/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) }),
+  driveSavedPlaces: () => requestJson<ApiSavedPlace[]>("/api/drive/places"),
+  driveSavePlace: (input: { nickname: string; placeId: string }) =>
+    requestJson<ApiSavedPlace>("/api/drive/places", { method: "POST", body: JSON.stringify(input) }),
+  driveUpdateSavedPlace: (id: string, input: { nickname?: string; placeId?: string }) =>
+    requestJson<ApiSavedPlace>(`/api/drive/places/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
+  driveDeleteSavedPlace: (id: string) =>
+    requestJson<{ deleted: boolean }>(`/api/drive/places/${id}`, { method: "DELETE" }),
   driverRides: () => requestJson<ApiDriverBoard>("/api/drive/driver/rides"),
   driverAcceptRide: (id: string) =>
     requestJson<ApiRide>(`/api/drive/driver/rides/${id}/accept`, { method: "POST" }),

@@ -363,3 +363,17 @@ export function quoteDrive(input: {
     }
   };
 }
+
+/* ------------------------------------------------------------------ timing --- */
+
+/**
+ * How long an assigned driver has to make the next move before the ride returns to
+ * the open queue. Lagos traffic is real, so this is deliberately generous: the point
+ * is to stop a silent driver parking a rider forever, not to punish a slow one.
+ */
+export const DRIVE_ASSIGNMENT_GRACE_MINUTES = 10;
+
+/** Deadline for the next driver action. `null` means nothing is pending. */
+export function nextAssignmentDeadline(now: Date = new Date()) {
+  return new Date(now.getTime() + DRIVE_ASSIGNMENT_GRACE_MINUTES * 60 * 1000);
+}

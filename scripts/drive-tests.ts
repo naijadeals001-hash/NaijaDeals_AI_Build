@@ -62,6 +62,14 @@ class Client {
     return this.request(path, { method: "POST", body });
   }
 
+  patch(path: string, body?: unknown) {
+    return this.request(path, { method: "PATCH", body });
+  }
+
+  del(path: string) {
+    return this.request(path, { method: "DELETE" });
+  }
+
   async login(email: string, password: string) {
     const result = await this.post("/api/auth/login", { email, password });
     assert(result.status === 200, `login ${email} failed: ${result.status} ${JSON.stringify(result.body)}`);
@@ -405,6 +413,144 @@ async function main() {
   await step("Rider fare cannot be quoted across an invalid route", async () => {
     const response = await guest.get("/api/drive/quote?pickup=unknown-place&dropoff=ajah&vehicleClass=economy");
     isStatus(response, 400, "unknown place quote");
+  });
+
+  await step("Saved places: create, list, rename and delete are scoped to the account", async () => {
+    const stamp = Date.now();
+    const created = await customer.post("/api/drive/places", {
+      nickname: `Mum's place ${stamp}`,
+      placeId: "ikeja-city-mall"
+    });
+    isStatus(created, 201, "create saved place");
+    const savedId = (created.body as Json).id as string;
+
+    const list = await customer.get("/api/drive/places");
+    isStatus(list, 200, "list saved places");
+    assert(
+      (list.body as Json[]).some((place) => place.id === savedId),
+      "created saved place is missing from the list"
+    );
+
+    const renamed = await customer.patch(`/api/drive/places/${savedId}`, {
+      nickname: `Office ${stamp}`
+    });
+    isStatus(renamed, 200, "rename saved place");
+    assert(
+      String((renamed.body as Json).nickname).startsWith("Office"),
+      "saved-place rename did not apply"
+    );
+
+    const otherList = await other.get("/api/drive/places");
+    isStatus(otherList, 200, "other account list saved places");
+    assert(
+      !(otherList.body as Json[]).some((place) => place.id === savedId),
+      "saved place leaked into another account"
+    );
+
+    const otherDelete = await other.del(`/api/drive/places/${savedId}`);
+    isStatus(otherDelete, 404, "cross-account saved-place delete blocked");
+
+    const deleted = await customer.del(`/api/drive/places/${savedId}`);
+    isStatus(deleted, 200, "delete saved place");
+  });
+
+  await step("Saved places reject an unknown landmark and a duplicate nickname", async () => {
+    const unknown = await customer.post("/api/drive/places", {
+      nickname: `Nowhere ${Date.now()}`,
+      placeId: "not-a-bookable-place"
+    });
+    isStatus(unknown, 400, "unknown landmark saved-place");
+
+    const stamp = Date.now();
+    const first = await customer.post("/api/drive/places", {
+      nickname: `Dup ${stamp}`,
+      placeId: "maryland"
+    });
+    isStatus(first, 201, "first duplicate-check saved place");
+    const duplicate = await customer.post("/api/drive/places", {
+      nickname: `Dup ${stamp}`,
+      placeId: "apapa"
+    });
+    isStatus(duplicate, 409, "duplicate saved-place nickname");
+    await customer.del(`/api/drive/places/${(first.body as Json).id}`);
+  });
+
+  await step("Acceptance sets a response deadline that clears once the trip is moving", async () => {
+    const request = await customer.post("/api/drive/rides", {
+      pickupId: "maryland",
+      dropoffId: "apapa",
+      vehicleClass: "economy",
+      paymentMethod: "cash"
+    });
+    isStatus(request, 201, "deadline ride request");
+    const ride = request.body as Json;
+
+    const accept = await driver1.post(`/api/drive/driver/rides/${ride.id}/accept`);
+    isStatus(accept, 200, "deadline ride accept");
+    const accepted = accept.body as Json;
+    assert(accepted.assignmentExpiresAt, "acceptance did not set assignmentExpiresAt");
+    const delta = new Date(accepted.assignmentExpiresAt).getTime() - Date.now();
+    assert(
+      delta > 8 * 60 * 1000 && delta <= 10 * 60 * 1000 + 10_000,
+      `acceptance deadline is not about ten minutes ahead (${delta}ms)`
+    );
+
+    const arriving = await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, {
+      status: "driver_arriving"
+    });
+    isStatus(arriving, 200, "deadline ride arriving");
+    assert((arriving.body as Json).assignmentExpiresAt, "arrival did not reset the deadline");
+
+    const started = await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, {
+      status: "in_progress"
+    });
+    isStatus(started, 200, "deadline ride started");
+    assert(
+      (started.body as Json).assignmentExpiresAt === null,
+      "a moving trip should clear the assignment deadline"
+    );
+
+    const completed = await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, {
+      status: "completed"
+    });
+    isStatus(completed, 200, "deadline ride completed");
+  });
+
+  await step("Cancelling after the driver sets off charges no invented fee", async () => {
+    const before = walletBalances((await customer.get("/api/wallet")).body as Json);
+    const request = await customer.post("/api/drive/rides", {
+      pickupId: "yaba-tejuosho",
+      dropoffId: "lekki-phase-1",
+      vehicleClass: "economy",
+      paymentMethod: "wallet"
+    });
+    isStatus(request, 201, "late cancel request");
+    const ride = request.body as Json;
+
+    const accept = await driver1.post(`/api/drive/driver/rides/${ride.id}/accept`);
+    isStatus(accept, 200, "late cancel accept");
+    const arriving = await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, {
+      status: "driver_arriving"
+    });
+    isStatus(arriving, 200, "late cancel arriving");
+
+    const cancel = await customer.post(`/api/drive/rides/${ride.id}/cancel`, {
+      reason: "Plans changed after the driver set off"
+    });
+    isStatus(cancel, 200, "late cancel");
+    const cancelled = cancel.body as Json;
+    assert(
+      cancelled.paymentStatus === "refunded",
+      "late cancellation should refund the full hold while the fee policy is undefined"
+    );
+    assert(
+      String(cancelled.cancellationFeeKobo ?? "0") === "0",
+      "no cancellation fee may be charged while the policy is undefined"
+    );
+
+    const after = walletBalances((await customer.get("/api/wallet")).body as Json);
+    assert(after.available === before.available, "available balance was not fully restored");
+    assert(after.held === before.held, "held balance was not fully restored");
   });
 
   const passed = results.filter((item) => item.ok).length;

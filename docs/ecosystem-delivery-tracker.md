@@ -84,9 +84,25 @@ rather than copying their screens.
 | Safety affordances that are real, not decorative | Plate rendered as a large high-contrast chip with "match this plate before you get in"; one-tap `tel:` call to the driver's number from the server payload; trip share via WhatsApp deep link containing ride number, route, status and fare | Rendered page assertions in `qa:drive-map`; no fake PIN, no fake tracking, no invented driver position | RideCheck, trusted contacts, in-trip support channel |
 | Module hero must use real Nigerian photography | `components/functional/drive-page.tsx` hero repointed from `/generated/module-drive.svg` to `/real-photography/module-drive.jpg` | `qa:drive-map` asserts the real photograph is present and the legacy SVG is gone | Correct photographs for NaijaStay, NaijaStream and Aura AI |
 
-Test evidence: `npm run qa:drive-map` → **17/17**; `npm run test:drive` → **20/20**; `npm run qa:ecosystem` → **37/37**; `npm run qa:locale` → **27/27**; `NEXT_DIST_DIR=.next-prod npx next build` → compiled successfully.
+Test evidence: `npm run qa:drive-map` → **17/17**; `npm run test:drive` → **24/24** (current, after Increment 5); `npm run qa:deadline` → **9/9**; `npm run qa:drive-places` → **8/8**; `npm run qa:ecosystem` → **37/37**; `npm run qa:locale` → **27/27**; `NEXT_DIST_DIR=.next-prod npx next build` → compiled successfully.
 
 One real defect was found and fixed by this suite rather than shipped: a queued `ResizeObserver` callback called `map.invalidateSize()` after the Leaflet instance had been removed, throwing `Cannot read properties of undefined (reading '_leaflet_pos')`. It is now guarded by an `aliveRef` flag plus an `isConnected` check.
+
+---
+
+## Increment 5 — assignment deadlines, saved places and an honest cancellation policy
+
+| Requirement | Implementation | Acceptance test / result | Remaining work |
+| --- | --- | --- | --- |
+| A silent driver must not strand a rider | `Ride.assignmentExpiresAt`, set on acceptance and reset on `driver_arriving`, cleared when the trip starts. `releaseExpiredAssignments()` is the single authority and runs on every driver-board and ride read; the ride returns to `requested` with no rider charge | `test:drive`: acceptance sets a ~10-minute deadline, arrival resets it, `in_progress` clears it — **24/24 passed** | Push/SMS notification when a ride is released |
+| The deadline must be visible on both sides, not hidden in the database | `components/functional/driver-dashboard.tsx` runs a one-second clock and a one-shot refresh on expiry; `components/functional/drive-page.tsx` renders `AssignmentDeadline` for the rider. Both state that the ride returns to the queue automatically and nothing extra is charged | `npm run qa:deadline`: driver board shows `600 s left to update this ride` and the value ticks down between refreshes; the rider sees `Your driver has 9 min 56 s to arrive` — **9/9 passed** | Product copy sign-off for the wording |
+| Saved, nicknamed landmarks per account | `SavedPlace` model + migration `20261031072737_drive_assignment_timeouts_saved_places`; `listSavedPlaces` / `savePlace` / `updateSavedPlace` / `deleteSavedPlace`; `GET`/`POST /api/drive/places`, `PATCH`/`DELETE /api/drive/places/[id]`. Every nickname still resolves to a bookable landmark, so no address is invented. 20-place cap, duplicate nickname 409, unknown landmark 400, all lookups scoped by `userId` | `test:drive`: create/list/rename/delete, cross-account list and delete blocked, unknown landmark and duplicate nickname rejected. `npm run qa:drive-places`: add, rename, search and delete in a real browser, 44×44 icon targets, 0 px overflow at 390 px — **8/8 passed** | Suggest a saved place as the default pick-up |
+| Cancellation fee must not be invented | `cancelRide` sets `feeKobo = 0` with an explicit "policy not yet defined" comment. The schema fields and the ledger `fee` type remain so a defined policy can be enabled later without another migration. The cash-free policy is preserved | `test:drive` "Cancelling after the driver sets off charges no invented fee": `cancellationFeeKobo` is 0, payment status is `refunded`, and available **and** held balances are fully restored | The actual amount and qualifying trip state are still an open business rule — do not enable charging until defined |
+| Module cards must not show another module's photograph | `module-stay.jpg`, `module-stream.jpg` and `module-aura.jpg` restored to their own dedicated files instead of being cross-wired to unrelated modules. Each carries an explicit `TODO(blocked)` in `lib/data/ecosystem.ts` and `scripts/optimize-photography.mjs` naming the mismatch | `npm run qa:ecosystem`: homepage references all ten module images — **37/37 passed** | Genuine NaijaStay (accommodation), NaijaStream (music/creators) and Aura AI (concierge) photography — none exists on disk |
+
+Test evidence for this increment: `npx tsc --noEmit` clean; `NEXT_DIST_DIR=.next-prod npx next build` compiled successfully; `test:drive` **24/24**; `qa:deadline` **9/9**; `qa:drive-places` **8/8**; `qa:ecosystem` **37/37**; `qa:locale` **27/27**; `qa:drive-map` **17/17** — all against `http://localhost:3100`.
+
+This increment is runtime-verified locally only. It does not claim live dispatch, live payments or production readiness. The three mismatched photographs and the undefined cancellation fee are recorded as blocked, not faked.
 
 ---
 
@@ -99,7 +115,7 @@ One real defect was found and fixed by this suite rather than shipped: a queued 
 | NaijaSend | `/naijasend` | Partial | Marketplace suite (courier delivery, failure/retry) + shell smoke | No | Manual courier delivery states tied to marketplace orders | Standalone quote/booking, third-party courier API |
 | NaijaEats | `/naijaeats` | Route + status page | Route smoke | No | Honest status | Restaurants, menus, dispatch |
 | NaijaFresh | `/naijafresh` | Route + status page | Route smoke | No | Honest status | Grocery inventory, picking, substitutions |
-| NaijaDrive | `/naijadrive`, `/driver` | Yes (Lagos cash/wallet rides) | `test:drive` 20/20; `qa:drive-map` 17/17; marketplace regression 13/13 | No | Named-place quotes locked in kobo, live OSM map with tile-free low-data fallback, offline landmark search with Lagos aliases, device-location snapping, itemised fare, colour-blind-safe trip encoding, one active ride per rider, single-driver acceptance, wallet hold/refund/release, cash recording, driver board, Control Center rides | Live driver dispatch/matchmaking, road-network routing, driver documents, scheduled rides, cancellation fees, timeout reassignment |
+| NaijaDrive | `/naijadrive`, `/driver` | Yes (Lagos cash/wallet rides) | `test:drive` 24/24; `qa:drive-map` 17/17; `qa:deadline` 9/9; `qa:drive-places` 8/8; marketplace regression 13/13 | No | Named-place quotes locked in kobo, live OSM map with tile-free low-data fallback, offline landmark search with Lagos aliases, device-location snapping, itemised fare, colour-blind-safe trip encoding, one active ride per rider, single-driver acceptance, server-authoritative assignment deadline with live countdown on both sides, per-account saved places (add/rename/search/delete), wallet hold/refund/release, cash recording, driver board, Control Center rides | Live driver dispatch/matchmaking, road-network routing, driver documents, scheduled rides, push notification on release; cancellation-fee amount and qualifying state still undefined, so charging stays disabled |
 | NaijaGigs | `/naijagigs` | Route + status page | Route smoke | No | Honest status | Gig catalogue, milestones, double-booking protection |
 | NaijaStay | `/naijastay` | Route + status page | Route smoke | No | Honest status | Property inventory, availability, double-booking protection |
 | NaijaStream | `/naijastream` | Route + status page | Route smoke | No | Honest status | Licensed media, rights, royalties |
@@ -115,30 +131,39 @@ One real defect was found and fixed by this suite rather than shipped: a queued 
 | --- | --- | --- | --- |
 | 1 | Homepage → Products → every module | Test-verified | `npm run qa:ecosystem`: all 10 module routes 200 (wallet 307 → login); homepage card opens NaijaShop; browser Back returns home |
 | 2 | Login and return to intended journey | Test-verified | `?next=/wallet` login lands on wallet with customer fixture |
-| 3 | Core customer and partner workflows | Test-verified | `npm run test:marketplace` (13/13) and `npm run test:drive` (20/20) against `localhost:3001`: catalogue, purchase, seller fulfilment, courier delivery, escrow release, ride booking, driver trip and receipt |
+| 3 | Core customer and partner workflows | Test-verified | `npm run test:marketplace` (13/13) and `npm run test:drive` (24/24) against `localhost:3100`: catalogue, purchase, seller fulfilment, courier delivery, escrow release, ride booking, driver trip and receipt |
 | 4 | Control Center actions and permissions | Test-verified | Marketplace suite plus `test:drive`: auth/RBAC enforced, seller onboarding + admin approval, cross-tenant and cross-account access rejected, admin ride cancellation refunds the hold |
-| 5 | Persistence after refresh/restart | Test-verified | The suites write orders/products/deliveries/rides to PostgreSQL and read them back; DB has 3 migrations applied and is up to date |
+| 5 | Persistence after refresh/restart | Test-verified | The suites write orders/products/deliveries/rides/saved places to PostgreSQL and read them back; DB has 4 migrations applied and is up to date |
 | 6 | Mobile usability, accessibility, performance | Fixed | 390 px and 1440 px screenshots for English, Swahili and Arabic; 0 px overflow; whole-card links, skip link, focus styles, RTL shell; Lighthouse/axe not yet run | Mobile overflow in NaijaDrive active ride state diagnosed and fixed with `min-w-0` classes on booking card, selects, vehicle grid and active-ride card; re-verified with Playwright probe at 390×844; scrollWidth stays at 390 px across anonymous, requested, assigned and driver states. All 22/22 visual checks pass. |
 | 7 | Failed payments, duplicate callbacks, retries | Test-verified | Marketplace suite: failed wallet payment rejected and order stays unpaid; duplicate callback idempotent; invalid/unconfigured webhook signatures rejected |
 | 8 | Concurrent stock requests | Test-verified | Marketplace suite: concurrent checkout cannot oversell a one-unit product. `test:drive`: duplicate ride request returns 409; two drivers racing to accept produce exactly one winner |
-| 9 | Cancellation, refund, inventory restoration | Test-verified | Marketplace suite: paid cancellation refunds and restocks exactly once. `test:drive`: rider cancellation restores the NaijaPay hold; duplicate cancel and duplicate completion do not double-refund or double-pay |
+| 9 | Cancellation, refund, inventory restoration | Test-verified | Marketplace suite: paid cancellation refunds and restocks exactly once. `test:drive`: rider cancellation restores the NaijaPay hold; duplicate cancel and duplicate completion do not double-refund or double-pay; late cancellation charges no fee because the fee policy is undefined |
 | 10 | Delivery/dispatch failures and recovery | Test-verified | Marketplace suite: delivery failure and retry reach delivered. Rides: a driver can release an accepted ride back to the queue; no fake dispatch is shown |
 | 11 | Unauthorized cross-account access | Test-verified | Marketplace suite: cross-tenant and unauthorized access rejected. `test:drive`: another rider cannot read or cancel the ride, non-drivers cannot use driver endpoints, non-admins cannot use admin rides |
 
 ### Recorded runs
 
 ```
-$ npm run test:marketplace          # TEST_BASE_URL=http://localhost:3001, ENABLE_TEST_PAYMENTS=true
+$ npm run test:marketplace          # TEST_BASE_URL=http://localhost:3100
 Marketplace verification: 13/13 passed
 
-$ npm run test:drive                # TEST_BASE_URL=http://localhost:3001
-20/20 checks passed
+$ npm run test:drive                # TEST_BASE_URL=http://localhost:3100
+24/24 checks passed
+
+$ npm run qa:deadline               # QA_BASE_URL=http://localhost:3100
+9/9 checks passed
+
+$ npm run qa:drive-places           # QA_BASE_URL=http://localhost:3100
+8/8 checks passed
 
 $ npm run qa:ecosystem              # QA_BASE_URL=http://localhost:3100
-25/25 checks passed
+37/37 checks passed
 
 $ npm run qa:locale                 # QA_BASE_URL=http://localhost:3100
 27/27 checks passed
+
+$ npm run qa:drive-map              # QA_BASE_URL=http://localhost:3100
+17/17 checks passed
 ```
 
 Artifacts: `qa-artifacts/ecosystem/*.png` (mobile 390×844 and desktop 1440×1000 for

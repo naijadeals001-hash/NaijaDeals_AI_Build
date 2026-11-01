@@ -11,6 +11,8 @@
     "qa:visual": "node scripts/visual-qa.mjs",
     "qa:ecosystem": "node scripts/ecosystem-smoke.mjs",
     "qa:drive-map": "node scripts/drive-map-qa.mjs",
+    "qa:drive-places": "node scripts/drive-saved-places-qa.mjs",
+    "qa:deadline": "node scripts/drive-deadline-qa.mjs",
     "qa:locale": "node scripts/locale-qa.mjs",
     "art:generate": "node scripts/generate-ecosystem-art.mjs && node scripts/generate-product-art.mjs",
     "prisma:seed": "prisma db seed",

@@ -2,7 +2,12 @@ import { randomBytes } from "node:crypto";
 import type { Prisma, RidePaymentMethod, RideStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
-import { quoteDrive } from "@/lib/config/drive";
+import {
+  DRIVE_ASSIGNMENT_GRACE_MINUTES,
+  findPlace,
+  nextAssignmentDeadline,
+  quoteDrive
+} from "@/lib/config/drive";
 import { ensureWallet } from "@/lib/payments/service";
 import { recordAudit } from "./audit.service";
 import { recordSystemEvent } from "./event.service";
@@ -229,6 +234,14 @@ export async function requestRide(input: {
   });
 }
 
+/**
+ * Release the rider's fare hold, optionally retaining a late cancellation fee.
+ *
+ * The fee is taken out of money NaijaPay is already holding, never charged from
+ * nothing: the rider's held amount is released, the refundable part returns to
+ * their available balance, and the retained part moves from platform escrow to the
+ * platform's available balance in the same balanced ledger transaction.
+ */
 async function refundRideHold(
   tx: Db,
   ride: {
@@ -238,40 +251,64 @@ async function refundRideHold(
     paymentMethod: RidePaymentMethod;
     paymentStatus: string;
   },
-  actorId: string
+  actorId: string,
+  feeKobo = 0
 ) {
   if (ride.paymentMethod !== "wallet" || ride.paymentStatus !== "held") return null;
   const riderWallet = await ensureWallet(tx, { userId: ride.riderId, ownerType: "CUSTOMER" });
   const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
   const fare = ride.fareKobo;
+  const fee = BigInt(Math.max(0, Math.min(Math.round(feeKobo), Number(fare))));
+  const refund = fare - fee;
 
   const riderRelease = await tx.wallet.updateMany({
     where: { id: riderWallet.id, heldKobo: { gte: fare } },
-    data: { heldKobo: { decrement: fare }, availableKobo: { increment: fare } }
+    data: { heldKobo: { decrement: fare }, availableKobo: { increment: refund } }
   });
   const platformRelease = await tx.wallet.updateMany({
     where: { id: platform.id, heldKobo: { gte: fare } },
-    data: { heldKobo: { decrement: fare } }
+    data: { heldKobo: { decrement: fare }, availableKobo: { increment: fee } }
   });
   if (riderRelease.count === 0 || platformRelease.count === 0) {
     throw new ApiError(409, "hold_conflict", "The ride fare hold is no longer available to refund.");
   }
 
-  const reference = `RIDE-${ride.id}-REFUND`;
+  const reference = `RIDE-${ride.id}-${fee > BigInt(0) ? "CANCEL" : "REFUND"}`;
+  const entries: Array<{ walletId: string; direction: "DEBIT" | "CREDIT"; amountKobo: bigint; memo: string }> = [
+    { walletId: platform.id, direction: "DEBIT", amountKobo: fare, memo: "Ride fare hold released" }
+  ];
+  if (refund > BigInt(0)) {
+    entries.push({
+      walletId: riderWallet.id,
+      direction: "CREDIT",
+      amountKobo: refund,
+      memo: "Fare returned to rider wallet"
+    });
+  }
+  if (fee > BigInt(0)) {
+    entries.push({
+      walletId: platform.id,
+      direction: "CREDIT",
+      amountKobo: fee,
+      memo: "Late cancellation fee retained"
+    });
+  }
+
   await postBalancedTransaction({
     tx,
     actorId,
     walletId: riderWallet.id,
-    type: "refund",
+    type: fee > BigInt(0) ? "fee" as const : "refund" as const,
     amountKobo: fare,
     reference,
-    description: `Ride fare returned for ${ride.id}`,
-    entries: [
-      { walletId: platform.id, direction: "DEBIT", amountKobo: fare, memo: "Ride fare hold returned" },
-      { walletId: riderWallet.id, direction: "CREDIT", amountKobo: fare, memo: "Ride fare refunded to rider wallet" }
-    ]
+    description:
+      fee > BigInt(0)
+        ? `Ride cancelled after the driver set off for ${ride.id}`
+        : `Ride fare returned for ${ride.id}`,
+    entries
   });
-  return reference;
+
+  return { reference, refundKobo: Number(refund), feeKobo: Number(fee) };
 }
 
 export async function cancelRide(input: {
@@ -297,37 +334,59 @@ export async function cancelRide(input: {
       );
     }
 
+    // CANCELLATION FEE POLICY — NOT YET DEFINED.
+    // The retention amount and the exact qualifying trip state are still an open
+    // business rule, so no fee is charged here and none is deducted from a rider's
+    // held fare. Both `paymentMethod` cases are therefore free to cancel, which also
+    // preserves the stated cash-free policy. The schema fields and ledger `fee`
+    // transaction type stay in place so a defined policy can be switched on later
+    // without another migration, but until then this is deliberately zero.
+    const feeKobo = 0;
+
     const updated = await tx.ride.updateMany({
       where: { id: ride.id, status: ride.status },
       data: {
         status: "cancelled",
         cancelledAt: new Date(),
-        cancellationReason: input.reason?.slice(0, 300) || "Cancelled by rider."
+        cancellationReason: input.reason?.slice(0, 300) || "Cancelled by rider.",
+        cancellationFeeKobo: BigInt(feeKobo),
+        assignmentExpiresAt: null
       }
     });
     if (updated.count === 0) throw new ApiError(409, "ride_changed", "The ride changed while cancelling. Reload and try again.");
 
-    const reference = await refundRideHold(tx, ride, input.actorId);
-    if (reference) {
-      await tx.ride.update({ where: { id: ride.id }, data: { paymentStatus: "refunded", paymentReference: reference } });
+    const refund = await refundRideHold(tx, ride, input.actorId, feeKobo);
+    if (refund) {
+      await tx.ride.update({
+        where: { id: ride.id },
+        data: {
+          paymentStatus: refund.feeKobo > 0 ? "partially_refunded" : "refunded",
+          paymentReference: refund.reference
+        }
+      });
     }
 
     await addRideEvent(tx, {
       rideId: ride.id,
       status: "cancelled",
       label: rideStatusLabel.cancelled,
-      description: reference
-        ? `Ride cancelled. ${ride.fareKobo.toString()} kobo returned to the rider wallet.`
+      description: refund
+        ? refund.feeKobo > 0
+          ? `Ride cancelled after the driver set off. ${refund.feeKobo} kobo was kept as a late cancellation fee and ${refund.refundKobo} kobo returned to the rider wallet.`
+          : `Ride cancelled. ${refund.refundKobo} kobo returned to the rider wallet.`
         : `Ride cancelled. ${input.reason || "No fare was charged."}`,
       actorId: input.actorId
     });
+    const hasRefund = Boolean(refund);
     await recordSystemEvent({
       tx,
       type: "ride.cancelled",
       actorId: input.actorId,
       entity: "Ride",
       entityId: ride.id,
-      payload: { refunded: Boolean(reference) }
+      payload: {
+        refunded: refund ? (refund.feeKobo > 0 ? "partially_refunded" : "refunded") : "none"
+      }
     });
     await recordAudit({
       tx,
@@ -335,7 +394,11 @@ export async function cancelRide(input: {
       action: input.isAdmin ? "ride.cancelled_by_admin" : "ride.cancelled",
       entity: "Ride",
       entityId: ride.id,
-      metadata: { refunded: Boolean(reference), reason: input.reason ?? null }
+      metadata: {
+        refunded: Boolean(refund),
+        cancellationFeeKobo: feeKobo,
+        reason: input.reason ?? null
+      }
     });
 
     return loadRide(tx, ride.id);
@@ -360,7 +423,13 @@ export async function acceptRide(input: { userId: string; rideId: string }) {
 
     const accepted = await tx.ride.updateMany({
       where: { id: input.rideId, status: "requested", driverId: null },
-      data: { driverId: driver.id, status: "driver_assigned", acceptedAt: new Date() }
+      data: {
+        driverId: driver.id,
+        status: "driver_assigned",
+        acceptedAt: new Date(),
+        // The clock starts now: arrive, or the ride goes back to the queue.
+        assignmentExpiresAt: nextAssignmentDeadline()
+      }
     });
     if (accepted.count === 0) {
       throw new ApiError(409, "ride_taken", "Another driver has already accepted this ride, or it is no longer available.");
@@ -458,9 +527,13 @@ export async function driverUpdateRideStatus(input: {
       where: { id: ride.id, driverId: driver.id, status: ride.status },
       data: {
         status: input.status,
-        ...(input.status === "driver_arriving" ? { arrivedAt: now } : {}),
-        ...(input.status === "in_progress" ? { startedAt: ride.startedAt ?? now } : {}),
-        ...(input.status === "completed" ? { completedAt: now } : {})
+        ...(input.status === "driver_arriving"
+          ? { arrivedAt: now, assignmentExpiresAt: nextAssignmentDeadline(now) }
+          : {}),
+        ...(input.status === "in_progress"
+          ? { startedAt: ride.startedAt ?? now, assignmentExpiresAt: null }
+          : {}),
+        ...(input.status === "completed" ? { completedAt: now, assignmentExpiresAt: null } : {})
       }
     });
     if (updated.count === 0) throw new ApiError(409, "ride_changed", "The ride changed while updating. Reload and try again.");
@@ -524,7 +597,13 @@ export async function releaseRide(input: { userId: string; rideId: string; reaso
 
     const updated = await tx.ride.updateMany({
       where: { id: ride.id, driverId: driver.id, status: ride.status },
-      data: { status: "requested", driverId: null, acceptedAt: null, arrivedAt: null }
+      data: {
+        status: "requested",
+        driverId: null,
+        acceptedAt: null,
+        arrivedAt: null,
+        assignmentExpiresAt: null
+      }
     });
     if (updated.count === 0) throw new ApiError(409, "ride_changed", "The ride changed while releasing. Reload and try again.");
 
@@ -583,7 +662,77 @@ export async function markCashCollected(input: { userId: string; rideId: string 
   });
 }
 
+/**
+ * Return rides whose assigned driver has gone silent to the open queue.
+ *
+ * There is no background worker in this deployment, so the sweep runs lazily at the
+ * start of every read that a client polls: the rider's ride list, the driver board and
+ * the Control Center. A ride can therefore only appear stale until the next client
+ * read, which is the same moment anybody could notice it.
+ *
+ * Each release is guarded by the exact status and deadline that were read, so two
+ * concurrent sweeps (or a sweep racing the driver) release a ride at most once.
+ */
+export async function releaseExpiredAssignments(now: Date = new Date()) {
+  const stale = await prisma.ride.findMany({
+    where: {
+      status: { in: ["driver_assigned", "driver_arriving"] },
+      assignmentExpiresAt: { lt: now }
+    },
+    select: { id: true, rideNumber: true, status: true, driverId: true },
+    orderBy: { assignmentExpiresAt: "asc" },
+    take: 25
+  });
+
+  const released: string[] = [];
+  for (const ride of stale) {
+    try {
+      const changed = await prisma.$transaction(async (tx) => {
+        const updated = await tx.ride.updateMany({
+          where: {
+            id: ride.id,
+            status: ride.status,
+            driverId: ride.driverId,
+            assignmentExpiresAt: { lt: now }
+          },
+          data: {
+            status: "requested",
+            driverId: null,
+            acceptedAt: null,
+            arrivedAt: null,
+            assignmentExpiresAt: null
+          }
+        });
+        if (updated.count === 0) return null;
+
+        await addRideEvent(tx, {
+          rideId: ride.id,
+          status: "requested",
+          label: "Driver did not respond in time",
+          description: `The assigned driver made no progress for ${DRIVE_ASSIGNMENT_GRACE_MINUTES} minutes, so the ride went back to the open queue automatically. Nothing extra was charged and you do not need to request again.`,
+          actorId: null
+        });
+        await recordAudit({
+          tx,
+          actorId: null,
+          action: "ride.assignment_expired",
+          entity: "Ride",
+          entityId: ride.id,
+          metadata: { rideNumber: ride.rideNumber, previousDriverId: ride.driverId }
+        });
+        return ride.id;
+      });
+      if (changed) released.push(changed);
+    } catch {
+      // Another sweep or the driver won the race. The ride is already moving on.
+    }
+  }
+
+  return released;
+}
+
 export async function listRidesForRider(riderId: string) {
+  await releaseExpiredAssignments();
   return prisma.ride.findMany({
     where: { riderId },
     include: rideInclude,
@@ -600,6 +749,7 @@ export async function getRideForUser(input: { userId: string; isAdmin: boolean; 
 
 export async function listDriverRides(userId: string) {
   const driver = await getDriverForUser(userId);
+  await releaseExpiredAssignments();
   const [open, active, recent] = await Promise.all([
     prisma.ride.findMany({
       where: { status: "requested" },
@@ -623,9 +773,118 @@ export async function listDriverRides(userId: string) {
 }
 
 export async function listAllRides() {
+  await releaseExpiredAssignments();
   return prisma.ride.findMany({
     include: rideInclude,
     orderBy: { createdAt: "desc" },
     take: 100
   });
+}
+
+/* ------------------------------------------------------------ saved places --- */
+
+export const MAX_SAVED_PLACES = 20;
+
+export async function listSavedPlaces(userId: string) {
+  return prisma.savedPlace.findMany({ where: { userId }, orderBy: { createdAt: "asc" } });
+}
+
+export async function savePlace(input: { userId: string; nickname: string; placeId: string }) {
+  const nickname = input.nickname.trim().replace(/\s+/g, " ");
+  if (nickname.length < 2 || nickname.length > 40) {
+    throw new ApiError(400, "invalid_nickname", "Give this place a name between 2 and 40 characters.");
+  }
+  if (!findPlace(input.placeId)) {
+    throw new ApiError(400, "unknown_place", "Choose one of the Lagos landmarks NaijaDrive can price.");
+  }
+
+  const count = await prisma.savedPlace.count({ where: { userId: input.userId } });
+  if (count >= MAX_SAVED_PLACES) {
+    throw new ApiError(409, "too_many_saved_places", `You can save up to ${MAX_SAVED_PLACES} places. Remove one first.`);
+  }
+
+  const existing = await prisma.savedPlace.findFirst({
+    where: { userId: input.userId, nickname: { equals: nickname, mode: "insensitive" } }
+  });
+  if (existing) {
+    throw new ApiError(409, "nickname_taken", `You already have a saved place called “${existing.nickname}”.`);
+  }
+
+  const place = await prisma.savedPlace.create({
+    data: { userId: input.userId, nickname, placeId: input.placeId }
+  });
+  await recordAudit({
+    actorId: input.userId,
+    action: "drive.saved_place_created",
+    entity: "SavedPlace",
+    entityId: place.id,
+    metadata: { nickname, placeId: input.placeId }
+  });
+  return place;
+}
+
+/**
+ * Rename a saved place, or re-point it at a different bookable landmark. Scoped by
+ * userId in the lookup, so one account can never edit another's saved places.
+ */
+export async function updateSavedPlace(input: {
+  userId: string;
+  id: string;
+  nickname?: string;
+  placeId?: string;
+}) {
+  const current = await prisma.savedPlace.findFirst({
+    where: { id: input.id, userId: input.userId }
+  });
+  if (!current) {
+    throw new ApiError(404, "saved_place_not_found", "That saved place is not on this account.");
+  }
+
+  const nickname =
+    input.nickname === undefined ? current.nickname : input.nickname.trim().replace(/\s+/g, " ");
+  if (nickname.length < 2 || nickname.length > 40) {
+    throw new ApiError(400, "invalid_nickname", "Give this place a name between 2 and 40 characters.");
+  }
+  if (input.placeId !== undefined && !findPlace(input.placeId)) {
+    throw new ApiError(400, "unknown_place", "Choose one of the Lagos landmarks NaijaDrive can price.");
+  }
+
+  const clash = await prisma.savedPlace.findFirst({
+    where: {
+      userId: input.userId,
+      nickname: { equals: nickname, mode: "insensitive" },
+      NOT: { id: input.id }
+    }
+  });
+  if (clash) {
+    throw new ApiError(409, "nickname_taken", `You already have a saved place called “${clash.nickname}”.`);
+  }
+
+  const place = await prisma.savedPlace.update({
+    where: { id: input.id },
+    data: { nickname, ...(input.placeId !== undefined ? { placeId: input.placeId } : {}) }
+  });
+  await recordAudit({
+    actorId: input.userId,
+    action: "drive.saved_place_updated",
+    entity: "SavedPlace",
+    entityId: place.id,
+    metadata: { nickname: place.nickname, placeId: place.placeId }
+  });
+  return place;
+}
+
+export async function deleteSavedPlace(input: { userId: string; id: string }) {
+  // Scoped by userId in the delete itself, so one account can never remove another's.
+  const deleted = await prisma.savedPlace.deleteMany({ where: { id: input.id, userId: input.userId } });
+  if (deleted.count === 0) {
+    throw new ApiError(404, "saved_place_not_found", "That saved place is not on this account.");
+  }
+  await recordAudit({
+    actorId: input.userId,
+    action: "drive.saved_place_deleted",
+    entity: "SavedPlace",
+    entityId: input.id
+  });
+  return { deleted: true };
 }
