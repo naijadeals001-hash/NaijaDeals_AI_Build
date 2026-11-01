@@ -10,6 +10,24 @@
 - Remote SHA 884faecc0ddbca84da150a8e2f7f7f95384164df confirmed
 - Credentials protected: .env.txt in .gitignore
 - Documentation: AGENTS.md, architecture.md, requirements-matrix.md, decisions.md, handoff.md
+- Local baseline repair: stale `.next` regenerated, dev server restarted, all routes verified 200 OK with full CSS/Tailwind delivery
+- Admin authentication verified: unauthenticated access returns 401 (not 500), `/api/auth.me` returns `user:null`
+- Password reset script `scripts/reset-admin-password.cjs` created and tested
+- `scripts/check-admin-pass.mjs` password hash output removed per security requirements
+
+**Verified findings:**
+- All routes (`/`, `/login`, `/naijashop`, `/admin`, `/super-admin`) return HTTP 200 OK
+- Tailwind CSS delivered at all routes (`<link rel="stylesheet" href="/_next/static/css/app/layout.css">`)
+- `bg-[#04140f]`, `text-white` classes rendered at homepage
+- API `/api/auth/me` returns `{"user":null}` for unauthenticated session
+- API `/api/admin/overview` returns 401 `{"error":"Sign in to continue.","code":"unauthenticated"}` for unauthenticated access (not 500)
+- Earlier "missing required error components" and "Cannot find module './1682.js'" errors were transient webpack runtime cache mismatches resolved by fresh `.next` rebuild + dev server restart
+
+**Baseline recovery procedure:**
+1. Rename stale `.next` to `.next-stale` (backup preserved)
+2. Run `npm run build` to regenerate fresh `.next` output
+3. Restart dev server: `npm run dev -- --port 3000`
+4. Verify all routes return 200 OK with stylesheet delivery
 
 ## Phase 01 — Development skills, tests and change gates
 
