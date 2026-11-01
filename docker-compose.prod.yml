@@ -1,0 +1,58 @@
+# NaijaDeals - Production Docker Compose
+# Production deployment with secrets and health checks
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: naijadeals-db-prod
+    environment:
+      POSTGRES_USER_FILE: /run/secrets/postgres_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_DB_FILE: /run/secrets/postgres_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$(cat /run/secrets/postgres_user)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: naijadeals-app-prod
+    environment:
+      DATABASE_URL_FILE: /run/secrets/database_url
+      NODE_ENV: production
+      PORT: "3000"
+      # Add other env vars here (DEEPSEEK_API_KEY, PAYSTACK_SECRET, etc.)
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+secrets:
+  postgres_user:
+    file: ./secrets/postgres_user.txt
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  postgres_db:
+    file: ./secrets/postgres_db.txt
+  database_url:
+    file: ./secrets/database_url.txt
+
+volumes:
+  postgres_data:

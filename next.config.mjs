@@ -3,6 +3,7 @@ const nextConfig = {
   // Allow a separate build directory so a local dev server and a production
   // preview can run side by side without overwriting each other's artifacts.
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  output: "standalone",
   async headers() {
     return [
       {

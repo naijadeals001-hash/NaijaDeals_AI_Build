@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+.next-prod/
+out/
+dist/
+build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.txt
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Testing
+coverage/
+.nyc_output/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Prisma
+prisma/migrations/
+
+# Scripts
+scripts/
+qa-artifacts/
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
