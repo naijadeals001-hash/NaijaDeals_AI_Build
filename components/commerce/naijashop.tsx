@@ -166,55 +166,48 @@ export function NaijaShopPage() {
   return (
     <div className="space-y-8">
       <section className="overflow-hidden rounded-3xl bg-night p-6 text-white sm:p-10">
-        <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr] lg:items-center">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-primary-live">NaijaShop</p>
-            <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-5xl">
-              Shop verified Nigerian sellers. Pay safely. Track every delivery.
-            </h1>
-            <p className="mt-4 max-w-xl text-sm text-white/70 sm:text-base">
-              Real listings from real sellers. Payment is verified on our server before an order is accepted, and
-              funds stay in escrow until you confirm delivery.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/search" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-white">
-                <Search className="h-4 w-4" /> Browse the catalogue
-              </Link>
-              <Link href="/sell" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/30 px-5 text-sm font-bold text-white">
-                <Store className="h-4 w-4" /> Become a seller
-              </Link>
-            </div>
-          </div>
-          <dl className="grid grid-cols-2 gap-3">
-            {[
-              ["Live listings", String(products.length)],
-              ["Verified sellers", String(vendors)],
-              ["Categories", String(categories.length)],
-              ["Payment", "Server-verified"]
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl bg-white/10 p-4">
-                <dt className="text-xs font-bold uppercase tracking-wide text-white/60">{label}</dt>
-                <dd className="mt-1 font-display text-2xl font-extrabold">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </section>
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-primary-live">NaijaShop</p>
+          <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">
+            Shop verified Nigerian sellers. Pay safely. Track every delivery.
+          </h1>
+          <p className="mt-4 max-w-2xl text-sm text-white/70 sm:text-base">
+            Real listings from real sellers. Payment is verified on our server before an order is accepted, and
+            funds stay in escrow until you confirm delivery.
+          </p>
 
-      <section className="grid gap-3 sm:grid-cols-3">
-        {[
-          { icon: ShieldCheck, title: "Escrow protected", body: "Sellers are paid after you confirm delivery." },
-          { icon: Truck, title: "Tracked delivery", body: "Pickup, transit and delivery events are recorded." },
-          { icon: CheckCircle2, title: "Verified payments", body: "We confirm every payment with the provider." }
-        ].map((item) => (
-          <div key={item.title} className="flex gap-3 rounded-2xl border border-border-soft bg-canvas p-4">
-            <item.icon className="h-6 w-6 shrink-0 text-primary" />
-            <div>
-              <p className="font-bold">{item.title}</p>
-              <p className="text-sm text-muted">{item.body}</p>
-            </div>
+          <form action="/search" method="get" className="mt-6 flex items-center gap-2 rounded-2xl bg-white p-1.5 shadow-lift max-w-xl">
+            <label htmlFor="shop-search" className="sr-only">
+              Search products
+            </label>
+            <Search className="ml-2 h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
+            <input
+              id="shop-search"
+              name="q"
+              type="search"
+              inputMode="search"
+              placeholder="Search phones, fashion, home, electronics..."
+              className="min-h-11 w-full min-w-0 bg-transparent px-1 text-sm font-semibold text-ink outline-none placeholder:text-muted/70"
+            />
+            <button
+              type="submit"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-white transition hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              aria-label="Search products"
+            >
+              <ArrowRight className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </form>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/60">
+            <span>{products.length} live listings</span>
+            <span>·</span>
+            <span>{vendors} verified sellers</span>
+            <span>·</span>
+            <span>{categories.length} categories</span>
+            <span>·</span>
+            <span>Server-verified payments</span>
           </div>
-        ))}
+        </div>
       </section>
 
       {notice ? (

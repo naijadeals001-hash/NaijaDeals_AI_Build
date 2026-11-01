@@ -164,21 +164,23 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
             <LayoutGrid className="h-5 w-5" aria-hidden="true" />
             <span>{t("common.allProducts")}</span>
           </Link>
-          {verticals.map((vertical) => {
-            const Icon = vertical.icon;
-            return (
-              <Link
-                key={vertical.key}
-                href={vertical.href}
-                className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold ${
-                  isActive(vertical.href) ? "bg-surface-low text-primary" : "text-muted hover:bg-surface-low hover:text-primary"
-                }`}
-              >
-                <Icon className="h-5 w-5" aria-hidden="true" />
-                <span>{vertical.name}</span>
-              </Link>
-            );
-          })}
+          {verticals
+            .filter((v) => v.key !== "shop")
+            .map((vertical) => {
+              const Icon = vertical.icon;
+              return (
+                <Link
+                  key={vertical.key}
+                  href={vertical.href}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold ${
+                    isActive(vertical.href) ? "bg-surface-low text-primary" : "text-muted hover:bg-surface-low hover:text-primary"
+                  }`}
+                >
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                  <span>{vertical.name}</span>
+                </Link>
+              );
+            })}
         </nav>
         <Link href="/sell" className="mt-5 flex items-center justify-center gap-2 rounded-xl bg-night px-4 py-3 text-sm font-bold text-white">
           <Store className="h-4 w-4" />
