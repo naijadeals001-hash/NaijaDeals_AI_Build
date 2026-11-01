@@ -129,6 +129,9 @@ export function AdminShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>(["operations", "catalog", "finance", "people"]);
   const [lastFocusedElement, setLastFocusedElement] = useState<HTMLElement | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { t } = useLocale();
 
   const closeSidebar = useCallback(() => {
@@ -175,17 +178,30 @@ export function AdminShell({
     router.refresh();
   }
 
+  function handleRefresh() {
+    router.refresh();
+  }
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`${pathname}?search=${encodeURIComponent(searchQuery)}`);
+    }
+  }
+
   const userRoles = user.roles ?? [];
+  const isSuperAdmin = userRoles.includes("super_admin") || user.actorType === "SUPER_ADMIN";
+
   const filteredNavItems = adminNavItems.filter((item) => {
     if (!item.roles) return true;
     return item.roles.some((role) => userRoles.includes(role) || user.actorType === role.toUpperCase());
   });
 
   return (
-    <div className="min-h-screen bg-surface text-ink">
+    <div className="min-h-screen bg-[#0B0E14] text-[#F0F6FC]">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-white"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-[#00E676] focus:px-4 focus:py-2 focus:text-[#0B0E14]"
       >
         Skip to main content
       </a>
@@ -193,7 +209,7 @@ export function AdminShell({
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/70 lg:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
@@ -201,19 +217,19 @@ export function AdminShell({
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 h-screen border-r border-border-soft bg-canvas transition-all duration-200 ${
+        className={`fixed left-0 top-0 z-50 h-screen border-r border-[#21262D] bg-[#161B22] transition-all duration-200 ${
           sidebarCollapsed ? "w-16" : "w-64"
         } lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
         aria-label="Control Center navigation"
       >
         <div className="flex h-full flex-col">
           {/* Brand header */}
-          <div className={`flex h-16 items-center justify-between border-b border-border-soft px-4 ${sidebarCollapsed ? "justify-center" : ""}`}>
+          <div className={`flex h-16 items-center justify-between border-b border-[#21262D] px-4 ${sidebarCollapsed ? "justify-center" : ""}`}>
             <Link href="/admin" className="flex items-center gap-2" aria-label="Control Center home">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-sm font-black text-white shadow-lift">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#00E676] text-sm font-black text-[#0B0E14] shadow-lift">
                 CC
               </span>
-              {!sidebarCollapsed && <span className="font-display text-xl font-extrabold text-primary">Control Center</span>}
+              {!sidebarCollapsed && <span className="font-display text-xl font-extrabold text-[#F0F6FC]">Control Center</span>}
             </Link>
             {!sidebarCollapsed && (
               <button
@@ -243,8 +259,8 @@ export function AdminShell({
                         onClick={() => toggleSection(section.id)}
                         className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
                           isSectionActive
-                            ? "bg-primary-soft text-primary"
-                            : "text-muted hover:bg-surface-low hover:text-ink"
+                            ? "bg-[#00E676]/15 text-[#00E676]"
+                            : "text-[#8B949E] hover:bg-[#21262D] hover:text-[#F0F6FC]"
                         }`}
                         aria-expanded={isSectionExpanded(section.id)}
                         aria-controls={`${section.id}-submenu`}
@@ -255,7 +271,7 @@ export function AdminShell({
                         )}
                         {!sidebarCollapsed && (
                           <span className={`transition-transform ${isSectionExpanded(section.id) ? "rotate-180" : ""}`}>
-                            <ChevronDown className="h-4 w-4 text-muted" />
+                            <ChevronDown className="h-4 w-4 text-[#8B949E]" />
                           </span>
                         )}
                       </button>
@@ -274,15 +290,15 @@ export function AdminShell({
                                 href={child.href}
                                 className={`flex items-center gap-3 rounded-xl px-6 py-2 text-sm font-medium transition-colors ${
                                   isActive(child.href)
-                                    ? "bg-primary-soft text-primary"
-                                    : "text-muted hover:bg-surface-low hover:text-ink"
+                                    ? "bg-[#00E676]/15 text-[#00E676]"
+                                    : "text-[#8B949E] hover:bg-[#21262D] hover:text-[#F0F6FC]"
                                 }`}
                                 aria-current={isActive(child.href) ? "page" : undefined}
                               >
                                 <span className="shrink-0" aria-hidden="true">{child.icon}</span>
                                 <span className="truncate">{child.label}</span>
                                 {child.badge && (
-                                  <span className="ml-auto min-w-5 h-5 rounded-full bg-primary/10 px-1.5 text-[10px] font-bold text-primary text-center">
+                                  <span className="ml-auto min-w-5 h-5 rounded-full bg-crimson/20 px-1.5 text-[10px] font-bold text-crimson text-center">
                                     {child.badge > 99 ? "99+" : child.badge}
                                   </span>
                                 )}
@@ -297,8 +313,8 @@ export function AdminShell({
                       href={section.href}
                       className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
                         isActive(section.href)
-                          ? "bg-primary-soft text-primary"
-                          : "text-muted hover:bg-surface-low hover:text-ink"
+                          ? "bg-[#00E676]/15 text-[#00E676]"
+                          : "text-[#8B949E] hover:bg-[#21262D] hover:text-[#F0F6FC]"
                       }`}
                       aria-current={isActive(section.href) ? "page" : undefined}
                     >
@@ -312,21 +328,21 @@ export function AdminShell({
           </nav>
 
           {/* User section */}
-          <div className={`border-t border-border-soft p-4 ${sidebarCollapsed ? "px-2" : ""}`}>
+          <div className={`border-t border-[#21262D] p-4 ${sidebarCollapsed ? "px-2" : ""}`}>
             {!sidebarCollapsed ? (
               <>
-                <div className="flex items-center gap-3 rounded-xl bg-primary-soft p-3 mb-3">
-                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-sm font-bold text-white">
+                <div className="flex items-center gap-3 rounded-xl bg-[#21262D] p-3 mb-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-[#00E676] text-sm font-bold text-[#0B0E14]">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate">{user.name}</p>
-                    <p className="text-xs text-muted truncate">{user.email}</p>
+                    <p className="font-semibold text-[#F0F6FC] truncate">{user.name}</p>
+                    <p className="text-xs text-[#8B949E] truncate">{user.email}</p>
                   </div>
                 </div>
                 <button
                   onClick={signOut}
-                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted hover:bg-surface-low hover:text-crimson"
+                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-[#8B949E] hover:bg-[#21262D] hover:text-crimson"
                 >
                   <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
                   <span className="truncate">Sign out</span>
@@ -336,7 +352,7 @@ export function AdminShell({
               <div className="flex justify-center">
                 <button
                   onClick={signOut}
-                  className="rounded-lg p-2 text-muted hover:bg-surface-low hover:text-crimson"
+                  className="rounded-lg p-2 text-[#8B949E] hover:bg-[#21262D] hover:text-crimson"
                   aria-label="Sign out"
                 >
                   <LogOut className="h-5 w-5" />
@@ -358,61 +374,91 @@ export function AdminShell({
       </button>
 
       {/* Top header */}
-      <header className={`sticky top-0 z-30 border-b border-border-soft bg-canvas/95 backdrop-blur ${sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"}`}>
+      <header className={`sticky top-0 z-30 border-b border-[#21262D] bg-[#161B22]/95 backdrop-blur ${sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"}`}>
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 lg:px-8">
           <div className="flex items-center gap-4">
             <button
-              className="rounded-lg p-2 text-muted hover:bg-surface-low lg:hidden"
+              className="rounded-lg p-2 text-[#8B949E] hover:bg-[#21262D] lg:hidden"
               onClick={openSidebar}
               aria-label="Open navigation menu"
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h1 className="hidden font-display text-xl font-extrabold text-ink lg:block">
+            <h1 className="hidden font-display text-xl font-extrabold text-[#F0F6FC] lg:block">
               {currentPathname.includes("tab=")
-                ? currentPathname.split("tab=")[1].replace(/-/g, " ").replace(/\\b\\w/g, (c) => c.toUpperCase())
+                ? currentPathname.split("tab=")[1].replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
                 : "Operations dashboard"}
             </h1>
           </div>
 
           <div className="flex items-center gap-3">
             {/* Search */}
-            <div className="relative hidden sm:block">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+            <form onSubmit={handleSearch} className="relative hidden sm:block">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B949E]" aria-hidden="true" />
               <input
                 type="search"
                 placeholder="Search orders, users, products..."
-                className="h-10 w-64 rounded-xl border border-border-soft bg-canvas pl-10 pr-4 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-10 w-64 rounded-xl border border-[#21262D] bg-[#0B0E14] pl-10 pr-4 text-sm text-[#F0F6FC] placeholder:text-[#8B949E] focus:outline-none focus:ring-2 focus:ring-[#00E676]/30 focus:border-[#00E676]"
                 aria-label="Search Control Center"
               />
-            </div>
+            </form>
 
             {/* Notifications */}
-            <button className="relative rounded-full p-2 text-muted hover:bg-surface-low" aria-label="Notifications">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-crimson text-[10px] font-bold text-white flex items-center justify-center">
-                3
-              </span>
-            </button>
+            <div className="relative">
+              <button
+                className="relative rounded-full p-2 text-[#8B949E] hover:bg-[#21262D]"
+                aria-label="Notifications"
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+              >
+                <Bell className="h-5 w-5" />
+                <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-crimson text-[10px] font-bold text-white flex items-center justify-center">
+                  3
+                </span>
+              </button>
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-64 rounded-xl border border-[#21262D] bg-[#161B22] p-2 shadow-lift z-50">
+                  <p className="p-2 text-sm text-[#8B949E]">No new notifications</p>
+                </div>
+              )}
+            </div>
 
             {/* Refresh */}
-            <button className="rounded-full p-2 text-muted hover:bg-surface-low" aria-label="Refresh data">
+            <button className="rounded-full p-2 text-[#8B949E] hover:bg-[#21262D]" onClick={handleRefresh} aria-label="Refresh data">
               <RefreshCw className="h-5 w-5" />
             </button>
 
             {/* User menu */}
             <div className="relative">
               <button
-                className="flex items-center gap-2 rounded-full bg-primary-soft px-3 py-1.5 text-sm font-bold text-primary"
-                aria-expanded="false"
+                className="flex items-center gap-2 rounded-full bg-[#00E676]/10 px-3 py-1.5 text-sm font-bold text-[#00E676]"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                aria-expanded={userMenuOpen}
                 aria-haspopup="true"
               >
-                <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-sm font-bold text-white">
+                <div className="grid h-8 w-8 place-items-center rounded-lg bg-[#00E676] text-sm font-bold text-[#0B0E14]">
                   {user.name.charAt(0).toUpperCase()}
                 </div>
-                <span className="hidden sm:inline truncate max-w-[140px]">{user.name}</span>
-                <ChevronDown className="h-4 w-4" />
+                <span className="hidden sm:inline truncate max-w-[140px] text-[#F0F6FC]">{user.name}</span>
+                <ChevronDown className="h-4 w-4 text-[#8B949E]" />
               </button>
+              {userMenuOpen && (
+                <div role="menu" className="absolute right-0 mt-2 w-48 rounded-xl border border-[#21262D] bg-[#161B22] py-1 shadow-lift z-50">
+                  <div className="px-4 py-2 text-sm font-bold border-b border-[#21262D] text-[#F0F6FC]">
+                    {user.name}
+                    <p className="text-xs text-[#8B949E] font-normal">{user.actorType}</p>
+                  </div>
+                  <Link href="/admin?tab=settings" role="menuitem" className="block px-4 py-2 text-sm text-[#F0F6FC] hover:bg-[#21262D]">Settings</Link>
+                  <button
+                    role="menuitem"
+                    onClick={signOut}
+                    className="block w-full text-left px-4 py-2 text-sm text-crimson hover:bg-[#21262D]"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -65,7 +65,11 @@ export function roleNames(user: SessionUser): string[] {
 }
 
 export function isAdmin(user: SessionUser) {
-  return user.actorType === "ADMIN" || roleNames(user).includes("admin");
+  return user.actorType === "ADMIN" || roleNames(user).includes("admin") || roleNames(user).includes("super_admin");
+}
+
+export function isSuperAdmin(user: SessionUser) {
+  return roleNames(user).includes("super_admin");
 }
 
 export function isVendor(user: SessionUser) {

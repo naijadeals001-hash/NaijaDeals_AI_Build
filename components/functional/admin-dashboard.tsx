@@ -194,18 +194,18 @@ export function AdminDashboard({
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-1">
-        <p className="text-xs font-black uppercase tracking-wide text-primary">Control Center</p>
-        <h1 className="font-display text-3xl font-extrabold text-ink">Operations dashboard</h1>
-        <p className="text-sm text-muted">All figures are computed from the database. No sample revenue is displayed.</p>
+        <p className="text-xs font-black uppercase tracking-wide text-[#00E676]">Control Center</p>
+        <h1 className="font-display text-3xl font-extrabold text-[#F0F6FC]">Operations dashboard</h1>
+        <p className="text-sm text-[#8B949E]">All figures are computed from the database. No sample revenue is displayed.</p>
       </header>
 
       {notice ? (
-        <div role="status" className="rounded-xl bg-primary-soft p-3 text-sm font-bold text-primary">
+        <div role="status" className="rounded-xl bg-[#00E676]/10 p-3 text-sm font-bold text-[#00E676]">
           {notice}
         </div>
       ) : null}
       {error ? (
-        <div role="alert" className="rounded-xl border border-crimson/30 bg-crimson-soft p-3 text-sm font-bold text-crimson">
+        <div role="alert" className="rounded-xl border border-crimson/30 bg-crimson/10 p-3 text-sm font-bold text-crimson">
           {error}
         </div>
       ) : null}
@@ -221,7 +221,7 @@ export function AdminDashboard({
               if (onTabChange) onTabChange(item.id as Tab);
             }}
             className={`min-h-10 whitespace-nowrap rounded-full px-4 text-sm font-bold transition-colors ${
-              tab === item.id ? "bg-primary text-white shadow-lift" : "bg-canvas text-muted ring-1 ring-border-soft hover:bg-surface-low hover:text-ink"
+              tab === item.id ? "bg-[#00E676] text-[#0B0E14] shadow-lift" : "bg-[#161B22] text-[#8B949E] ring-1 ring-[#21262D] hover:bg-[#21262D] hover:text-[#F0F6FC]"
             }`}
           >
             {item.label}
@@ -242,9 +242,9 @@ export function AdminDashboard({
               ["Low Stock Items", overviewState.data?.lowStock],
               ["Open Returns", overviewState.data?.openReturns]
             ].map(([label, value]) => (
-              <div key={String(label)} className="rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft">
-                <p className="text-xs font-black uppercase tracking-wide text-muted">{label}</p>
-                <p className="mt-2 font-display text-3xl font-extrabold text-ink">{value ?? "—"}</p>
+              <div key={String(label)} className="rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft">
+                <p className="text-xs font-black uppercase tracking-wide text-[#8B949E]">{label}</p>
+                <p className="mt-2 font-display text-3xl font-extrabold text-[#F0F6FC]">{value ?? "—"}</p>
               </div>
             ))}
           </section>
@@ -255,25 +255,25 @@ export function AdminDashboard({
               <p className="mt-2 font-display text-3xl font-extrabold">{koboToNaira(overviewState.data?.grossVerifiedKobo ?? 0)}</p>
               <p className="mt-1 text-xs text-white/60">{overviewState.data?.completedPaymentCount} completed payment(s)</p>
             </div>
-            <div className="rounded-2xl border border-border-soft bg-canvas p-6 shadow-soft">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted">Refunded amount</p>
-              <p className="mt-2 font-display text-3xl font-extrabold text-ink">{koboToNaira(overviewState.data?.refundedKobo ?? 0)}</p>
-              <p className="mt-1 text-xs text-muted">{overviewState.data?.refundCount} refund(s)</p>
+            <div className="rounded-2xl border border-[#21262D] bg-[#161B22] p-6 shadow-soft">
+              <p className="text-xs font-bold uppercase tracking-wider text-[#8B949E]">Refunded amount</p>
+              <p className="mt-2 font-display text-3xl font-extrabold text-[#F0F6FC]">{koboToNaira(overviewState.data?.refundedKobo ?? 0)}</p>
+              <p className="mt-1 text-xs text-[#8B949E]">{overviewState.data?.refundCount} refund(s)</p>
             </div>
-            <div className="rounded-2xl border border-border-soft bg-canvas p-6 shadow-soft">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted">Escrow held</p>
-              <p className="mt-2 font-display text-3xl font-extrabold text-ink">{koboToNaira(overviewState.data?.escrowHeldKobo ?? 0)}</p>
-              <p className="mt-1 text-xs text-muted">Active marketplace escrow</p>
+            <div className="rounded-2xl border border-[#21262D] bg-[#161B22] p-6 shadow-soft">
+              <p className="text-xs font-bold uppercase tracking-wider text-[#8B949E]">Escrow held</p>
+              <p className="mt-2 font-display text-3xl font-extrabold text-[#F0F6FC]">{koboToNaira(overviewState.data?.escrowHeldKobo ?? 0)}</p>
+              <p className="mt-1 text-xs text-[#8B949E]">Active marketplace escrow</p>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-border-soft bg-canvas p-6 shadow-soft">
-            <h2 className="font-display text-lg font-extrabold text-ink">Payment provider configuration</h2>
+          <section className="rounded-2xl border border-[#21262D] bg-[#161B22] p-6 shadow-soft">
+            <h2 className="font-display text-lg font-extrabold text-[#F0F6FC]">Payment provider configuration</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {overviewState.data?.paymentMethods?.map((method) => (
-                <div key={method.id} className="flex items-center justify-between rounded-xl bg-surface-low p-4">
-                  <span className="font-bold text-ink">{method.label}</span>
-                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${method.configured ? "bg-primary-soft text-primary" : "bg-amber-soft text-amber"}`}>
+                <div key={method.id} className="flex items-center justify-between rounded-xl bg-[#21262D] p-4">
+                  <span className="font-bold text-[#F0F6FC]">{method.label}</span>
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${method.configured ? "bg-[#00E676]/15 text-[#00E676]" : "bg-amber-soft text-amber"}`}>
                     {method.configured ? "Configured" : method.reason || "Not configured"}
                   </span>
                 </div>
@@ -286,24 +286,24 @@ export function AdminDashboard({
       {tab === "orders" && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-extrabold text-ink">Orders management</h2>
-            <span className="text-xs text-muted font-bold">{ordersData.length} total orders</span>
+            <h2 className="font-display text-xl font-extrabold text-[#F0F6FC]">Orders management</h2>
+            <span className="text-xs text-[#8B949E] font-bold">{ordersData.length} total orders</span>
           </div>
-          {ordersData.length === 0 ? <p className="text-sm text-muted">No orders found.</p> : null}
+          {ordersData.length === 0 ? <p className="text-sm text-[#8B949E]">No orders found.</p> : null}
           <div className="space-y-3">
             {ordersData.map((order) => (
-              <article key={order.id} className="rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft">
+              <article key={order.id} className="rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-display font-extrabold text-ink">{order.orderNumber}</span>
-                      <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-bold text-primary">{order.status}</span>
+                      <span className="font-display font-extrabold text-[#F0F6FC]">{order.orderNumber}</span>
+                      <span className="rounded-full bg-[#00E676]/15 px-2.5 py-0.5 text-xs font-bold text-[#00E676]">{order.status}</span>
                     </div>
-                    <p className="mt-1 text-sm text-muted">
-                      Customer: <strong className="text-ink">{order.customer?.name}</strong> &bull; Vendor: <strong className="text-ink">{order.vendor?.name}</strong>
+                    <p className="mt-1 text-sm text-[#8B949E]">
+                      Customer: <strong className="text-[#F0F6FC]">{order.customer?.name}</strong> &bull; Vendor: <strong className="text-[#F0F6FC]">{order.vendor?.name}</strong>
                     </p>
-                    <p className="text-xs text-muted mt-0.5">
-                      Payment status: <span className="font-bold text-primary">{order.paymentStatus}</span> &bull; Total: <strong className="text-ink">{koboToNaira(order.totalKobo)}</strong>
+                    <p className="text-xs text-[#8B949E] mt-0.5">
+                      Payment status: <span className="font-bold text-[#00E676]">{order.paymentStatus}</span> &bull; Total: <strong className="text-[#F0F6FC]">{koboToNaira(order.totalKobo)}</strong>
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -315,7 +315,7 @@ export function AdminDashboard({
                         setNotice(`Order ${order.orderNumber} status updated to ${event.target.value}`);
                         event.target.value = "";
                       }}
-                      className="h-10 rounded-xl border border-border-soft px-3 text-xs font-bold bg-canvas text-ink"
+                      className="h-10 rounded-xl border border-[#21262D] px-3 text-xs font-bold bg-[#161B22] text-[#F0F6FC]"
                     >
                       <option value="">Change status...</option>
                       {["accepted", "preparing", "ready_for_pickup", "in_transit", "delivered", "completed", "cancelled", "refunded"].map((val) => (
@@ -341,23 +341,23 @@ export function AdminDashboard({
       {tab === "applications" && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-extrabold text-ink">Seller applications</h2>
-            <span className="text-xs text-muted font-bold">{applicationsData.length} pending review</span>
+            <h2 className="font-display text-xl font-extrabold text-[#F0F6FC]">Seller applications</h2>
+            <span className="text-xs text-[#8B949E] font-bold">{applicationsData.length} pending review</span>
           </div>
-          {applicationsData.length === 0 ? <p className="text-sm text-muted">No seller applications.</p> : null}
+          {applicationsData.length === 0 ? <p className="text-sm text-[#8B949E]">No seller applications.</p> : null}
           <div className="space-y-3">
             {applicationsData.map((app) => (
-              <article key={app.id} className="rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft">
+              <article key={app.id} className="rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-display font-extrabold text-ink">{app.businessName}</span>
+                      <span className="font-display font-extrabold text-[#F0F6FC]">{app.businessName}</span>
                       <span className="rounded-full bg-amber-soft px-2.5 py-0.5 text-xs font-bold text-amber">{app.status}</span>
                     </div>
-                    <p className="mt-1 text-sm text-muted">
-                      Applicant: <strong className="text-ink">{app.user?.name}</strong> ({app.user?.email}) &bull; Market: <strong className="text-ink">{app.market}</strong>
+                    <p className="mt-1 text-sm text-[#8B949E]">
+                      Applicant: <strong className="text-[#F0F6FC]">{app.user?.name}</strong> ({app.user?.email}) &bull; Market: <strong className="text-[#F0F6FC]">{app.market}</strong>
                     </p>
-                    <p className="text-xs text-muted mt-0.5">
+                    <p className="text-xs text-[#8B949E] mt-0.5">
                       Pickup: {app.pickupAddress} &bull; Phone: {app.phone}
                     </p>
                   </div>
@@ -365,13 +365,13 @@ export function AdminDashboard({
                     <div className="flex gap-2">
                       <button
                         onClick={() => setNotice(`Seller application for ${app.businessName} approved.`)}
-                        className="h-10 rounded-xl bg-primary px-4 text-xs font-bold text-white shadow-lift hover:bg-primary-live"
+                        className="h-10 rounded-xl bg-[#00E676] text-[#0B0E14] hover:bg-[#00c853]"
                       >
                         Approve
                       </button>
                       <button
                         onClick={() => setNotice(`Seller application for ${app.businessName} rejected.`)}
-                        className="h-10 rounded-xl border border-border-soft px-4 text-xs font-bold text-ink hover:bg-surface-low"
+                        className="h-10 rounded-xl border border-[#21262D] px-4 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D]"
                       >
                         Reject
                       </button>
@@ -387,13 +387,13 @@ export function AdminDashboard({
       {tab === "products" && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-extrabold text-ink">Product catalog moderation</h2>
-            <span className="text-xs text-muted font-bold">{productsData.length} products listed</span>
+            <h2 className="font-display text-xl font-extrabold text-[#F0F6FC]">Product catalog moderation</h2>
+            <span className="text-xs text-[#8B949E] font-bold">{productsData.length} products listed</span>
           </div>
-          <div className="overflow-x-auto rounded-2xl border border-border-soft bg-canvas shadow-soft">
+          <div className="overflow-x-auto rounded-2xl border border-[#21262D] bg-[#161B22] shadow-soft">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
-                <tr className="border-b border-border-soft bg-surface-low text-xs uppercase text-muted">
+                <tr className="border-b border-[#21262D] bg-[#21262D] text-xs uppercase text-[#8B949E]">
                   <th className="py-3 px-4">Product</th>
                   <th className="py-3 px-4">Vendor</th>
                   <th className="py-3 px-4">Price</th>
@@ -404,18 +404,18 @@ export function AdminDashboard({
               </thead>
               <tbody>
                 {productsData.map((prod) => (
-                  <tr key={prod.id} className="border-b border-border-soft hover:bg-surface-low/50">
-                    <td className="py-3 px-4 font-bold text-ink">{prod.name}</td>
-                    <td className="py-3 px-4 text-muted">{prod.vendor?.name}</td>
-                    <td className="py-3 px-4 font-bold text-ink">{koboToNaira(prod.priceKobo)}</td>
-                    <td className="py-3 px-4 text-muted">{prod.stock?.quantity ?? "In stock"}</td>
+                  <tr key={prod.id} className="border-b border-[#21262D] hover:bg-[#21262D]/50">
+                    <td className="py-3 px-4 font-bold text-[#F0F6FC]">{prod.name}</td>
+                    <td className="py-3 px-4 text-[#8B949E]">{prod.vendor?.name}</td>
+                    <td className="py-3 px-4 font-bold text-[#F0F6FC]">{koboToNaira(prod.priceKobo)}</td>
+                    <td className="py-3 px-4 text-[#8B949E]">{prod.stock?.quantity ?? "In stock"}</td>
                     <td className="py-3 px-4">
-                      <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-bold text-primary">{prod.status}</span>
+                      <span className="rounded-full bg-[#00E676]/15 px-2.5 py-0.5 text-xs font-bold text-[#00E676]">{prod.status}</span>
                     </td>
                     <td className="py-3 px-4">
                       <button
                         onClick={() => setNotice(`Product ${prod.name} moderation status updated.`)}
-                        className="h-9 rounded-lg border border-border-soft px-3 text-xs font-bold text-ink hover:bg-surface-low"
+                        className="h-9 rounded-lg border border-[#21262D] px-3 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D]"
                       >
                         {prod.status === "ACTIVE" ? "Suspend" : "Activate"}
                       </button>
@@ -431,22 +431,22 @@ export function AdminDashboard({
       {tab === "payments" && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-extrabold text-ink">Payment ledger</h2>
-            <span className="text-xs text-muted font-bold">{paymentsData.length} verified transactions</span>
+            <h2 className="font-display text-xl font-extrabold text-[#F0F6FC]">Payment ledger</h2>
+            <span className="text-xs text-[#8B949E] font-bold">{paymentsData.length} verified transactions</span>
           </div>
           <div className="space-y-3">
             {paymentsData.map((pay) => (
-              <div key={pay.id} className="flex flex-wrap items-center justify-between rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft">
+              <div key={pay.id} className="flex flex-wrap items-center justify-between rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-display font-extrabold text-ink">{pay.order?.orderNumber || "Direct Payment"}</span>
-                    <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-bold text-primary">{pay.status}</span>
+                    <span className="font-display font-extrabold text-[#F0F6FC]">{pay.order?.orderNumber || "Direct Payment"}</span>
+                    <span className="rounded-full bg-[#00E676]/15 px-2.5 py-0.5 text-xs font-bold text-[#00E676]">{pay.status}</span>
                   </div>
-                  <p className="mt-1 text-xs text-muted">
-                    Provider: <strong className="text-ink">{pay.provider.toUpperCase()}</strong> &bull; Ref: {pay.providerReference}
+                  <p className="mt-1 text-xs text-[#8B949E]">
+                    Provider: <strong className="text-[#F0F6FC]">{pay.provider.toUpperCase()}</strong> &bull; Ref: {pay.providerReference}
                   </p>
                 </div>
-                <p className="font-display text-xl font-extrabold text-ink">{koboToNaira(pay.amountKobo)}</p>
+                <p className="font-display text-xl font-extrabold text-[#F0F6FC]">{koboToNaira(pay.amountKobo)}</p>
               </div>
             ))}
           </div>
@@ -456,13 +456,13 @@ export function AdminDashboard({
       {tab === "users" && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-extrabold text-ink">User management</h2>
-            <span className="text-xs text-muted font-bold">{usersData.length} system users</span>
+            <h2 className="font-display text-xl font-extrabold text-[#F0F6FC]">User management</h2>
+            <span className="text-xs text-[#8B949E] font-bold">{usersData.length} system users</span>
           </div>
-          <div className="overflow-x-auto rounded-2xl border border-border-soft bg-canvas shadow-soft">
+          <div className="overflow-x-auto rounded-2xl border border-[#21262D] bg-[#161B22] shadow-soft">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
-                <tr className="border-b border-border-soft bg-surface-low text-xs uppercase text-muted">
+                <tr className="border-b border-[#21262D] bg-[#21262D] text-xs uppercase text-[#8B949E]">
                   <th className="py-3 px-4">Name</th>
                   <th className="py-3 px-4">Email</th>
                   <th className="py-3 px-4">Type</th>
@@ -472,12 +472,12 @@ export function AdminDashboard({
               </thead>
               <tbody>
                 {usersData.map((usr) => (
-                  <tr key={usr.id} className="border-b border-border-soft hover:bg-surface-low/50">
-                    <td className="py-3 px-4 font-bold text-ink">{usr.name}</td>
-                    <td className="py-3 px-4 text-muted">{usr.email}</td>
-                    <td className="py-3 px-4 font-bold text-primary">{usr.actorType}</td>
-                    <td className="py-3 px-4 text-muted">{usr.roles.map((r) => r.role.name).join(", ") || "Standard"}</td>
-                    <td className="py-3 px-4 text-muted">{usr.vendors.map((v) => v.name).join(", ") || "—"}</td>
+                  <tr key={usr.id} className="border-b border-[#21262D] hover:bg-[#21262D]/50">
+                    <td className="py-3 px-4 font-bold text-[#F0F6FC]">{usr.name}</td>
+                    <td className="py-3 px-4 text-[#8B949E]">{usr.email}</td>
+                    <td className="py-3 px-4 font-bold text-[#00E676]">{usr.actorType}</td>
+                    <td className="py-3 px-4 text-[#8B949E]">{usr.roles.map((r) => r.role.name).join(", ") || "Standard"}</td>
+                    <td className="py-3 px-4 text-[#8B949E]">{usr.vendors.map((v) => v.name).join(", ") || "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -489,22 +489,22 @@ export function AdminDashboard({
       {tab === "deliveries" && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-extrabold text-ink">Deliveries & Dispatch</h2>
-            <span className="text-xs text-muted font-bold">Logistics monitoring</span>
+            <h2 className="font-display text-xl font-extrabold text-[#F0F6FC]">Deliveries & Dispatch</h2>
+            <span className="text-xs text-[#8B949E] font-bold">Logistics monitoring</span>
           </div>
           {ordersData.flatMap((o) => o.deliveries ?? []).length === 0 ? (
-            <p className="text-sm text-muted">No active deliveries.</p>
+            <p className="text-sm text-[#8B949E]">No active deliveries.</p>
           ) : null}
           <div className="space-y-3">
             {ordersData.flatMap((o) => (o.deliveries ?? []).map((d) => (
-              <div key={d.id} className="rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft flex flex-wrap items-center justify-between gap-4">
+              <div key={d.id} className="rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-display font-extrabold text-ink">{o.orderNumber}</span>
-                    <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-bold text-primary">{d.status}</span>
+                    <span className="font-display font-extrabold text-[#F0F6FC]">{o.orderNumber}</span>
+                    <span className="rounded-full bg-[#00E676]/15 px-2.5 py-0.5 text-xs font-bold text-[#00E676]">{d.status}</span>
                   </div>
-                  <p className="mt-1 text-xs text-muted">Provider: <strong className="text-ink">{d.provider}</strong></p>
-                  <p className="text-xs text-muted mt-0.5">Pickup: {d.pickupAddress}</p>
+                  <p className="mt-1 text-xs text-[#8B949E]">Provider: <strong className="text-[#F0F6FC]">{d.provider}</strong></p>
+                  <p className="text-xs text-[#8B949E] mt-0.5">Pickup: {d.pickupAddress}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <select
@@ -515,7 +515,7 @@ export function AdminDashboard({
                       setNotice(`Courier assigned to order ${o.orderNumber}`);
                       e.target.value = "";
                     }}
-                    className="h-10 rounded-xl border border-border-soft px-3 text-xs font-bold bg-canvas text-ink"
+                    className="h-10 rounded-xl border border-[#21262D] px-3 text-xs font-bold bg-[#161B22] text-[#F0F6FC]"
                   >
                     <option value="">Assign courier...</option>
                     {couriersData.map((c) => (
@@ -532,22 +532,22 @@ export function AdminDashboard({
       {tab === "rides" && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-extrabold text-ink">NaijaDrive Rides oversight</h2>
-            <span className="text-xs text-muted font-bold">{ridesData.length} active rides</span>
+            <h2 className="font-display text-xl font-extrabold text-[#F0F6FC]">NaijaDrive Rides oversight</h2>
+            <span className="text-xs text-[#8B949E] font-bold">{ridesData.length} active rides</span>
           </div>
           <div className="space-y-3">
             {ridesData.map((ride) => (
-              <article key={ride.id} className="rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft flex flex-wrap items-center justify-between gap-4">
+              <article key={ride.id} className="rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-display font-extrabold text-ink">{ride.rideNumber}</span>
-                    <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-bold text-primary">{ride.status}</span>
+                    <span className="font-display font-extrabold text-[#F0F6FC]">{ride.rideNumber}</span>
+                    <span className="rounded-full bg-[#00E676]/15 px-2.5 py-0.5 text-xs font-bold text-[#00E676]">{ride.status}</span>
                   </div>
-                  <p className="mt-1 text-sm text-muted font-bold text-ink">
+                  <p className="mt-1 text-sm text-[#8B949E] font-bold text-[#F0F6FC]">
                     {ride.pickupLabel} &rarr; {ride.dropoffLabel}
                   </p>
-                  <p className="text-xs text-muted mt-0.5">
-                    Class: {ride.vehicleClass} &bull; Fare: <strong className="text-ink">{koboToNaira(ride.fareKobo, ride.currency)}</strong> &bull; Rider: {ride.rider?.name}
+                  <p className="text-xs text-[#8B949E] mt-0.5">
+                    Class: {ride.vehicleClass} &bull; Fare: <strong className="text-[#F0F6FC]">{koboToNaira(ride.fareKobo, ride.currency)}</strong> &bull; Rider: {ride.rider?.name}
                   </p>
                 </div>
                 <div>
@@ -567,11 +567,11 @@ export function AdminDashboard({
       {tab === "payouts" && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-extrabold text-ink">Vendor Payouts</h2>
-            <span className="text-xs text-muted font-bold">{payoutsData.length} payout batches</span>
+            <h2 className="font-display text-xl font-extrabold text-[#F0F6FC]">Vendor Payouts</h2>
+            <span className="text-xs text-[#8B949E] font-bold">{payoutsData.length} payout batches</span>
           </div>
-          <div className="rounded-2xl border border-border-soft bg-canvas p-6 shadow-soft">
-            <h3 className="font-display text-base font-extrabold text-ink">Create new payout batch</h3>
+          <div className="rounded-2xl border border-[#21262D] bg-[#161B22] p-6 shadow-soft">
+            <h3 className="font-display text-base font-extrabold text-[#F0F6FC]">Create new payout batch</h3>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -579,34 +579,34 @@ export function AdminDashboard({
               }}
               className="mt-4 grid gap-3 sm:grid-cols-4"
             >
-              <select name="vendorId" required className="h-11 rounded-xl border border-border-soft px-3 text-sm bg-canvas text-ink">
+              <select name="vendorId" required className="h-11 rounded-xl border border-[#21262D] px-3 text-sm bg-[#161B22] text-[#F0F6FC]">
                 <option value="">Select vendor...</option>
                 {([] as Array<{ id: string; name: string }>).map((v) => (
                   <option key={v.id} value={v.id}>{v.name}</option>
                 ))}
               </select>
-              <input name="periodStart" type="date" required className="h-11 rounded-xl border border-border-soft px-3 text-sm bg-canvas text-ink" aria-label="Start date" />
-              <input name="periodEnd" type="date" required className="h-11 rounded-xl border border-border-soft px-3 text-sm bg-canvas text-ink" aria-label="End date" />
-              <button type="submit" className="h-11 rounded-xl bg-primary px-5 text-sm font-bold text-white shadow-lift hover:bg-primary-live">
+              <input name="periodStart" type="date" required className="h-11 rounded-xl border border-[#21262D] px-3 text-sm bg-[#161B22] text-[#F0F6FC]" aria-label="Start date" />
+              <input name="periodEnd" type="date" required className="h-11 rounded-xl border border-[#21262D] px-3 text-sm bg-[#161B22] text-[#F0F6FC]" aria-label="End date" />
+              <button type="submit" className="h-11 rounded-xl bg-[#00E676] text-[#0B0E14] shadow-lift hover:bg-[#00c853]">
                 Create payout
               </button>
             </form>
           </div>
           <div className="space-y-3">
             {payoutsData.map((p) => (
-              <div key={p.id} className="flex flex-wrap items-center justify-between rounded-2xl border border-border-soft bg-canvas p-5 shadow-soft">
+              <div key={p.id} className="flex flex-wrap items-center justify-between rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-display font-extrabold text-ink">{p.vendor?.name}</span>
+                    <span className="font-display font-extrabold text-[#F0F6FC]">{p.vendor?.name}</span>
                     <span className="rounded-full bg-amber-soft px-2.5 py-0.5 text-xs font-bold text-amber">{p.status}</span>
                   </div>
-                  <p className="mt-1 text-xs text-muted">Reference: {p.reference}</p>
+                  <p className="mt-1 text-xs text-[#8B949E]">Reference: {p.reference}</p>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="font-display text-xl font-extrabold text-ink">{koboToNaira(p.amountKobo)}</span>
+                  <span className="font-display text-xl font-extrabold text-[#F0F6FC]">{koboToNaira(p.amountKobo)}</span>
                   <button
                     onClick={() => setNotice(`Payout ${p.reference} marked as paid.`)}
-                    className="h-10 rounded-xl bg-primary px-4 text-xs font-bold text-white shadow-lift hover:bg-primary-live"
+                    className="h-10 rounded-xl bg-[#00E676] text-[#0B0E14] hover:bg-[#00c853]"
                   >
                     Mark paid
                   </button>
@@ -620,17 +620,17 @@ export function AdminDashboard({
       {tab === "audit" && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-extrabold text-ink">System audit log</h2>
-            <span className="text-xs text-muted font-bold">{auditData.length} recent events</span>
+            <h2 className="font-display text-xl font-extrabold text-[#F0F6FC]">System audit log</h2>
+            <span className="text-xs text-[#8B949E] font-bold">{auditData.length} recent events</span>
           </div>
           <div className="space-y-3">
             {auditData.map((entry) => (
-              <div key={entry.id} className="rounded-2xl border border-border-soft bg-canvas p-4 shadow-soft flex items-center justify-between">
+              <div key={entry.id} className="rounded-2xl border border-[#21262D] bg-[#161B22] p-4 shadow-soft flex items-center justify-between">
                 <div>
-                  <p className="font-bold text-ink">{entry.action} &bull; <span className="font-normal text-muted">{entry.entity}</span></p>
-                  <p className="text-xs text-muted mt-0.5">Actor: {entry.actor?.name || "System"}</p>
+                  <p className="font-bold text-[#F0F6FC]">{entry.action} &bull; <span className="font-normal text-[#8B949E]">{entry.entity}</span></p>
+                  <p className="text-xs text-[#8B949E] mt-0.5">Actor: {entry.actor?.name || "System"}</p>
                 </div>
-                <p className="text-xs text-muted font-medium">{new Date(entry.createdAt).toLocaleString()}</p>
+                <p className="text-xs text-[#8B949E] font-medium">{new Date(entry.createdAt).toLocaleString()}</p>
               </div>
             ))}
           </div>
