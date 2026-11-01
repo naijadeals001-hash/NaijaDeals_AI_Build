@@ -5,10 +5,10 @@
 **Phase:** 00 — Verified baseline and recovery  
 **Workspace:** C:\Users\User\Documents\naijadeals.com  
 **Branch:** naijashop-marketplace  
-**Remote:** origin/naijashop-marketplace, origin/master  
+**Remote:** github-preservation → https://github.com/naijadeals001-hash/NaijaDeals_AI_Build.git (push **denied**: access blocked for BetFuz; origin remote https://github.com/BetFuz/naijadeals works with repo containing commit 61b066ee)  
 **Last Commit:** 61b066ee "Increment 5: assignment deadlines, saved places and no invented cancellation fee"  
 **Stash Backup:** `Phase00-backup-before-audit` (git stash)  
-**Preview URL:** http://localhost:3000 (development), http://localhost:3000 after build served  
+**Preview URL:** http://localhost:3000 (development via `npm run dev`); build artifact `.next/` produced by `npm run build`  
 
 ## Files Created (Phase 00)
 

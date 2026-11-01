@@ -54,7 +54,7 @@ function Hero() {
             <span className="text-white/40">·</span>
             <span className="text-white/70">{storeCurrency}</span>
           </p>
-          <h1 className="mt-4 font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+          <h1 className="mt-4 font-display text-3xl font-extrabold leading-[1.1] tracking-tight sm:text-4xl lg:text-5xl">
             {t("home.title")}
           </h1>
           <p className="mt-4 max-w-lg text-base leading-relaxed text-white/75 sm:text-lg">{t("home.body")}</p>
@@ -81,19 +81,13 @@ function Hero() {
             </button>
           </form>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3">
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <Link
               href="#products"
-              className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-[#04140f] transition hover:bg-primary-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-[#04140f] transition hover:bg-primary-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             >
               {t("home.explore")}
               <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
-            </Link>
-            <Link
-              href="/sell"
-              className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-white/25 px-5 text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            >
-              {t("home.sellPartner")}
             </Link>
           </div>
         </div>
@@ -107,8 +101,7 @@ function QuickActions() {
   const quickActions = [
     { label: t("quick.shop"), href: "/naijashop", icon: Store },
     { label: t("quick.send"), href: "/naijasend", icon: Truck },
-    { label: t("quick.pay"), href: "/wallet", icon: Banknote },
-    { label: t("quick.track"), href: "/orders", icon: PackageCheck }
+    { label: t("quick.pay"), href: "/wallet", icon: Banknote }
   ];
 
   return (
@@ -123,7 +116,7 @@ function QuickActions() {
             <Link
               key={action.href}
               href={action.href}
-              className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border-soft bg-canvas p-4 transition hover:border-primary/40 hover:shadow-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border-soft bg-canvas p-4 transition:hover:border-primary/40 hover:shadow-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">
                 <Icon className="h-5 w-5" aria-hidden="true" />
