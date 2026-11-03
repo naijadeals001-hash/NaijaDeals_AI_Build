@@ -1,0 +1,262 @@
+﻿[
+    {
+        "file":  "phone-1.jpg",
+        "status":  "ok",
+        "query":  "smartphone",
+        "title":  "Smartphone",
+        "creator":  "Insights Unspoken",
+        "license":  "by-sa",
+        "source":  "https://www.flickr.com/photos/23328561@N07/21135682726",
+        "url":  "https://live.staticflickr.com/671/21135682726_f8f6da6372_b.jpg"
+    },
+    {
+        "file":  "phone-2.jpg",
+        "status":  "ok",
+        "query":  "mobile phone",
+        "title":  "mobile phone mast",
+        "creator":  "osde8info",
+        "license":  "by-sa",
+        "source":  "https://www.flickr.com/photos/8764442@N07/8676610205",
+        "url":  "https://live.staticflickr.com/8522/8676610205_9dacb05122_b.jpg"
+    },
+    {
+        "file":  "phone-3.jpg",
+        "status":  "ok",
+        "query":  "android phone",
+        "title":  "Rooting my HTC Hero Android Phone",
+        "creator":  "Andrew Mason",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/34754790@N00/4255426890",
+        "url":  "https://live.staticflickr.com/2800/4255426890_0629d08c03_b.jpg"
+    },
+    {
+        "file":  "phone-4.jpg",
+        "status":  "ok",
+        "query":  "cellphone",
+        "title":  "New cellphone prototype",
+        "creator":  "dam",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/36749491@N00/8073737056",
+        "url":  "https://live.staticflickr.com/8170/8073737056_6504e7fea5_b.jpg"
+    },
+    {
+        "file":  "fashion-1.jpg",
+        "status":  "ok",
+        "query":  "sneakers",
+        "title":  "sneakers",
+        "creator":  "Shockingly Tasty",
+        "license":  "by-sa",
+        "source":  "https://www.flickr.com/photos/49506223@N00/5170903067",
+        "url":  "https://live.staticflickr.com/4104/5170903067_f5f6d1599a_b.jpg"
+    },
+    {
+        "file":  "fashion-2.jpg",
+        "status":  "ok",
+        "query":  "leather handbag",
+        "title":  "Leather Handbags",
+        "creator":  "Mike Prince",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/70804987@N00/4782040554",
+        "url":  "https://live.staticflickr.com/4114/4782040554_74106db1b0_b.jpg"
+    },
+    {
+        "file":  "fashion-3.jpg",
+        "status":  "ok",
+        "query":  "sunglasses",
+        "title":  "The Sunglasses",
+        "creator":  "Tobyotter",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/78428166@N00/7993768362",
+        "url":  "https://live.staticflickr.com/8454/7993768362_324ae52f7e_b.jpg"
+    },
+    {
+        "file":  "fashion-4.jpg",
+        "status":  "ok",
+        "query":  "wristwatch",
+        "title":  "russian wristwatch",
+        "creator":  "Kurt:S",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/28847016@N08/21838850705",
+        "url":  "https://live.staticflickr.com/600/21838850705_667b4d26d3_b.jpg"
+    },
+    {
+        "file":  "grocery-1.jpg",
+        "status":  "ok",
+        "query":  "tomatoes",
+        "title":  "tomatoes",
+        "creator":  "Vladimir Morozov",
+        "license":  "by-sa",
+        "source":  "https://www.flickr.com/photos/27429206@N02/2694720316",
+        "url":  "https://live.staticflickr.com/3043/2694720316_4693c8051a_b.jpg"
+    },
+    {
+        "file":  "grocery-2.jpg",
+        "status":  "ok",
+        "query":  "rice",
+        "title":  "Cooked Golden Rice - Minh Phat Supermarket",
+        "creator":  "avlxyz",
+        "license":  "by-sa",
+        "source":  "https://www.flickr.com/photos/10559879@N00/2370243789",
+        "url":  "https://live.staticflickr.com/3068/2370243789_ffe9c05ec4_b.jpg"
+    },
+    {
+        "file":  "grocery-3.jpg",
+        "status":  "ok",
+        "query":  "beans",
+        "title":  "Green Beans",
+        "creator":  "JeepersMedia",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/39160147@N03/15134304555",
+        "url":  "https://live.staticflickr.com/3921/15134304555_ec73f5bd82_b.jpg"
+    },
+    {
+        "file":  "grocery-4.jpg",
+        "status":  "ok",
+        "query":  "pepper",
+        "title":  "Red pepper",
+        "creator":  "Alan Cleaver",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/11121568@N06/2380333595",
+        "url":  "https://live.staticflickr.com/2042/2380333595_d32f56a8b9.jpg"
+    },
+    {
+        "file":  "power-1.jpg",
+        "status":  "ok",
+        "query":  "solar panel",
+        "title":  "Joe\u0027s DIY Solar Panel Install Taken by Joe",
+        "creator":  "Dave Dugdale",
+        "license":  "by-sa",
+        "source":  "https://www.flickr.com/photos/37387065@N05/4160370798",
+        "url":  "https://live.staticflickr.com/2491/4160370798_3ca24273ea.jpg"
+    },
+    {
+        "file":  "power-2.jpg",
+        "status":  "ok",
+        "query":  "car battery",
+        "title":  "Amstel beer case car battery powered boom box | Roskilde Festival 2009",
+        "creator":  "Wouter Kiel",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/30682807@N02/3717868414",
+        "url":  "https://live.staticflickr.com/2493/3717868414_88d454aa8f_b.jpg"
+    },
+    {
+        "file":  "power-3.jpg",
+        "status":  "ok",
+        "query":  "power bank",
+        "title":  "#Lepow Moonstone akku power bank",
+        "creator":  "ThomasKohler",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/28077296@N02/15266648003",
+        "url":  "https://live.staticflickr.com/7554/15266648003_847cc1565a.jpg"
+    },
+    {
+        "file":  "power-4.jpg",
+        "status":  "ok",
+        "query":  "solar lamp",
+        "title":  "solar lamp",
+        "creator":  "grace_kat",
+        "license":  "by-sa",
+        "source":  "https://www.flickr.com/photos/13835286@N06/3243961726",
+        "url":  "https://live.staticflickr.com/3481/3243961726_704b9163e9_b.jpg"
+    },
+    {
+        "file":  "gaming-1.jpg",
+        "status":  "ok",
+        "query":  "game controller",
+        "title":  "games-controller",
+        "creator":  "LoveMyVouchers.co.uk",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/85216294@N05/8592762154",
+        "url":  "https://live.staticflickr.com/8390/8592762154_9ed5506e9e.jpg"
+    },
+    {
+        "file":  "gaming-2.jpg",
+        "status":  "ok",
+        "query":  "gaming headset",
+        "title":  "Gaming Headsets",
+        "creator":  "tandemsystemsltd",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/109369158@N08/10963478003",
+        "url":  "https://live.staticflickr.com/7447/10963478003_18c20b5e35_b.jpg"
+    },
+    {
+        "file":  "gaming-3.jpg",
+        "status":  "ok",
+        "query":  "mechanical keyboard",
+        "title":  "2018 Bay Area Mechanical Keyboard Meetup",
+        "creator":  "Nebulant",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/47581723@N00/32074239348",
+        "url":  "https://live.staticflickr.com/4846/32074239348_4851038033_b.jpg"
+    },
+    {
+        "file":  "gaming-4.jpg",
+        "status":  "ok",
+        "query":  "gaming mouse",
+        "title":  "Logitech MX518 Gaming Mouse",
+        "creator":  "gcg2009",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/51219817@N04/4777334208",
+        "url":  "https://live.staticflickr.com/4096/4777334208_bbd8bd6c33_m.jpg"
+    },
+    {
+        "file":  "computer-monitor.jpg",
+        "status":  "ok",
+        "query":  "computer monitor",
+        "title":  "new computer / monitor setup",
+        "creator":  "hodgers",
+        "license":  "by-sa",
+        "source":  "https://www.flickr.com/photos/35468147887@N01/3126952638",
+        "url":  "https://live.staticflickr.com/3293/3126952638_de8f1c04d0_b.jpg"
+    },
+    {
+        "file":  "home-kettle.jpg",
+        "status":  "ok",
+        "query":  "electric kettle",
+        "title":  "Reflection of a Toaster on an Electric Kettle",
+        "creator":  "zeevveez",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/29001414@N00/7853607814",
+        "url":  "https://live.staticflickr.com/8432/7853607814_41755dc873_b.jpg"
+    },
+    {
+        "file":  "home-blender.jpg",
+        "status":  "ok",
+        "query":  "blender",
+        "title":  "Inexplicable baby-in-a-blender product, John Lewis, London, UK.JPG",
+        "creator":  "gruntzooki",
+        "license":  "by-sa",
+        "source":  "https://www.flickr.com/photos/37996580417@N01/1791683036",
+        "url":  "https://live.staticflickr.com/2060/1791683036_97bc35cfe4_b.jpg"
+    },
+    {
+        "file":  "home-cookware.jpg",
+        "status":  "ok",
+        "query":  "cookware",
+        "title":  "cookware",
+        "creator":  "detzelpretzel",
+        "license":  "by-sa",
+        "source":  "https://www.flickr.com/photos/8990365@N03/2126504339",
+        "url":  "https://live.staticflickr.com/2210/2126504339_f3977d39d4_b.jpg"
+    },
+    {
+        "file":  "beauty-shampoo.jpg",
+        "status":  "ok",
+        "query":  "shampoo",
+        "title":  "1970\u0027s Earth Born Shampoo",
+        "creator":  "twitchery",
+        "license":  "by",
+        "source":  "https://www.flickr.com/photos/84369496@N00/2202692518",
+        "url":  "https://live.staticflickr.com/2122/2202692518_741c5d7c73_b.jpg"
+    },
+    {
+        "file":  "beauty-cream.jpg",
+        "status":  "ok",
+        "query":  "face cream",
+        "title":  "Why, I love this new face cream!",
+        "creator":  "quinn.anya",
+        "license":  "by-sa",
+        "source":  "https://www.flickr.com/photos/53326337@N00/4310168247",
+        "url":  "https://live.staticflickr.com/4001/4310168247_0dd35eb3f2_b.jpg"
+    }
+]
