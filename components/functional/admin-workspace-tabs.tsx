@@ -1486,7 +1486,39 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
             { header: "Market", cell: (row) => <span>{text(row.market)}</span> },
             { header: "Status", cell: (row) => <StatusBadge status={text(row.status)} /> },
             { header: "Products", cell: (row) => <span>{text(value(row, "_count.products"), "0")}</span>, className: "text-right" },
-            { header: "Orders", cell: (row) => <span>{text(value(row, "_count.orders"), "0")}</span>, className: "text-right" }
+            { header: "Orders", cell: (row) => <span>{text(value(row, "_count.orders"), "0")}</span>, className: "text-right" },
+            {
+              header: "Access",
+              cell: (row) => {
+                const status = String(row.status);
+                if (status === "PENDING") return <span className="text-xs text-[#8B949E]">Pending</span>;
+                const suspended = status === "SUSPENDED";
+                const busy = busyId === String(row.id);
+                return (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      if (suspended) {
+                        if (!window.confirm(`Reactivate ${text(row.name)}? Its products return to the catalogue.`)) return;
+                        void run(String(row.id), () => apiClient.adminSetVendorStatus(String(row.id), "VERIFIED"), `${text(row.name)} reactivated.`);
+                        return;
+                      }
+                      const reason = window.prompt(`Reason for suspending ${text(row.name)}?`);
+                      if (!reason || !reason.trim()) return;
+                      void run(
+                        String(row.id),
+                        () => apiClient.adminSetVendorStatus(String(row.id), "SUSPENDED", reason.trim()),
+                        `${text(row.name)} suspended.`
+                      );
+                    }}
+                    className="rounded-lg border border-[#21262D] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D] disabled:opacity-50"
+                  >
+                    {busy ? "Working…" : suspended ? "Reactivate" : "Suspend"}
+                  </button>
+                );
+              }
+            }
           ]}
         />
       </Panel>

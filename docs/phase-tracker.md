@@ -159,7 +159,18 @@ dialogs are introduced.
 
 ## Phase 06 — Partner dashboards and onboarding
 
-**Status:** NOT STARTED (depends on Phase 05)
+**Status:** IN PROGRESS — seller suspension slice landed (2026-11-03); entry gate satisfied by Phase 05 PASS
+
+**Completed and verified:**
+- Existing seller (`/seller`), driver (`/driver`) and courier (`/courier`) portals retained; seller overview is scoped to the signed-in vendor only
+- Vendor suspension end to end: admin `POST /api/admin/vendors/[id]/status` (audited `vendor.status_changed` before/after), suspended products disappear from the catalogue, seller writes return **403 vendor_suspended** with the reason, the seller dashboard shows a suspension banner, and reactivation restores product creation
+- Evidence: suspend → catalogue hidden, create blocked 403, overview status SUSPENDED with reason, reactivate → create 201 (cleaned up); screenshot `qa-artifacts/preview/seller-suspended.png`
+
+**Still open for a Phase 06 PASS:**
+- Rejected application access path (no vendor role) and suspension *during an active job* policy
+- Driver and courier suspension parity
+- Seller earnings tied to wallet-ledger entries rather than order aggregates
+- Partner notifications and profile management primitives
 
 ## Phase 07 — Wallet, payments, escrow and settlement correctness
 

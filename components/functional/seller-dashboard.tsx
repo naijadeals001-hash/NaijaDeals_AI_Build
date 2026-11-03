@@ -179,6 +179,13 @@ export function SellerDashboard() {
         </Link>
       </header>
 
+      {overview.vendor.status === "SUSPENDED" ? (
+        <div role="alert" className="rounded-xl border border-crimson/30 bg-crimson-soft p-3 text-sm font-bold text-crimson">
+          This seller account is suspended{overview.vendor.suspendedReason ? `: ${overview.vendor.suspendedReason}` : "."} Products are
+          hidden from the catalogue and new listings or order actions are blocked. Existing orders stay visible so you can
+          finish any active work.
+        </div>
+      ) : null}
       {notice ? <div role="status" className="rounded-xl bg-primary-soft p-3 text-sm font-bold text-primary">{notice}</div> : null}
       {error ? (
         <div role="alert" className="rounded-xl border border-crimson/30 bg-crimson-soft p-3 text-sm font-bold text-crimson">

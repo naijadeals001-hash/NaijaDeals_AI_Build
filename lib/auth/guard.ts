@@ -68,6 +68,20 @@ export async function requireVendor(): Promise<SessionUser> {
   return user;
 }
 
+/** Vendor writes are blocked while the seller account is suspended; reads stay available. */
+export async function requireActiveVendor(): Promise<SessionUser> {
+  const user = await requireVendor();
+  const vendor = user.vendors[0];
+  if (vendor?.status === "SUSPENDED") {
+    throw new ApiError(
+      403,
+      "vendor_suspended",
+      vendor.suspendedReason ? `Seller account suspended: ${vendor.suspendedReason}` : "Seller account suspended."
+    );
+  }
+  return user;
+}
+
 export async function requireCourier(): Promise<SessionUser> {
   const user = await requireUser();
   if (!isCourier(user)) throw new ApiError(403, "forbidden", "Courier access is required.");

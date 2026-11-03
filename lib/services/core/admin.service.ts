@@ -180,6 +180,41 @@ async function syncDeliveryForOrderStatus(tx: Prisma.TransactionClient, actorId:
 }
 
 
+export async function setVendorStatus(input: {
+  adminId: string;
+  vendorId: string;
+  status: "VERIFIED" | "SUSPENDED";
+  reason?: string;
+}) {
+  const vendor = await prisma.vendor.findUnique({ where: { id: input.vendorId } });
+  if (!vendor) throw new ApiError(404, "vendor_not_found", "Vendor not found.");
+  if (vendor.status === "PENDING") {
+    throw new ApiError(409, "vendor_pending", "Pending vendors are approved through seller applications.");
+  }
+  if (vendor.status === input.status) return vendor;
+  const reason = input.reason?.trim() ?? "";
+  if (input.status === "SUSPENDED" && reason.length === 0) {
+    throw new ApiError(400, "reason_required", "A suspension reason is required.");
+  }
+
+  const updated = await prisma.vendor.update({
+    where: { id: vendor.id },
+    data: { status: input.status, suspendedReason: input.status === "SUSPENDED" ? reason : null }
+  });
+
+  await recordAudit({
+    actorId: input.adminId,
+    action: "vendor.status_changed",
+    entity: "Vendor",
+    entityId: vendor.id,
+    metadata: {
+      before: { status: vendor.status, suspendedReason: vendor.suspendedReason },
+      after: { status: updated.status, suspendedReason: updated.suspendedReason }
+    }
+  });
+  return updated;
+}
+
 export async function getAdminDisputes(scope: { countryCode?: string } = {}) {
   return prisma.dispute.findMany({
     where: scope.countryCode ? { order: { countryCode: scope.countryCode } } : undefined,

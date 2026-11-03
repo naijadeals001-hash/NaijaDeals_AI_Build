@@ -46,6 +46,7 @@ export async function getSellerOverview(userId: string) {
       name: vendor.name,
       slug: vendor.slug,
       status: vendor.status,
+      suspendedReason: vendor.suspendedReason,
       market: vendor.market,
       pickupAddress: vendor.pickupAddress,
       pickupPhone: vendor.pickupPhone,

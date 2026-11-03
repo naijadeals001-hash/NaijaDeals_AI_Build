@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { updateSellerProduct } from "@/lib/services/core/seller.service";
-import { assertSameOrigin, jsonError, optionalString, readJson, requireVendor } from "@/lib/auth/guard";
+import { assertSameOrigin, jsonError, optionalString, readJson, requireActiveVendor } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     assertSameOrigin(request);
-    const user = await requireVendor();
+    const user = await requireActiveVendor();
     const body = await readJson<Record<string, unknown>>(request);
     let priceKobo: bigint | undefined;
     if (body.priceKobo !== undefined) {

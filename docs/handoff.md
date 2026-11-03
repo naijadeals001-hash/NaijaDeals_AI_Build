@@ -486,6 +486,13 @@ ledger/escrow/payout cards, "Open NaijaPay" → `/wallet`), completing the set: 
 fresh, send, gigs, stay, stream, aura and pay each have a landing route recorded in
 `docs/design-direction.md`. Verified all ten return 200 with axe 0 and 0 overflow.
 
+**Phase 06 seller suspension (2026-11-03):** admin vendors table now has Suspend/Reactivate; suspension
+requires a reason, is audited with before/after, hides the vendor's products from the catalogue (which
+already filters `vendor.status = VERIFIED`), blocks seller writes with **403 vendor_suspended**, and
+shows a banner on `/seller`. Verified: suspend 200 → catalogue product absent → create 403 with reason →
+overview SUSPENDED → reactivate 200 → create 201 (probe deleted). Driver/courier suspension, rejected-
+application access and ledger-based earnings remain open for Phase 06.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSellerProduct } from "@/lib/services/core/seller.service";
-import { assertSameOrigin, jsonError, optionalString, readJson, requireString, requireVendor } from "@/lib/auth/guard";
+import { assertSameOrigin, jsonError, optionalString, readJson, requireString, requireActiveVendor } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ function parseMoney(value: unknown, field: string): bigint {
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    const user = await requireVendor();
+    const user = await requireActiveVendor();
     const body = await readJson<Record<string, unknown>>(request);
     const priceKobo = parseMoney(body.priceKobo, "Price");
     const quantity = Number(body.quantity ?? 0);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { resolveReturn } from "@/lib/services/core/seller.service";
-import { assertSameOrigin, jsonError, readJson, requireString, requireVendor } from "@/lib/auth/guard";
+import { assertSameOrigin, jsonError, readJson, requireString, requireActiveVendor } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
     assertSameOrigin(request);
-    const user = await requireVendor();
+    const user = await requireActiveVendor();
     const body = await readJson<Record<string, unknown>>(request);
     const action = requireString(body.action, "Action", 20);
     if (action !== "approve" && action !== "reject" && action !== "receive") {
