@@ -128,7 +128,6 @@ dialogs are introduced.
 | Admin usable on smaller screens | PASS — 390×844: 0 document overflow, tables scroll inside their container, navigation available, axe 0 |
 
 **Still open for a Phase 05 PASS (WORK coverage, not exit gate):**
-- Role-assignment UI (the roles:write API and guards exist; no Control Center surface yet)
 - Dispute resolution actions (the read-only Disputes tab landed 2026-11-03 with order, buyer, seller, status, escrow and reason; resolving/refunding still has no admin surface)
 - City-level activation (country activation shipped)
 - Phase 05 acceptance run (2026-11-03, fresh isolated database): admin security **19/19**,

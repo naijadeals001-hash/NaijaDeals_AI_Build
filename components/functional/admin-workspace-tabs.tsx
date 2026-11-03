@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { apiClient, koboToNaira, statusLabel } from "@/lib/api-client";
 import type { AdminTab } from "@/lib/admin/admin-navigation";
+import { COUNTRIES } from "@/lib/config/commerce";
 
 export type Row = Record<string, any>;
 
@@ -348,6 +349,188 @@ function ActionFeedback({ message, error }: { message: string; error: string }) 
   );
 }
 
+interface AssignableRole {
+  name: string;
+  description?: string | null;
+}
+
+function RoleDialog({ user, onClose, onSaved }: { user: Row; onClose: () => void; onSaved: (message: string) => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [available, setAvailable] = useState<AssignableRole[]>([]);
+  const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
+
+  useEffect(() => {
+    if (ref.current && !ref.current.open) ref.current.showModal();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/super-admin/users/${encodeURIComponent(String(user.id))}/roles`, { cache: "no-store" });
+        const body = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (!res.ok) {
+          setError(body?.error ?? `Request failed with HTTP ${res.status}`);
+          setLoading(false);
+          return;
+        }
+        setAvailable(Array.isArray(body?.assignableRoles) ? (body.assignableRoles as AssignableRole[]) : []);
+        setSelected(Array.isArray(body?.user?.roles) ? body.user.roles.map((entry: { role: { name: string } }) => entry.role.name) : []);
+        setCountry(String(body?.user?.scopeCountryCode ?? ""));
+        setCity(String(body?.user?.scopeCityCode ?? ""));
+        setLoading(false);
+      } catch (caught) {
+        if (!cancelled) {
+          setError(caught instanceof Error ? caught.message : "Could not load roles.");
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  function trapFocus(event: React.KeyboardEvent<HTMLDialogElement>) {
+    if (event.key !== "Tab") return;
+    const dialog = ref.current;
+    if (!dialog) return;
+    const focusable = Array.from(
+      dialog.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+    ).filter((element) => !element.hasAttribute("disabled"));
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  async function save() {
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/super-admin/users/${encodeURIComponent(String(user.id))}/roles`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roles: selected, scopeCountryCode: country || null, scopeCityCode: city || null })
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(body?.error ?? `Request failed with HTTP ${res.status}`);
+        setSaving(false);
+        return;
+      }
+      onSaved(`${text(user.name)} access updated.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not save roles.");
+      setSaving(false);
+    }
+  }
+
+  return (
+    <dialog
+      ref={ref}
+      onClose={onClose}
+      onKeyDown={trapFocus}
+      aria-labelledby="admin-role-title"
+      className="w-[calc(100%-2rem)] max-w-xl rounded-2xl border border-[#21262D] bg-[#161B22] p-0 text-[#F0F6FC] shadow-soft backdrop:bg-black/70"
+    >
+      <div className="flex items-start justify-between gap-4 border-b border-[#21262D] px-5 py-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-[#8B949E]">Role and scope</p>
+          <h2 id="admin-role-title" className="font-display text-lg font-extrabold">{text(user.name)}</h2>
+          <p className="text-xs text-[#8B949E]">{text(user.email)}</p>
+        </div>
+        <button type="button" onClick={onClose} aria-label="Close role editor" className="rounded-lg border border-[#21262D] px-2.5 py-1 text-sm font-bold hover:bg-[#21262D]">
+          &#10005;
+        </button>
+      </div>
+
+      {loading ? (
+        <p className="px-5 py-6 text-sm text-[#8B949E]">Loading roles…</p>
+      ) : (
+        <div className="space-y-4 px-5 py-4">
+          <fieldset>
+            <legend className="text-[11px] font-bold uppercase tracking-wide text-[#8B949E]">Roles</legend>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {available.map((role) => {
+                const checked = selected.includes(role.name);
+                return (
+                  <label key={role.name} className={`flex cursor-pointer items-start gap-2 rounded-xl border p-2.5 ${checked ? "border-[#00E676]/50 bg-[#00E676]/10" : "border-[#21262D] bg-[#0B0E14]"}`}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(event) =>
+                        setSelected((previous) =>
+                          event.target.checked ? [...new Set([...previous, role.name])] : previous.filter((name) => name !== role.name)
+                        )
+                      }
+                      className="mt-0.5 h-4 w-4 accent-[#00E676]"
+                    />
+                    <span>
+                      <span className="block text-sm font-bold">{role.name}</span>
+                      {role.description ? <span className="mt-0.5 block text-[11px] leading-snug text-[#8B949E]">{role.description}</span> : null}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-[11px] font-bold uppercase tracking-wide text-[#8B949E]">
+              Country scope
+              <select
+                value={country}
+                onChange={(event) => setCountry(event.target.value)}
+                className="mt-1 block min-h-10 w-full rounded-lg border border-[#21262D] bg-[#0B0E14] px-2 text-sm font-semibold text-[#F0F6FC]"
+              >
+                <option value="">All countries</option>
+                {Object.values(COUNTRIES).map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-[11px] font-bold uppercase tracking-wide text-[#8B949E]">
+              City scope
+              <input
+                value={city}
+                onChange={(event) => setCity(event.target.value)}
+                placeholder="e.g. lagos"
+                className="mt-1 block min-h-10 w-full rounded-lg border border-[#21262D] bg-[#0B0E14] px-2 text-sm font-semibold text-[#F0F6FC]"
+              />
+            </label>
+          </div>
+
+          {error ? <p role="alert" className="rounded-lg border border-crimson/30 bg-crimson/10 p-3 text-xs font-bold text-[#FFB4AB]">{error}</p> : null}
+
+          <div className="flex justify-end gap-2 border-t border-[#21262D] pt-3">
+            <button type="button" onClick={onClose} className="rounded-lg border border-[#21262D] px-4 py-2 text-sm font-bold hover:bg-[#21262D]">
+              Cancel
+            </button>
+            <button type="button" onClick={() => void save()} disabled={saving} className="rounded-lg bg-[#00E676] px-4 py-2 text-sm font-extrabold text-[#0B0E14] disabled:opacity-50">
+              {saving ? "Saving…" : "Save access"}
+            </button>
+          </div>
+        </div>
+      )}
+    </dialog>
+  );
+}
+
 function RecordDialog({ row, onClose }: { row: Row; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
 
@@ -482,6 +665,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
   const [detail, setDetail] = useState<Row | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [roleUser, setRoleUser] = useState<Row | null>(null);
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -1048,6 +1232,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           onFilter={setStatusFilter}
           onRefresh={onRefresh}
         />
+        <ActionFeedback message={message} error={error} />
         <DataTable
           rows={rows}
           emptyLabel={props.users.length === 0 ? "No users exist yet." : "No users match this filter."}
@@ -1076,11 +1261,39 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
                 );
               }
             },
-            { header: "Joined", cell: (row) => <span className="text-xs text-[#8B949E]">{date(row.createdAt)}</span> }
+            { header: "Joined", cell: (row) => <span className="text-xs text-[#8B949E]">{date(row.createdAt)}</span> },
+            ...(isSuperAdmin
+              ? [
+                  {
+                    header: "Access",
+                    cell: (row: Row) => (
+                      <button
+                        type="button"
+                        onClick={() => setRoleUser(row)}
+                        className="rounded-lg border border-[#21262D] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D]"
+                      >
+                        Manage
+                      </button>
+                    )
+                  }
+                ]
+              : [])
           ]}
         />
       </Panel>
       {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      {roleUser ? (
+        <RoleDialog
+          user={roleUser}
+          onClose={() => setRoleUser(null)}
+          onSaved={(message) => {
+            setRoleUser(null);
+            setMessage(message);
+            setError("");
+            onRefresh();
+          }}
+        />
+      ) : null}
       </>
     );
   }

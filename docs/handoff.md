@@ -415,6 +415,17 @@ followed by recorded-events / escrow-release / Lagos-coverage cards and a status
 external carrier credentials are not configured. Verified: image loads, 3 feature cards, axe 0,
 0 overflow at 1440 and 390.
 
+**Role-assignment UI (same pass):** the Users table now has a super-admin-only "Manage" action
+opening a role/scope dialog (role checkboxes from the database, country select, city scope). Saving
+calls the existing `PUT /api/super-admin/users/[id]/roles`, refreshes the row and confirms inline.
+Verified: support granted to the test customer then removed, row state persisted both times, audit
+rows `admin.roles_updated` contain before/after role arrays, and saving your own account returns
+"You cannot change your own roles or scope." (403). axe is 0 after fixing the error text contrast.
+
+Note: the development database predated the expanded staff-role list, so `ops`, `finance`,
+`support` and `moderator` were missing there; they were upserted (seed already defines them) and
+both dev and test databases now expose all ten roles.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only
