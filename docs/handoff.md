@@ -499,6 +499,10 @@ reason and an audited `courier.status_changed` row. Assignment checks the suspen
 an assigned delivery can be finished. Verified: suspend 200 → assign 409 → reactivate 200, audit
 before/after present.
 
+**Commit scope note:** `f1bbb0b` also carried a pending change in `app/api/admin/couriers/route.ts`
+(`requireAdmin()` → `requireAdminPermission("deliveries:read")`) that was already in the working tree
+from the earlier RBAC migration; it was exercised by the admin suite before commit.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only
