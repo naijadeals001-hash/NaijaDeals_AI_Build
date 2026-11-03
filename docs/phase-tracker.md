@@ -121,6 +121,7 @@ dialogs are introduced.
 - Explicit operations/finance/support/moderation role scopes and cross-region allow/deny tests
 - Role-assignment writes and protection against self-escalation
 - Audited before/after events for sensitive finance and permission changes
+- Record-detail dialog for Orders and Vendors (2026-11-03): native modal with title, focus trap, Escape, focus restoration and 0 axe violations; bulk actions and remaining detail surfaces still open
 - Scoped staff access (2026-11-03): `requireAdmin` now admits ops/finance/support/moderator through `hasAdminConsoleAccess`; admin security suite **19/19**
 - Region filtering is server-side and permission-aware (2026-11-03): regions come from the country
   catalogue (not a hard-coded pair), `geo` is validated and clamped to scoped staff so the URL cannot widen

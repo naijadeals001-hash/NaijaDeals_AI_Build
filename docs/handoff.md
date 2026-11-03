@@ -295,6 +295,15 @@ session (its process survived kill attempts), so it still has the pre-`amber-str
 config cached. The affected utilities now use `bg-[#B45309]`-style arbitrary values so they render
 without a restart; a normal restart can switch them back to the token.
 
+## Control Center record detail (2026-11-03)
+
+Orders and Vendors tables now expose a `View` action that opens an accessible native modal dialog
+with the row's real fields (status, payment, total, customer/vendor, market, owner, counts,
+created). Verified in Chrome: `showModal` modal semantics, labelled title, initial focus inside,
+Tab/Shift+Tab trapped (explicit wrap handler), Escape closes, focus returns to the triggering
+button, axe 0 with the dialog open. A StrictMode cleanup bug that dismissed the dialog immediately
+was found and fixed. Bulk actions and detail views for the remaining tables are still open.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

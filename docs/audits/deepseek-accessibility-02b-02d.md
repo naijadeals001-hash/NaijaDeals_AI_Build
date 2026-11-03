@@ -52,6 +52,25 @@ dialogs are introduced (Phase 05 record detail), a trap/escape test must be adde
 - **0** unnamed buttons, **0** unnamed links, and the only input (`home-search`) has a real
   `<label for>`.
 
+## Record-detail dialog (2026-11-03)
+
+The Control Center now has a record-detail view for Orders and Vendors. It uses a native
+`<dialog>` opened with `showModal()`:
+
+| Check | Result |
+| --- | --- |
+| Dialog opens with a labelled title (`aria-labelledby`) | pass — "Yaba Home & Living" |
+| Modal semantics | `:modal` true, backdrop dims the page |
+| Initial focus | inside the dialog |
+| Keyboard trap | Tab/Shift+Tab cycle inside; explicit wrap handler supplements the native trap |
+| Escape | closes the dialog |
+| Focus restoration | returns to the "View" button that opened it |
+| axe-core with dialog open | 0 violations |
+
+A StrictMode bug was caught during testing: closing the dialog in the effect cleanup fired the
+`close` event immediately on the double-invoked effect, dismissing it. Cleanup no longer calls
+`close()`; unmounting removes the element.
+
 ## Remaining
 
 - Manual screen-reader pass (NVDA or VoiceOver) over the homepage and booking flow — automated

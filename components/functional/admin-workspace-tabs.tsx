@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -305,6 +305,94 @@ function ActionFeedback({ message, error }: { message: string; error: string }) 
   );
 }
 
+function RecordDialog({ row, onClose }: { row: Row; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (element && !element.open) element.showModal();
+    // No cleanup close(): unmounting removes the dialog, and calling close() in a
+    // StrictMode double-invoke would fire onClose immediately and dismiss it.
+  }, []);
+
+  function trapFocus(event: React.KeyboardEvent<HTMLDialogElement>) {
+    if (event.key !== "Tab") return;
+    const dialog = ref.current;
+    if (!dialog) return;
+    const focusable = Array.from(
+      dialog.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+    ).filter((element) => !element.hasAttribute("disabled"));
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  const title = text(row.orderNumber ?? row.name ?? row.id);
+  const fields: Array<[string, string]> = [];
+  const add = (label: string, raw: unknown, format?: (input: unknown) => string) => {
+    if (raw === undefined || raw === null || raw === "") return;
+    fields.push([label, format ? format(raw) : text(raw)]);
+  };
+  add("Status", row.status);
+  add("Payment", row.paymentStatus);
+  add("Total", row.totalKobo, (input) => money(input));
+  add("Customer", value(row, "customer.name"));
+  add("Vendor", value(row, "vendor.name"));
+  add("Market", row.market);
+  add("Owner", value(row, "owner.name"));
+  add("Owner email", value(row, "owner.email"));
+  add("Created", row.createdAt, (input) => date(input));
+  add("Products", value(row, "_count.products"));
+  add("Orders", value(row, "_count.orders"));
+
+  return (
+    <dialog
+      ref={ref}
+      onClose={onClose}
+      onKeyDown={trapFocus}
+      aria-labelledby="admin-record-title"
+      className="w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-[#21262D] bg-[#161B22] p-0 text-[#F0F6FC] shadow-soft backdrop:bg-black/70"
+    >
+      <div className="flex items-start justify-between gap-4 border-b border-[#21262D] px-5 py-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-[#8B949E]">Record details</p>
+          <h2 id="admin-record-title" className="font-display text-lg font-extrabold">
+            {title}
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close details"
+          className="rounded-lg border border-[#21262D] px-2.5 py-1 text-sm font-bold hover:bg-[#21262D]"
+        >
+          &#10005;
+        </button>
+      </div>
+      <dl className="grid gap-x-4 gap-y-3 px-5 py-4 text-sm sm:grid-cols-2">
+        {fields.map(([label, val]) => (
+          <div key={label}>
+            <dt className="text-[11px] font-bold uppercase tracking-wide text-[#8B949E]">{label}</dt>
+            <dd className="mt-0.5 font-semibold text-[#F0F6FC]">{val}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="border-t border-[#21262D] px-5 py-3 text-right">
+        <button type="button" onClick={onClose} className="rounded-lg bg-[#00E676] px-4 py-2 text-sm font-extrabold text-[#0B0E14]">
+          Close
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
 export function WorkspaceTabContent(props: WorkspaceTabProps) {
   const { tab, isSuperAdmin, onRefresh, initialQuery } = props;
   const [query, setQuery] = useState(initialQuery);
@@ -312,6 +400,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
   const [busyId, setBusyId] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [detail, setDetail] = useState<Row | null>(null);
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -361,6 +450,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     );
     const statuses = Array.from(new Set(props.orders.map((row) => String(row.status)))).sort();
     return (
+      <>
       <Panel title="Orders" description="Real orders from the marketplace service. Status changes go through the audited admin service.">
         <Toolbar
           query={query}
@@ -390,6 +480,18 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
             { header: "Status", cell: (row) => <StatusBadge status={text(row.status)} /> },
             { header: "Payment", cell: (row) => <StatusBadge status={text(row.paymentStatus)} /> },
             { header: "Total", cell: (row) => <span className="font-bold">{money(row.totalKobo)}</span>, className: "text-right" },
+            {
+              header: "Details",
+              cell: (row) => (
+                <button
+                  type="button"
+                  onClick={() => setDetail(row)}
+                  className="rounded-lg border border-[#21262D] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D]"
+                >
+                  View
+                </button>
+              )
+            },
             {
               header: "Change status",
               cell: (row) => {
@@ -421,6 +523,8 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           ]}
         />
       </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      </>
     );
   }
 
@@ -814,6 +918,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     const rows = filterRows(props.vendors).filter((row) => matches(row, ["name", "slug", "market", "status", "owner.name", "owner.email"]));
     const statuses = Array.from(new Set(props.vendors.map((row) => String(row.status)))).sort();
     return (
+      <>
       <Panel title="Vendors" description="Seller accounts created by approved applications.">
         <Toolbar
           query={query}
@@ -833,10 +938,24 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
             { header: "Market", cell: (row) => <span>{text(row.market)}</span> },
             { header: "Status", cell: (row) => <StatusBadge status={text(row.status)} /> },
             { header: "Products", cell: (row) => <span>{text(value(row, "_count.products"), "0")}</span>, className: "text-right" },
-            { header: "Orders", cell: (row) => <span>{text(value(row, "_count.orders"), "0")}</span>, className: "text-right" }
+            { header: "Orders", cell: (row) => <span>{text(value(row, "_count.orders"), "0")}</span>, className: "text-right" },
+            {
+              header: "Details",
+              cell: (row) => (
+                <button
+                  type="button"
+                  onClick={() => setDetail(row)}
+                  className="rounded-lg border border-[#21262D] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D]"
+                >
+                  View
+                </button>
+              )
+            }
           ]}
         />
       </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      </>
     );
   }
 
