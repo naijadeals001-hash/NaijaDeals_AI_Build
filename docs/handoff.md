@@ -1023,3 +1023,13 @@ uncovered/unbalanced/unrecognised rows; adjustment transactions are excluded onl
 LedgerAdjustment key exists and cross-table validation passes. Choice B (FIXTURE_EQUITY) recommended but
 not applied; synthetic-funds schema isolation gap recorded. Refund-fee options A/B/C recorded, no
 decision. Provider readiness is credential presence only; sandbox execution remains blocked.
+
+
+## Synthetic-funds boundary (2026-11-03)
+
+Added lib/payments/boundary.ts with explicit production+live+allow gate. Payout creation, payout
+settlement route and live provider initialisation are blocked server-side on the shared development
+database. Tests pass for config permutations, admin payout creation (no record created) and Paystack
+init. Payout settlement HTTP path is guarded but was not exercised end-to-end (no payout row).
+Refund-fee wording corrected: retaining the fee is not aligned with the unverified 1% policy.
+Adjustment remains PREPARED; Phase 07 IN PROGRESS.
