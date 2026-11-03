@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { AlertCircle, ArrowRight, Bot, ChefHat, Headphones, PackageCheck, ShieldCheck, ShoppingBag, Truck, Wrench } from "lucide-react";
 import { NaijaEatsPage, NaijaFreshPage, NaijaPayPage, NaijaSendPage, NaijaShopPage, OrdersPageApi, SearchPage, ShopCartPage, ShopCheckoutPage } from "@/components/commerce/naijashop";
 import { verticals } from "@/lib/data/ecosystem";
-import { AuraAiLanding, NaijaGigsLanding, NaijaStayLanding, NaijaStreamLanding } from "./vertical-landings";
+import { AuraAiLanding, NaijaGigsLanding, NaijaPayLanding, NaijaStayLanding, NaijaStreamLanding } from "./vertical-landings";
 
 const configuredShopRoutes = new Set(["categories", "product-listing"]);
 
@@ -78,6 +78,7 @@ export function GenericPage({ slug }: { slug: string }) {
   if (slug === "naijastream") return <NaijaStreamLanding />;
   if (slug === "aura-ai") return <AuraAiLanding />;
   if (slug === "naijagigs") return <NaijaGigsLanding />;
+  if (slug === "naijapay") return <NaijaPayLanding />;
   if (slug === "naijasend" || slug === "shipping") return <NaijaSendPage />;
   if (slug === "product-detail") return <ConfiguredLink title="Product detail" description="Open a live product from NaijaShop to see variants, stock, reviews and escrow checkout." href="/naijashop" cta="Browse NaijaShop" />;
   if (slug === "safety") return <SafetyPage />;

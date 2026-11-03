@@ -241,3 +241,25 @@ full-bleed photograph blended into the dark surface with a left-weighted gradien
 NaijaDrive header — instead of the earlier split panel with a floating secondary thumbnail. The
 shared `ModuleLanding` drives NaijaStay, NaijaStream, Aura AI, NaijaGigs, NaijaEats, NaijaFresh and
 NaijaSend; each page now has exactly one hero image.
+
+
+## Module landing inventory (2026-11-03)
+
+Every ecosystem module now has a landing surface; the shared `ModuleLanding` supplies the
+full-bleed blended hero, capability cards, optional partner band and honest setup card.
+
+| Module | Route | State |
+| --- | --- | --- |
+| NaijaShop | `/naijashop` | Live storefront (Amazon-derived layout) |
+| NaijaDrive | `/naijadrive` | Live booking page with reference-04 hero |
+| NaijaEats | `/naijaeats` | Landing, ordering disabled until kitchens connect |
+| NaijaFresh | `/naijafresh` | Landing, ordering disabled until market vendors connect |
+| NaijaSend | `/naijasend` | Landing, manual courier workflow live |
+| NaijaGigs | `/naijagigs` | Landing, booking disabled until dispatch connects |
+| NaijaStay | `/naijastay` | Landing, booking disabled until properties/calendars connect |
+| NaijaStream | `/naijastream` | Landing, playback disabled until licensing connects |
+| Aura AI | `/aura-ai` | Landing, assistant disabled until a model provider connects |
+| NaijaPay | `/naijapay` | Landing with "Open NaijaPay" → functional `/wallet` |
+
+Ecosystem cards and the header sub-nav point at these landing routes; functional apps remain at
+`/wallet`, `/orders`, etc.

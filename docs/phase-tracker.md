@@ -106,7 +106,7 @@ dialogs are introduced.
 
 ## Phase 05 — Unified admin Control Center and permissions
 
-**Status:** IN PROGRESS — core Control Center and super-admin boundary runtime-verified (2026-11-02)
+**Status:** PASS ✅ (2026-11-03) — exit gate 6/6 and all work coverage closed
 
 **Completed and verified:**
 - One `/admin` + `/super-admin` shell driven by `searchParams`, with URL-addressable modules/workspaces (`?module=…&tab=…&q=…`)
@@ -134,30 +134,28 @@ dialogs are introduced.
 - Role-assignment UI and dispute resolution are covered in the handoff; the previously listed
   coverage gaps are closed.
 
-**Still open for a Phase 05 PASS (WORK coverage, not exit gate):**
-- City-level activation (country activation shipped)
-- Phase 05 acceptance run (2026-11-03, fresh isolated database): admin security **19/19**,
-  marketplace **13/13**, drive **28/28**, `tsc` clean, in the order admin → marketplace → drive.
-  The admin suite's cross-region product fixture now carries an image, removing the suite-order
-  coupling that made marketplace fail when it ran second.
-- Country activation (2026-11-03): `CountrySetting` overrides (migration `20261103130000_country_settings`)
-  with a super-admin panel for sell/delivery switches, `countries:write` permission, audited
-  `country.updated` before/after, and real enforcement in checkout (disabled → 400
-  `country_disabled`; delivery off → 503 `delivery_unconfigured`). Verified by disabling Ghana,
-  observing the 400, re-enabling and reaching the delivery check. Absent rows keep config defaults.
-- Before/after audit detail (2026-11-03): product moderation and order status changes now write
-  `before → after` metadata into AuditLog/AdminAction (payouts and role changes already recorded
-  before-state), refunds and disputes now record before/after (payment/order/escrow states), and the
-  record-detail dialog renders the metadata block. Verified rows: refund `vendor_notified/held/paid →
-  refunded`; dispute `completed/released → disputed`
-- Record-detail dialogs for Orders, Vendors, Products and Users (2026-11-03): shared table action, native modal with title, focus trap, Escape, focus restoration and 0 axe violations; detail dialogs are now wired to every operational table (orders, deliveries, rides, payouts, products, applications, payments, users, vendors, couriers, audit) through the shared `DataTable` action
-- Bulk product moderation (2026-11-03): row and select-all checkboxes, a live "N selected" bar, Suspend/Activate selected with confirmation, per-row results, failure summary and refresh. Verified end to end — two products suspended then restored to ACTIVE; axe clean with the bar open. Bulk actions for orders/rides/payments are not enabled
-- Scoped staff access (2026-11-03): `requireAdmin` now admits ops/finance/support/moderator through `hasAdminConsoleAccess`; admin security suite **19/19**
-- Region filtering is server-side and permission-aware (2026-11-03): regions come from the country
-  catalogue (not a hard-coded pair), `geo` is validated and clamped to scoped staff so the URL cannot widen
-  access, datasets are filtered before serialisation, tables paginate 10/page, and a 17/17 Playwright check
-  covers default/selection/refresh/invalid/pagination/staff-scope/mobile with zero console errors
-- Disputes, reconciliation, country/city activation and provider-connection controls where real services exist
+**Delivered coverage (2026-11-03):**
+- Final acceptance run on a freshly migrated/seeded isolated database, in the order admin → marketplace →
+  drive: **19/19**, **13/13**, **28/28**, `tsc --noEmit` clean.
+- Role-assignment UI (Users → Manage): database roles, country/city scope, self-edit rejected with 403, audited
+  `admin.roles_updated` before/after.
+- Dispute resolution (Control Center → Disputes): refund buyer or release escrow to seller, audited
+  `dispute.resolved` before/after, double-release guarded with 409 `escrow_not_releasable`.
+- Country activation (Settings): `CountrySetting` overrides, audited, enforced at checkout (400
+  `country_disabled`, 503 `delivery_unconfigured`).
+- City activation (Settings): `CitySetting` overrides, audited `city.updated`, enforced in staff scope
+  assignment (409 `city_not_activated`).
+- Region filtering is server-side and permission-aware: regions come from the country catalogue (not a
+  hard-coded pair), `geo` is validated and clamped to scoped staff so the URL cannot widen access, datasets
+  are filtered before serialisation, tables paginate 10/page, and a 17/17 Playwright check covers
+  default/selection/refresh/invalid/pagination/staff-scope/mobile with zero console errors.
+- Before/after audit detail: product moderation, order status, refunds, disputes, payouts, role changes and
+  country/city activation all carry before/after metadata rendered in the record dialog.
+
+**Documented limitations (not exit-gate failures):**
+- Dispute *dismissal* is not exposed: the order status machine cannot restore an arbitrary pre-dispute status.
+- Live driver presence and a live map provider are not integrated; the dashboard reports only evidence-backed
+  coverage instead of inventing online/offline states.
 
 ## Phase 06 — Partner dashboards and onboarding
 

@@ -22,6 +22,7 @@ export const routeTitles: Record<string, string> = {
   naijastay: "NaijaStay",
   naijadrive: "NaijaDrive",
   naijasend: "NaijaSend",
+  naijapay: "NaijaPay",
   naijastream: "NaijaStream",
   "aura-ai": "Aura AI"
 };

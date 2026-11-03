@@ -7,6 +7,7 @@ import {
   Music2,
   ShieldCheck,
   Sparkles,
+  Wallet,
   Wrench,
   Zap
 } from "lucide-react";
@@ -126,6 +127,41 @@ export function NaijaGigsLanding() {
         links: [
           { label: "Apply as a provider", href: "/sell" },
           { label: "How payouts work", href: "/help" }
+        ]
+      }}
+    />
+  );
+}
+
+export function NaijaPayLanding() {
+  return (
+    <ModuleLanding
+      name="NaijaPay"
+      icon={Wallet}
+      headline="One wallet for payments, escrow and payouts"
+      description="NaijaPay keeps every balance on a server-side ledger: shopping, escrow holds, refunds and seller payouts settle from the same NaijaDeals account."
+      chips={["Ledger-backed", "Escrow protection", "Live in this build"]}
+      image={{
+        src: "/real-photography/module-wallet.jpg",
+        alt: "NaijaPay brand artwork: a wallet and payment cards for the NaijaDeals ecosystem"
+      }}
+      features={[
+        { icon: Wallet, title: "Ledger-backed balance", body: "Every credit, hold and release is posted to a balanced ledger entry." },
+        { icon: ShieldCheck, title: "Escrow holds", body: "Order and service funds stay held until delivery or completion is confirmed." },
+        { icon: BadgeCheck, title: "Seller payouts", body: "Vendor wallets are credited when escrow releases, with the surviving audit trail." }
+      ]}
+      status={{
+        title: "Setup status",
+        body: "NaijaPay is live for authenticated accounts. Card and bank funding depend on provider credentials; only the local test provider is enabled outside production, and no payout leaves the platform without a recorded ledger entry."
+      }}
+      primaryCta={{ label: "Open NaijaPay", href: "/wallet" }}
+      secondaryCta={{ label: "How escrow works", href: "/help" }}
+      partner={{
+        title: "Accept payments with NaijaPay",
+        body: "Sellers receive payouts into their NaijaPay wallet when escrow releases; funding and withdrawal providers are configured per environment.",
+        links: [
+          { label: "Start selling", href: "/sell" },
+          { label: "Payment setup", href: "/help" }
         ]
       }}
     />

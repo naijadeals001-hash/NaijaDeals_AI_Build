@@ -475,6 +475,17 @@ hero image blended into the dark surface, matching the NaijaDrive header; the sp
 floating secondary thumbnails were removed. Each page reports exactly one hero image, axe 0 and no
 overflow.
 
+**Phase 05 PASS (2026-11-03):** final acceptance run on a freshly migrated/seeded isolated database —
+admin **19/19**, marketplace **13/13**, drive **28/28**, `tsc` clean. Exit gate 6/6 and every work
+item is closed: role-assignment UI, dispute resolution, country activation, city activation, region
+filtering, before/after audit. Documented limitations: dispute dismissal is not exposed (status
+machine), and live driver presence/map provider remain unintegrated.
+
+**Landing page for every module (same pass):** NaijaPay gained `/naijapay` (one blended hero,
+ledger/escrow/payout cards, "Open NaijaPay" → `/wallet`), completing the set: shop, drive, eats,
+fresh, send, gigs, stay, stream, aura and pay each have a landing route recorded in
+`docs/design-direction.md`. Verified all ten return 200 with axe 0 and 0 overflow.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only
