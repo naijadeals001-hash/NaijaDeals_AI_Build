@@ -35,7 +35,7 @@ export function EcosystemHome() {
   return (
     <div className="space-y-6 pb-6 sm:space-y-8">
       <Hero />
-      <EcosystemPulse />
+      <ModuleRail />
       <ServiceBento />
       <WalletBand />
       <TrustSection />
@@ -58,17 +58,17 @@ function Hero() {
   return (
     <section data-forced-colors="preserve" className="relative isolate overflow-hidden rounded-[28px] bg-[#04140f] text-white shadow-[0_30px_80px_-40px_rgba(4,20,15,0.9)]">
       <img
-        src="/real-photography/hero-ecosystem.jpg"
-        alt="A warm Lagos evening with NaijaDeals delivering food, rides and payments"
-        width={1600}
-        height={1200}
+        src="/brand-photography/drive-sedan-lagos.jpg"
+        alt="A green NaijaDrive sedan and its driver on a Lagos road at sunset (brand illustration)"
+        width={1536}
+        height={1024}
         fetchPriority="high"
-        className="absolute inset-0 h-full w-full object-cover object-[62%_center] opacity-95"
+        className="absolute inset-0 h-full w-full object-cover object-[72%_center]"
       />
-      <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(4,20,15,0.97)_0%,rgba(4,20,15,0.92)_38%,rgba(4,20,15,0.45)_66%,rgba(4,20,15,0.15)_100%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,20,15,0.55)_0%,transparent_35%,rgba(4,20,15,0.85)_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(3,16,12,0.98)_0%,rgba(3,16,12,0.94)_34%,rgba(3,16,12,0.6)_58%,rgba(3,16,12,0.12)_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,16,12,0.5)_0%,transparent_45%,rgba(3,16,12,0.9)_100%)]" />
 
-      <div className="relative flex min-h-[560px] flex-col justify-end px-5 pb-6 pt-10 sm:px-8 lg:min-h-[620px] lg:px-12 lg:pb-10 lg:pt-14">
+      <div className="relative flex min-h-[600px] flex-col justify-end px-5 pb-7 pt-12 sm:px-8 sm:pb-9 lg:min-h-[680px] lg:px-14 lg:pb-12 lg:pt-16">
         <div className="max-w-2xl">
           <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white/80">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 backdrop-blur">
@@ -157,15 +157,19 @@ function Hero() {
           </form>
           )}
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <QuickChip href="/naijashop" icon={ShoppingBag} label={verticals[0].name} />
-            <QuickChip href="/naijadrive" icon={Car} label={verticals.find((v) => v.key === "drive")!.name} />
-            <QuickChip href="/wallet" icon={Wallet} label={verticals.find((v) => v.key === "wallet")!.name} />
+          <div className="mt-6 flex flex-wrap items-center gap-2.5">
             <Link
-              href="#products"
-              className="inline-flex min-h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-extrabold text-[#04140f] transition hover:bg-primary-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              href="/naijashop"
+              className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-[#04140f] shadow-lift transition hover:bg-primary-soft"
             >
               {t("home.explore")}
+              <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
+            </Link>
+            <Link
+              href="/naijadrive"
+              className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-5 text-sm font-bold text-white backdrop-blur transition hover:bg-white/20"
+            >
+              {verticals.find((vertical) => vertical.key === "drive")!.name}
               <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
             </Link>
           </div>
@@ -199,6 +203,36 @@ function QuickChip({ href, icon: Icon, label }: { href: string; icon: typeof Sto
       <Icon className="h-4 w-4" aria-hidden="true" />
       {label}
     </Link>
+  );
+}
+
+function ModuleRail() {
+  const { t } = useLocale();
+  return (
+    <section aria-label={t("home.productsTitle")} className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      {verticals.slice(0, 10).map((vertical) => {
+        const Icon = vertical.icon;
+        return (
+          <Link
+            key={vertical.key}
+            href={vertical.href}
+            className="group flex items-center gap-2.5 rounded-2xl border border-border-soft bg-canvas px-3 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lift"
+          >
+            <span
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+              style={{ backgroundColor: vertical.accent + "1f", color: vertical.accent }}
+            >
+              <Icon className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-extrabold">{vertical.name}</span>
+              <span className="block truncate text-[11px] font-semibold text-muted">{vertical.label}</span>
+            </span>
+            <ArrowRight className="h-4 w-4 shrink-0 text-muted transition group-hover:text-primary rtl:rotate-180" aria-hidden="true" />
+          </Link>
+        );
+      })}
+    </section>
   );
 }
 

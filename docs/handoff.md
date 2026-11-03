@@ -397,6 +397,11 @@ villa), NaijaStream (studio + rooftop) and Aura AI (concierge + orb). They are l
 illustrations, never as real listings, customers or drivers. All eight load with naturalWidth > 0,
 no 404s, axe 0.
 
+**Homepage redesign (owner feedback, 2026-11-03):** `/` is now full-bleed — no ecosystem sidebar,
+a module sub-nav row under the header, the owner-supplied NaijaDrive sedan as the hero image, one
+service-chip row, the marketplace search, two primary CTAs and a ten-tile module rail; the redundant
+status-pill strip is gone. Verified 1440 + 390: no overflow, axe 0, no console errors.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

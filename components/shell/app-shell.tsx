@@ -35,6 +35,9 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
     return <>{children}</>;
   }
 
+  // The public homepage is a full-bleed storefront; the ecosystem sidebar starts on inner routes.
+  const isHome = pathname === "/";
+
   const topLinks = [
     { href: "/", label: t("nav.home") },
     { href: "/products", label: t("nav.products") },
@@ -137,6 +140,26 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
         </div>
       </header>
 
+      {isHome ? (
+        <nav aria-label="Ecosystem" className="border-b border-border-soft bg-canvas">
+          <div className="mx-auto flex max-w-[1440px] items-center gap-1 overflow-x-auto px-3 py-2 sm:px-5 lg:px-8">
+            {verticals.map((vertical) => {
+              const Icon = vertical.icon;
+              return (
+                <Link
+                  key={vertical.key}
+                  href={vertical.href}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-muted transition hover:bg-surface-low hover:text-primary"
+                >
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                  {vertical.name}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      ) : null}
+
       {mobileMenuOpen ? (
         <div className="fixed inset-x-0 top-16 z-40 border-b border-border-soft bg-canvas p-4 shadow-soft lg:hidden">
           <div className="grid gap-2 sm:grid-cols-2">
@@ -155,6 +178,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
         </div>
       ) : null}
 
+      {!isHome ? (
       <aside className="fixed left-0 top-16 z-30 hidden h-[calc(100vh-4rem)] w-64 overflow-y-auto border-r border-border-soft bg-canvas px-4 py-5 rtl:left-auto rtl:right-0 rtl:border-l rtl:border-r-0 lg:block">
         <div className="mb-5 rounded-xl bg-primary-soft p-4">
           {user ? (
@@ -240,12 +264,20 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
           </Link>
         ) : null}
       </aside>
+      ) : null}
 
-      <main id="main-content" className="mx-auto max-w-7xl px-4 pb-28 pt-6 lg:ml-64 lg:px-8 lg:rtl:ml-0 lg:rtl:mr-64">
+      <main
+        id="main-content"
+        className={
+          isHome
+            ? "mx-auto max-w-[1440px] px-3 pb-20 pt-4 sm:px-5 lg:px-8"
+            : "mx-auto max-w-7xl px-4 pb-28 pt-6 lg:ml-64 lg:px-8 lg:rtl:ml-0 lg:rtl:mr-64"
+        }
+      >
         {children}
       </main>
 
-      <footer className="hidden border-t border-border-soft bg-canvas py-8 lg:ml-64 lg:block lg:rtl:ml-0 lg:rtl:mr-64">
+      <footer className={`hidden border-t border-border-soft bg-canvas py-8 lg:block ${isHome ? "" : "lg:ml-64 lg:rtl:ml-0 lg:rtl:mr-64"}`}>
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-8 text-sm text-muted">
           <span>NaijaDeals.com</span>
           <span>{t("common.footer", { currency: "NGN" })}</span>

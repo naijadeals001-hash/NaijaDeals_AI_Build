@@ -163,3 +163,21 @@ Usage map: NaijaDrive hero (sedan) and ecosystem card (SUV); NaijaStay module pa
 apartment + courtyard villa); NaijaStream module page (studio + rooftop listener); Aura AI module
 page (concierge + orb). Verified in Chrome: all eight load with `naturalWidth > 0`, no 404s and
 axe 0 on the module pages.
+
+
+## Homepage redesign (2026-11-03)
+
+Following owner feedback that the homepage did not meet the reference standard, the page is now a
+full-bleed storefront:
+
+- The ecosystem sidebar is suppressed on `/` only; the header gains a module sub-nav row
+  (NaijaShop, NaijaEats, NaijaFresh, NaijaDrive, NaijaSend, NaijaGigs, NaijaStay, NaijaStream,
+  NaijaPay, Aura AI).
+- Hero uses the owner-supplied NaijaDrive sedan artwork as a cinematic full-bleed image with a
+  left-weighted gradient, a single service-chip row, the marketplace search, and two primary CTAs
+  (Explore products, NaijaDrive).
+- A ten-tile module rail sits directly beneath the hero with icon, label, working status and arrow.
+- The redundant status-pill strip was removed.
+
+Verified at 1440 and 390: no sidebar on the homepage, hero image loads, rail has 10 links, no
+horizontal overflow, axe 0, no console errors (`qa-artifacts/preview/home-redesign-*.png`).
