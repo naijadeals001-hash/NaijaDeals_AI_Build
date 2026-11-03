@@ -155,7 +155,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
             <>
               <p className="text-xs font-bold uppercase tracking-wide text-primary">{t("common.welcome")}</p>
               <p className="mt-1 font-bold">{t("common.signInPrompt")}</p>
-              <Link href="/login" className="mt-2 inline-block text-xs font-bold text-primary underline">
+              <Link href="/login" className="mt-2 inline-flex min-h-9 items-center text-xs font-bold text-primary underline">
                 {t("common.signInLink")}
               </Link>
             </>

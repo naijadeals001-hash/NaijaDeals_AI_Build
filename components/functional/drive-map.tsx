@@ -227,7 +227,8 @@ export function DriveMap({ pickup, dropoff, roadDistanceMeters, lowData, onLowDa
           <div
             ref={containerRef}
             className="h-[260px] w-full bg-surface-low sm:h-[320px]"
-            aria-hidden="true"
+            role="region"
+            aria-label="Route map showing pickup and drop-off"
           />
         )}
 

@@ -241,6 +241,17 @@ images loaded, and `/naijashop`, `/naijadrive`, `/wallet`, `/products` all 200. 
 `qa-artifacts/preview/final-redesign-*.png` (Git-ignored). The preview is served from the
 project's dedicated `.next-preview` build directory so concurrent agent servers cannot corrupt it.
 
+## Accessibility pass 02A/02C (2026-11-03)
+
+axe-core 4.12 (WCAG 2.0/2.1 A+AA) reports **zero violations** across 15 routes on desktop and
+mobile. Three defects were found and fixed: the setup-status dot contrast (2.15:1 → 5.02:1 via a
+new `amber-strong` token), the 16 px sidebar sign-in target (now 36 px), and the Leaflet map
+container that was `aria-hidden` while containing focusable controls (now a labelled region).
+Keyboard traversal starts at the skip link (147×40 when focused) with visible focus throughout;
+heading order and image alts are clean; no horizontal overflow at 390 px. Full evidence:
+`docs/audits/deepseek-accessibility-02a-02c.md`. 02B keyboard flows and 02D screen-reader/RTL
+checks remain open.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

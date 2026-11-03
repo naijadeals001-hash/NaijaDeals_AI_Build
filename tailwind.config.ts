@@ -16,6 +16,7 @@ const config: Config = {
         "primary-live": "#00a859",
         "primary-soft": "#e7f8ed",
         amber: "#F59E0B",
+        "amber-strong": "#B45309",
         "amber-soft": "#FEF3C7",
         crimson: "#EF4444",
         "crimson-soft": "#FEE2E2",

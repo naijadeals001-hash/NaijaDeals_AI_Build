@@ -78,6 +78,11 @@ phases (00–20) plus 10 advisory Part M workstreams. No phase status was upgrad
 **Landed:** editorial homepage hero, ecosystem pulse, asymmetric service bento, wallet band,
 refined trust/partner sections, `/drive` → `/naijadrive` redirect; see `docs/design-direction.md`
 
+**02A/02C evidence (2026-11-03):** axe-core WCAG A/AA audit is clean on 15 routes (desktop +
+mobile); contrast tokens measured (amber dot raised to 5.02:1), sidebar sign-in target raised to
+36 px, and the Leaflet map is now a labelled region instead of `aria-hidden` with focusable
+controls. 02B (map/dialog keyboard flows) and 02D (screen-reader/RTL/forced-colors) remain open.
+
 **Required per playbook:**
 - Research Uber/Bolt ecosystem navigation and commerce/dashboard references through REA
 - Create shared tokens, typography, spacing, colors, responsive layouts and accessible components
