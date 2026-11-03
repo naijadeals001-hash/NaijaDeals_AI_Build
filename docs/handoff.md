@@ -360,6 +360,12 @@ image, which made the marketplace catalogue check fail when it ran second; the f
 an image. Reminder: restart the test server after dropping/recreating its database, otherwise
 Prisma reports "Server has closed the connection".
 
+**NaijaDrive landing (same pass):** the ride page now opens with the reference-04 composition — a
+photographic hero carrying "Request a ride, get around Lagos with NaijaDrive", a service tab bar
+(Ride active; Package → delivery workflow; Bike and Schedule visibly disabled with "not available
+yet"), then the existing live fare/vehicle/request flow. Verified: headline renders, 5 tab items,
+2 disabled, axe 0, no mobile overflow, screenshots in `qa-artifacts/preview/drive-landing-*.png`.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

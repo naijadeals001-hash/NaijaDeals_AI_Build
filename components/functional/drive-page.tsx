@@ -9,7 +9,9 @@ import {
   ArrowRight,
   Banknote,
   Bike,
+  CalendarClock,
   Car,
+  Package,
   CheckCircle2,
   Clock,
   Loader2,
@@ -287,7 +289,7 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
               {DRIVE_CITY}, Nigeria
             </p>
             <h1 className="mt-4 font-display text-3xl font-extrabold leading-tight sm:text-4xl">
-              NaijaDrive
+              Request a ride, get around {DRIVE_CITY} with NaijaDrive
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/75 sm:text-base">
               Book a verified Lagos driver, see the fare before you request, and follow real server
@@ -320,6 +322,28 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
           </div>
         </div>
       </section>
+
+      <nav aria-label="NaijaDrive services" className="flex flex-wrap items-center gap-2 rounded-2xl border border-border-soft bg-canvas p-2">
+        <span aria-current="page" className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-extrabold text-white">
+          <Car className="h-4 w-4" aria-hidden="true" />
+          Ride
+        </span>
+        <span aria-disabled="true" title="Bike rides are not available in this build" className="inline-flex min-h-10 items-center gap-2 rounded-xl px-4 text-sm font-bold text-muted/60">
+          <Bike className="h-4 w-4" aria-hidden="true" />
+          Bike
+        </span>
+        <Link href="/naijasend" className="inline-flex min-h-10 items-center gap-2 rounded-xl px-4 text-sm font-bold text-muted transition hover:bg-surface-low hover:text-primary">
+          <Package className="h-4 w-4" aria-hidden="true" />
+          Package
+        </Link>
+        <span aria-disabled="true" title="Scheduled rides are not available in this build" className="inline-flex min-h-10 items-center gap-2 rounded-xl px-4 text-sm font-bold text-muted/60">
+          <CalendarClock className="h-4 w-4" aria-hidden="true" />
+          Schedule
+        </span>
+        <span className="ml-auto hidden text-[11px] font-semibold text-muted sm:inline">
+          Bike and scheduled rides are not available yet.
+        </span>
+      </nav>
 
       {!viewer ? (
         <div className="flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 sm:flex-row sm:items-center sm:justify-between">
