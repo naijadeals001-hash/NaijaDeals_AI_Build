@@ -137,3 +137,38 @@ evidence**; they are not in the current 10-wallet database and were not recreate
 Port 3010 is served from `C:\Users\User\naijadeals-live`, detached at the commit recorded below
 (after syncing this evidence commit). It uses the same `naijadeals_core` PostgreSQL database as the
 authoritative checkout. The SHA is recorded in the handoff at the time of this write.
+
+
+## Tested correction implementation (2026-11-03)
+
+Contra mechanism: `LedgerAccount` (code FIXTURE_EQUITY, balance may be negative) and
+`AccountPosting` (unique per adjustment+account) were added. `applyLedgerAdjustment` runs one
+serializable transaction: validate journal, conditionally move PREPARED -> APPLIED, create the SYSTEM
+ledger CREDIT (stored SYSTEM balance unchanged), create the FIXTURE_EQUITY DEBIT posting and decrement
+the contra balance. Any failure rolls back the status and both postings.
+
+Isolated application test (`scripts/phase07-apply-isolated-test.ts`) runs in a disposable
+`phase07_apply_test` schema, migrated from scratch, then dropped. It verifies:
+
+- original fixture transaction: customer CREDIT 2.5m / SYSTEM DEBIT 2.5m
+- after adjustment: customer stored/ledger 2.5m; SYSTEM stored 0, ledger -2.5m -> adjustment +2.5m
+  -> 0; FIXTURE_EQUITY balance -2.5m; one contra posting
+- retry returns already_applied, no duplicate posting
+- simultaneous application cannot duplicate
+- forced unique-reference failure rolls status back to PREPARED with no posting; retry succeeds
+- all wallets reconcile after correction
+
+**Whole-system values (isolated test):** debits = credits = 2.5m; assets customer 2.5m + SYSTEM 0;
+contra equity -2.5m; post-correction wallet differences: none.
+
+Lifetime suite label corrected: it proves the known discrepancy is **contained**, not full
+reconciliation. Zero unexplained differences are required after the correction is approved/applied.
+
+Production adjustment remains **PREPARED and unapplied**; no SYSTEM/equity posting exists in
+naijadeals_core.
+
+## Shared database warning
+
+The 3010 preview worktree and authoritative checkout both use **localhost:5432/naijadeals_core**.
+Migrations and financial tests therefore affect both. Any future application test must use a
+disposable schema/database, as the isolated test does.

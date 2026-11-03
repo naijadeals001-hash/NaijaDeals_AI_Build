@@ -993,3 +993,13 @@ PHASE07-FIXTURE-FUNDING-20261103 (references and balanced journal; appliedAt nul
 idempotent. Lifetime suite passes: non-negative wallets, one quarantined mismatch only, all ledger
 transaction groups balanced, single PREPARED correction. Isolated 3-wallet DB remains unavailable and
 unresolved. Phase 07 remains IN PROGRESS; correction is unapplied.
+
+
+## Phase 07 correction implementation tested in isolation (2026-11-03)
+
+Added LedgerAccount/AccountPosting and applyLedgerAdjustment (serializable, atomic status+postings,
+idempotent, rollback on failure). Isolated schema test passes: whole-system balances, retry,
+concurrent apply, forced-failure rollback, retry-after-failure, all wallets reconcile. Production
+correction remains PREPARED/unapplied. Lifetime suite relabelled as containment, not full
+reconciliation. Shared DB warning: 3010 and authoritative checkout both use
+localhost:5432/naijadeals_core.

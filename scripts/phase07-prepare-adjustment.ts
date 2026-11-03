@@ -16,6 +16,7 @@ const KEY = "PHASE07-FIXTURE-FUNDING-20261103";
     console.log(JSON.stringify({ status: "already_prepared", id: existing.id, adjustmentKey: KEY, applied: existing.status === "APPLIED" }));
     await prisma.$disconnect(); return;
   }
+  await prisma.ledgerAccount.upsert({ where: { code: "FIXTURE_EQUITY" }, update: {}, create: { code: "FIXTURE_EQUITY", name: "Fixture opening equity", kind: "EQUITY" } });
   const difference = target.available + target.held - target.net;
   const first = await prisma.ledgerEntry.findFirstOrThrow({ where: { walletId: target.id }, orderBy: { createdAt: "asc" } });
   const tx = await prisma.walletTransaction.findUnique({ where: { id: first.transactionId }, include: { ledger: true } });

@@ -17,7 +17,7 @@ const check = (name: string, ok: boolean, detail = "") => {
     FROM "Wallet" w LEFT JOIN "LedgerEntry" e ON e."walletId" = w.id
     GROUP BY w.id, w."availableKobo", w."heldKobo"`;
   const mismatches = rows.filter((r) => r.available + r.held !== r.net);
-  check("only the known quarantined wallet mismatches", mismatches.every((m) => QUARANTINED.has(m.id)) && mismatches.length <= 1, JSON.stringify(mismatches.map((m) => ({ id: m.id, diff: (m.available + m.held - m.net).toString() }))));
+  check("known discrepancy remains contained (NOT full reconciliation)", mismatches.every((m) => QUARANTINED.has(m.id)) && mismatches.length <= 1, JSON.stringify(mismatches.map((m) => ({ id: m.id, diff: (m.available + m.held - m.net).toString() }))));
 
   const groups = await prisma.$queryRaw<Array<{ transactionId: string; debits: bigint; credits: bigint }>>`
     SELECT "transactionId",

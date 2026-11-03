@@ -1104,4 +1104,32 @@ model LedgerAdjustment {
   preparedBy    String
   preparedAt    DateTime  @default(now())
   appliedAt     DateTime?
+  appliedBy     String?
+  postings      AccountPosting[]
+}
+
+/// Non-wallet accounting account (for example fixture equity). Its balance may be negative.
+model LedgerAccount {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  name        String
+  kind        String
+  balanceKobo BigInt           @default(0)
+  createdAt   DateTime         @default(now())
+  postings    AccountPosting[]
+}
+
+model AccountPosting {
+  id             String          @id @default(cuid())
+  accountId      String
+  adjustmentId   String?
+  transactionId  String
+  direction      LedgerDirection
+  amountKobo     BigInt
+  memo           String
+  createdAt      DateTime        @default(now())
+  account        LedgerAccount   @relation(fields: [accountId], references: [id])
+  adjustment     LedgerAdjustment? @relation(fields: [adjustmentId], references: [id])
+  @@index([accountId])
+  @@unique([adjustmentId, accountId])
 }
