@@ -6,8 +6,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
 import { apiClient, type SessionUser } from "@/lib/api-client";
 
+const STAFF_ROLES = ["super_admin", "admin", "ops", "finance", "support", "moderator"];
+
 function landingFor(user: SessionUser) {
-  if (user.roles.includes("admin") || user.actorType === "ADMIN") return "/admin";
+  if (user.actorType === "ADMIN" || user.roles.some((role) => STAFF_ROLES.includes(role))) return "/admin";
   if (user.roles.includes("vendor") || user.actorType === "VENDOR") return "/seller";
   if (user.roles.includes("courier") || user.actorType === "COURIER") return "/courier";
   return "/account";

@@ -67,8 +67,10 @@ Evidence columns name the code path and the execution that proved it. Last verif
 | Real data tables (orders, rides, payouts, users, audit…) | PASS | `.qa/control-center` run 29/29 |
 | Permission + region enforcement | PASS | admin suite 19/19 |
 | Audit trail for sensitive changes | PARTIAL | `admin.roles_updated` covered; before/after detail incomplete |
-| Pagination / bulk actions / record detail | NOT STARTED | Tables render full lists; no pagination controls |
-| Country/city activation | NOT STARTED | No Country model or workflow |
+| Pagination | PASS | 10-row pages with range label and Previous/Next on every admin table; client-side over the server-filtered dataset |
+| Bulk actions / record detail | NOT STARTED | No bulk mutation or drawer/detail view yet |
+| Region filter (country) | PASS | Server-validated `geo`, scope-clamped for staff, applied before serialisation; catalogue-driven options; 17/17 browser checks |
+| Country/city activation | PARTIAL | Countries live in `lib/config/commerce.ts` (`enabled`, `deliveryEnabled`); admin selector reads them. No activation workflow or per-country UI yet, and the catalogue currently lists 6 countries (4 African), not all 54 |
 | Live operations map | BLOCKED | No provider; UI shows honest placeholder |
 | Notifications centre | NOT STARTED | Bell is decorative |
 

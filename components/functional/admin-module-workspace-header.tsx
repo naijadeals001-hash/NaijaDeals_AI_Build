@@ -1,22 +1,19 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { MapPin, ExternalLink, Car, ShoppingBag, Utensils, Package, Briefcase, Home, Music, CreditCard, Apple, Sparkles } from "lucide-react";
 import { MODULE_TABS, TAB_LABELS, type AdminModule, type AdminTab } from "@/lib/admin/admin-navigation";
+import { adminRegionOptions, regionOptionValue, type AdminRegion } from "@/lib/admin/region";
 
 interface ModuleWorkspaceHeaderProps {
   moduleId: AdminModule;
+  region: AdminRegion;
   userRoles: string[];
   currentTab: AdminTab;
   isSuperAdmin: boolean;
   onNavigate: (target: { module?: string; tab?: string; geo?: string }) => void;
 }
 
-const GEO_OPTIONS = [
-  { value: "all", label: "All regions" },
-  { value: "NG", label: "Nigeria" },
-  { value: "GH", label: "Ghana" }
-];
+const GEO_OPTIONS = adminRegionOptions();
 
 const moduleConfigs: Record<AdminModule, {
   icon: React.ReactNode;
@@ -124,16 +121,16 @@ const moduleConfigs: Record<AdminModule, {
 
 export function ModuleWorkspaceHeader({
   moduleId,
+  region,
   userRoles,
   currentTab,
   isSuperAdmin,
   onNavigate
 }: ModuleWorkspaceHeaderProps) {
-  const searchParams = useSearchParams();
   const config = moduleConfigs[moduleId];
   const baseTabs = MODULE_TABS[moduleId];
   const tabs = isSuperAdmin ? [...baseTabs, { id: "settings" as AdminTab, label: TAB_LABELS.settings }] : baseTabs;
-  const geo = searchParams.get("geo") ?? config.geographyOptions[0].value;
+  const geo = regionOptionValue(region);
 
   return (
     <header className="min-w-0 max-w-full border-b border-[#21262D] bg-[#161B22]/95 backdrop-blur">
@@ -150,7 +147,7 @@ export function ModuleWorkspaceHeader({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="hidden items-center gap-2 sm:flex">
+            <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-[#8B949E]" aria-hidden="true" />
               <label htmlFor="workspace-geo" className="sr-only">
                 Geographic filter

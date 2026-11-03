@@ -206,6 +206,8 @@ function Panel({
   );
 }
 
+const PAGE_SIZE = 10;
+
 function DataTable({
   columns,
   rows,
@@ -215,8 +217,22 @@ function DataTable({
   rows: Row[];
   emptyLabel: string;
 }) {
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const firstRowId = rows[0]?.id ?? "";
+  const totalPages = Math.ceil(rows.length / PAGE_SIZE);
+
+  // Reset to the first page whenever the filtered dataset changes.
+  useEffect(() => {
+    setPage(0);
+  }, [rows.length, firstRowId, emptyLabel]);
+
   if (rows.length === 0) return <EmptyState label={emptyLabel} />;
+
+  const visible = rows.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
   return (
+    <>
     <div className="overflow-x-auto">
       <table className="w-full min-w-[720px] text-left text-sm">
         <thead>
@@ -229,7 +245,7 @@ function DataTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-[#21262D]">
-          {rows.map((row, index) => (
+          {visible.map((row, index) => (
             <tr key={String(row.id ?? index)} className="hover:bg-[#21262D]/50">
               {columns.map((column) => (
                 <td key={column.header} className={`px-4 py-3 align-top text-[#F0F6FC] ${column.className ?? ""}`}>
@@ -241,6 +257,33 @@ function DataTable({
         </tbody>
       </table>
     </div>
+    <div className="flex flex-col gap-3 border-t border-[#21262D] px-4 py-3 text-xs text-[#8B949E] sm:flex-row sm:items-center sm:justify-between">
+      <span>
+        Showing {rows.length === 0 ? 0 : safePage * PAGE_SIZE + 1}–{Math.min(rows.length, safePage * PAGE_SIZE + PAGE_SIZE)} of {rows.length}
+      </span>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setPage((current) => Math.max(0, current - 1))}
+          disabled={safePage === 0}
+          className="h-8 rounded-lg border border-[#21262D] px-3 font-bold text-[#F0F6FC] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Previous
+        </button>
+        <span aria-live="polite">
+          Page {safePage + 1} of {totalPages}
+        </span>
+        <button
+          type="button"
+          onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))}
+          disabled={safePage >= pageCount - 1}
+          className="h-8 rounded-lg border border-[#21262D] px-3 font-bold text-[#F0F6FC] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+    </>
   );
 }
 

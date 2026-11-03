@@ -3,6 +3,7 @@ import { AdminDashboard } from "@/components/functional/admin-dashboard";
 import { getSessionUser, toPublicSessionUser } from "@/lib/auth/session";
 import { loadAdminPageData } from "@/lib/admin/load-page-data";
 import { normalizeModule, normalizeTab } from "@/lib/admin/admin-navigation";
+import { resolveAdminRegion } from "@/lib/admin/region";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +12,12 @@ export default async function Page({
 }: {
   searchParams?: { tab?: string; module?: string; geo?: string };
 }) {
-  const [data, sessionUser] = await Promise.all([loadAdminPageData(), getSessionUser()]);
-  const publicUser = sessionUser ? await toPublicSessionUser(sessionUser) : null;
+  const sessionUser = await getSessionUser();
+  const resolved = resolveAdminRegion(searchParams?.geo, sessionUser?.scopeCountryCode);
+  const [data, publicUser] = await Promise.all([
+    loadAdminPageData(resolved.region),
+    sessionUser ? toPublicSessionUser(sessionUser) : Promise.resolve(null)
+  ]);
 
   return (
     <Suspense fallback={<p className="p-6 text-sm text-[#8B949E]">Loading Control Center…</p>}>
@@ -35,6 +40,8 @@ export default async function Page({
         userRoles={publicUser?.roles ?? ["super_admin"]}
         userActorType={publicUser?.actorType ?? "ADMIN"}
         isSuperAdmin
+        region={resolved.region}
+        regionRestricted={resolved.restricted}
       />
     </Suspense>
   );

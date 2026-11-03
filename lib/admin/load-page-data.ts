@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { filterRowsByRegion, type AdminRegion } from "@/lib/admin/region";
 
 /**
  * Server-side loader for the Control Center.
@@ -81,7 +82,7 @@ function asArray(value: unknown, envelopeKey?: string): Array<Record<string, unk
   return [];
 }
 
-export async function loadAdminPageData(): Promise<AdminPageData> {
+export async function loadAdminPageData(region: AdminRegion = "ALL"): Promise<AdminPageData> {
   const headersList = headers();
   const host = headersList.get("host") ?? "localhost:3100";
   const forwardedProto = headersList.get("x-forwarded-proto");
@@ -106,19 +107,22 @@ export async function loadAdminPageData(): Promise<AdminPageData> {
 
   const raw = Object.fromEntries(results) as Record<EndpointKey, unknown>;
 
-  return {
+  // Region filtering happens on the server so rows outside the selected (or
+  // permitted) region never reach the client payload.
+  const data: AdminPageData = {
     overview: raw.overview && typeof raw.overview === "object" ? (raw.overview as AdminOverviewData) : null,
-    orders: asArray(raw.orders),
-    applications: asArray(raw.applications),
-    products: asArray(raw.products),
-    payments: asArray(raw.payments),
-    users: asArray(raw.users),
+    orders: filterRowsByRegion(asArray(raw.orders), region),
+    applications: filterRowsByRegion(asArray(raw.applications), region),
+    products: filterRowsByRegion(asArray(raw.products), region),
+    payments: filterRowsByRegion(asArray(raw.payments), region),
+    users: filterRowsByRegion(asArray(raw.users), region),
     rides: asArray(raw.rides, "rides"),
     audit: asArray(raw.audit),
-    payouts: asArray(raw.payouts),
-    vendors: asArray(raw.vendors),
+    payouts: filterRowsByRegion(asArray(raw.payouts), region),
+    vendors: filterRowsByRegion(asArray(raw.vendors), region),
     couriers: asArray(raw.couriers),
     loadErrors,
     loadedAt: new Date().toISOString()
   };
+  return data;
 }

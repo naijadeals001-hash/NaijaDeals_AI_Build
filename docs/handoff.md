@@ -193,11 +193,32 @@ idempotent on a shared database (marketplace rejects catalog products without im
 a previous run; drive needs no active ride), so reset and reseed between full runs.
 
 **Region filter (same pass):** the Control Center selector previously only rewrote the URL — a dead
-control. It now filters every module table by `countryCode`/`scopeCountryCode`, the href builder
-preserves `geo` for every region (previously `NG` was dropped, silently showing all rows), the
-unfilterable city options were replaced with the real country set, and a visible note states that
-summary cards remain platform-wide. Verified in a real browser: orders table `all` 8 rows →
-`GH` 1 row → `NG` 7 rows, note present, zero console errors (`qa-artifacts/region-filter-*.png`).
+control. The final implementation:
+
+- regions are derived from the country catalogue (`lib/config/commerce.ts` → `COUNTRIES`) instead of
+  a hard-coded Nigeria/Ghana pair, so enabling any country there adds it to the selector with no
+  code change; "All regions" is a real option;
+- the server resolves and validates `geo`, clamps it to a scoped staff member's assigned country
+  (staff cannot widen scope through the URL), and filters the page datasets **before** they are
+  serialised, so out-of-region rows never reach the browser;
+- scoped staff can now enter the console at all: `app/admin/layout.tsx` and the login landing
+  route use `hasAdminConsoleAccess`, matching the API guard;
+- tables paginate at 10 rows with Previous/Next and a “Showing x–y of n” range; the footer resets
+  when the filter or search changes;
+- summary cards remain platform-wide and are labelled as such, and rides/couriers/audit are
+  explicitly called out as not country-scoped (no normalised country column exists for them).
+
+Browser evidence (`qa-artifacts/region-verification.cjs`, 17/17 checks): default region, GH
+selection, refresh persistence, invalid `geo=XX` fallback to All, pagination page 1→2, scoped
+staff clamping with no GH order visible, mobile selector, zero console errors.
+
+**Live development preview (2026-11-03):** the persistent dev server runs on
+`http://localhost:3000` against the local development database from `.env` (the pending
+`admin_region_scope` migration was applied locally first). Verified: `/`, `/naijashop`,
+`/naijadrive` return 200 with stylesheets; 11 module images load at 1024 px; `/admin` redirects
+anonymous visitors to `/login?next=/admin` and renders after sign-in; zero console errors;
+desktop and 390×844 mobile screenshots captured. A separate isolated test server may run on
+`http://localhost:3101` against `naijadeals_test`; it is not the preview.
 
 **Documentation reconciliation (same pass):** `docs/architecture.md` and
 `docs/requirements-matrix.md` were rewritten from the verified code and test evidence;
