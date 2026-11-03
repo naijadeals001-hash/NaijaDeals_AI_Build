@@ -90,10 +90,40 @@ jobs:
             public
           retention-days: 1
 
+  # The marketplace suite is an end-to-end HTTP suite: it needs a migrated,
+  # seeded PostgreSQL database AND a running application. A production build
+  # cannot be used because `next build` bakes NODE_ENV=production, which
+  # deliberately disables the local test payment provider; the suite is
+  # documented to run against the development server (see
+  # scripts/marketplace-tests.ts). The `build` job above already verifies the
+  # production build, so this job only stands up the isolated test stack.
   test:
     name: Tests
     runs-on: ubuntu-latest
     needs: [type-check]
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: naijadeals_test
+          POSTGRES_PASSWORD: naijadeals_test
+          POSTGRES_DB: naijadeals_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U naijadeals_test -d naijadeals_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # Disposable database created by the service container above. It never
+      # points at a shared or production instance.
+      DATABASE_URL: "postgresql://naijadeals_test:naijadeals_test@localhost:5432/naijadeals_test"
+      DEEPSEEK_API_KEY: "test-key"
+      ENABLE_TEST_PAYMENTS: "true"
+      TEST_BASE_URL: "http://localhost:3100"
+      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -110,11 +140,58 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Run Tests
+      - name: Verify test database is not a shared instance
+        run: |
+          case "$DATABASE_URL" in
+            *@localhost:*/*|*@127.0.0.1:*/*) ;;
+            *) echo "Refusing to run: DATABASE_URL is not a local test database"; exit 1 ;;
+          esac
+          echo "Test database target confirmed as local service container"
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed deterministic fixtures
+        run: npx prisma db seed
+
+      - name: Start application
+        run: |
+          npm run dev -- -p 3100 > "$RUNNER_TEMP/app.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/app.pid"
+
+      - name: Wait for application readiness
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl -fsS --max-time 10 http://localhost:3100/api/categories > /dev/null; then
+              echo "Application and database are ready (attempt $attempt)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Application did not become ready; server log:"
+          tail -n 100 "$RUNNER_TEMP/app.log" || true
+          exit 1
+
+      - name: Run marketplace suite
         run: npm run test:marketplace
-        env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/naijadeals_core"
-          DEEPSEEK_API_KEY: "test-key"
+
+      - name: Upload server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-server-log
+          path: ${{ runner.temp }}/app.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/app.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/app.pid")" 2>/dev/null || true
+          fi
+          pkill -f "next dev" 2>/dev/null || true
+          pkill -f "next-server" 2>/dev/null || true
 
   docker:
     name: Docker Build
