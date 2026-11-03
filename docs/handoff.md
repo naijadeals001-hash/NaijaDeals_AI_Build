@@ -445,6 +445,11 @@ two images, capability cards, an optional partner band and an honest setup card.
 load, 3 feature cards each, axe 0, 0 overflow at 1440 and 390. NaijaEats/Fresh/Send already follow
 the same structure; Drive and Shop keep their reference-specific layouts.
 
+**Homepage hero cleanup (same pass):** the in-hero service chips were removed per owner feedback —
+they duplicated the module rail, produced a horizontal scrollbar at narrow widths and cluttered the
+search-first hero. Verified: no chip group in the hero, search and both CTAs present, 0 page
+overflow, axe 0.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

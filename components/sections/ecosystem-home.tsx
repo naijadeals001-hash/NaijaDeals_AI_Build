@@ -45,15 +45,9 @@ export function EcosystemHome() {
   );
 }
 
-const HERO_TABS = ["shop", "drive", "eats", "stay", "send", "gigs"] as const;
-
 function Hero() {
   const { t, city, countryName, storeCurrency } = useLocale();
-  const [activeKey, setActiveKey] = useState<(typeof HERO_TABS)[number]>("shop");
   const liveCount = verticals.filter((vertical) => vertical.status === "live").length;
-  const tabs = HERO_TABS.map((key) => verticals.find((vertical) => vertical.key === key)).filter(Boolean) as typeof verticals;
-  const active = tabs.find((vertical) => vertical.key === activeKey) ?? tabs[0];
-  const ActiveIcon = active.icon;
 
   return (
     <section data-forced-colors="preserve" className="relative isolate overflow-hidden rounded-[28px] bg-[#04140f] text-white shadow-[0_30px_80px_-40px_rgba(4,20,15,0.9)]">
@@ -87,49 +81,8 @@ function Hero() {
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/75 sm:text-base lg:text-lg">{t("home.body")}</p>
 
-          <div className="mt-6 flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label={t("home.productsTitle")}>
-            {tabs.map((vertical) => {
-              const Icon = vertical.icon;
-              const isActive = vertical.key === activeKey;
-              return (
-                <button
-                  key={vertical.key}
-                  type="button"
-                  onClick={() => setActiveKey(vertical.key as (typeof HERO_TABS)[number])}
-                  aria-pressed={isActive}
-                  className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-xs font-bold transition ${
-                    isActive
-                      ? "bg-white text-[#04140f] shadow-sm"
-                      : "border border-white/20 bg-white/10 text-white/85 hover:bg-white/15"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                  {vertical.name}
-                </button>
-              );
-            })}
-          </div>
 
-          {activeKey !== "shop" ? (
-            <Link
-              href={active.href}
-              className="mt-3 flex min-h-16 items-center justify-between gap-3 rounded-2xl bg-white/95 px-4 py-2.5 text-ink shadow-[0_18px_50px_-18px_rgba(0,0,0,0.6)] backdrop-blur"
-            >
-              <span className="flex min-w-0 items-center gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">
-                  <ActiveIcon className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-extrabold">{active.name}</span>
-                  <span className="block truncate text-xs text-muted">{t(`module.${active.key}.desc` as DictionaryKey)}</span>
-                </span>
-              </span>
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white">
-                {t("common.open")}
-                <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
-              </span>
-            </Link>
-          ) : (
+
           <form
             action="/search"
             method="get"
@@ -155,7 +108,6 @@ function Hero() {
               <ArrowRight className="h-5 w-5 rtl:rotate-180" aria-hidden="true" />
             </button>
           </form>
-          )}
 
           <div className="mt-6 flex flex-wrap items-center gap-2.5">
             <Link

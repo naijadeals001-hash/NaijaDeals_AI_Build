@@ -227,3 +227,10 @@ hero → services → earn → download/news rhythm without copying its claims o
 Applied so far: NaijaStay, NaijaStream, Aura AI, NaijaGigs (new), with NaijaEats, NaijaFresh and
 NaijaSend following the same pattern. NaijaDrive keeps its reference-04 hero; NaijaShop keeps the
 Amazon-derived storefront.
+
+
+**Homepage hero simplification (2026-11-03, owner feedback):** the service-chip row inside the hero
+was removed. It duplicated the module rail directly beneath the hero, introduced a horizontal
+scrollbar at narrow widths, and added a second switcher to a search-first hero. The hero now reads
+badges → headline → description → search → two CTAs → trust row, with navigation handled by the
+header sub-nav and the ten-tile module rail.
