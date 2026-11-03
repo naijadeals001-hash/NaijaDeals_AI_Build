@@ -815,3 +815,12 @@ Added licensed category product photography and seeded 20 extra labelled sample 
 department shelf shows four tiles (photos plus existing illustrations). Added working left/right
 carousel arrows. Verified on 3001: 8 shelves, arrows scroll 0 -> 352px, axe 0, one footer. Product
 photo licences are listed on /credits.
+
+## Preview incident (2026-11-03)
+
+An orphaned entry named app/index could not be created, renamed or removed (NTFS EPERM; the owning
+process is gone). Next and Tailwind both scan app/**, so every route on the original checkout returned
+500. The source tree is intact and committed; a clean git worktree at C:UsersUser
+aijadeals-live
+serves the same commit on port 3010 with /, /home and /naijashop returning 200. The canonical ports
+3000/3001 still hold the ghost listener (PID 60680) and need a host restart or handle release.
