@@ -86,7 +86,9 @@
 
 **Branch:** `naijashop-marketplace`
 
-**Base:** `255168d` “Add reference-aligned Control Center components”
+**Base:** `dc47a4d` “Add reference-aligned Control Center components”
+
+**Published:** pushed to `origin/naijashop-marketplace` at `90a7f20` (working tree clean, remote in sync)
 
 **Preview:** production build served at `http://localhost:3100` with `NEXT_DIST_DIR=.next-prod` (not a deployed URL)
 
@@ -122,3 +124,11 @@ Artifacts: `.qa/control-center/` (desktop and mobile screenshots plus `report.js
 - Phase 05 remains **IN PROGRESS**: pagination, bulk actions, detail views, cross-region scopes, role-assignment writes and sensitive-action audit events are not done.
 - The in-app browser screenshot API was unavailable (“Screenshot needs a visible tab”); Playwright with installed Chrome was used instead.
 - Push status must be checked separately from local verification; a GitHub rejection does not invalidate the local repair.
+
+### Publication (2026-11-02)
+
+- **Remote:** `origin/naijashop-marketplace` now at `90a7f20`; `git rev-list --left-right --count` reports `0 0`.
+- **Push blocked once, then cleared:** GitHub secret scanning rejected the branch because a **revoked** token value was still written in plaintext in `HANDOFF.md` inside two of the eight unpublished commits (`8d97fc2`, `e1e8bbd`). The value has been replaced with `ghp_REDACTED_IN_HISTORY` across the eight unpublished commits (no other content changed; `git diff --stat` shows only that one line).
+- **History rewrite scope:** local-only commits on `naijashop-marketplace` above the previously published `9fe78d5`. Pre-rewrite commits are still reachable through the local branch `backup/pre-secret-redaction-ec55b41`; nothing was deleted.
+- **CI:** `.github/workflows/ci.yml` runs type-check, lint, build, test and a Docker build with `push: false`. There is no deployment job, so the push triggered CI only.
+- **Credentials:** the push used a credential supplied outside Git; no token value is stored in tracked files, logs, or reports. The leaked value in `HANDOFF.md` was already revoked and remains unusable.

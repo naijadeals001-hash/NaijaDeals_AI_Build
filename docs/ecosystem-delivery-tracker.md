@@ -3,7 +3,7 @@
 Last updated: 2026-11-02
 Branch: `naijashop-marketplace`
 Baseline commit: `d996d224` (Correct stale verification claims in Amazon behaviour record)
-Latest increment: Control Center runtime integration and permissions (working tree on top of `255168d`; see Increment 6)
+Latest increment: Control Center runtime integration and permissions (committed and pushed as `90a7f20`, on top of `dc47a4d`; see Increment 6)
 
 This tracker separates three states so a screen existing is never confused with a
 service working:
