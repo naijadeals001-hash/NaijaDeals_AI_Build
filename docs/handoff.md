@@ -966,3 +966,15 @@ No Phase 08 work started.
 ### Image backlog unchanged
 Four presentation improvements remain open (LED Monitor, Apple iPhone 5s, Coffee Maker,
 Smartphone on Desk). Catalogue population stays closed; 32/32 images and provenance intact.
+
+
+## Phase 07 wallet investigation (2026-11-03)
+
+Read-only investigation in docs/audits/phase07-wallet-investigation.md. Current dev DB: 10 wallets,
+1 SYSTEM mismatch cmvzwmxzx002cv4ucop26i63c (stored 1,940,000, ledger -560,000, difference +2,500,000);
+earliest entry 2026-11-02T23:43:16.895Z "Fixture funding source" DEBIT 2.5m with no stored movement.
+Earlier 3-of-37 rows belong to the isolated database and are absent from the current DB. Proposed
+balanced opening-equity journal is dry-run only; no history rewritten. Phase 07 remains IN PROGRESS.
+
+Environment: 3010 = clean worktree C:\Users\User\naijadeals-live, detached HEAD 941991d, same
+naijadeals_core database as authoritative checkout (branch naijashop-marketplace, HEAD 941991d).
