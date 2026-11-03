@@ -140,3 +140,24 @@ Monitor review unchanged: both monitor images are desk scenes, accurate but not 
 
 DRAFT reconciliation after this pass: 91 sample records total = 12 branded + 17 demo1 + 20 seed-catalog
 + 16 demo2 + 10 demo3 + 8 demo4 + 8 demo5. Active 32; DRAFT 59. Nothing deleted.
+
+
+## Presentation replacement pass (2026-11-03)
+
+Six weaker photos replaced with licensed packshots, provenance updated in place:
+
+| Listing | Replacement |
+| --- | --- |
+| Asics Gel-Cumulus 22 Running Shoes | Asics shoe packshot |
+| Vintage Prada Leather Handbag | single handbag photo |
+| Blackview A60 Android Smartphone | device/case product photo |
+| EIZO Foris FG2421 Monitor | monitor test-pattern packshot |
+| Mechanical Keyboard | keyboard packshot |
+| PS4 and Xbox One Controllers | controller pair photo |
+
+Specification corrections: "16GB" removed from the iPhone 6 listing (photo cannot establish storage) and
+"(Refurbished)" removed from the iPhone 5s listing. Remaining specification claims are limited to what
+the source title/photo supports.
+
+Presentation now approximately 28/32; the "27-inch LED Monitor" desk scene remains the weakest.
+Images load 32/32, accuracy 32/32, provenance 32/32. DRAFT remains 59 of 91 sample records.

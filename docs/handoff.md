@@ -917,3 +917,11 @@ REA was used earlier for Amazon reference research; ECC/Soup were not invoked fo
 0 broken images. Shop E2E 13/13 on 3010. Remaining DRAFT inventory is 59 records (12 branded, 15 demo1,
 20 seed-catalog, 12 demo2). Presentation quality is mixed (~26/32 suitable packshots); monitor photos
 are desk scenes. Screenshots refreshed: expanded-desktop.png / expanded-mobile.png.
+
+
+## Six image replacements (2026-11-03)
+
+Replaced six weak photos with licensed packshots (Asics shoes, Prada handbag, Blackview A60, EIZO
+FG2421 monitor, mechanical keyboard, PS4/Xbox controllers). Removed unsupported 16GB/refurbished
+claims. 32/32 products display 4 per shelf with 0 broken images; provenance 32/32; shop E2E 13/13.
+Presentation ~28/32; the 27-inch monitor desk scene remains weak. Screenshots refreshed.
