@@ -934,3 +934,35 @@ reviewed; horizontal category carousel is intentional. The four below-standard p
 (LED Monitor, Apple iPhone 5s, Coffee Maker, Smartphone on Desk) are tracked separately as visual
 polish, not as a population blocker. Spec claims narrowed (no 27-inch/16GB/refurbished/filter/vintage
 claims). Shop E2E 13/13.
+
+
+## Playbook priority checks (2026-11-03, after catalogue closure)
+
+### Restart persistence — PASS
+The 3010 preview process (PID 24760, launched from C:\Users\User\naijadeals-live) was stopped and
+restarted alone (new PID 6724). After restart: /api/storefront 200 with heroTitle
+"Shop verified sellers across Africa", demo announcement, showDemoProducts=true; /naijashop 200.
+Storefront config therefore survives a real process restart. 3000/3001 were not touched.
+
+### Migration status — PARTIAL
+npx prisma migrate status: 19 migrations found, "Database schema is up to date!" against the existing
+dev database. A migration replay against a fresh/restored existing database was NOT executed.
+
+### Canonical preview repair — BLOCKED (host restart required)
+Evidence: port 3000 owned by PID 60680 (node.exe, owner DESKTOP-AQQLCB2\User, started 2026-10-31
+01:24) returns HTTP 500. app\index is now ABSENT. Targeted Stop-Process and taskkill /F /PID 60680 did
+not release the listener; a new dev server on 3000 failed with EADDRINUSE. Port 3001 similarly returns
+500 with PID 65032. This is an OS-level ghost listener; no blind deletion or further killing performed.
+Canonical repair requires a host restart or elevated handle release. Working preview remains 3010.
+
+### Phase 07 — still IN PROGRESS
+Local ledger/refund/payout tests pass, but closure remains blocked on:
+- reconciliation mismatch: 3 of 37 wallets (1 SYSTEM, 2 VENDOR) differ from ledger net; dry-run
+  backfill exists, no history rewritten and no approval to apply it;
+- live Paystack/Flutterwave sandbox reconciliation unavailable;
+- refund-fee business decision unresolved.
+No Phase 08 work started.
+
+### Image backlog unchanged
+Four presentation improvements remain open (LED Monitor, Apple iPhone 5s, Coffee Maker,
+Smartphone on Desk). Catalogue population stays closed; 32/32 images and provenance intact.
