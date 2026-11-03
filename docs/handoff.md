@@ -763,3 +763,11 @@ as **naijadeals001-hash** with push permission on naijadeals001-hash/NaijaDeals_
 naijashop-marketplace pushed successfully and the remote ref resolved to
 **c576e56c9d2fa3807086630484abfa2a3f9fa76c**. CI runs tests only; no deployment workflow is triggered by
 this branch.
+
+## Amazon REA and NaijaShop layout pass (2026-11-03)
+
+REA inspected the public amazon.com homepage (3,569 DOM nodes, deliver-to + department select +
+search, category row, 9 promo cards, four footer columns). NaijaShop now runs full-bleed without the
+ecosystem sidebar, keeps the two-row commerce header, dense four-column results, department rail,
+sort control and a Back-to-top footer. No Amazon trademarks, ratings or imagery were copied; the
+reference and resulting screenshots are recorded in docs/rea-amazon-research.md.
