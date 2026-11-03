@@ -26,6 +26,7 @@ interface WorkspaceTabProps {
   products: Row[];
   applications: Row[];
   payments: Row[];
+  disputes: Row[];
   users: Row[];
   vendors: Row[];
   couriers: Row[];
@@ -376,7 +377,7 @@ function RecordDialog({ row, onClose }: { row: Row; onClose: () => void }) {
     }
   }
 
-  const title = text(row.orderNumber ?? row.rideNumber ?? row.name ?? row.businessName ?? row.reference ?? row.action ?? row.id);
+  const title = text(row.orderNumber ?? value(row, "order.orderNumber") ?? row.rideNumber ?? row.name ?? row.businessName ?? row.reference ?? row.action ?? row.id);
   const fields: Array<[string, string]> = [];
   const add = (label: string, raw: unknown, format?: (input: unknown) => string) => {
     if (raw === undefined || raw === null || raw === "") return;
@@ -413,6 +414,11 @@ function RecordDialog({ row, onClose }: { row: Row; onClose: () => void }) {
   add("Fare", row.fareKobo, (input) => money(input));
   add("Active", typeof row.active === "boolean" ? (row.active ? "Yes" : "No") : undefined);
   add("Notes", row.note ?? row.description);
+  add("Reason", row.reason);
+  add("Order status", value(row, "order.status"));
+  add("Escrow status", value(row, "escrow.status"));
+  add("Escrow amount", value(row, "escrow.amountKobo"), (input) => money(input));
+  add("Buyer email", value(row, "customer.email"));
   add("Created", row.createdAt, (input) => date(input));
   add("Products", value(row, "_count.products"));
   add("Orders", value(row, "_count.orders"));
@@ -1166,6 +1172,48 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           ]}
         />
       </Panel>
+    );
+  }
+
+  if (tab === "disputes") {
+    const rows = filterRows(props.disputes).filter((row) => matches(row, ["order.orderNumber", "customer.name", "customer.email", "vendor.name", "reason", "status"]));
+    const statuses = Array.from(new Set(props.disputes.map((row) => String(row.status)))).sort();
+    return (
+      <>
+      <Panel title="Disputes" description="Buyer-opened disputes with their order, escrow state and reason. Resolution actions are not exposed yet.">
+        <Toolbar
+          query={query}
+          onQuery={setQuery}
+          placeholder="Search order, buyer, seller, reason…"
+          filters={statuses}
+          filterValue={statusFilter}
+          onFilter={setStatusFilter}
+          onRefresh={onRefresh}
+        />
+        <DataTable
+          rows={rows}
+          emptyLabel={props.disputes.length === 0 ? "No disputes have been opened." : "No disputes match this filter."}
+          onDetail={setDetail}
+          columns={[
+            {
+              header: "Order",
+              cell: (row) => (
+                <div>
+                  <p className="font-bold">{text(value(row, "order.orderNumber"), "—")}</p>
+                  <p className="text-xs text-[#8B949E]">{money(value(row, "order.totalKobo"))}</p>
+                </div>
+              )
+            },
+            { header: "Buyer", cell: (row) => <span className="text-xs">{text(value(row, "customer.name") ?? value(row, "customer.email"), "—")}</span> },
+            { header: "Seller", cell: (row) => <span className="text-xs">{text(value(row, "vendor.name"), "—")}</span> },
+            { header: "Status", cell: (row) => <StatusBadge status={text(row.status)} /> },
+            { header: "Escrow", cell: (row) => <span className="text-xs">{statusLabel(text(value(row, "escrow.status"), "—"))}</span> },
+            { header: "Opened", cell: (row) => <span className="text-xs text-[#8B949E]">{date(row.createdAt)}</span> }
+          ]}
+        />
+      </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      </>
     );
   }
 

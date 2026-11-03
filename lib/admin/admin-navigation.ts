@@ -15,6 +15,7 @@ export const ADMIN_TABS = [
   "products",
   "applications",
   "payments",
+  "disputes",
   "users",
   "vendors",
   "couriers",
@@ -85,6 +86,7 @@ export const MODULE_TABS: Record<AdminModule, Array<{ id: AdminTab; label: strin
     { id: "users", label: "Users" },
     { id: "vendors", label: "Vendors" },
     { id: "payments", label: "Payments" },
+    { id: "disputes", label: "Disputes" },
     { id: "audit", label: "Audit log" }
   ],
   shop: [
@@ -93,7 +95,8 @@ export const MODULE_TABS: Record<AdminModule, Array<{ id: AdminTab; label: strin
     { id: "products", label: "Products" },
     { id: "applications", label: "Seller applications" },
     { id: "deliveries", label: "Deliveries" },
-    { id: "payments", label: "Payments" }
+    { id: "payments", label: "Payments" },
+    { id: "disputes", label: "Disputes" }
   ],
   eats: [{ id: "overview", label: "Overview" }],
   drive: [
@@ -116,6 +119,7 @@ export const MODULE_TABS: Record<AdminModule, Array<{ id: AdminTab; label: strin
     { id: "overview", label: "Overview" },
     { id: "payments", label: "Payments" },
     { id: "payouts", label: "Payouts" },
+    { id: "disputes", label: "Disputes" },
     { id: "audit", label: "Audit log" }
   ],
   fresh: [{ id: "overview", label: "Overview" }],
@@ -131,6 +135,7 @@ export const TAB_LABELS: Record<AdminTab, string> = {
   products: "Products",
   applications: "Seller applications",
   payments: "Payments",
+  disputes: "Disputes",
   users: "Users",
   vendors: "Vendors",
   couriers: "Couriers",

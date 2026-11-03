@@ -402,6 +402,13 @@ a module sub-nav row under the header, the owner-supplied NaijaDrive sedan as th
 service-chip row, the marketplace search, two primary CTAs and a ten-tile module rail; the redundant
 status-pill strip is gone. Verified 1440 + 390: no overflow, axe 0, no console errors.
 
+**Disputes admin view (same pass):** new `disputes:read` permission, `GET /api/admin/disputes`
+(region-scoped, jsonSafe for BigInt), a "Disputes" tab in ecosystem/shop/pay workspaces, and a
+table with order, buyer, seller, status, escrow state and opened date plus the record dialog
+(now titles by order number and shows the reason). Verified on the isolated instance: 1 dispute
+row rendered, dialog reason present, axe 0; anonymous access returns **401**. Resolution actions are
+deliberately not exposed yet.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

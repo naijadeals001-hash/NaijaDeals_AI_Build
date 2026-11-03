@@ -25,7 +25,8 @@ export const PERMISSIONS = [
   "finance:payouts:write",
   "audit:read",
   "roles:write",
-  "countries:write"
+  "countries:write",
+  "disputes:read"
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -44,6 +45,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
   admin: PERMISSIONS.filter((permission) => permission !== "roles:write"),
   ops: [
     "dashboard:read",
+    "disputes:read",
     "orders:read",
     "orders:write",
     "deliveries:read",
@@ -68,7 +70,8 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "deliveries:read",
     "rides:read",
     "vendors:read",
-    "users:read"
+    "users:read",
+    "disputes:read"
   ],
   moderator: [
     "dashboard:read",
