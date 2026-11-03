@@ -742,7 +742,7 @@ function ShopResultRow({ product, onAdd }: { product: ApiProduct; onAdd: (produc
       </Link>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          {product.isSample ? <span className="rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase text-[#B45309]">Sample</span> : null}
+          {product.isSample ? <span className="rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase text-[#B45309]">Demo</span> : null}
           {product.saleMode === "contact" ? <span className="rounded bg-[#131921] px-1.5 py-0.5 text-[10px] font-black uppercase text-white">Contact seller</span> : null}
         </div>
         <Link href={`/product/${product.slug}`} className="mt-0.5 line-clamp-2 text-lg font-medium leading-snug text-[#0f1111] hover:text-[#c45500] hover:underline">

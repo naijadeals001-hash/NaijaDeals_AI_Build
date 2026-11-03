@@ -1,0 +1,44 @@
+﻿[
+    {
+        "slug":  "running-shoes",
+        "file":  "File:Asics Gel-Cumulus 22.jpg",
+        "license":  "CC BY-SA 4.0",
+        "artist":  "Petar Milošević",
+        "url":  "https://commons.wikimedia.org/wiki/File:Asics_Gel-Cumulus_22.jpg"
+    },
+    {
+        "slug":  "handbag",
+        "file":  "File:Kelly Bag.jpg",
+        "license":  "CC BY-SA 2.0",
+        "artist":  "Wen-Cheng Liu",
+        "url":  "https://commons.wikimedia.org/wiki/File:Kelly_Bag.jpg"
+    },
+    {
+        "slug":  "rice",
+        "file":  "File:Bag of rice 20221028 150305.jpg",
+        "license":  "CC0",
+        "artist":  "01x07x2022000",
+        "url":  "https://commons.wikimedia.org/wiki/File:Bag_of_rice_20221028_150305.jpg"
+    },
+    {
+        "slug":  "powerbank",
+        "file":  "File:Canon LP-E6NH BATTERY PACK(3).jpg",
+        "license":  "CC BY-SA 4.0",
+        "artist":  "Dinkun Chen",
+        "url":  "https://commons.wikimedia.org/wiki/File:Canon_LP-E6NH_BATTERY_PACK(3).jpg"
+    },
+    {
+        "slug":  "headset",
+        "file":  "File:Astaroth- Inside the Finished Build.jpg",
+        "license":  "CC BY-SA 2.0",
+        "artist":  "bwDraco",
+        "url":  "https://commons.wikimedia.org/wiki/File:Astaroth-_Inside_the_Finished_Build.jpg"
+    },
+    {
+        "slug":  "monitor",
+        "file":  "File:Amiga500 system.jpg",
+        "license":  "CC BY-SA 2.5",
+        "artist":  "Bill Bertram",
+        "url":  "https://commons.wikimedia.org/wiki/File:Amiga500_system.jpg"
+    }
+]
