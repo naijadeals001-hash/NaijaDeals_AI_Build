@@ -249,3 +249,11 @@ order-paid and delivery-assigned hooks implemented. Notifications for every hook
 by an automated regression suite.
 
 **Status: PASS** (exit criteria met; notification automation is the remaining hardening item).
+
+
+### NaijaEats restaurant onboarding increment (2026-11-03)
+
+Bounded slice inside the Eats module: restaurant application → admin approval (idempotent) → partner
+menu publishing (draft/publish/unavailable) → customer discovery by delivery area, with ownership,
+suspension and unpublished-item denials verified on the isolated server. Checkout remains gated;
+kitchen dispatch is the next slice.

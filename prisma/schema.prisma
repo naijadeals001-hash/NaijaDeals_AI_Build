@@ -177,6 +177,7 @@ model User {
   partnerNotifications PartnerNotification[] @relation("PartnerNotifications")
   restaurants Restaurant[] @relation("RestaurantOwner")
   foodOrders FoodOrder[] @relation("CustomerFoodOrders")
+  restaurantApplications RestaurantApplication[] @relation("RestaurantApplications")
 }
 
 model Role {
@@ -940,10 +941,11 @@ model Restaurant {
   address   String
   phone     String
   status    RestaurantStatus @default(PENDING)
-  isSample  Boolean          @default(false)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  owner     User             @relation("RestaurantOwner", fields: [ownerId], references: [id])
+  isSample      Boolean          @default(false)
+  applicationId String?          @unique
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  owner         User             @relation("RestaurantOwner", fields: [ownerId], references: [id])
   menuItems MenuItem[]
 
   @@index([status, market])
@@ -956,6 +958,7 @@ model MenuItem {
   name         String
   description  String?
   priceKobo    BigInt
+  published    Boolean    @default(false)
   available    Boolean    @default(true)
   isSample     Boolean    @default(false)
   createdAt    DateTime   @default(now())
@@ -1024,4 +1027,31 @@ model FoodOrderEvent {
   order     FoodOrder       @relation(fields: [orderId], references: [id])
 
   @@index([orderId, createdAt])
+}
+
+
+enum RestaurantApplicationStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+/// A partner applying to operate a kitchen. Approval creates exactly one Restaurant.
+model RestaurantApplication {
+  id          String                      @id @default(cuid())
+  userId      String
+  kitchenName String
+  cuisine     String
+  market      String
+  address     String
+  phone       String
+  status      RestaurantApplicationStatus @default(SUBMITTED)
+  note        String?
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
+  user        User                        @relation("RestaurantApplications", fields: [userId], references: [id])
+
+  @@index([status, createdAt])
 }

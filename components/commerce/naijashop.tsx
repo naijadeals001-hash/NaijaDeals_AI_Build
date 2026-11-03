@@ -1910,6 +1910,7 @@ export function NaijaEatsPage() {
   const [cart, setCart] = useState<Record<string, { restaurantId: string; name: string; priceKobo: string; quantity: number }>>({});
   const [checkout, setCheckout] = useState({ contactName: "", contactPhone: "", deliveryAddress: "", notes: "" });
   const [paying, setPaying] = useState(false);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [payError, setPayError] = useState("");
   const router = useRouter();
 
@@ -2169,7 +2170,7 @@ export function NaijaEatsPage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#04140f]/80 via-[#04140f]/20 to-transparent" />
                   {restaurant.isSample ? (
-                    <span className="absolute right-2 top-2 rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#B45309]">Sample</span>
+                    <span className="absolute right-2 top-2 rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#B45309]">QA sample</span>
                   ) : null}
                   <span className="absolute left-3 top-3 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold text-white">{index + 1 < 10 ? "0" : ""}{index + 1}</span>
                 </div>
@@ -2178,25 +2179,29 @@ export function NaijaEatsPage() {
                   <p className="mt-0.5 text-xs font-semibold text-muted">{restaurant.cuisine} · {restaurant.market}</p>
                   <p className="mt-2 text-[11px] text-muted">{restaurant.menuItems.length} menu item{restaurant.menuItems.length === 1 ? "" : "s"} · {min === max ? koboToNaira(min) : `${koboToNaira(min)} – ${koboToNaira(max)}`}</p>
                   <ul className="mt-2 space-y-1">
-                    {restaurant.menuItems.slice(0, 2).map((item) => (
+                    {(expanded[restaurant.id] ? restaurant.menuItems : restaurant.menuItems.slice(0, 2)).map((item) => (
                       <li key={item.id} className="flex items-center justify-between gap-2 text-xs">
                         <span className="truncate font-semibold">{item.name}</span>
                         <span className="flex shrink-0 items-center gap-2">
                           <span className="font-bold text-primary">{koboToNaira(item.priceKobo)}</span>
-                          <button
-                            type="button"
-                            onClick={() => addItem(restaurant, item)}
-                            aria-label={`Add ${item.name} to order`}
-                            className="grid h-7 w-7 place-items-center rounded-full bg-primary text-white"
-                          >
-                            +
-                          </button>
+                          <span className="rounded bg-surface-low px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted">Published</span>
                         </span>
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-3 rounded-lg bg-surface-low px-2 py-1.5 text-[10px] font-semibold text-muted">
-                    Menu preview · ordering opens with dispatch
+                  {restaurant.menuItems.length > 2 ? (
+                    <button
+                      type="button"
+                      onClick={() => setExpanded({ ...expanded, [restaurant.id]: !expanded[restaurant.id] })}
+                      className="mt-2 text-xs font-bold text-primary underline"
+                    >
+                      {expanded[restaurant.id] ? "Show less" : `Browse menu (${restaurant.menuItems.length})`}
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => setExpanded({ ...expanded, [restaurant.id]: true })} className="mt-2 text-xs font-bold text-primary underline">Browse menu</button>
+                  )}
+                  <p className="mt-2 rounded-lg bg-surface-low px-2 py-1.5 text-[10px] font-semibold text-muted">
+                    Checkout is not open yet. Browse the published menu; ordering opens with dispatch.
                   </p>
                 </div>
               </article>

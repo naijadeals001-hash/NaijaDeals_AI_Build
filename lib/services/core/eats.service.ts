@@ -35,9 +35,10 @@ export async function listEatsRestaurants(): Promise<EatsRestaurant[]> {
         ) FILTER (WHERE m.id IS NOT NULL), '[]'
       ) AS "menuItems"
     FROM "Restaurant" r
-    LEFT JOIN "MenuItem" m ON m."restaurantId" = r.id AND m.available = true
+    LEFT JOIN "MenuItem" m ON m."restaurantId" = r.id AND m.available = true AND m.published = true
     WHERE r.status = 'VERIFIED'
     GROUP BY r.id
+    HAVING COUNT(m.id) > 0
     ORDER BY r."createdAt" ASC`;
 
   return rows.map((row) => ({

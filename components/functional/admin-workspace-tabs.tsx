@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminKitchenApplications } from "./admin-kitchen-applications";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -1342,6 +1344,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           ]}
         />
       </Panel>
+      <AdminKitchenApplications />
       {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
       </>
     );

@@ -610,3 +610,43 @@ exists in the Windows user or machine environment. Eleven properly licensed Nige
 were sourced from Wikimedia Commons instead (public/food + /credits). NaijaEats hero now uses the
 NaijaEats courier/jollof artwork with the mockup's category labels; ordering APIs/UI exist but the
 end-to-end run is still being verified (test wallet balance blocked the first attempt).
+
+
+## NaijaEats restaurant onboarding and menu publishing (2026-11-03)
+
+Bounded increment after Phase 06 PASS. Route tested end to end on the isolated server
+`http://localhost:3101` (test database), then the customer storefront was visually checked on the
+preview.
+
+**Migration impact** (`20261103230000_restaurant_onboarding`):
+- new enum `RestaurantApplicationStatus` and table `RestaurantApplication` (unique per applicant in
+  service logic; resubmission reuses the rejected row);
+- `Restaurant.applicationId` (unique) links an approved application to exactly one kitchen, making
+  approval idempotent;
+- `MenuItem.published` defaults to false; existing sample items were backfilled to true so the
+  labelled QA kitchens keep their menus.
+
+**Tested route and results**
+- New applicant submitted a kitchen application (201) for Yaba, Lagos; admin approved through the
+  Control Center `Applications` tab; exactly one `Restaurant` was created and the partner gained
+  `/restaurant` access.
+- Partner added two items (naira input converted to integer kobo), published both, and both appeared
+  at `/naijaeats` for the Yaba area with the exact prices (₦12,500 / ₦8,000).
+- Price change to ₦13,000 was reflected on reload. Marking one item unavailable removed it while the
+  other stayed published. A draft item never appeared for customers.
+- Retrying approval returned 409 and did not create a second kitchen (single application row,
+  single linked restaurant).
+- A second approved kitchen's item could not be edited by the first partner (403, item unchanged).
+- Admin suspension made every partner write return 403 `kitchen_suspended`; the public price stayed
+  ₦8,000 until reactivation.
+- Rejection left management denied: rejected applicant got 403 `not_a_kitchen` and the
+  `/restaurant` page showed the rejection reason.
+- `scripts/partner-lifecycle-tests.mjs` still passes 9/9.
+
+**UI rules:** published + available items are the only menu rows returned by
+`GET /api/eats/restaurants`; a kitchen with no live items is hidden; customer cards expose
+"Browse menu" (checkout is gated) and QA fixtures carry a "QA sample" badge.
+
+**Limitations:** the long-running dev server predates the generated Prisma client for these models,
+so the new service uses raw SQL (matching the existing discovery query); a restart would allow typed
+Prisma calls. Kitchen order dispatch stays out of this increment.
