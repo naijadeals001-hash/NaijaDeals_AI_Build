@@ -26,10 +26,12 @@ async function main() {
   check("first partial refund", first.refundedKobo === "100" && after.refundedKobo === 100n && after.paymentStatus === "partially_refunded" && balanced1,
     `refund=${first.refundedKobo} cumulative=${after.refundedKobo} status=${after.paymentStatus} ledgerBalanced=${balanced1}`);
 
-  const second = await refundPayment({ orderId: order.id, actorId: admin.id, reason: "Second partial", amountKobo: 200n });
+  const secondKey = `phase07-second-${Date.now()}`;
+  const second = await refundPayment({ orderId: order.id, actorId: admin.id, reason: "Second partial", amountKobo: 200n, idempotencyKey: secondKey });
   after = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
-  check("second partial refund accumulates", second.totalRefundedKobo === "300" && after.refundedKobo === 300n,
-    `total=${second.totalRefundedKobo} cumulative=${after.refundedKobo}`);
+  const secondTotal = "totalRefundedKobo" in second ? second.totalRefundedKobo : "0";
+  check("second partial refund accumulates", secondTotal === "300" && after.refundedKobo === 300n,
+    `total=${secondTotal} cumulative=${after.refundedKobo}`);
 
   const remaining = after.totalKobo - after.refundedKobo;
   let overCode = "";
@@ -51,8 +53,16 @@ async function main() {
   const allBalanced = refundTxs.every((tx) =>
     tx.ledger.filter(e => e.direction === "DEBIT").reduce((s, e) => s + e.amountKobo, 0n) ===
     tx.ledger.filter(e => e.direction === "CREDIT").reduce((s, e) => s + e.amountKobo, 0n));
-  check("concurrent full refund settles once", concurrent.filter(c => c === "ok").length === 1 && finalOrder.refundedKobo === finalOrder.totalKobo && finalOrder.status === "refunded" && allBalanced,
-    `outcomes=[${concurrent.join(",")}] refunded=${finalOrder.refundedKobo}/${finalOrder.totalKobo} status=${finalOrder.status} ledgerBalanced=${allBalanced} payment=${finalPayment.status}`);
+  const attempts = await prisma.refund.findMany({ where: { orderId: order.id } });
+  const completedRefunds = attempts.filter((attempt) => attempt.status === "COMPLETED");
+  const completedSum = completedRefunds.reduce((sum, attempt) => sum + attempt.amountKobo, BigInt(0));
+  check("concurrent full refund settles once", concurrent.filter(c => c === "ok").length === 1 && finalOrder.refundedKobo === finalOrder.totalKobo && finalOrder.status === "refunded" && allBalanced && completedSum === finalOrder.totalKobo,
+    `outcomes=[${concurrent.join(",")}] refunded=${finalOrder.refundedKobo}/${finalOrder.totalKobo} status=${finalOrder.status} ledgerBalanced=${allBalanced} payment=${finalPayment.status} attempts=${attempts.length} completedSum=${completedSum}`);
+
+  const retried = await refundPayment({ orderId: order.id, actorId: admin.id, reason: "Second partial retry", amountKobo: 200n, idempotencyKey: secondKey });
+  const attemptsAfterRetry = await prisma.refund.findMany({ where: { orderId: order.id } });
+  check("idempotency key prevents duplicate provider refund", "idempotent" in retried && retried.idempotent === true && attemptsAfterRetry.length === attempts.length && finalOrder.refundedKobo === finalOrder.totalKobo,
+    `idempotent=${"idempotent" in retried ? retried.idempotent : false} attempts=${attemptsAfterRetry.length} refunded=${finalOrder.refundedKobo}`);
 
   const repeatCode = await refundPayment({ orderId: order.id, actorId: admin.id, reason: "Repeat" }).then(() => "ok").catch((error) => (error as { code?: string }).code ?? "error");
   check("repeated refund rejected", repeatCode === "already_refunded", `code=${repeatCode}`);

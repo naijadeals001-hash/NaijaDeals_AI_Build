@@ -494,53 +494,93 @@ export async function refundPayment(input: {
   restock?: boolean;
   /** Partial refund in kobo. Omit to refund the remaining balance. */
   amountKobo?: bigint;
+  /** Caller-supplied retry key; the same key never calls the provider twice. */
+  idempotencyKey?: string;
 }) {
+  const idempotencyKey = input.idempotencyKey ?? `refund:${input.orderId}:${randomBytes(10).toString("hex")}`;
+  const prior = await prisma.refund.findUnique({ where: { idempotencyKey } });
+  if (prior) {
+    if (prior.status === "COMPLETED") {
+      return { orderId: prior.orderId, refundedKobo: prior.amountKobo.toString(), idempotent: true, refundId: prior.id };
+    }
+    throw new ApiError(409, prior.status === "PENDING" ? "refund_pending" : "refund_failed",
+      prior.status === "PENDING" ? "This refund is awaiting provider reconciliation." : "This refund attempt failed. Use a new idempotency key.");
+  }
+
   const order = await prisma.order.findUnique({
     where: { id: input.orderId },
     include: { payments: true, escrowHolds: true }
   });
   if (!order) throw new ApiError(404, "order_not_found", "Order not found.");
-  if (order.paymentStatus === "refunded") {
-    throw new ApiError(409, "already_refunded", "This order has already been fully refunded.");
-  }
-  if (!["paid", "partially_refunded"].includes(order.paymentStatus)) {
+  if (order.paymentStatus === "refunded") throw new ApiError(409, "already_refunded", "This order has already been fully refunded.");
+  if (!["paid", "partially_refunded", "refund_pending"].includes(order.paymentStatus)) {
     throw new ApiError(409, "not_paid", "Only paid orders can be refunded.");
   }
 
   const alreadyRefunded = order.refundedKobo ?? BigInt(0);
   const remaining = order.totalKobo - alreadyRefunded;
-  if (remaining <= BigInt(0) || order.paymentStatus === "refunded") {
-    throw new ApiError(409, "already_refunded", "This order has already been fully refunded.");
-  }
+  if (remaining <= BigInt(0)) throw new ApiError(409, "already_refunded", "This order has already been fully refunded.");
   const requested = input.amountKobo ?? remaining;
   if (requested <= BigInt(0) || requested > remaining) {
     throw new ApiError(400, "invalid_refund_amount", `Refund must be between 1 and ${remaining} kobo.`);
   }
   const isFullRefund = requested === remaining;
-  if (input.restock && !isFullRefund) {
-    throw new ApiError(400, "invalid_restock", "Stock can only be restocked on a full refund.");
-  }
+  if (input.restock && !isFullRefund) throw new ApiError(400, "invalid_restock", "Stock can only be restocked on a full refund.");
 
   const completed = order.payments.find((payment) => payment.status === "COMPLETED");
   if (!completed) throw new ApiError(409, "no_payment", "No completed payment was found for this order.");
 
+  // Reserve the exact amount first. Concurrent attempts see the reduced remaining
+  // balance, so the cumulative refund can never exceed the order total.
+  const refund = await prisma.$transaction(async (tx) => {
+    const claim = await tx.order.updateMany({
+      where: { id: order.id, refundedKobo: alreadyRefunded },
+      data: { refundedKobo: { increment: requested } }
+    });
+    if (claim.count === 0) throw new ApiError(409, "refund_conflict", "Another refund changed this order. Reload and try again.");
+    return tx.refund.create({
+      data: {
+        orderId: order.id,
+        paymentId: completed.id,
+        actorId: input.actorId,
+        amountKobo: requested,
+        reason: input.reason,
+        idempotencyKey,
+        status: "PENDING"
+      }
+    });
+  });
+
   const external = completed.provider !== "wallet";
+  let providerReference: string | undefined;
   if (external) {
     const adapter = adapters[completed.provider as AdapterId];
     if (!adapter?.refund) {
+      await prisma.$transaction([
+        prisma.refund.update({ where: { id: refund.id }, data: { status: "FAILED" } }),
+        prisma.order.update({ where: { id: order.id }, data: { refundedKobo: { decrement: requested } } })
+      ]);
       throw new ApiError(503, "refund_unsupported", `${completed.provider} refunds are not configured on this server.`);
     }
-    const result = await adapter.refund({
-      reference: completed.providerReference,
-      amountMinor: requested,
-      currency: order.currency
-    });
+    let result;
+    try {
+      result = await adapter.refund({
+        reference: completed.providerReference,
+        amountMinor: requested,
+        currency: order.currency,
+        idempotencyKey
+      });
+    } catch (error) {
+      await prisma.$transaction([
+        prisma.refund.update({ where: { id: refund.id }, data: { status: "FAILED" } }),
+        prisma.order.update({ where: { id: order.id }, data: { refundedKobo: { decrement: requested } } })
+      ]);
+      throw error;
+    }
+    providerReference = result.providerReference;
     if (result.status !== "COMPLETED") {
-      throw new ApiError(
-        502,
-        "refund_pending",
-        `${adapter.label} accepted the refund request but has not confirmed it. The order remains paid until reconciliation.`
-      );
+      await prisma.refund.update({ where: { id: refund.id }, data: { providerReference, status: "PENDING" } });
+      throw new ApiError(502, "refund_pending", `${adapter.label} has not confirmed this refund. The amount stays reserved for reconciliation.`);
     }
   }
 
@@ -551,77 +591,39 @@ export async function refundPayment(input: {
   const platformShare = requested - vendorShare;
 
   return prisma.$transaction(async (tx) => {
-    // Claim this exact refunded amount first; a concurrent or repeated refund
-    // cannot pass the same starting balance.
-    const claimed = await tx.order.updateMany({
-      where: { id: order.id, refundedKobo: alreadyRefunded },
-      data: {
-        refundedKobo: { increment: requested },
-        paymentStatus: isFullRefund ? "refunded" : "partially_refunded"
-      }
-    });
-    if (claimed.count === 0) throw new ApiError(409, "refund_conflict", "Another refund changed this order. Reload and try again.");
-
     const buyerWallet = await ensureWallet(tx, { userId: order.customerId, ownerType: "CUSTOMER" });
     const vendorWallet = await ensureWallet(tx, { vendorId: order.vendorId, ownerType: "VENDOR" });
     const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
 
     if (completed.provider === "wallet" && escrowReleased) {
-      await tx.wallet.update({
-        where: { id: buyerWallet.id },
-        data: { availableKobo: { increment: requested } }
-      });
+      await tx.wallet.update({ where: { id: buyerWallet.id }, data: { availableKobo: { increment: requested } } });
       if (vendorShare > BigInt(0)) {
-        const vendorDebit = await tx.wallet.updateMany({
-          where: { id: vendorWallet.id, availableKobo: { gte: vendorShare } },
-          data: { availableKobo: { decrement: vendorShare } }
-        });
-        if (vendorDebit.count === 0) throw new ApiError(409, "refund_conflict", "Seller payable is no longer available to reverse.");
+        const debit = await tx.wallet.updateMany({ where: { id: vendorWallet.id, availableKobo: { gte: vendorShare } }, data: { availableKobo: { decrement: vendorShare } } });
+        if (debit.count === 0) throw new ApiError(409, "refund_conflict", "Seller payable is no longer available to reverse.");
       }
       if (platformShare > BigInt(0)) {
-        const platformDebit = await tx.wallet.updateMany({
-          where: { id: platform.id, availableKobo: { gte: platformShare } },
-          data: { availableKobo: { decrement: platformShare } }
-        });
-        if (platformDebit.count === 0) throw new ApiError(409, "refund_conflict", "Platform fee balance is no longer available to reverse.");
+        const debit = await tx.wallet.updateMany({ where: { id: platform.id, availableKobo: { gte: platformShare } }, data: { availableKobo: { decrement: platformShare } } });
+        if (debit.count === 0) throw new ApiError(409, "refund_conflict", "Platform fee balance is no longer available to reverse.");
       }
     } else if (completed.provider === "wallet") {
-      const buyerHeld = await tx.wallet.updateMany({
-        where: { id: buyerWallet.id, heldKobo: { gte: requested } },
-        data: { heldKobo: { decrement: requested }, availableKobo: { increment: requested } }
-      });
-      if (buyerHeld.count === 0) throw new ApiError(409, "refund_conflict", "Escrow hold is no longer available to refund.");
-      const vendorHeld = await tx.wallet.updateMany({
-        where: { id: vendorWallet.id, heldKobo: { gte: requested } },
-        data: { heldKobo: { decrement: requested } }
-      });
-      if (vendorHeld.count === 0) throw new ApiError(409, "refund_conflict", "Seller escrow hold is no longer available to reverse.");
+      const buyer = await tx.wallet.updateMany({ where: { id: buyerWallet.id, heldKobo: { gte: requested } }, data: { heldKobo: { decrement: requested }, availableKobo: { increment: requested } } });
+      if (buyer.count === 0) throw new ApiError(409, "refund_conflict", "Escrow hold is no longer available to refund.");
+      const vendor = await tx.wallet.updateMany({ where: { id: vendorWallet.id, heldKobo: { gte: requested } }, data: { heldKobo: { decrement: requested } } });
+      if (vendor.count === 0) throw new ApiError(409, "refund_conflict", "Seller escrow hold is no longer available to reverse.");
     } else if (escrowReleased) {
       if (vendorShare > BigInt(0)) {
-        const vendorDebit = await tx.wallet.updateMany({
-          where: { id: vendorWallet.id, availableKobo: { gte: vendorShare } },
-          data: { availableKobo: { decrement: vendorShare } }
-        });
-        if (vendorDebit.count === 0) throw new ApiError(409, "refund_conflict", "Seller payable is no longer available to reverse.");
+        const debit = await tx.wallet.updateMany({ where: { id: vendorWallet.id, availableKobo: { gte: vendorShare } }, data: { availableKobo: { decrement: vendorShare } } });
+        if (debit.count === 0) throw new ApiError(409, "refund_conflict", "Seller payable is no longer available to reverse.");
       }
       if (platformShare > BigInt(0)) {
-        const platformDebit = await tx.wallet.updateMany({
-          where: { id: platform.id, availableKobo: { gte: platformShare } },
-          data: { availableKobo: { decrement: platformShare } }
-        });
-        if (platformDebit.count === 0) throw new ApiError(409, "refund_conflict", "Platform fee balance is no longer available to reverse.");
+        const debit = await tx.wallet.updateMany({ where: { id: platform.id, availableKobo: { gte: platformShare } }, data: { availableKobo: { decrement: platformShare } } });
+        if (debit.count === 0) throw new ApiError(409, "refund_conflict", "Platform fee balance is no longer available to reverse.");
       }
     } else {
-      const platformDebit = await tx.wallet.updateMany({
-        where: { id: platform.id, availableKobo: { gte: requested } },
-        data: { availableKobo: { decrement: requested } }
-      });
-      if (platformDebit.count === 0) throw new ApiError(409, "refund_conflict", "Platform escrow balance is no longer available to refund.");
-      const vendorHeld = await tx.wallet.updateMany({
-        where: { id: vendorWallet.id, heldKobo: { gte: requested } },
-        data: { heldKobo: { decrement: requested } }
-      });
-      if (vendorHeld.count === 0) throw new ApiError(409, "refund_conflict", "Seller escrow hold is no longer available to reverse.");
+      const debit = await tx.wallet.updateMany({ where: { id: platform.id, availableKobo: { gte: requested } }, data: { availableKobo: { decrement: requested } } });
+      if (debit.count === 0) throw new ApiError(409, "refund_conflict", "Platform escrow balance is no longer available to refund.");
+      const vendor = await tx.wallet.updateMany({ where: { id: vendorWallet.id, heldKobo: { gte: requested } }, data: { heldKobo: { decrement: requested } } });
+      if (vendor.count === 0) throw new ApiError(409, "refund_conflict", "Seller escrow hold is no longer available to reverse.");
     }
 
     const ledgerEntries =
@@ -652,10 +654,15 @@ export async function refundPayment(input: {
         orderId: order.id,
         type: "refund",
         amountKobo: requested,
-        reference: `REFUND-${order.id}-${randomBytes(3).toString("hex")}`,
+        reference: `REFUND-${refund.id}`,
         description: `${isFullRefund ? "Refund" : "Partial refund"} for ${order.orderNumber}: ${input.reason}`,
         ledger: { create: ledgerEntries.filter((entry) => entry.amountKobo > BigInt(0)) }
       }
+    });
+
+    await tx.refund.update({
+      where: { id: refund.id },
+      data: { status: "COMPLETED", completedAt: new Date(), providerReference: providerReference ?? null }
     });
 
     if (isFullRefund) {
@@ -668,6 +675,8 @@ export async function refundPayment(input: {
       }
       if (input.restock) await restockOrderItems(tx, order.id);
       await updateOrderStatus({ tx, actorId: input.actorId, orderId: order.id, status: "refunded", note: `Refund issued: ${input.reason}` });
+    } else {
+      await tx.order.update({ where: { id: order.id }, data: { paymentStatus: "partially_refunded" } });
     }
 
     await recordAudit({
@@ -677,6 +686,8 @@ export async function refundPayment(input: {
       entity: "Order",
       entityId: order.id,
       metadata: {
+        refundId: refund.id,
+        idempotencyKey,
         before: { paymentStatus: order.paymentStatus, orderStatus: order.status, refundedKobo: alreadyRefunded.toString() },
         after: { paymentStatus: isFullRefund ? "refunded" : "partially_refunded", refundedKobo: (alreadyRefunded + requested).toString() },
         amountKobo: requested.toString(),
@@ -686,7 +697,7 @@ export async function refundPayment(input: {
       }
     });
 
-    return { orderId: order.id, refundedKobo: requested.toString(), totalRefundedKobo: (alreadyRefunded + requested).toString() };
+    return { orderId: order.id, refundedKobo: requested.toString(), totalRefundedKobo: (alreadyRefunded + requested).toString(), refundId: refund.id };
   });
 }
 

@@ -547,11 +547,17 @@ export async function markPayoutPaid(input: { adminId: string; payoutId: string 
   if (payout.status === "PAID") return payout;
   return prisma.$transaction(async (tx) => {
     // Claim the payout atomically so concurrent/repeated calls settle it once.
+    // Only PENDING/APPROVED payouts are eligible. REJECTED payouts are terminal
+    // and an already-PAID payout is returned without touching the wallet.
     const claim = await tx.payout.updateMany({
-      where: { id: payout.id, status: { not: "PAID" } },
+      where: { id: payout.id, status: { in: ["PENDING", "APPROVED"] } },
       data: { status: "PAID", paidAt: new Date() }
     });
-    if (claim.count === 0) return tx.payout.findUniqueOrThrow({ where: { id: payout.id } });
+    if (claim.count === 0) {
+      const current = await tx.payout.findUniqueOrThrow({ where: { id: payout.id } });
+      if (current.status === "REJECTED") throw new ApiError(409, "payout_not_eligible", "A rejected payout cannot be paid.");
+      return current;
+    }
 
     // The wallet debit is conditional: a payout can never push the vendor balance negative.
     const debit = await tx.wallet.updateMany({

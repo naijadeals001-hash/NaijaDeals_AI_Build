@@ -52,5 +52,5 @@ export type PaymentAdapter = {
   initialize: (input: PaymentInitInput) => Promise<PaymentInitResult>;
   verify: (reference: string) => Promise<PaymentVerifyResult>;
   verifyWebhook?: (rawBody: string, headers: Headers) => Promise<WebhookResult | null>;
-  refund?: (input: { reference: string; amountMinor: bigint; currency: string }) => Promise<PaymentRefundResult>;
+  refund?: (input: { reference: string; amountMinor: bigint; currency: string; idempotencyKey?: string }) => Promise<PaymentRefundResult>;
 };

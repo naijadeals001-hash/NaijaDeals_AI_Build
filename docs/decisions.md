@@ -74,3 +74,16 @@
 | D-008 | ✅ Verified | 2026-11-01 |
 | D-009 | ✅ Verified | 2026-11-01 |
 | D-010 | ✅ Verified | 2026-11-01 |
+
+## Open decision — refund fee treatment (2026-11-03)
+
+The reported 1% escrow fee is an existing but unverified policy. The following is unresolved and must
+not be implemented by assumption:
+
+- whether the 1% fee is returned proportionally on a partial refund, retained, or varied by refund
+  reason (customer cancellation, seller fault, dispute, failed delivery);
+- how provider processing fees are treated separately from the platform fee;
+- whether repeated partial refunds recalculate the fee per attempt or once for the order.
+
+Current implementation reverses the platform commission proportionally with each refunded kobo; this
+is ledger mechanics, not an approved fee policy. A business decision is required before changing it.

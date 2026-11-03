@@ -283,3 +283,13 @@ ledger balance, non-negative wallets, duplicate confirmation, insufficient funds
 idempotency/overdraw, partial and cumulative refunds, concurrent refund single settlement and repeated
 refund rejection. Provider sandbox signature checks remain BLOCKED (no Paystack/Flutterwave
 credentials); no live charge was made.
+
+
+### Phase 07 review follow-up (2026-11-03)
+
+Added an individual Refund attempt model with a unique idempotency key, atomic reservation of the
+remaining refundable amount, cumulative attempts, and provider calls made at most once per key.
+Payouts are limited to explicit PENDING/APPROVED eligibility (REJECTED is terminal). Synthetic
+Paystack/Flutterwave signature tests pass with test-only secrets. Wallet partial refunds and escrow
+release verified. Phase remains IN PROGRESS pending live provider sandbox reconciliation, the refund
+fee policy decision, and GitHub preservation.

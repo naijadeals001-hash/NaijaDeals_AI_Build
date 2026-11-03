@@ -369,6 +369,7 @@ model Order {
   payments        Payment[]
   returnRequests  ReturnRequest[]
   reviews         Review[]
+  refunds Refund[]
 }
 
 model OrderItem {
@@ -652,6 +653,7 @@ model Payment {
   order             Order         @relation(fields: [orderId], references: [id])
 
   @@index([orderId])
+  refunds Refund[]
 }
 
 model WebhookEvent {
@@ -1054,4 +1056,30 @@ model RestaurantApplication {
   user        User                        @relation("RestaurantApplications", fields: [userId], references: [id])
 
   @@index([status, createdAt])
+}
+
+
+enum RefundStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+/// One refund attempt. The idempotency key makes provider retries safe.
+model Refund {
+  id                String       @id @default(cuid())
+  orderId           String
+  paymentId         String
+  actorId           String
+  amountKobo        BigInt
+  status            RefundStatus @default(PENDING)
+  reason            String
+  idempotencyKey    String       @unique
+  providerReference String?
+  createdAt         DateTime     @default(now())
+  completedAt       DateTime?
+  order             Order        @relation(fields: [orderId], references: [id])
+  payment           Payment      @relation(fields: [paymentId], references: [id])
+
+  @@index([orderId, status])
 }

@@ -30,9 +30,19 @@ Run: `npx tsx scripts/phase07-ledger-tests.ts` against the isolated database.
 | Insufficient funds cannot create a food order | PASS | `insufficient_funds`, zero orders written |
 | Concurrent payout settlement debits once | PASS | wallet 2,450,000 → 2,449,500 with two simultaneous calls; third call no-op |
 | Payout cannot overdraw the vendor wallet | PASS | `insufficient_wallet`, payout stays PENDING, wallet unchanged |
-| Partial refund | PASS | two partial refunds accumulated 100 → 300 kobo, over-refund rejected, ledger balanced; `scripts/phase07-partial-refund-tests.ts` |
-| Concurrent / repeated refund | PASS | two simultaneous full refunds produced one `ok` + one `refund_conflict`; repeat returned `already_refunded` |
-| Provider webhook signature | BLOCKED | no Paystack/Flutterwave credentials or sandbox webhook fixture in this environment |
+| Partial refund attempts | PASS | individual `Refund` rows, cumulative 100 → 300 kobo, over-refund rejected, ledger balanced; `scripts/phase07-partial-refund-tests.ts` |
+| Concurrent / repeated refund | PASS | one `ok` + one `refund_conflict`; repeat returned `already_refunded` |
+| Refund idempotency key | PASS | repeated key returned the stored attempt without another provider call |
+| Wallet refund + escrow | PASS | buyer credited, escrow marked refunded, cumulative attempts sum equals order total (`scripts/phase07-wallet-refund-tests.ts`) |
+| Synthetic webhook signatures | PASS | Paystack HMAC-SHA512 and Flutterwave hash accepted; bad signatures rejected (`scripts/phase07-webhook-tests.ts`) |
+| Provider sandbox delivery/reconciliation | BLOCKED | no live sandbox credentials; synthetic signature verification passes separately |
+
+## Refund attempts model
+
+A new `Refund` table records every refund attempt (amount, status PENDING/COMPLETED/FAILED, reason,
+actor, payment, unique idempotency key, provider reference). The remaining refundable amount is
+reserved atomically before the provider call; the same idempotency key never calls the provider twice.
+`Order.refundedKobo` stays the cumulative figure and must equal the sum of COMPLETED refund attempts.
 
 ## Refund extension
 
@@ -63,18 +73,24 @@ payout status back. The concurrency and overdraw cases above fail on the old cod
 
 ## Status
 
-**Phase 07 PASS** against the local invariants: ledger balance, conservation of each transaction,
-insufficient funds, duplicate confirmation, payout idempotency/concurrency, overdraw rejection,
-partial and cumulative refunds, concurrent refund settlement and repeated refunds all pass.
-**Provider sandbox integration is BLOCKED** — no Paystack/Flutterwave credentials or webhook fixtures
-exist, which the exit gate permits to block only those provider checks. No live charges were made.
+**Phase 07 IN PROGRESS** after review. Local invariants pass (ledger, payouts, partial/concurrent
+refunds, synthetic webhooks), but the phase stays open pending (a) a live provider sandbox delivery and
+reconciliation check, (b) the refund-fee policy decision, and (c) GitHub preservation of these commits.
+No live charges were made.
 
 ## Migration impact
 
-None. The payout fix is application logic only.
+`20261103240000_refund_attempts` adds the `RefundStatus` enum and `Refund` table (unique idempotency key, order/payment FKs). Payout eligibility is application logic only.
 
 **Evidence limitation (2026-11-03):** the partial-refund suite used completed test-provider payments
 because the isolated database had no paid wallet order at test time. The wallet-provider
 partial-refund branch is implemented with the same proportional ledger split but was not separately
 exercised; a paid wallet order should be added to the fixture set before treating that branch as
 verified.
+
+
+## Preservation
+
+The commits for this phase are **not yet preserved on GitHub**: the push exits 128 and the remote
+`naijashop-marketplace` remains at `d28a6beadbd10cdc42424270b79b3ff627d0d3b7`. Local backup remote and
+bundle are current. Phase 07 stays IN PROGRESS until GitHub preservation is verified.

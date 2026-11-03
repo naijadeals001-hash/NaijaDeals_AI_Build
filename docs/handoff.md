@@ -717,3 +717,24 @@ confirmation, insufficient funds, concurrent payout, payout overdraw). All local
 Sandbox webhook/signature evidence is BLOCKED for missing provider credentials; no live charge.
 
 Migration impact: none.
+
+
+## Phase 07 review follow-up (2026-11-03)
+
+Review feedback addressed:
+- Payouts are eligible only from PENDING/APPROVED; REJECTED is terminal and a PAID payout is returned
+  without a wallet debit. Only the caller whose conditional update changed one row debits.
+- Refunds now create an individual Refund attempt (unique idempotency key) and reserve the remaining
+  refundable amount atomically before the provider call, so concurrent requests cannot exceed the
+  order total and a retried key never calls the provider twice.
+- Wallet partial refunds were exercised end to end: buyer wallet credited, escrow marked refunded,
+  attempts summed to the order total.
+- Synthetic Paystack HMAC-SHA512 and Flutterwave verif-hash tests pass with test-only secrets; live
+  sandbox delivery/reconciliation remains BLOCKED.
+- Payout provider transfer does not exist in this build (payouts are recorded manually), so duplicate
+  external payout calls cannot occur yet; this must be revisited if a transfer adapter is added.
+
+Refund fee policy remains unresolved in docs/decisions.md (proportional vs retained vs by reason, and
+provider processing fees separately). No fee logic was invented.
+
+Phase 07 stays IN PROGRESS: GitHub preservation and live provider sandbox evidence are outstanding.

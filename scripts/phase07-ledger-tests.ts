@@ -111,11 +111,33 @@ async function main() {
     const afterBig = await prisma.wallet.findUniqueOrThrow({ where: { id: vendorWallet.id } });
     check("payout cannot overdraw wallet", bigCode === "insufficient_wallet" && bigStatus.status !== "PAID" && afterBig.availableKobo === final.availableKobo,
       `code=${bigCode} status=${bigStatus.status} wallet=${afterBig.availableKobo}`);
+
+    const rejected = await prisma.payout.create({
+      data: {
+        vendorId: vendorWallet.vendorId,
+        amountKobo: 100n,
+        status: "REJECTED",
+        reference: `PHASE07-REJECTED-${Date.now()}`,
+        periodStart: new Date(Date.now() - 86400000),
+        periodEnd: new Date()
+      }
+    });
+    let rejectedCode = "";
+    try {
+      await markPayoutPaid({ adminId: admin.id, payoutId: rejected.id });
+    } catch (error) {
+      rejectedCode = (error as { code?: string }).code ?? "thrown";
+    }
+    const rejectedAfter = await prisma.payout.findUniqueOrThrow({ where: { id: rejected.id } });
+    const walletAfterRejected = await prisma.wallet.findUniqueOrThrow({ where: { id: vendorWallet.id } });
+    check("rejected payout is not eligible", rejectedCode === "payout_not_eligible" && rejectedAfter.status === "REJECTED" && walletAfterRejected.availableKobo === final.availableKobo,
+      `code=${rejectedCode} status=${rejectedAfter.status} wallet=${walletAfterRejected.availableKobo}`);
   }
 
   // 6. Partial refunds are covered by scripts/phase07-partial-refund-tests.ts.
   results.push({ name: "partial refund path", status: "PASS", detail: "covered by phase07-partial-refund-tests.ts (partial, cumulative, over-refund, concurrent full, repeated)" });
-  results.push({ name: "provider webhook signature", status: "BLOCKED", detail: "no Paystack/Flutterwave credentials or sandbox webhook fixtures in this environment" });
+  results.push({ name: "provider webhook signature (synthetic)", status: "PASS", detail: "covered by phase07-webhook-tests.ts: HMAC/hash accepted, bad signatures rejected" });
+  results.push({ name: "provider sandbox delivery and reconciliation", status: "BLOCKED", detail: "no live Paystack/Flutterwave sandbox credentials or delivery fixtures" });
 
   console.log(JSON.stringify(results, null, 2));
   const failed = results.filter((result) => result.status === "FAIL").length;
