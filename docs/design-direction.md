@@ -102,3 +102,30 @@ To stop it being presented as real seller listings:
 
 Verified: default storefront 0 cards + empty state; demo toggle 12 labelled cards; detail banner
 present; axe-core 0 violations in both states; 390 px layout has no overflow.
+
+
+## Approved reference mockups (2026-11-03)
+
+The project owner supplied five target mockups; they are stored under
+`design-references/approved/` (JPEG, ~180 KB each) and are the visual north star for the
+customer super-app, NaijaDrive and NaijaShop.
+
+| File | SHA-256 prefix |
+| --- | --- |
+| `01-admin-control-center.jpg` | `48958321e2cf3719…` |
+| `02-home-super-app.jpg` | `112056a5741ca688…` |
+| `03-home-rides.jpg` | `409c982c9a2ea45f…` |
+| `04-naijadrive-landing.jpg` | `8ec47c5438432427…` |
+| `05-naijashop-marketplace.jpg` | `5045af6dd0246db6…` |
+
+| Reference | What it shows | Adoption status |
+| --- | --- | --- |
+| `01-admin-control-center.jpg` | Dense Control Center: module switcher tiles, NaijaDrive admin header with city + Live Operations pill, KPI row, Live Operations Map + Active Trips, service performance, revenue trend, driver donut, ecosystem health/summary, future modules, activity/alerts/quick actions | Mostly implemented (same component families, region filter, real tables). Gaps: live map provider, populated active-trip list, 4-state driver presence, uptime metric |
+| `02-home-super-app.jpg` | Dark navy/green hero with large photography, Ride/Eat/Shop/Stay/Send/Gigs tab bar, pickup/destination fields, service tile rail, trust strip, app-store badges | Hero, search, service tiles and trust strip implemented. The tabbed location panel and app-store badges are **not** copied: no native apps are shipped, and the playbook forbids implying they are |
+| `03-home-rides.jpg` | Variant homepage: ecosystem nav, "Ride. Eat. Shop. Stay. Pay. Stream. All in One." hero with phone, download badges, arrowed service tiles, four-part trust strip | Copy and claims adapted; visual language (green/navy, photography, tile rail) already reflected in the current homepage |
+| `04-naijadrive-landing.jpg` | Ride landing: "Request a ride, get around Nigeria", Ride/Bike/Package/Schedule tabs, pickup + destination inputs, Find a Ride CTA, service strip | **Next design increment** — the current `/naijadrive` is the functional booking page; the landing composition is not built yet |
+| `05-naijashop-marketplace.jpg` | Amazon-style storefront: brand header with deliver-to/search/account/cart, department nav, hero deal banner, category icon grid, Today's Deals / Bestsellers / New Arrivals trio, deals-by-category rail | Implemented today: brand bar, department chips, category icon rail, red/amber/green promo trio wired to real data, filters and result cards |
+
+Rules applied when adopting the mockups: no app-store badges (nothing shipped there), no
+"54 countries operational" claims (only six configured countries, four African), no competitor
+assets, and every count shown is computed from the database.

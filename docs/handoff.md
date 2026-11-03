@@ -344,6 +344,15 @@ restart can switch it to `prisma.countrySetting` without behaviour change.
 audit confirms every local `@/`/relative import resolves to a tracked file. Build directories,
 test results and the REA bundle are now ignored explicitly.
 
+## Design references and NaijaShop alignment (2026-11-03)
+
+The owner's five target mockups are preserved in `design-references/approved/` and mapped to
+current status in `docs/design-direction.md`. The NaijaShop storefront now mirrors the supplied
+marketplace reference: department chips, a **category icon rail** (9 categories, icon per vertical)
+and a **red/amber/green promo trio** — Today's deals, Top rated, New arrivals — each wired to real
+data and filtering (deals reduced 12 sample cards to the 6 with genuine savings; aria-pressed and
+axe clean). The next design increment is the NaijaDrive landing composition (reference 04).
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

@@ -17,7 +17,19 @@ import {
   Star,
   Store,
   Truck,
-  Wallet
+  Wallet,
+  Smartphone,
+  Laptop,
+  Sofa,
+  Shirt,
+  Sparkles,
+  ShoppingBasket,
+  BatteryCharging,
+  Gamepad2,
+  Tag,
+  Flame,
+  Award,
+  PackagePlus
 } from "lucide-react";
 import {
   ApiRequestError,
@@ -126,6 +138,7 @@ export function NaijaShopPage() {
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [showSamples, setShowSamples] = useState(false);
+  const [preset, setPreset] = useState<"all" | "deals" | "top" | "new">("all");
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -181,15 +194,16 @@ export function NaijaShopPage() {
       if (price < band.min || price > band.max) return false;
       if (minRating > 0 && (product.rating?.average ?? 0) < minRating) return false;
       if (inStockOnly && (product.available ?? 0) <= 0) return false;
+      if (preset === "deals" && !(product.compareAtKobo && Number(product.compareAtKobo) > Number(product.priceKobo))) return false;
       return true;
     });
 
     const sorted = [...list];
     if (sort === "price-asc") sorted.sort((a, b) => Number(a.priceKobo) - Number(b.priceKobo));
     if (sort === "price-desc") sorted.sort((a, b) => Number(b.priceKobo) - Number(a.priceKobo));
-    if (sort === "rating") sorted.sort((a, b) => (b.rating?.average ?? 0) - (a.rating?.average ?? 0) || (b.rating?.count ?? 0) - (a.rating?.count ?? 0));
+    if (sort === "rating" || preset === "top") sorted.sort((a, b) => (b.rating?.average ?? 0) - (a.rating?.average ?? 0) || (b.rating?.count ?? 0) - (a.rating?.count ?? 0));
     return sorted;
-  }, [catalogue, category, priceBand, minRating, inStockOnly, sort, priceBands]);
+  }, [catalogue, category, priceBand, minRating, inStockOnly, sort, priceBands, preset]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -218,7 +232,21 @@ export function NaijaShopPage() {
     }
   }
 
-  const hasFilters = category !== "all" || priceBand !== "all" || minRating > 0 || inStockOnly;
+  const hasFilters = category !== "all" || priceBand !== "all" || minRating > 0 || inStockOnly || preset !== "all";
+  const dealCount = catalogue.filter((product) => product.compareAtKobo && Number(product.compareAtKobo) > Number(product.priceKobo)).length;
+  const ratedCount = catalogue.filter((product) => (product.rating?.count ?? 0) > 0).length;
+  const categoryIcon = (name: string) => {
+    const key = name.toLowerCase();
+    if (/phone|tablet/.test(key)) return Smartphone;
+    if (/computer|laptop/.test(key)) return Laptop;
+    if (/home|kitchen|furniture/.test(key)) return Sofa;
+    if (/fashion|cloth|shoe/.test(key)) return Shirt;
+    if (/beauty|health|care/.test(key)) return Sparkles;
+    if (/grocer/.test(key)) return ShoppingBasket;
+    if (/power|solar|energy/.test(key)) return BatteryCharging;
+    if (/gaming|game/.test(key)) return Gamepad2;
+    return Tag;
+  };
 
   return (
     <div className="space-y-0">
@@ -322,6 +350,81 @@ export function NaijaShopPage() {
           </div>
         </div>
       ) : null}
+
+      <section aria-label="Shop by category" className="mt-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-extrabold text-ink">Shop by category</h2>
+          <button
+            type="button"
+            onClick={() => { setCategory("all"); setPreset("all"); resetPage(); }}
+            className="text-xs font-bold text-primary hover:underline"
+          >
+            View all
+          </button>
+        </div>
+        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+          {categories.slice(0, 10).map((item) => {
+            const Icon = categoryIcon(item.name);
+            const active = category === item.slug;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => { setCategory(item.slug); resetPage(); }}
+                aria-pressed={active}
+                className={`flex w-20 shrink-0 flex-col items-center gap-1 rounded-xl border p-2 text-center transition ${active ? "border-primary bg-primary-soft" : "border-border-soft bg-canvas hover:border-primary/40"}`}
+              >
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-surface-low text-primary">
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className="line-clamp-2 text-[10px] font-bold leading-tight text-ink">{item.name}</span>
+              </button>
+            );
+          })}
+          <Link href="/search" className="flex w-20 shrink-0 flex-col items-center gap-1 rounded-xl border border-border-soft bg-canvas p-2 text-center hover:border-primary/40">
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-surface-low text-primary">
+              <Tag className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="text-[10px] font-bold text-ink">More</span>
+          </Link>
+        </div>
+      </section>
+
+      <section aria-label="Promotions" className="mt-3 grid gap-3 sm:grid-cols-3">
+        <button
+          type="button"
+          onClick={() => { setPreset("deals"); setCategory("all"); setPriceBand("all"); resetPage(); }}
+          aria-pressed={preset === "deals"}
+          className={`rounded-xl bg-[#b91c1c] p-4 text-left text-white transition hover:brightness-110 ${preset === "deals" ? "ring-2 ring-white/70" : ""}`}
+        >
+          <Flame className="h-5 w-5" aria-hidden="true" />
+          <p className="mt-1 font-display text-lg font-extrabold">Today's deals</p>
+          <p className="text-xs text-white/85">{dealCount} product{dealCount === 1 ? "" : "s"} with real savings</p>
+          <span className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-[#b91c1c]">Shop deals</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setPreset("top"); setCategory("all"); setPriceBand("all"); resetPage(); }}
+          aria-pressed={preset === "top"}
+          className={`rounded-xl bg-[#f3b33d] p-4 text-left text-[#0b1a13] transition hover:brightness-105 ${preset === "top" ? "ring-2 ring-[#0b1a13]/40" : ""}`}
+        >
+          <Award className="h-5 w-5" aria-hidden="true" />
+          <p className="mt-1 font-display text-lg font-extrabold">Top rated</p>
+          <p className="text-xs text-[#0b1a13]/80">{ratedCount} reviewed product{ratedCount === 1 ? "" : "s"}</p>
+          <span className="mt-2 inline-flex rounded-full bg-[#0b1a13] px-3 py-1 text-xs font-bold text-white">Shop bestsellers</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setPreset("new"); setCategory("all"); setPriceBand("all"); resetPage(); }}
+          aria-pressed={preset === "new"}
+          className={`rounded-xl bg-[#0b6b3a] p-4 text-left text-white transition hover:brightness-110 ${preset === "new" ? "ring-2 ring-white/70" : ""}`}
+        >
+          <PackagePlus className="h-5 w-5" aria-hidden="true" />
+          <p className="mt-1 font-display text-lg font-extrabold">New arrivals</p>
+          <p className="text-xs text-white/85">Fresh listings from verified sellers</p>
+          <span className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-[#0b6b3a]">Shop new</span>
+        </button>
+      </section>
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
         <div className={showFilters ? "block" : "hidden lg:block"}>
