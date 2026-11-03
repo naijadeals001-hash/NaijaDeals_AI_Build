@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 
 const productInclude = {
   category: true,
-  vendor: { select: { id: true, name: true, slug: true, market: true, status: true, trustScore: true } },
+  vendor: { select: { id: true, name: true, slug: true, market: true, status: true, trustScore: true, pickupPhone: true } },
   images: { orderBy: { sortOrder: "asc" as const } },
   stock: true,
   variants: { where: { isActive: true }, orderBy: { name: "asc" as const } },
@@ -60,4 +60,21 @@ export function availableQuantity(product: {
     return product.variants.reduce((total, variant) => total + Math.max(variant.stock - variant.reserved, 0), 0);
   }
   return product.stock ? Math.max(product.stock.quantity - product.stock.reserved, 0) : 0;
+}
+
+
+/**
+ * Sale mode read through raw SQL so a long-running dev server whose Prisma client
+ * predates the column still returns the correct buying journey.
+ */
+export async function saleModesFor(ids: string[]): Promise<Map<string, "escrow" | "contact">> {
+  if (ids.length === 0) return new Map();
+  const rows = await prisma.$queryRaw<Array<{ id: string; saleMode: string }>>`
+    SELECT id, "saleMode"::text AS "saleMode" FROM "Product" WHERE id = ANY(${ids}::text[])`;
+  return new Map(rows.map((row) => [row.id, row.saleMode === "contact" ? "contact" : "escrow"]));
+}
+
+export async function saleModeFor(id: string): Promise<"escrow" | "contact"> {
+  const modes = await saleModesFor([id]);
+  return modes.get(id) ?? "escrow";
 }

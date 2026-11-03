@@ -167,6 +167,7 @@ const products = [
   {
     slug: "ankara-sneakers",
     name: "Unisex Ankara Print Sneakers",
+    saleMode: "contact",
     brand: "Naija Loom",
     category: "fashion",
     vendor: "yaba-home-living",
@@ -425,6 +426,7 @@ async function main() {
         brand: product.brand,
         priceKobo: product.price,
         compareAtKobo: product.compareAt,
+        saleMode: product.saleMode ?? "escrow",
         weightGrams: 500,
         status: "ACTIVE",
         isSample: true,

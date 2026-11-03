@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { availableQuantity, isFixtureListing, listProducts, ratingSummary } from "@/lib/services/core/catalog.service";
+import { availableQuantity, isFixtureListing, listProducts, ratingSummary, saleModesFor } from "@/lib/services/core/catalog.service";
 import { jsonSafe } from "@/lib/services/core/serialize";
 
 export const dynamic = "force-dynamic";
@@ -42,9 +42,11 @@ export async function GET(request: NextRequest) {
   if (sort === "price-desc") products = [...products].sort((a, b) => Number(b.priceKobo - a.priceKobo));
   if (sort === "trust") products = [...products].sort((a, b) => b.vendor.trustScore - a.vendor.trustScore);
 
+  const saleModes = await saleModesFor(products.map((product) => product.id));
   const payload = products.map((product) => ({
     ...product,
     isSample: isFixtureListing(product),
+    saleMode: saleModes.get(product.id) ?? "escrow",
     available: availableQuantity(product),
     rating: ratingSummary(product.reviews)
   }));

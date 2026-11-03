@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { availableQuantity, getProduct, isFixtureListing, ratingSummary } from "@/lib/services/core/catalog.service";
+import { availableQuantity, getProduct, isFixtureListing, ratingSummary, saleModeFor } from "@/lib/services/core/catalog.service";
 import { listReviews } from "@/lib/services/core/account.service";
 import { jsonSafe } from "@/lib/services/core/serialize";
 
@@ -16,6 +16,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       jsonSafe({
         ...product,
         isSample: isFixtureListing(product),
+        saleMode: await saleModeFor(product.id),
         available: availableQuantity(product),
         rating: ratingSummary(product.reviews),
         reviews

@@ -522,6 +522,12 @@ repo's limitations recorded. NaijaDrive now compares fares across every class: `
 returns four server quotes and the vehicle cards show each price while the selected class drives the
 booked fare. Verified prices ₦4,650 / ₦7,750 / ₦11,250 / ₦14,900 and axe 0.
 
+**Journey 3 shop mode (2026-11-03):** products now carry `saleMode` (escrow | contact). Contact
+listings show a badge and Contact seller panel (phone + WhatsApp) with an explicit escrow exclusion;
+the cart API rejects them with 400 `contact_seller_only`. Jumia and Jiji were blocked by a Cloudflare
+challenge in the REA browser, recorded as unavailable. Verified contact/escrow sample listings, card
+and detail rendering, cart rejection, axe 0.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

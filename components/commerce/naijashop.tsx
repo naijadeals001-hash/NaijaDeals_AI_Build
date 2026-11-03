@@ -74,6 +74,11 @@ export function ProductCard({ product, onAdd }: { product: ApiProduct; onAdd?: (
           Sample
         </span>
       ) : null}
+      {product.saleMode === "contact" ? (
+        <span className="absolute right-3 top-3 z-10 rounded bg-night px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">
+          Contact seller
+        </span>
+      ) : null}
       <Link href={`/product/${product.slug}`} className="block bg-surface-low">
         <img
           src={product.images[0]?.url || "/products/tecno-spark-20.svg"}
@@ -105,7 +110,15 @@ export function ProductCard({ product, onAdd }: { product: ApiProduct; onAdd?: (
           {product.compareAtKobo ? (
             <p className="text-xs text-muted line-through">{koboToNaira(product.compareAtKobo)}</p>
           ) : null}
-          {product.variants && product.variants.length > 0 ? (
+          {product.saleMode === "contact" ? (
+            <Link
+              href={`/product/${product.slug}`}
+              className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-night bg-canvas px-4 text-sm font-bold text-ink"
+            >
+              <Store className="h-4 w-4" />
+              Contact seller
+            </Link>
+          ) : product.variants && product.variants.length > 0 ? (
             <Link
               href={`/product/${product.slug}`}
               className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white"
@@ -759,11 +772,18 @@ function ShopResultCard({ product, onAdd }: { product: ApiProduct; onAdd: (produ
 
   return (
     <article className="flex h-full flex-col rounded-lg border border-border-soft bg-canvas p-3 transition hover:shadow-soft">
-      {product.isSample ? (
-        <span className="mb-1 inline-flex w-fit items-center rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#B45309]">
-          Sample
-        </span>
-      ) : null}
+      <div className="mb-1 flex items-center gap-1.5">
+        {product.isSample ? (
+          <span className="inline-flex w-fit items-center rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#B45309]">
+            Sample
+          </span>
+        ) : null}
+        {product.saleMode === "contact" ? (
+          <span className="inline-flex w-fit items-center rounded bg-[#0b1a13] px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">
+            Contact seller
+          </span>
+        ) : null}
+      </div>
       <Link href={`/product/${product.slug}`} className="grid place-items-center bg-white">
         <img
           src={product.images[0]?.url || "/products/tecno-spark-20.svg"}
@@ -796,7 +816,14 @@ function ShopResultCard({ product, onAdd }: { product: ApiProduct; onAdd: (produ
       </p>
       <p className="text-[11px] text-muted">Sold by {product.vendor.name}</p>
       <div className="mt-auto pt-3">
-        {product.variants && product.variants.length > 0 ? (
+        {product.saleMode === "contact" ? (
+          <Link
+            href={`/product/${product.slug}`}
+            className="inline-flex min-h-9 w-full items-center justify-center rounded-full border border-[#0b1a13] px-3 text-xs font-bold text-ink transition hover:bg-surface-low"
+          >
+            Contact seller
+          </Link>
+        ) : product.variants && product.variants.length > 0 ? (
           <Link
             href={`/product/${product.slug}`}
             className="inline-flex min-h-9 w-full items-center justify-center rounded-full bg-[#ffd814] px-3 text-xs font-bold text-[#0b1a13] transition hover:bg-[#f7ca00]"

@@ -11,6 +11,7 @@ export type ApiVendor = {
   market: string;
   trustScore: number;
   status: string;
+  pickupPhone?: string | null;
 };
 
 export type ApiVariant = {
@@ -23,6 +24,8 @@ export type ApiVariant = {
   isActive: boolean;
 };
 
+export type ApiSaleMode = "escrow" | "contact";
+
 export type ApiProduct = {
   id: string;
   slug: string;
@@ -34,6 +37,7 @@ export type ApiProduct = {
   compareAtKobo?: ApiMoney | null;
   status: string;
   isSample?: boolean;
+  saleMode?: ApiSaleMode;
   category: ApiCategory;
   vendor: ApiVendor;
   images: Array<{ id: string; url: string; alt: string | null; sortOrder: number }>;

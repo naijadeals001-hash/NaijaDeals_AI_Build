@@ -75,3 +75,21 @@ Lagos route) while the selected class still drives the booked fare.
 
 Next gaps: schedule-for-later, "auto-fill my location" affordance, and a side-by-side ride-option
 detail view (ETA, capacity, luggage) without copying competitor prices.
+
+
+## Journey 3 — NaijaShop buy vs contact seller (2026-11-03)
+
+Reference capture attempt: **Jumia Nigeria** and **Jiji** both returned a Cloudflare
+"Just a moment…" challenge in the REA CDP browser, so no product/listing structure could be
+observed. Recorded as unavailable rather than invented; the journey follows the owner's stated
+split and the existing Amazon-derived storefront work.
+
+NaijaDeals implementation: a `saleMode` on every product — **escrow** (default) or **contact**.
+
+- Escrow listings keep Add to cart / Buy now.
+- Contact listings carry a **Contact seller** badge on cards and detail, show the seller phone and a
+  WhatsApp link, state that payment and delivery happen directly with the seller and that NaijaDeals
+  escrow does not cover the listing, and the cart API rejects them with
+  **400 `contact_seller_only`**.
+- Verified: the sample Ankara sneakers listing is `contact` while the Dell monitor stays
+  `escrow`; card badge and detail panel render, no Add to cart on contact, cart rejected, axe 0.

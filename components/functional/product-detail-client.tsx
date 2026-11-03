@@ -230,6 +230,35 @@ export function ProductDetailClient({ id }: { id: string }) {
 
             {error ? <p className="mt-3 text-sm font-bold text-crimson">{error}</p> : null}
 
+            {product.saleMode === "contact" ? (
+              <div className="mt-4 rounded-xl border border-night/20 bg-surface-low p-4">
+                <p className="text-sm font-extrabold">Contact seller</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  This listing is fulfilled directly by {product.vendor.name}. Payment, inspection and delivery are arranged with
+                  the seller — NaijaDeals escrow does not cover it.
+                </p>
+                {product.vendor.pickupPhone ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <a
+                      href={`tel:${product.vendor.pickupPhone}`}
+                      className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-night px-4 text-sm font-bold text-white"
+                    >
+                      Call {product.vendor.pickupPhone}
+                    </a>
+                    <a
+                      href={`https://wa.me/${String(product.vendor.pickupPhone).replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-night px-4 text-sm font-bold"
+                    >
+                      WhatsApp seller
+                    </a>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs font-bold text-muted">Contact details appear once the seller adds a phone number.</p>
+                )}
+              </div>
+            ) : (
             <div className="mt-4 grid gap-2">
               <button
                 onClick={() => void addToCart(false)}
@@ -254,6 +283,7 @@ export function ProductDetailClient({ id }: { id: string }) {
                 {saved ? "Saved" : "Save for later"}
               </button>
             </div>
+            )}
           </div>
 
           <div className="space-y-3 rounded-2xl border border-border-soft bg-canvas p-5 text-sm">

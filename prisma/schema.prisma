@@ -235,6 +235,11 @@ model Category {
   products    Product[]
 }
 
+enum SaleMode {
+  escrow
+  contact
+}
+
 model Product {
   id             String           @id @default(cuid())
   vendorId       String
