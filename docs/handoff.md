@@ -650,3 +650,9 @@ preview.
 **Limitations:** the long-running dev server predates the generated Prisma client for these models,
 so the new service uses raw SQL (matching the existing discovery query); a restart would allow typed
 Prisma calls. Kitchen order dispatch stays out of this increment.
+
+**GitHub preservation attempt (2026-11-03):** commit 6904434 on branch naijashop-marketplace.
+Remote naijadeals001-hash/NaijaDeals_AI_Build stayed at d28a6beadbd10cdc42424270b79b3ff627d0d3b7;
+the push failed with exit 128 and no updated remote ref (the same remote previously returned
+"Permission ... denied to BetFuz"). Local backup remote and bundle were updated instead. Production
+deployment remains gated.
