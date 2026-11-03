@@ -56,3 +56,60 @@ Genuine inventory was not touched.
 - Desktop: `qa-artifacts/preview/final-curated-desktop.png`
 - Mobile: `qa-artifacts/preview/final-curated-mobile.png`
 - No broken images, no horizontal overflow, one footer, Escape closes the drawer.
+
+
+## Expanded demo catalogue (2026-11-03, second pass)
+
+**16 displayed products / 32 target (partial).** 10 new licensed demo3 photos added with
+credits in `public/products/demo3/credits.json` and merged into `public/products/provenance.json`
+(16 entries, one per displayed product).
+
+### Coverage by department
+
+| Department | Displayed | Target | Gap |
+| --- | --- | --- | --- |
+| Phones & Tablets | 0 | 4 | 4 |
+| Computers | 4 | 4 | 0 |
+| Home & Kitchen | 2 | 4 | 2 |
+| Fashion | 2 | 4 | 2 |
+| Beauty | 2 | 4 | 2 |
+| Groceries | 3 | 4 | 1 |
+| Power & Solar | 2 | 4 | 2 |
+| Gaming | 1 | 4 | 3 |
+| **Total** | **16** | **32** | **16** |
+
+### Acceptance fields (kept separate)
+
+- Images load: **16/16**
+- Image accurately matches listing: **16/16**
+- Suitable presentation: **14/16** — worn sneakers and desk-scene monitor photos are informative
+  but not studio packshots.
+- Source/author/licence recorded: **16/16**
+
+### Monitor photograph review
+
+The "27-inch LED Monitor" photo is an in-use desk workstation, not a neutral-background packshot.
+It accurately depicts a monitor and is acceptable for development, but it does not meet the strict
+"packshot on neutral background" presentation criterion. "Desktop Monitor Setup" is likewise a desk
+scene. Both are documented as presentation-limited, not mismatches.
+
+### Why 59 records are DRAFT
+
+75 sample records total across five batches:
+
+| Batch | Total | Active | Draft |
+| --- | --- | --- | --- |
+| Original branded samples | 12 | 0 | 12 |
+| First demo batch (demo-) | 17 | 2 | 15 |
+| seed-catalog products (sample-) | 20 | 0 | 20 |
+| Second demo batch (demo2-) | 16 | 4 | 12 |
+| New licensed batch (demo3-) | 10 | 10 | 0 |
+| **Total** | **75** | **16** | **59** |
+
+The earlier "65 active" figure counted 12+17+20+16; the 10 demo3 records were added afterwards.
+59 = every sample record not selected for the provenanced showcase. Records are archived, not deleted.
+
+## Remaining work
+
+Phones, Fashion, Home, Beauty, Power and Gaming still need licensed, accurately matching photographs
+to reach four each. No branded lookalikes, AI impersonations, ratings or sellers were introduced.

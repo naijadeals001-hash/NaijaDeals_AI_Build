@@ -899,3 +899,13 @@ imagery-final-mobile.png. Shop E2E 13/13; storefront acceptance 15/15 (includes 
 
 Cached config may preserve layout/copy during outages, but demo visibility is never read from cache and
 defaults to hidden whenever current configuration cannot be fetched.
+
+
+## Catalogue population (2026-11-03, partial)
+
+16 of 32 target demo products displayed with complete provenance (16/16): Computers 4, Groceries 3,
+Home 2, Fashion 2, Beauty 2, Power 2, Gaming 1, Phones 0. 59 sample records remain DRAFT
+(12 branded + 15 demo1 + 20 seed-catalog + 12 demo2); 10 new demo3 records active. Shop E2E 13/13 and
+storefront acceptance 15/15 pass locally on 3010. Screenshots: qa-artifacts/preview/expanded-desktop.png,
+expanded-mobile.png. Milestone remains PARTIAL pending Phones/Fashion/Home/Beauty/Power/Gaming coverage.
+REA was used earlier for Amazon reference research; ECC/Soup were not invoked for this asset-sourcing pass.
