@@ -139,3 +139,27 @@ drives the hero action — NaijaShop keeps the marketplace search form; every ot
 for a module card (name, real description, status) with an "Open" link to that module. Switching back
 restores the search. Verified: 6 tabs, form ⇄ CTA swap works, axe 0, no mobile overflow
 (`qa-artifacts/preview/home-service-tabs-*.png`).
+
+
+## Owner-supplied brand artwork (2026-11-03)
+
+Eight brand illustrations were supplied by the project owner (AI-generated, delivered as PNG,
+converted to 1280-wide JPEG q82 under `public/brand-photography/`). They are used **only** as
+module/brand artwork — never as product listings, real customers, drivers, artists or property
+records. Alt text and data comments mark them as illustrations.
+
+| Asset | Size | SHA-256 prefix |
+| --- | --- | --- |
+| `aura-concierge-lagos.jpg` | 186 KB | `19ba91eb8cf6…` |
+| `aura-orb-lagos.jpg` | 141 KB | `ef8c394f4b62…` |
+| `drive-sedan-lagos.jpg` | 232 KB | `1b0a4c753d7e…` |
+| `drive-suv-lagos.jpg` | 254 KB | `6957e3ff5e44…` |
+| `stay-courtyard-villa.jpg` | 264 KB | `35b842e909ba…` |
+| `stay-waterfront-apartment.jpg` | 223 KB | `dbb9382ebf5a…` |
+| `stream-rooftop-lagos.jpg` | 160 KB | `4997a9d7d160…` |
+| `stream-studio-lagos.jpg` | 159 KB | `712923a852bc…` |
+
+Usage map: NaijaDrive hero (sedan) and ecosystem card (SUV); NaijaStay module page (waterfront
+apartment + courtyard villa); NaijaStream module page (studio + rooftop listener); Aura AI module
+page (concierge + orb). Verified in Chrome: all eight load with `naturalWidth > 0`, no 404s and
+axe 0 on the module pages.

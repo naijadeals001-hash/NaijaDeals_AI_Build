@@ -312,8 +312,8 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
           </div>
           <div className="relative min-h-48 lg:min-h-full">
             <img
-              src="/real-photography/module-drive.jpg"
-              alt="A Lagos street at dusk with traffic and city lights, photographed in Nigeria"
+              src="/brand-photography/drive-sedan-lagos.jpg"
+              alt="A green NaijaDrive sedan with its driver on a Lagos road at sunset (brand illustration)"
               width={1024}
               height={768}
               className="h-full w-full object-cover"

@@ -391,6 +391,12 @@ stayed ACTIVE, and the UI surfaced the row failure. Admin at 390×844 has 0 docu
 in-container table scrolling, working navigation and axe 0. Phase 05 stays **IN PROGRESS** only for
 work coverage: role-assignment UI, disputes admin view, city activation.
 
+**Owner-supplied brand artwork (same pass):** eight AI-generated illustrations were compressed into
+`public/brand-photography/` and wired into NaijaDrive (hero sedan, card SUV), NaijaStay (apartment +
+villa), NaijaStream (studio + rooftop) and Aura AI (concierge + orb). They are labelled as brand
+illustrations, never as real listings, customers or drivers. All eight load with naturalWidth > 0,
+no 404s, axe 0.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

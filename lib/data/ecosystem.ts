@@ -115,7 +115,7 @@ export const verticals: Vertical[] = [
     icon: Car,
     label: "Rides, car sharing and business",
     description: "Cars, shared seats, bikes and company rides.",
-    image: "/real-photography/module-drive.jpg",
+    image: "/brand-photography/drive-suv-lagos.jpg", // Owner-supplied NaijaDrive brand artwork (AI-generated, not a real driver photo).
     accent: "#fbbf24",
     status: "live",
     statusLabel: "Live in Lagos",
@@ -157,7 +157,7 @@ export const verticals: Vertical[] = [
     icon: Building2,
     label: "Hotels, shortlets, apartments",
     description: "Shortlets and hotels scored for power and safety.",
-    image: "/real-photography/module-stay.jpg", // Original NaijaDeals artwork: a modern Lagos shortlet at dusk. Generated illustration (not a photograph); replace with supplied accommodation photography when available.
+    image: "/brand-photography/stay-waterfront-apartment.jpg", // Owner-supplied NaijaStay brand artwork (AI-generated interior, not a real listing).
     accent: "#c084fc",
     status: "setup",
     statusLabel: "Setup required",
@@ -171,7 +171,7 @@ export const verticals: Vertical[] = [
     icon: Headphones,
     label: "Music, video, creators",
     description: "African charts, creator rooms and licensed audio.",
-    image: "/real-photography/module-stream.jpg", // Original NaijaDeals artwork: headphones, vinyl and a waveform for African creators. Generated illustration (not a photograph); replace with supplied music photography when available.
+    image: "/brand-photography/stream-studio-lagos.jpg", // Owner-supplied NaijaStream brand artwork (AI-generated studio scene, not a real artist).
     accent: "#f472b6",
     status: "setup",
     statusLabel: "Setup required",
@@ -199,7 +199,7 @@ export const verticals: Vertical[] = [
     icon: Bot,
     label: "Concierge and support",
     description: "Help across the ecosystem, only when configured.",
-    image: "/real-photography/module-aura.jpg", // Original NaijaDeals artwork: an assistant orb with chat bubbles for concierge and support. Generated illustration (not a photograph); replace with supplied support photography when available.
+    image: "/brand-photography/aura-concierge-lagos.jpg", // Owner-supplied Aura brand artwork (AI-generated, not a real customer).
     accent: "#22d3ee",
     status: "setup",
     statusLabel: "Setup required",

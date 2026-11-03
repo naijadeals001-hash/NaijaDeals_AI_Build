@@ -6,6 +6,22 @@ import { verticals } from "@/lib/data/ecosystem";
 
 const configuredShopRoutes = new Set(["categories", "product-listing"]);
 
+/** Second owner-supplied brand illustration per module page (AI-generated artwork). */
+const secondaryBrandImage: Record<string, { src: string; alt: string }> = {
+  naijastay: {
+    src: "/brand-photography/stay-courtyard-villa.jpg",
+    alt: "Brand illustration of a walled courtyard villa with a pool at twilight"
+  },
+  naijastream: {
+    src: "/brand-photography/stream-rooftop-lagos.jpg",
+    alt: "Brand illustration of a listener wearing headphones on a Lagos rooftop at sunset"
+  },
+  "aura-ai": {
+    src: "/brand-photography/aura-orb-lagos.jpg",
+    alt: "Brand illustration of a glowing green assistant orb on a table overlooking Lagos at night"
+  }
+};
+
 export function GenericPage({ slug }: { slug: string }) {
   if (slug === "naijashop") {
     return (
@@ -219,6 +235,7 @@ function UnconfiguredVertical({ slug }: { slug: string }) {
   };
   const Icon = copy.icon;
   const image = verticals.find((vertical) => vertical.href === `/${slug}`)?.image;
+  const secondary = secondaryBrandImage[slug];
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -231,7 +248,12 @@ function UnconfiguredVertical({ slug }: { slug: string }) {
       </Link>
       <section className="overflow-hidden rounded-3xl border border-border-soft bg-canvas">
         {image ? (
-          <img src={image} alt={`Original NaijaDeals artwork for ${copy.name}`} width={640} height={480} className="h-44 w-full object-cover" />
+          <div className={secondary ? "grid grid-cols-2" : ""}>
+            <img src={image} alt={`Brand illustration for ${copy.name}`} width={640} height={480} className={`w-full object-cover ${secondary ? "h-56" : "h-44"}`} />
+            {secondary ? (
+              <img src={secondary.src} alt={secondary.alt} width={640} height={480} className="h-56 w-full object-cover" />
+            ) : null}
+          </div>
         ) : null}
         <div className="p-6 sm:p-8">
           <Icon className="h-9 w-9 text-primary" aria-hidden="true" />
