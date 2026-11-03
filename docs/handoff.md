@@ -909,3 +909,11 @@ Home 2, Fashion 2, Beauty 2, Power 2, Gaming 1, Phones 0. 59 sample records rema
 storefront acceptance 15/15 pass locally on 3010. Screenshots: qa-artifacts/preview/expanded-desktop.png,
 expanded-mobile.png. Milestone remains PARTIAL pending Phones/Fashion/Home/Beauty/Power/Gaming coverage.
 REA was used earlier for Amazon reference research; ECC/Soup were not invoked for this asset-sourcing pass.
+
+
+## Four-per-department catalogue complete (2026-11-03)
+
+32 demo products displayed, 4 in each of 8 departments, 32 unique images, 32/32 provenance entries,
+0 broken images. Shop E2E 13/13 on 3010. Remaining DRAFT inventory is 59 records (12 branded, 15 demo1,
+20 seed-catalog, 12 demo2). Presentation quality is mixed (~26/32 suitable packshots); monitor photos
+are desk scenes. Screenshots refreshed: expanded-desktop.png / expanded-mobile.png.

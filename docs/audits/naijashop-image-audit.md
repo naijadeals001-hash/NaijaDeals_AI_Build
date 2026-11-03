@@ -113,3 +113,30 @@ The earlier "65 active" figure counted 12+17+20+16; the 10 demo3 records were ad
 
 Phones, Fashion, Home, Beauty, Power and Gaming still need licensed, accurately matching photographs
 to reach four each. No branded lookalikes, AI impersonations, ratings or sellers were introduced.
+
+
+## Final four-per-department pass (2026-11-03)
+
+**32 displayed products, 4 per department, 32 unique local images, 0 broken.**
+
+| Department | Displayed |
+| --- | --- |
+| Phones & Tablets | 4 |
+| Computers | 4 |
+| Home & Kitchen | 4 |
+| Fashion | 4 |
+| Beauty | 4 |
+| Groceries | 4 |
+| Power & Solar | 4 |
+| Gaming | 4 |
+| **Total** | **32** |
+
+Acceptance fields: loads 32/32; accurate image-to-listing 32/32 (names written to the photographed
+object, including "Red Patent Leather Baby Shoes", "Assorted Leather Handbags" and "Apple iPhone 6
+(Silver) 16GB"); suitable presentation approximately 26/32 (some in-use/editorial-style scenes);
+source/author/licence recorded 32/32 in public/products/provenance.json.
+
+Monitor review unchanged: both monitor images are desk scenes, accurate but not studio packshots.
+
+DRAFT reconciliation after this pass: 91 sample records total = 12 branded + 17 demo1 + 20 seed-catalog
++ 16 demo2 + 10 demo3 + 8 demo4 + 8 demo5. Active 32; DRAFT 59. Nothing deleted.
