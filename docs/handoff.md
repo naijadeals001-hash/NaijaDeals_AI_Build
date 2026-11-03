@@ -366,6 +366,11 @@ photographic hero carrying "Request a ride, get around Lagos with NaijaDrive", a
 yet"), then the existing live fare/vehicle/request flow. Verified: headline renders, 5 tab items,
 2 disabled, axe 0, no mobile overflow, screenshots in `qa-artifacts/preview/drive-landing-*.png`.
 
+**Homepage service switcher (same pass):** six service chips now sit in the hero
+(NaijaShop, NaijaDrive, NaijaEats, NaijaStay, NaijaSend, NaijaGigs). NaijaShop keeps the search form;
+selecting another service swaps it for a module card with an "Open" link, and switching back restores
+the search. Verified: 6 tabs, form ⇄ CTA swap, axe 0, no mobile overflow.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

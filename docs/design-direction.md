@@ -129,3 +129,13 @@ customer super-app, NaijaDrive and NaijaShop.
 Rules applied when adopting the mockups: no app-store badges (nothing shipped there), no
 "54 countries operational" claims (only six configured countries, four African), no competitor
 assets, and every count shown is computed from the database.
+
+
+## Homepage service switcher (2026-11-03)
+
+Reference 02/03's tab bar is now implemented in the hero: six service chips (NaijaShop, NaijaDrive,
+NaijaEats, NaijaStay, NaijaSend, NaijaGigs) with icons and `aria-pressed` state. The active chip
+drives the hero action — NaijaShop keeps the marketplace search form; every other selection swaps it
+for a module card (name, real description, status) with an "Open" link to that module. Switching back
+restores the search. Verified: 6 tabs, form ⇄ CTA swap works, axe 0, no mobile overflow
+(`qa-artifacts/preview/home-service-tabs-*.png`).
