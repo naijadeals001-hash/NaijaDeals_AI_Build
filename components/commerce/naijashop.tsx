@@ -114,10 +114,17 @@ export function NaijaShopPage() {
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [category, setCategory] = useState("all");
+  const [sort, setSort] = useState("featured");
+  const [priceBand, setPriceBand] = useState("all");
+  const [minRating, setMinRating] = useState(0);
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [showFilters, setShowFilters] = useState(false);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [addingId, setAddingId] = useState("");
+  const PAGE_SIZE = 12;
 
   useEffect(() => {
     let active = true;
@@ -138,12 +145,49 @@ export function NaijaShopPage() {
     };
   }, []);
 
-  const filtered = useMemo(
-    () => (category === "all" ? products : products.filter((product) => product.category.slug === category)),
-    [products, category]
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const product of products) counts.set(product.category.slug, (counts.get(product.category.slug) ?? 0) + 1);
+    return counts;
+  }, [products]);
+
+  const priceBands = useMemo(
+    () => [
+      { id: "all", label: "All prices", min: 0, max: Number.POSITIVE_INFINITY },
+      { id: "under-10k", label: "Under \u20a610,000", min: 0, max: 1_000_000 },
+      { id: "10k-50k", label: "\u20a610,000 \u2013 \u20a649,999", min: 1_000_000, max: 5_000_000 },
+      { id: "50k-100k", label: "\u20a650,000 \u2013 \u20a699,999", min: 5_000_000, max: 10_000_000 },
+      { id: "100k-plus", label: "\u20a6100,000 & above", min: 10_000_000, max: Number.POSITIVE_INFINITY }
+    ],
+    []
   );
 
+  const filtered = useMemo(() => {
+    const band = priceBands.find((item) => item.id === priceBand) ?? priceBands[0];
+    const list = products.filter((product) => {
+      if (category !== "all" && product.category.slug !== category) return false;
+      const price = Number(product.priceKobo);
+      if (price < band.min || price > band.max) return false;
+      if (minRating > 0 && (product.rating?.average ?? 0) < minRating) return false;
+      if (inStockOnly && (product.available ?? 0) <= 0) return false;
+      return true;
+    });
+
+    const sorted = [...list];
+    if (sort === "price-asc") sorted.sort((a, b) => Number(a.priceKobo) - Number(b.priceKobo));
+    if (sort === "price-desc") sorted.sort((a, b) => Number(b.priceKobo) - Number(a.priceKobo));
+    if (sort === "rating") sorted.sort((a, b) => (b.rating?.average ?? 0) - (a.rating?.average ?? 0) || (b.rating?.count ?? 0) - (a.rating?.count ?? 0));
+    return sorted;
+  }, [products, category, priceBand, minRating, inStockOnly, sort, priceBands]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const vendors = useMemo(() => new Set(products.map((product) => product.vendor.id)).size, [products]);
+
+  function resetPage() {
+    setPage(1);
+  }
 
   async function add(product: ApiProduct) {
     setAddingId(product.id);
@@ -163,55 +207,62 @@ export function NaijaShopPage() {
     }
   }
 
+  const hasFilters = category !== "all" || priceBand !== "all" || minRating > 0 || inStockOnly;
+
   return (
-    <div className="space-y-8">
-      <section className="overflow-hidden rounded-3xl bg-night p-6 text-white sm:p-10">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-primary-live">NaijaShop</p>
-          <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">
-            Shop verified Nigerian sellers. Pay safely. Track every delivery.
-          </h1>
-          <p className="mt-4 max-w-2xl text-sm text-white/70 sm:text-base">
-            Real listings from real sellers. Payment is verified on our server before an order is accepted, and
-            funds stay in escrow until you confirm delivery.
-          </p>
+    <div className="space-y-0">
+      <MarketplaceBar categories={categories} />
 
-          <form action="/search" method="get" className="mt-6 flex items-center gap-2 rounded-2xl bg-white p-1.5 shadow-lift max-w-xl">
-            <label htmlFor="shop-search" className="sr-only">
-              Search products
-            </label>
-            <Search className="ml-2 h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
-            <input
-              id="shop-search"
-              name="q"
-              type="search"
-              inputMode="search"
-              placeholder="Search phones, fashion, home, electronics..."
-              className="min-h-11 w-full min-w-0 bg-transparent px-1 text-sm font-semibold text-ink outline-none placeholder:text-muted/70"
-            />
-            <button
-              type="submit"
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-white transition hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              aria-label="Search products"
-            >
-              <ArrowRight className="h-5 w-5" aria-hidden="true" />
-            </button>
-          </form>
+      <nav aria-label="Shop departments" className="mt-3 flex gap-1.5 overflow-x-auto pb-2">
+        <button
+          type="button"
+          onClick={() => { setCategory("all"); resetPage(); }}
+          aria-pressed={category === "all"}
+          className={chipClass(category === "all")}
+        >
+          All departments
+        </button>
+        {categories.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => { setCategory(item.slug); resetPage(); }}
+            aria-pressed={category === item.slug}
+            className={chipClass(category === item.slug)}
+          >
+            {item.name}
+          </button>
+        ))}
+      </nav>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/60">
-            <span>{products.length} live listings</span>
-            <span>·</span>
-            <span>{vendors} verified sellers</span>
-            <span>·</span>
-            <span>{categories.length} categories</span>
-            <span>·</span>
-            <span>Server-verified payments</span>
+      <section className="mt-2 overflow-hidden rounded-lg border border-border-soft bg-canvas">
+        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">NaijaShop marketplace</p>
+            <h1 className="mt-1 font-display text-2xl font-extrabold sm:text-3xl">Shop verified Nigerian sellers</h1>
+            <p className="mt-1 text-sm text-muted">
+              Escrow-protected checkout, tracked delivery and server-verified payments — {products.length} listings from {vendors} sellers.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-center text-[11px] font-bold text-muted sm:w-auto">
+            <div className="rounded-lg bg-surface-low px-3 py-2">
+              <ShieldCheck className="mx-auto mb-1 h-4 w-4 text-primary" aria-hidden="true" />
+              Escrow
+            </div>
+            <div className="rounded-lg bg-surface-low px-3 py-2">
+              <Truck className="mx-auto mb-1 h-4 w-4 text-primary" aria-hidden="true" />
+              Tracked
+            </div>
+            <div className="rounded-lg bg-surface-low px-3 py-2">
+              <PackageCheck className="mx-auto mb-1 h-4 w-4 text-primary" aria-hidden="true" />
+              Returns
+            </div>
           </div>
         </div>
       </section>
 
       {notice ? (
-        <div role="status" className="rounded-xl bg-primary-soft p-4 text-sm font-bold text-primary">
+        <div role="status" className="mt-4 rounded-lg border border-primary/20 bg-primary-soft p-3 text-sm font-bold text-primary">
           {notice}{" "}
           <Link href="/cart" className="underline">
             View cart
@@ -219,64 +270,400 @@ export function NaijaShopPage() {
         </div>
       ) : null}
       {error ? (
-        <ErrorBox
-          message={error}
-          action={
-            <Link href="/login" className="mt-2 inline-block font-bold underline">
-              Sign in
-            </Link>
-          }
-        />
+        <div className="mt-4">
+          <ErrorBox
+            message={error}
+            action={
+              <Link href="/login" className="mt-2 inline-block font-bold underline">
+                Sign in
+              </Link>
+            }
+          />
+        </div>
       ) : null}
 
-      <section>
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="font-display text-2xl font-extrabold">Browse the catalogue</h2>
-            <p className="text-sm text-muted">Stock counts and prices come directly from the seller inventory.</p>
-          </div>
-          <Link href="/search" className="text-sm font-bold text-primary underline">
-            Advanced search
-          </Link>
-        </div>
-        <div className="mb-5 flex flex-wrap gap-2">
-          <button
-            onClick={() => setCategory("all")}
-            className={`min-h-10 rounded-full px-4 text-sm font-bold ${category === "all" ? "bg-primary text-white" : "bg-canvas text-muted ring-1 ring-border-soft"}`}
-          >
-            All
-          </button>
-          {categories.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setCategory(item.slug)}
-              className={`min-h-10 rounded-full px-4 text-sm font-bold ${category === item.slug ? "bg-primary text-white" : "bg-canvas text-muted ring-1 ring-border-soft"}`}
-            >
-              {item.name}
-            </button>
-          ))}
+      <div className="mt-4 grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <div className={showFilters ? "block" : "hidden lg:block"}>
+        <ShopFilters
+          categories={categories}
+          categoryCounts={categoryCounts}
+          category={category}
+          onCategory={(value) => { setCategory(value); resetPage(); }}
+          priceBands={priceBands}
+          priceBand={priceBand}
+          onPriceBand={(value) => { setPriceBand(value); resetPage(); }}
+          minRating={minRating}
+          onMinRating={(value) => { setMinRating(value); resetPage(); }}
+          inStockOnly={inStockOnly}
+          onInStockOnly={(value) => { setInStockOnly(value); resetPage(); }}
+          hasFilters={hasFilters}
+          onClear={() => { setCategory("all"); setPriceBand("all"); setMinRating(0); setInStockOnly(false); resetPage(); }}
+        />
         </div>
 
-        {status === "loading" ? <Loading /> : null}
-        {status === "error" ? <ErrorBox message={error} /> : null}
-        {status === "ready" && filtered.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border-soft bg-canvas p-8 text-center">
-            <PackageCheck className="mx-auto mb-3 h-8 w-8 text-primary" />
-            <p className="font-bold">No listings in this category yet.</p>
-            <p className="text-sm text-muted">Sellers can add products from their dashboard.</p>
+        <section aria-label="Products">
+          <div className="flex flex-col gap-2 rounded-lg border border-border-soft bg-surface-low px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-bold text-ink">
+              {status === "ready" ? (
+                filtered.length > 0 ? (
+                  <>
+                    Showing <span className="text-primary">{filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–{Math.min(filtered.length, currentPage * PAGE_SIZE)}</span> of {filtered.length} results
+                  </>
+                ) : (
+                  "No results"
+                )
+              ) : (
+                "Loading products…"
+              )}
+            </p>
+            <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowFilters((value) => !value)}
+              aria-expanded={showFilters}
+              className="min-h-9 rounded-lg border border-border-soft bg-canvas px-3 text-xs font-bold text-ink lg:hidden"
+            >
+              Filters
+            </button>
+            <label className="flex items-center gap-2 text-xs font-bold text-muted">
+              Sort by:
+              <select
+                value={sort}
+                onChange={(event) => { setSort(event.target.value); resetPage(); }}
+                className="min-h-9 rounded-lg border border-border-soft bg-canvas px-2 text-sm font-semibold text-ink focus:border-primary focus:outline-none"
+              >
+                <option value="featured">Featured</option>
+                <option value="price-asc">Price: low to high</option>
+                <option value="price-desc">Price: high to low</option>
+                <option value="rating">Average customer review</option>
+              </select>
+            </label>
+            </div>
           </div>
-        ) : null}
-        {status === "ready" && filtered.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((product) => (
-              <div key={product.id} className={addingId === product.id ? "pointer-events-none opacity-60" : ""}>
-                <ProductCard product={product} onAdd={add} />
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </section>
+
+          {status === "loading" ? <div className="mt-4"><Loading /></div> : null}
+          {status === "error" ? <div className="mt-4"><ErrorBox message={error} /></div> : null}
+          {status === "ready" && filtered.length === 0 ? (
+            <div className="mt-4 rounded-lg border border-dashed border-border-soft bg-canvas p-10 text-center">
+              <PackageCheck className="mx-auto mb-3 h-8 w-8 text-primary" aria-hidden="true" />
+              <p className="font-bold">No listings match these filters.</p>
+              <p className="mt-1 text-sm text-muted">Try clearing a filter or browsing all departments.</p>
+              {hasFilters ? (
+                <button
+                  type="button"
+                  onClick={() => { setCategory("all"); setPriceBand("all"); setMinRating(0); setInStockOnly(false); resetPage(); }}
+                  className="mt-4 min-h-10 rounded-lg border border-border-soft px-4 text-sm font-bold text-primary"
+                >
+                  Clear filters
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {status === "ready" && visible.length > 0 ? (
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+              {visible.map((product) => (
+                <div key={product.id} className={addingId === product.id ? "pointer-events-none opacity-60" : ""}>
+                  <ShopResultCard product={product} onAdd={add} />
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {pageCount > 1 ? (
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.max(1, value - 1))}
+                disabled={currentPage === 1}
+                className="min-h-10 rounded-lg border border-border-soft px-4 text-sm font-bold disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span className="text-sm font-bold text-muted" aria-live="polite">
+                Page {currentPage} of {pageCount}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
+                disabled={currentPage === pageCount}
+                className="min-h-10 rounded-lg border border-border-soft px-4 text-sm font-bold disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          ) : null}
+        </section>
+      </div>
     </div>
+  );
+}
+
+function chipClass(active: boolean) {
+  return [
+    "min-h-9 whitespace-nowrap rounded-full px-3.5 text-xs font-bold transition",
+    active ? "bg-primary text-white" : "border border-border-soft bg-canvas text-ink hover:border-primary/40 hover:text-primary"
+  ].join(" ");
+}
+
+function MarketplaceBar({ categories }: { categories: ApiCategory[] }) {
+  const [scope, setScope] = useState("all");
+  return (
+    <div className="rounded-lg bg-[#0b1a13] px-3 py-2.5 text-white sm:px-4">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-4">
+        <Link href="/" className="flex items-center gap-2 rounded px-2 py-1 text-sm font-extrabold">
+          <span className="grid h-7 w-7 place-items-center rounded bg-primary-live text-[11px] font-black text-[#04140f]">ND</span>
+          NaijaDeals
+        </Link>
+
+        <div className="hidden items-start gap-1.5 px-2 text-xs leading-tight text-white/80 sm:flex">
+          <MapPin className="mt-0.5 h-4 w-4 text-primary-live" aria-hidden="true" />
+          <span>
+            Deliver to <span className="font-extrabold text-white">Lagos, Nigeria</span>
+          </span>
+        </div>
+
+        <form action="/search" method="get" className="flex flex-1 items-stretch overflow-hidden rounded-lg bg-white text-ink">
+          <label htmlFor="shop-department" className="sr-only">
+            Search department
+          </label>
+          <select
+            id="shop-department"
+            name="category"
+            value={scope}
+            onChange={(event) => setScope(event.target.value)}
+            className="hidden max-w-[9.5rem] border-r border-border-soft bg-surface-low px-2 text-xs font-semibold text-ink sm:block"
+          >
+            <option value="all">All departments</option>
+            {categories.map((item) => (
+              <option key={item.id} value={item.slug}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="shop-search" className="sr-only">
+            Search NaijaShop
+          </label>
+          <input
+            id="shop-search"
+            name="q"
+            type="search"
+            placeholder="Search NaijaShop products, brands and sellers"
+            className="min-h-10 min-w-0 flex-1 bg-white px-3 text-sm text-ink outline-none placeholder:text-muted/70"
+          />
+          <button type="submit" className="grid w-11 place-items-center bg-[#f3b33d] text-[#0b1a13] transition hover:bg-[#e5a52f]" aria-label="Search">
+            <Search className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </form>
+
+        <div className="flex items-center gap-4 text-xs font-bold">
+          <Link href="/account" className="hidden leading-tight hover:text-primary-live sm:block">
+            <span className="block text-white/70">Hello, sign in</span>
+            <span className="text-sm">Account &amp; lists</span>
+          </Link>
+          <Link href="/orders" className="hidden leading-tight hover:text-primary-live sm:block">
+            <span className="block text-white/70">Returns</span>
+            <span className="text-sm">&amp; Orders</span>
+          </Link>
+          <Link href="/cart" className="flex items-center gap-1.5 rounded px-1 py-1 hover:text-primary-live">
+            <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+            <span className="text-sm">Cart</span>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShopFilters(props: {
+  categories: ApiCategory[];
+  categoryCounts: Map<string, number>;
+  category: string;
+  onCategory: (value: string) => void;
+  priceBands: Array<{ id: string; label: string; min: number; max: number }>;
+  priceBand: string;
+  onPriceBand: (value: string) => void;
+  minRating: number;
+  onMinRating: (value: number) => void;
+  inStockOnly: boolean;
+  onInStockOnly: (value: boolean) => void;
+  hasFilters: boolean;
+  onClear: () => void;
+}) {
+  return (
+    <aside aria-label="Filter results" className="space-y-4">
+      <details open className="rounded-lg border border-border-soft bg-canvas lg:open">
+        <summary className="cursor-pointer list-none px-4 py-3 font-extrabold">
+          Department
+          <span className="float-right text-xs font-bold text-muted lg:hidden">tap to change</span>
+        </summary>
+        <ul className="space-y-1 px-3 pb-3 text-sm">
+          <li>
+            <button
+              type="button"
+              onClick={() => props.onCategory("all")}
+              aria-pressed={props.category === "all"}
+              className={filterItemClass(props.category === "all")}
+            >
+              All departments <span className="text-xs text-muted">({[...props.categoryCounts.values()].reduce((a, b) => a + b, 0)})</span>
+            </button>
+          </li>
+          {props.categories.map((item) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                onClick={() => props.onCategory(item.slug)}
+                aria-pressed={props.category === item.slug}
+                className={filterItemClass(props.category === item.slug)}
+              >
+                {item.name} <span className="text-xs text-muted">({props.categoryCounts.get(item.slug) ?? 0})</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <details open className="rounded-lg border border-border-soft bg-canvas">
+        <summary className="cursor-pointer list-none px-4 py-3 font-extrabold">Price</summary>
+        <ul className="space-y-1 px-3 pb-3 text-sm">
+          {props.priceBands.map((band) => (
+            <li key={band.id}>
+              <button
+                type="button"
+                onClick={() => props.onPriceBand(band.id)}
+                aria-pressed={props.priceBand === band.id}
+                className={filterItemClass(props.priceBand === band.id)}
+              >
+                {band.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <details open className="rounded-lg border border-border-soft bg-canvas">
+        <summary className="cursor-pointer list-none px-4 py-3 font-extrabold">Customer review</summary>
+        <ul className="space-y-1 px-3 pb-3 text-sm">
+          {[4, 3, 0].map((value) => (
+            <li key={value}>
+              <button
+                type="button"
+                onClick={() => props.onMinRating(value)}
+                aria-pressed={props.minRating === value}
+                className={filterItemClass(props.minRating === value)}
+              >
+                {value === 0 ? "All ratings" : `${value} stars & up`}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <details open className="rounded-lg border border-border-soft bg-canvas">
+        <summary className="cursor-pointer list-none px-4 py-3 font-extrabold">Availability</summary>
+        <label className="flex items-center gap-2 px-4 pb-4 text-sm font-semibold">
+          <input
+            type="checkbox"
+            checked={props.inStockOnly}
+            onChange={(event) => props.onInStockOnly(event.target.checked)}
+            className="h-4 w-4 accent-[#006d38]"
+          />
+          In stock only
+        </label>
+      </details>
+
+      {props.hasFilters ? (
+        <button type="button" onClick={props.onClear} className="w-full rounded-lg border border-border-soft px-3 py-2 text-sm font-bold text-primary">
+          Clear all filters
+        </button>
+      ) : null}
+    </aside>
+  );
+}
+
+function filterItemClass(active: boolean) {
+  return [
+    "w-full rounded px-2 py-1.5 text-left transition",
+    active ? "bg-primary-soft font-extrabold text-primary" : "font-semibold text-ink hover:text-primary"
+  ].join(" ");
+}
+
+function Stars({ average, count }: { average: number | null | undefined; count: number }) {
+  const value = average ?? 0;
+  if (count === 0) return <span className="text-[11px] text-muted">No reviews yet</span>;
+  return (
+    <span className="flex items-center gap-1 text-xs" aria-label={count > 0 ? `${value.toFixed(1)} out of 5 stars, ${count} reviews` : "No reviews yet"}>
+      <span className="flex" aria-hidden="true">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`h-3.5 w-3.5 ${value >= star - 0.25 ? "fill-[#f3b33d] text-[#f3b33d]" : "fill-transparent text-[#c9a227]"}`}
+          />
+        ))}
+      </span>
+      <span className="font-bold text-[#007185]">{count > 0 ? count.toLocaleString() : "0"}</span>
+    </span>
+  );
+}
+
+function ShopResultCard({ product, onAdd }: { product: ApiProduct; onAdd: (product: ApiProduct) => void }) {
+  const available = product.available ?? 0;
+  const discount = product.compareAtKobo && Number(product.compareAtKobo) > Number(product.priceKobo)
+    ? Math.round((1 - Number(product.priceKobo) / Number(product.compareAtKobo)) * 100)
+    : 0;
+
+  return (
+    <article className="flex h-full flex-col rounded-lg border border-border-soft bg-canvas p-3 transition hover:shadow-soft">
+      <Link href={`/product/${product.slug}`} className="grid place-items-center bg-white">
+        <img
+          src={product.images[0]?.url || "/products/tecno-spark-20.svg"}
+          alt={product.images[0]?.alt || product.name}
+          width={400}
+          height={400}
+          loading="lazy"
+          className="aspect-square w-full object-contain p-2"
+        />
+      </Link>
+      <Link href={`/product/${product.slug}`} className="mt-2 line-clamp-2 text-sm font-semibold leading-snug text-ink hover:text-primary">
+        {product.name}
+      </Link>
+      <div className="mt-1 flex items-center gap-2">
+        <Stars average={product.rating?.average} count={product.rating?.count ?? 0} />
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-baseline gap-2">
+        <span className="font-display text-lg font-extrabold text-ink">{koboToNaira(product.priceKobo)}</span>
+        {discount > 0 ? (
+          <span className="rounded bg-[#cc0c39] px-1.5 py-0.5 text-[10px] font-black text-white">-{discount}%</span>
+        ) : null}
+      </div>
+      {product.compareAtKobo ? (
+        <p className="text-[11px] text-muted">
+          List: <span className="line-through">{koboToNaira(product.compareAtKobo)}</span>
+        </p>
+      ) : null}
+      <p className="mt-1 text-[11px] font-semibold text-muted">
+        {available > 0 ? (available <= 3 ? `Only ${available} left in stock` : "In stock") : "Currently unavailable"}
+      </p>
+      <p className="text-[11px] text-muted">Sold by {product.vendor.name}</p>
+      <div className="mt-auto pt-3">
+        {product.variants && product.variants.length > 0 ? (
+          <Link
+            href={`/product/${product.slug}`}
+            className="inline-flex min-h-9 w-full items-center justify-center rounded-full bg-[#ffd814] px-3 text-xs font-bold text-[#0b1a13] transition hover:bg-[#f7ca00]"
+          >
+            See options
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onAdd(product)}
+            disabled={available === 0}
+            className="inline-flex min-h-9 w-full items-center justify-center rounded-full bg-[#ffd814] px-3 text-xs font-bold text-[#0b1a13] transition hover:bg-[#f7ca00] disabled:cursor-not-allowed disabled:bg-surface-mid disabled:text-muted"
+          >
+            {available === 0 ? "Out of stock" : "Add to cart"}
+          </button>
+        )}
+      </div>
+    </article>
   );
 }
 

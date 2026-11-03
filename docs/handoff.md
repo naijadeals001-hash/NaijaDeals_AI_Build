@@ -262,6 +262,17 @@ surfaces out with `forced-color-adjust` under `@media (forced-colors: active)`. 
 header/nav ×3/main/footer/aside, zero unnamed controls. Evidence:
 `docs/audits/deepseek-accessibility-02b-02d.md`. A manual screen-reader pass remains.
 
+## NaijaShop marketplace rework (2026-11-03)
+
+`/naijashop` now follows the Amazon-referenced marketplace floor captured with REA
+(Evidence `ev_92440282…bb9fd`): utility bar (deliver-to, department scope, search, account,
+returns/orders, cart), department strip, left filter rail with real category counts, NGN price
+bands, rating floor and in-stock toggle, a results header with sort, and Amazon-shaped product
+cards (square image, stars, review count, price, strike list price, discount badge, stock, seller,
+yellow Add to cart / See options). Mobile collapses filters behind a Filters button and keeps a
+2-column grid. Verified: 12 cards build from live API data, axe 0 violations, no mobile overflow,
+anonymous add-to-cart surfaces the real sign-in error. Details: `docs/design-direction.md`.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

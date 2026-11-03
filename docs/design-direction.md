@@ -55,3 +55,30 @@ primary navigation) are preserved so the regression suite still finds them.
 3. NaijaDrive booking flow: map-first fare estimate, vehicle cards, fare breakdown.
 4. Control Center density pass against the master reference (compact KPIs, module tabs).
 5. Accessibility pass (02A–02D): contrast, focus order, screen-reader labels.
+
+## NaijaShop marketplace floor (2026-11-03)
+
+Reference: **REA capture of `https://www.amazon.com/s?k=wireless+headphones`**, Evidence
+`ev_92440282acbf0ec7aab1b4d0bf4a00d6d9656607192d0d3a727f010b864bb9fd` (1,3062 DOM nodes,
+5,586 accessibility nodes), plus the existing `docs/amazon-observed-behavior.md` REA record for
+homepage, product page and cart. Screenshot kept outside Git at
+`~/rea-artifacts/amazon-search.png` (SHA-256 `d12f2c40…`).
+
+Observed patterns reproduced with original NaijaDeals code, copy and data:
+
+| Amazon pattern | NaijaDeals implementation |
+| --- | --- |
+| Utility header: deliver-to → department select → search → account → returns/orders → cart | Dark marketplace bar with "Deliver to Lagos, Nigeria", category scope, search form, Account & Lists, Returns & Orders, Cart |
+| Department strip under the header | Scrollable department chips bound to real categories |
+| Results count + sort control | "Showing 1–12 of N results", sort by Featured / price asc / price desc / review |
+| Left filter rail (department, price, reviews, availability) | Real counts per category, four computed NGN price bands, rating floor, in-stock toggle; collapsible on mobile via a Filters button |
+| Result cards: image, title, stars + count, price, strike list price, discount badge, stock, seller, buy action | Amazon-shaped card with square product image, stars, review count, discount %, "Only N left", seller, yellow Add to cart / See options |
+| Pagination | 12-per-page Previous/Next with an aria-live page label |
+
+Honesty rules kept: no fabricated review counts (products without reviews read "No reviews yet"),
+no invented delivery promises, no fake deals — discounts only render when a real
+`compareAtKobo` exceeds the price.
+
+Verified: 12 cards / 9 add buttons / 3 variant cards, axe-core **0 violations**, 390 px layout has
+no overflow and the filter panel toggles, anonymous add-to-cart returns the real 401 path with a
+"Sign in to add items" alert (`qa-artifacts/preview/shop-amazon-*.png`).

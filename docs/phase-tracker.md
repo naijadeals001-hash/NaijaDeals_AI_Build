@@ -138,6 +138,11 @@ dialogs are introduced.
 
 ## Phase 08 — NaijaShop end-to-end commerce
 
+**UI slice (2026-11-03):** the marketplace floor was rebuilt against an REA capture of the Amazon
+search experience (utility bar, department strip, filter rail with counts, sort, Amazon-shaped
+cards, pagination). Functional commerce gates (checkout/escrow/returns acceptance) are unchanged
+and still governed by Phases 07–08; this is a presentation and interaction slice only.
+
 **Status:** NOT STARTED (depends on Phase 07)
 
 ## Phase 09 — NaijaDrive core rides and driver operations
