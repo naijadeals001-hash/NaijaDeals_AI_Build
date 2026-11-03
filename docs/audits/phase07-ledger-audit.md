@@ -78,9 +78,9 @@ credited-minus-debited ledger net. On the isolated database **3 of 37 wallets do
 
 | Wallet | Owner type | Balance | Ledger net | Difference |
 | --- | --- | --- | --- | --- |
-| cmw09h8cn…wsp8 | SYSTEM | 0 | 2,418,000 | −2,418,000 |
-| cmw09h8cj…oax8 | VENDOR | 1,425,474 | −25,974,526 | +27,400,000 |
+| cmw09h8cj…oax8 | SYSTEM | 1,425,474 | −25,974,526 | +27,400,000 |
 | cmw09h8cm…dkrx | VENDOR | 2,446,726 | 22,256,226 | −19,809,500 |
+| cmw09h8cn…wsp8 | VENDOR | 0 | 2,418,000 | −2,418,000 |
 
 These are historical rows: payouts previously decremented the wallet without a `WalletTransaction`,
 and early fixture/escrow flows did not always post a matching ledger entry. New payouts now post a
