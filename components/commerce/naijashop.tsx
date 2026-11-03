@@ -185,9 +185,19 @@ export function NaijaShopPage() {
   });
 
   useEffect(() => {
+    try {
+      const cached = window.localStorage.getItem("naijashop.storefront");
+      if (cached) setStorefront((current) => ({ ...current, ...JSON.parse(cached) }));
+    } catch {
+      // Ignore malformed cache and keep the conservative defaults.
+    }
     fetch("/api/storefront")
       .then((response) => (response.ok ? response.json() : null))
-      .then((value) => { if (value) setStorefront((current) => ({ ...current, ...value })); })
+      .then((value) => {
+        if (!value) return;
+        setStorefront((current) => ({ ...current, ...value }));
+        try { window.localStorage.setItem("naijashop.storefront", JSON.stringify(value)); } catch { /* storage may be unavailable */ }
+      })
       .catch(() => undefined);
   }, []);
 

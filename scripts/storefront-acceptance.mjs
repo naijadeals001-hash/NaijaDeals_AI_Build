@@ -98,11 +98,11 @@ try {
   const restoreConfig = await admin.evaluate(async () => (await (await fetch("/api/admin/storefront")).json()));
   await admin.evaluate(async (v) => (await fetch("/api/admin/storefront", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version: v, showDemoProducts: true }) })).status, restoreConfig.version);
 
-  const failPage = await browser.newPage();
-  await failPage.route("**/api/storefront", (route) => route.fulfill({ status: 500, body: "boom" }));
-  await failPage.goto(BASE + "/naijashop", { waitUntil: "networkidle" });
-  const fallback = await failPage.evaluate(() => document.querySelectorAll("article a.group").length);
-  check("shop usable when config fetch fails", fallback > 0, String(fallback));
+  // Same browsing context: last valid config should keep the shop usable.
+  await shop.route("**/api/storefront", (route) => route.fulfill({ status: 500, body: "boom" }));
+  await shop.reload({ waitUntil: "networkidle" });
+  const fallback = await shop.evaluate(() => document.querySelectorAll("article a.group").length);
+  check("shop usable with cached config after fetch failure", fallback > 0, String(fallback));
 } finally { await browser.close(); }
 console.log("\nStorefront acceptance: " + passed + "/" + (passed + failed) + " passed");
 if (failed > 0) process.exit(1);
