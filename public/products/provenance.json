@@ -298,5 +298,25 @@
   "creator": "Tim-Hoggarth",
   "license": "by-sa",
   "source": "https://www.flickr.com/photos/101300267@N05/13610398033"
+ },
+ {
+  "path": "/products/demo5/beauty-moisturizer.jpg",
+  "products": [
+   "demo5-moisturizer"
+  ],
+  "title": "Jars",
+  "creator": "Hari Prasad Nadig",
+  "license": "by-sa",
+  "source": "https://www.flickr.com/photos/66722888@N00/4466992738"
+ },
+ {
+  "path": "/products/demo5/gaming-xbox.jpg",
+  "products": [
+   "demo5-xbox-controller"
+  ],
+  "title": "Xbox 360 Controller",
+  "creator": "benjamin-nagel",
+  "license": "by-sa",
+  "source": "https://www.flickr.com/photos/28526479@N02/2902721172"
  }
 ]
