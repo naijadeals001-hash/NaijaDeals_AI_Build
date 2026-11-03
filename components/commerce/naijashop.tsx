@@ -300,7 +300,7 @@ export function NaijaShopPage() {
 
       {showSamples ? (
         <p className="mt-2 rounded border border-[#B45309]/30 bg-amber/10 px-3 py-2 text-[11px] text-ink">
-          <strong>Demo catalogue.</strong> Sample listings are shown to preview the storefront; live seller listings replace them.
+          <strong>Demo inventory.</strong> These listings are for visual testing only; prices and stock are illustrative.
         </p>
       ) : null}
 
