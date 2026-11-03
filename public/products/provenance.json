@@ -238,5 +238,65 @@
   "creator": "osman.gucel",
   "license": "by",
   "source": "https://www.flickr.com/photos/126089327@N04/14714880858"
+ },
+ {
+  "path": "/products/demo5/phone-b1.jpg",
+  "products": [
+   "demo5-iphone"
+  ],
+  "title": "iPhone 5S Noise",
+  "creator": "andreasdantz",
+  "license": "by",
+  "source": "https://www.flickr.com/photos/29481208@N08/9836126276"
+ },
+ {
+  "path": "/products/demo5/phone-b2.jpg",
+  "products": [
+   "demo5-smartphone"
+  ],
+  "title": "iPhone Background - Clean Crystal",
+  "creator": "Patrick Hoesly",
+  "license": "by",
+  "source": "https://www.flickr.com/photos/60057912@N00/5415130206"
+ },
+ {
+  "path": "/products/demo5/home-coffee.jpg",
+  "products": [
+   "demo5-coffee-maker"
+  ],
+  "title": "New coffee maker",
+  "creator": "scriptingnews",
+  "license": "by-sa",
+  "source": "https://www.flickr.com/photos/22221172@N00/464367776"
+ },
+ {
+  "path": "/products/demo5/fashion-shoes.jpg",
+  "products": [
+   "demo5-baby-shoes"
+  ],
+  "title": "Red baby girl patent leather shoes",
+  "creator": "38 Parrots",
+  "license": "by",
+  "source": "https://www.flickr.com/photos/39603331@N06/3637656103"
+ },
+ {
+  "path": "/products/demo5/beauty-shampoo3.jpg",
+  "products": [
+   "demo5-shampoo-bars"
+  ],
+  "title": "handmade soap - castile shampoo bars",
+  "creator": "mommyknows { Kim Becker }",
+  "license": "by",
+  "source": "https://www.flickr.com/photos/13724840@N00/7468313382"
+ },
+ {
+  "path": "/products/demo5/gaming-controller3.jpg",
+  "products": [
+   "demo5-controller-case"
+  ],
+  "title": "XBOX Controller Case",
+  "creator": "Tim-Hoggarth",
+  "license": "by-sa",
+  "source": "https://www.flickr.com/photos/101300267@N05/13610398033"
  }
 ]
