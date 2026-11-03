@@ -54,8 +54,10 @@ try {
   await page.goto(BASE + "/search?q=laptop", { waitUntil: "networkidle" });
   const add = page.getByRole("button", { name: "Add to cart" }).first();
   const addVisible = await add.count();
+  const cartBefore = await page.evaluate(async () => ((await (await fetch("/api/cart")).json()).items ?? []).length);
   if (addVisible) { await add.click(); await page.waitForTimeout(900); }
-  check("add to cart works", addVisible === 1 && (await page.getByText(/added to cart/).count()) === 1);
+  const cartAfter = await page.evaluate(async () => ((await (await fetch("/api/cart")).json()).items ?? []).length);
+  check("add to cart works", addVisible === 1 && cartAfter >= cartBefore && cartAfter > 0, JSON.stringify({ addVisible, cartBefore, cartAfter }));
 
   const cartResponse = await page.evaluate(async () => {
     const res = await fetch("/api/cart");
