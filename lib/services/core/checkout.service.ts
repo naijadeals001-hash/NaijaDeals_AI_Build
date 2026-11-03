@@ -70,6 +70,10 @@ export async function checkout(input: {
   if (unavailable) {
     throw new ApiError(409, "item_unavailable", `${unavailable.product.name} is no longer available. Remove it from the cart.`);
   }
+  const demoItem = cart.items.find((item) => item.product.isSample);
+  if (demoItem) {
+    throw new ApiError(409, "demo_inventory", "Demo inventory is for visual review only and cannot be purchased. Remove demo items before checking out.");
+  }
 
   const deliveryAddress = formatAddress(input.address);
   const byVendor = new Map<string, typeof cart.items>();
