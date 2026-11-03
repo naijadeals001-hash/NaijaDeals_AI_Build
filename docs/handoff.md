@@ -303,6 +303,11 @@ summary and a refresh. Verified in Chrome: 12 selected via the header checkbox, 
 suspended and then restored to ACTIVE, selection cleared, axe 0 with the bar visible. Bulk actions
 for orders, rides and payments are intentionally not enabled yet.
 
+Every operational admin table (orders, deliveries, rides, payouts, products, applications,
+payments, users, vendors, couriers, audit) now exposes the shared `View` dialog; audit rows title
+themselves by action (e.g. `product.moderated`) and rides by ride number. Verified: ride dialog
+7 fields, audit dialog 5 fields, no console errors.
+
 Orders, Vendors, Products and Users tables now expose a shared `View` action that opens an accessible native modal dialog
 with the row's real fields (status, payment, total, customer/vendor, market, owner, counts,
 created). Verified in Chrome: `showModal` modal semantics, labelled title, initial focus inside,

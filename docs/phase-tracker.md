@@ -121,7 +121,7 @@ dialogs are introduced.
 - Explicit operations/finance/support/moderation role scopes and cross-region allow/deny tests
 - Role-assignment writes and protection against self-escalation
 - Audited before/after events for sensitive finance and permission changes
-- Record-detail dialogs for Orders, Vendors, Products and Users (2026-11-03): shared table action, native modal with title, focus trap, Escape, focus restoration and 0 axe violations; the remaining tables (deliveries, rides, payouts, payments, applications, couriers, audit) still open
+- Record-detail dialogs for Orders, Vendors, Products and Users (2026-11-03): shared table action, native modal with title, focus trap, Escape, focus restoration and 0 axe violations; detail dialogs are now wired to every operational table (orders, deliveries, rides, payouts, products, applications, payments, users, vendors, couriers, audit) through the shared `DataTable` action
 - Bulk product moderation (2026-11-03): row and select-all checkboxes, a live "N selected" bar, Suspend/Activate selected with confirmation, per-row results, failure summary and refresh. Verified end to end — two products suspended then restored to ACTIVE; axe clean with the bar open. Bulk actions for orders/rides/payments are not enabled
 - Scoped staff access (2026-11-03): `requireAdmin` now admits ops/finance/support/moderator through `hasAdminConsoleAccess`; admin security suite **19/19**
 - Region filtering is server-side and permission-aware (2026-11-03): regions come from the country

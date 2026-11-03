@@ -376,7 +376,7 @@ function RecordDialog({ row, onClose }: { row: Row; onClose: () => void }) {
     }
   }
 
-  const title = text(row.orderNumber ?? row.name ?? row.id);
+  const title = text(row.orderNumber ?? row.rideNumber ?? row.name ?? row.businessName ?? row.reference ?? row.action ?? row.id);
   const fields: Array<[string, string]> = [];
   const add = (label: string, raw: unknown, format?: (input: unknown) => string) => {
     if (raw === undefined || raw === null || raw === "") return;
@@ -406,6 +406,13 @@ function RecordDialog({ row, onClose }: { row: Row; onClose: () => void }) {
   add("Business", row.businessName);
   add("Applicant", value(row, "user.name"));
   add("Trust score", row.trustScore);
+  add("Action", row.action);
+  add("Entity", row.entity);
+  add("Actor", value(row, "actor.name"));
+  add("Actor email", value(row, "actor.email"));
+  add("Fare", row.fareKobo, (input) => money(input));
+  add("Active", typeof row.active === "boolean" ? (row.active ? "Yes" : "No") : undefined);
+  add("Notes", row.note ?? row.description);
   add("Created", row.createdAt, (input) => date(input));
   add("Products", value(row, "_count.products"));
   add("Orders", value(row, "_count.orders"));
@@ -607,6 +614,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     const rows = filterRows(props.deliveries).filter((row) => matches(row, ["orderNumber", "status", "courier.name", "pickupAddress", "dropoffAddress"]));
     const statuses = Array.from(new Set(props.deliveries.map((row) => String(row.status)))).sort();
     return (
+      <>
       <Panel title="Deliveries" description="Delivery records attached to real orders. Courier names appear only when assigned.">
         <Toolbar
           query={query}
@@ -621,6 +629,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
         <DataTable
           rows={rows}
           emptyLabel={props.deliveries.length === 0 ? "No delivery records exist yet." : "No deliveries match this filter."}
+          onDetail={setDetail}
           columns={[
             { header: "Order", cell: (row) => <span className="font-bold">{text(row.orderNumber)}</span> },
             { header: "Courier", cell: (row) => <span>{text(value(row, "courier.name"), "Unassigned")}</span> },
@@ -655,6 +664,8 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           ]}
         />
       </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      </>
     );
   }
 
@@ -664,6 +675,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     );
     const statuses = Array.from(new Set(props.rides.map((row) => String(row.status)))).sort();
     return (
+      <>
       <Panel title="Trips" description="NaijaDrive ride records from the drive service.">
         <Toolbar
           query={query}
@@ -678,6 +690,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
         <DataTable
           rows={rows}
           emptyLabel={props.rides.length === 0 ? "No trips have been requested yet." : "No trips match this filter."}
+          onDetail={setDetail}
           columns={[
             {
               header: "Trip",
@@ -724,6 +737,8 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           ]}
         />
       </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      </>
     );
   }
 
@@ -731,6 +746,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     const rows = filterRows(props.payouts).filter((row) => matches(row, ["reference", "vendor.name", "status"]));
     const statuses = Array.from(new Set(props.payouts.map((row) => String(row.status)))).sort();
     return (
+      <>
       <Panel title="Payouts" description="Vendor payouts created from real paid orders. Marking paid debits the vendor wallet.">
         <Toolbar
           query={query}
@@ -745,6 +761,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
         <DataTable
           rows={rows}
           emptyLabel={props.payouts.length === 0 ? "No payouts have been created yet." : "No payouts match this filter."}
+          onDetail={setDetail}
           columns={[
             { header: "Reference", cell: (row) => <span className="font-bold">{text(row.reference)}</span> },
             { header: "Vendor", cell: (row) => <span>{text(value(row, "vendor.name"))}</span> },
@@ -774,6 +791,8 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           ]}
         />
       </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      </>
     );
   }
 
@@ -900,6 +919,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     const rows = filterRows(props.applications).filter((row) => matches(row, ["businessName", "user.name", "user.email", "market", "status"]));
     const statuses = Array.from(new Set(props.applications.map((row) => String(row.status)))).sort();
     return (
+      <>
       <Panel title="Seller applications" description="Applications submitted through the customer account flow. Approval creates a verified vendor.">
         <Toolbar
           query={query}
@@ -914,6 +934,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
         <DataTable
           rows={rows}
           emptyLabel={props.applications.length === 0 ? "No seller applications have been submitted." : "No applications match this filter."}
+          onDetail={setDetail}
           columns={[
             {
               header: "Business",
@@ -959,6 +980,8 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           ]}
         />
       </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      </>
     );
   }
 
@@ -966,6 +989,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     const rows = filterRows(props.payments).filter((row) => matches(row, ["reference", "provider", "providerReference", "status", "order.orderNumber"]));
     const statuses = Array.from(new Set(props.payments.map((row) => String(row.status)))).sort();
     return (
+      <>
       <Panel title="Payments" description="Payment records with provider references. Provider credentials are configured outside Git.">
         <Toolbar
           query={query}
@@ -979,6 +1003,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
         <DataTable
           rows={rows}
           emptyLabel={props.payments.length === 0 ? "No payments have been recorded." : "No payments match this filter."}
+          onDetail={setDetail}
           columns={[
             { header: "Reference", cell: (row) => <span className="font-bold">{text(row.reference ?? row.providerReference)}</span> },
             { header: "Order", cell: (row) => <span>{text(value(row, "order.orderNumber"))}</span> },
@@ -989,6 +1014,8 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           ]}
         />
       </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      </>
     );
   }
 
@@ -1081,6 +1108,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
   if (tab === "couriers") {
     const rows = props.couriers.filter((row) => matches(row, ["name", "phone", "user.name", "user.email"]) && (statusFilter === "all" || (statusFilter === "active" ? row.active === true : row.active === false)));
     return (
+      <>
       <Panel title="Couriers" description="Courier operators available for delivery assignment.">
         <Toolbar
           query={query}
@@ -1094,6 +1122,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
         <DataTable
           rows={rows}
           emptyLabel={props.couriers.length === 0 ? "No couriers exist yet." : "No couriers match this filter."}
+          onDetail={setDetail}
           columns={[
             { header: "Courier", cell: (row) => <span className="font-bold">{text(row.name)}</span> },
             { header: "Phone", cell: (row) => <span>{text(row.phone)}</span> },
@@ -1103,6 +1132,8 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           ]}
         />
       </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      </>
     );
   }
 
@@ -1133,11 +1164,13 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
   if (tab === "audit") {
     const rows = props.audit.filter((row) => matches(row, ["action", "entity", "actor.name", "actor.email"]));
     return (
+      <>
       <Panel title="Audit log" description="Server-recorded administrative and domain actions. This list is the authoritative activity feed.">
         <Toolbar query={query} onQuery={setQuery} placeholder="Search action, entity, actor…" onRefresh={onRefresh} />
         <DataTable
           rows={rows}
           emptyLabel={props.audit.length === 0 ? "No audit entries have been recorded." : "No entries match this search."}
+          onDetail={setDetail}
           columns={[
             { header: "When", cell: (row) => <span className="text-xs text-[#8B949E]">{date(row.createdAt)}</span> },
             { header: "Action", cell: (row) => <span className="font-bold">{text(row.action)}</span> },
@@ -1155,6 +1188,8 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           ]}
         />
       </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      </>
     );
   }
 
