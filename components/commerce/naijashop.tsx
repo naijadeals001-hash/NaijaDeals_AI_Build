@@ -1952,6 +1952,12 @@ const FREIGHT_STATUS: Record<string, string> = {
   cancelled: "Cancelled"
 };
 
+interface FreightEventRow {
+  status: string;
+  note: string | null;
+  createdAt: string;
+}
+
 interface FreightRow {
   id: string;
   reference: string;
@@ -1960,8 +1966,11 @@ interface FreightRow {
   destinationCity: string;
   commodity: string;
   weightKg: number;
+  carrierName: string | null;
+  quoteKobo: string | number | null;
   status: string;
   createdAt: string;
+  events?: FreightEventRow[];
 }
 
 function FreightQuoteForm() {
@@ -2138,11 +2147,37 @@ function FreightQuoteForm() {
                   <td className="px-3 py-2 text-xs">{row.originCity} → {row.destinationCity}</td>
                   <td className="px-3 py-2 text-xs">{row.serviceType}</td>
                   <td className="px-3 py-2 text-xs">{row.weightKg} kg</td>
-                  <td className="px-3 py-2 text-xs">{FREIGHT_STATUS[row.status] ?? row.status}</td>
+                  <td className="px-3 py-2 text-xs">
+                    {FREIGHT_STATUS[row.status] ?? row.status}
+                    {row.carrierName ? <span className="block text-[10px] text-muted">{row.carrierName}</span> : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      ) : null}
+
+      {requests.some((row) => (row.events?.length ?? 0) > 0) ? (
+        <div className="mt-6 space-y-3">
+          <h3 className="text-sm font-extrabold">Shipment milestones</h3>
+          {requests
+            .filter((row) => (row.events?.length ?? 0) > 0)
+            .map((row) => (
+              <div key={row.id} className="rounded-xl border border-border-soft bg-surface-low p-3">
+                <p className="text-xs font-extrabold">
+                  {row.reference} · {row.originCity} → {row.destinationCity}
+                </p>
+                <ol className="mt-2 space-y-1 text-[11px] text-muted">
+                  {(row.events ?? []).map((event, index) => (
+                    <li key={index}>
+                      <span className="font-bold text-ink">{FREIGHT_STATUS[event.status] ?? event.status}</span>
+                      {event.note ? ` · ${event.note}` : ""}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ))}
         </div>
       ) : null}
     </section>

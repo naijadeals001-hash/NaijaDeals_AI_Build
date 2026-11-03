@@ -18,6 +18,8 @@ export type FreightRow = {
   dimensions: string | null;
   pickupRequired: boolean;
   notes: string | null;
+  carrierName: string | null;
+  quoteKobo: bigint | null;
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -78,14 +80,110 @@ export async function createFreightRequest(input: {
   return request;
 }
 
+export const FREIGHT_ACTIONS = ["quote", "assign", "transit", "deliver", "cancel"] as const;
+export type FreightAction = (typeof FREIGHT_ACTIONS)[number];
+
+const ACTION_TARGET: Record<Exclude<FreightAction, "cancel">, string> = {
+  quote: "quoted",
+  assign: "carrier_assigned",
+  transit: "in_transit",
+  deliver: "delivered"
+};
+
+const ACTION_ALLOWED_FROM: Record<FreightAction, string[]> = {
+  quote: ["quote_requested"],
+  assign: ["quoted"],
+  transit: ["carrier_assigned"],
+  deliver: ["in_transit"],
+  cancel: ["quote_requested", "quoted", "carrier_assigned", "in_transit"]
+};
+
+export async function updateFreightRequest(input: {
+  adminId: string;
+  requestId: string;
+  action: FreightAction;
+  quoteKobo?: string;
+  carrierName?: string;
+  note?: string;
+}) {
+  if (!FREIGHT_ACTIONS.includes(input.action)) {
+    throw new ApiError(400, "invalid_action", "Unknown freight action.");
+  }
+  const rows = await prisma.$queryRaw<FreightRow[]>`SELECT * FROM "FreightRequest" WHERE id = ${input.requestId} LIMIT 1`;
+  const current = rows[0];
+  if (!current) throw new ApiError(404, "freight_not_found", "Freight request not found.");
+  if (!ACTION_ALLOWED_FROM[input.action].includes(current.status)) {
+    throw new ApiError(409, "invalid_transition", `Cannot ${input.action} a request in ${FREIGHT_STATUS_LABELS[current.status] ?? current.status}.`);
+  }
+
+  const note = input.note?.trim() || null;
+  let status = input.action === "cancel" ? "cancelled" : ACTION_TARGET[input.action];
+  let quoteKobo: bigint | null = null;
+  let carrierName: string | null = current.carrierName ?? null;
+
+  if (input.action === "quote") {
+    const amount = BigInt(String(input.quoteKobo ?? "0"));
+    if (amount <= BigInt(0)) throw new ApiError(400, "invalid_quote", "Quote amount must be greater than zero.");
+    quoteKobo = amount;
+    if (input.carrierName?.trim()) carrierName = input.carrierName.trim();
+    if (!carrierName) throw new ApiError(400, "carrier_required", "Name the carrier or service for this quote.");
+  }
+  if (input.action === "assign") {
+    if (!input.carrierName?.trim()) throw new ApiError(400, "carrier_required", "Name the carrier for this shipment.");
+    carrierName = input.carrierName.trim();
+  }
+
+  const updatedRows = await prisma.$queryRaw<FreightRow[]>`
+    UPDATE "FreightRequest"
+    SET status = ${status}::"FreightStatus",
+        "carrierName" = ${carrierName},
+        "quoteKobo" = COALESCE(${quoteKobo}, "quoteKobo"),
+        "updatedAt" = NOW()
+    WHERE id = ${current.id}
+    RETURNING *`;
+  const updated = updatedRows[0];
+
+  await prisma.$executeRaw`
+    INSERT INTO "FreightEvent" (id, "requestId", status, note, "actorId", "createdAt")
+    VALUES (${randomUUID()}, ${current.id}, ${status}::"FreightStatus", ${note}, ${input.adminId}, NOW())`;
+
+  await recordAudit({
+    actorId: input.adminId,
+    action: "freight.status_changed",
+    entity: "FreightRequest",
+    entityId: current.id,
+    metadata: {
+      reference: current.reference,
+      action: input.action,
+      before: { status: current.status },
+      after: { status: updated.status, carrierName: updated.carrierName, quoteKobo: updated.quoteKobo?.toString() ?? null },
+      note
+    }
+  });
+  return updated;
+}
+
 export async function listFreightForCustomer(customerId: string) {
-  return prisma.$queryRaw<FreightRow[]>`
-    SELECT * FROM "FreightRequest" WHERE "customerId" = ${customerId} ORDER BY "createdAt" DESC LIMIT 50`;
+  return prisma.$queryRaw<Array<FreightRow & { events: unknown }>>`
+    SELECT f.*, COALESCE(
+      json_agg(json_build_object('status', e.status, 'note', e.note, 'createdAt', e."createdAt") ORDER BY e."createdAt")
+      FILTER (WHERE e.id IS NOT NULL), '[]'
+    ) AS events
+    FROM "FreightRequest" f
+    LEFT JOIN "FreightEvent" e ON e."requestId" = f.id
+    WHERE f."customerId" = ${customerId}
+    GROUP BY f.id
+    ORDER BY f."createdAt" DESC LIMIT 50`;
 }
 
 export async function listFreightForAdmin() {
-  return prisma.$queryRaw<Array<FreightRow & { customerName: string; customerEmail: string; customerPhone: string | null }>>`
-    SELECT f.*, u.name AS "customerName", u.email AS "customerEmail", u.phone AS "customerPhone"
-    FROM "FreightRequest" f JOIN "User" u ON u.id = f."customerId"
+  return prisma.$queryRaw<Array<FreightRow & { customerName: string; customerEmail: string; customerPhone: string | null; events: unknown }>>`
+    SELECT f.*, u.name AS "customerName", u.email AS "customerEmail", u.phone AS "customerPhone",
+      COALESCE(json_agg(json_build_object('status', e.status, 'note', e.note, 'createdAt', e."createdAt") ORDER BY e."createdAt")
+        FILTER (WHERE e.id IS NOT NULL), '[]') AS events
+    FROM "FreightRequest" f
+    JOIN "User" u ON u.id = f."customerId"
+    LEFT JOIN "FreightEvent" e ON e."requestId" = f.id
+    GROUP BY f.id, u.name, u.email, u.phone
     ORDER BY f."createdAt" DESC LIMIT 200`;
 }

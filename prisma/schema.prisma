@@ -871,11 +871,28 @@ model FreightRequest {
   dimensions      String?
   pickupRequired  Boolean            @default(false)
   notes           String?
+  carrierName     String?
+  quoteKobo       BigInt?
   status          FreightStatus      @default(quote_requested)
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   customer        User               @relation("CustomerFreight", fields: [customerId], references: [id])
+  events          FreightEvent[]
 
   @@index([customerId, status])
   @@index([status, createdAt])
+}
+
+
+/// Milestones recorded by an operator for one freight request.
+model FreightEvent {
+  id        String        @id @default(cuid())
+  requestId String
+  status    FreightStatus
+  note      String?
+  actorId   String?
+  createdAt DateTime      @default(now())
+  request   FreightRequest @relation(fields: [requestId], references: [id])
+
+  @@index([requestId, createdAt])
 }

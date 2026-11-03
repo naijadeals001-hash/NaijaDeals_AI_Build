@@ -28,6 +28,7 @@ interface WorkspaceTabProps {
   applications: Row[];
   payments: Row[];
   disputes: Row[];
+  freight: Row[];
   users: Row[];
   vendors: Row[];
   couriers: Row[];
@@ -1709,6 +1710,95 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           }}
         />
       ) : null}
+      </>
+    );
+  }
+
+  if (tab === "freight") {
+    const rows = filterRows(props.freight).filter((row) => matches(row, ["reference", "customerName", "originCity", "destinationCity", "commodity", "status"]));
+    const statuses = Array.from(new Set(props.freight.map((row) => String(row.status)))).sort();
+
+    function act(row: Row, action: "quote" | "assign" | "transit" | "deliver" | "cancel") {
+      const id = String(row.id);
+      const label = text(row.reference);
+      void run(
+        id,
+        async () => {
+          if (action === "quote") {
+            const amount = window.prompt(`Quote amount in naira for ${label}?`);
+            if (!amount) throw new Error("Quote cancelled.");
+            const carrier = window.prompt("Carrier or service name for this quote?");
+            if (!carrier) throw new Error("Carrier name is required.");
+            return apiClient.adminUpdateFreight(id, "quote", { quoteKobo: String(Math.round(Number(amount) * 100)), carrierName: carrier });
+          }
+          if (action === "assign") {
+            const carrier = window.prompt("Carrier name for this shipment?");
+            if (!carrier) throw new Error("Carrier name is required.");
+            return apiClient.adminUpdateFreight(id, "assign", { carrierName: carrier });
+          }
+          return apiClient.adminUpdateFreight(id, action, {});
+        },
+        `${label} updated.`
+      );
+    }
+
+    return (
+      <>
+      <Panel title="Freight" description="Quote requests captured from NaijaSend. Quote, assign a carrier and record milestones so the sender can track the shipment.">
+        <Toolbar
+          query={query}
+          onQuery={setQuery}
+          placeholder="Search reference, customer, route…"
+          filters={statuses}
+          filterValue={statusFilter}
+          onFilter={setStatusFilter}
+          onRefresh={onRefresh}
+        />
+        <ActionFeedback message={message} error={error} />
+        <DataTable
+          rows={rows}
+          emptyLabel={props.freight.length === 0 ? "No freight requests yet." : "No freight requests match this filter."}
+          onDetail={setDetail}
+          columns={[
+            { header: "Reference", cell: (row) => <span className="font-bold">{text(row.reference)}</span> },
+            { header: "Route", cell: (row) => <span className="text-xs">{text(row.originCity)} → {text(row.destinationCity)}</span> },
+            { header: "Customer", cell: (row) => <span className="text-xs">{text(row.customerName)}<br /><span className="text-[#8B949E]">{text(row.customerEmail)}</span></span> },
+            { header: "Service", cell: (row) => <span className="text-xs">{statusLabel(text(row.serviceType))}</span> },
+            { header: "Weight", cell: (row) => <span className="text-xs">{text(row.weightKg, "—")} kg</span>, className: "text-right" },
+            { header: "Quote", cell: (row) => <span className="text-xs">{row.quoteKobo ? money(row.quoteKobo) : "—"}</span>, className: "text-right" },
+            { header: "Status", cell: (row) => <StatusBadge status={text(row.status)} /> },
+            {
+              header: "Action",
+              cell: (row) => {
+                const status = String(row.status);
+                const busy = busyId === String(row.id);
+                const buttons: Array<{ label: string; action: "quote" | "assign" | "transit" | "deliver" | "cancel" }> = [];
+                if (status === "quote_requested") buttons.push({ label: "Quote", action: "quote" });
+                if (status === "quoted") buttons.push({ label: "Assign", action: "assign" });
+                if (status === "carrier_assigned") buttons.push({ label: "In transit", action: "transit" });
+                if (status === "in_transit") buttons.push({ label: "Delivered", action: "deliver" });
+                if (["quote_requested", "quoted", "carrier_assigned", "in_transit"].includes(status)) buttons.push({ label: "Cancel", action: "cancel" });
+                return (
+                  <div className="flex flex-wrap gap-1">
+                    {buttons.map((button) => (
+                      <button
+                        key={button.action}
+                        type="button"
+                        disabled={busy}
+                        onClick={() => act(row, button.action)}
+                        className="rounded-lg border border-[#21262D] px-2 py-1 text-[11px] font-bold text-[#F0F6FC] hover:bg-[#21262D] disabled:opacity-40"
+                      >
+                        {busy ? "…" : button.label}
+                      </button>
+                    ))}
+                  </div>
+                );
+              }
+            }
+          ]}
+        />
+      </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
       </>
     );
   }

@@ -510,6 +510,12 @@ noted). NaijaDeals implemented its own first freight slice: `FreightRequest` (bu
 quote requests), validated API with audit, freight form + history on `/naijasend`, and an operator
 queue API. Verified quote NFS-20261103-BF20 end to end, axe 0.
 
+**Journey 1 freight operator flow (2026-11-03):** freight requests now carry a carrier, quote and
+milestone events. Operators quote (amount + carrier), assign, mark in transit and delivered; each step
+writes a `FreightEvent` and an audited `freight.status_changed` row. The Control Center has a Freight
+tab in the NaijaSend workspace and the sender sees milestones on `/naijasend`. Verified: truck Lagos →
+Kano 800 kg quoted ₦450,000, assigned, in transit, delivered; 4 events shown to the customer; axe 0.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

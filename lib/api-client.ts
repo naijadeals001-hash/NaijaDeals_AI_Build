@@ -426,6 +426,8 @@ export const apiClient = {
   adminApplications: () => requestJson<Array<Record<string, unknown>>>("/api/admin/applications"),
   adminReviewApplication: (id: string, decision: "approve" | "reject", note?: string) =>
     requestJson<Record<string, unknown>>(`/api/admin/applications/${id}`, { method: "POST", body: JSON.stringify({ decision, note }) }),
+  adminUpdateFreight: (id: string, action: string, payload: Record<string, unknown> = {}) =>
+    requestJson<Record<string, unknown>>(`/api/admin/freight/${id}`, { method: "POST", body: JSON.stringify({ action, ...payload }) }),
   adminSetCourierStatus: (id: string, active: boolean, reason?: string) =>
     requestJson<Record<string, unknown>>(`/api/admin/couriers/${id}/status`, { method: "POST", body: JSON.stringify({ active, reason }) }),
   adminSetDriverStatus: (userId: string, status: "approved" | "suspended", reason?: string) =>
@@ -436,6 +438,7 @@ export const apiClient = {
     requestJson<Record<string, unknown>>(`/api/admin/products/${id}/moderate`, { method: "POST", body: JSON.stringify({ status, note }) }),
   adminPayments: () => requestJson<Array<Record<string, unknown>>>("/api/admin/payments"),
   adminCountries: () => requestJson<Array<Record<string, unknown>>>("/api/admin/countries"),
+  adminFreight: () => requestJson<Array<Record<string, unknown>>>("/api/admin/freight"),
   adminCities: () => requestJson<Array<Record<string, unknown>>>("/api/admin/cities"),
   adminUpdateCity: (countryCode: string, city: string, enabled: boolean) =>
     requestJson<Record<string, unknown>>("/api/admin/cities", { method: "PATCH", body: JSON.stringify({ countryCode, city, enabled }) }),

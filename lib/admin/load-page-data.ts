@@ -37,6 +37,7 @@ export interface AdminPageData {
   products: Array<Record<string, unknown>>;
   payments: Array<Record<string, unknown>>;
   disputes: Array<Record<string, unknown>>;
+  freight: Array<Record<string, unknown>>;
   users: Array<Record<string, unknown>>;
   rides: Array<Record<string, unknown>>;
   audit: Array<Record<string, unknown>>;
@@ -54,6 +55,7 @@ const ENDPOINTS = {
   products: "/api/admin/products",
   payments: "/api/admin/payments",
   disputes: "/api/admin/disputes",
+  freight: "/api/admin/freight",
   users: "/api/admin/users",
   rides: "/api/admin/rides",
   audit: "/api/admin/audit-logs",
@@ -118,6 +120,7 @@ export async function loadAdminPageData(region: AdminRegion = "ALL"): Promise<Ad
     products: filterRowsByRegion(asArray(raw.products), region),
     payments: filterRowsByRegion(asArray(raw.payments), region),
     disputes: asArray(raw.disputes),
+    freight: asArray(raw.freight),
     users: filterRowsByRegion(asArray(raw.users), region),
     rides: asArray(raw.rides, "rides"),
     audit: asArray(raw.audit),

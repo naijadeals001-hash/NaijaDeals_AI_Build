@@ -48,5 +48,10 @@ NaijaDeals implementation (first slice):
   operator queue is exposed at `GET /api/admin/freight`.
 - Verified end to end: quote **NFS-20261103-BF20** (Lagos → Abuja, 120 kg, bus cargo) created from
   the browser, appeared in the customer table and in the operator queue, axe 0.
-- Next: operator carrier assignment + quote record, milestone events (waybill, handover, in transit,
-  delivered/collected), and a customer tracking view.
+- Operator journey completed (2026-11-03): **Quote** (amount + carrier) → **Assign carrier** → **In transit** →
+  **Delivered**, each recorded as a `FreightEvent` milestone with an audited `freight.status_changed` row.
+  The Control Center gained a **Freight** tab in the NaijaSend admin workspace; the sender sees a
+  **Shipment milestones** timeline on `/naijasend`.
+- Verified end to end: truck request Lagos → Kano (800 kg, solar panels) quoted at ₦450,000 with
+  "Kobo360 Haulage", assigned, moved in transit and delivered; customer API returned 4 events and
+  the timeline rendered; operator queue showed both requests; axe 0.
