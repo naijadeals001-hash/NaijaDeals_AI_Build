@@ -129,7 +129,7 @@ export const verticals: Vertical[] = [
     icon: Truck,
     label: "Courier and logistics",
     description: "Parcels across town with tracked delivery events.",
-    image: "/real-photography/module-send.jpg",
+    image: "/brand-photography/send-airport-logistics.jpg", // Owner-supplied NaijaSend brand artwork (AI-generated, not a real shipment).
     accent: "#34d399",
     status: "live",
     statusLabel: "Live",

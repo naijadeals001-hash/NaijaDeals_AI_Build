@@ -1851,13 +1851,72 @@ export function NaijaEatsPage() {
 }
 
 export function NaijaSendPage() {
+  const features = [
+    { icon: PackageCheck, title: "Recorded events", body: "Pickup, transit and delivery are server records — no simulated courier movement." },
+    { icon: ShieldCheck, title: "Escrow release", body: "Funds stay held until the buyer or admin confirms delivery." },
+    { icon: MapPin, title: "Lagos coverage", body: "City-wide courier assignment. External carrier credentials are not configured." }
+  ];
   return (
-    <div className="rounded-2xl border border-border-soft bg-canvas p-8">
-      <h1 className="font-display text-2xl font-extrabold">NaijaSend</h1>
-      <p className="mt-2 text-sm text-muted">
-        Marketplace delivery is handled by the NaijaSend manual courier workflow with recorded pickup, transit and
-        delivery events. Third-party courier credentials are not configured.
-      </p>
+    <div className="space-y-5">
+      <section className="overflow-hidden rounded-3xl border border-border-soft bg-canvas">
+        <div className="relative">
+          <img
+            src="/brand-photography/send-airport-logistics.jpg"
+            alt="Brand illustration of a green NaijaSend truck at the Murtala Muhammed airport cargo hub"
+            width={1536}
+            height={1024}
+            className="h-64 w-full object-cover sm:h-80"
+            fetchPriority="high"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#04140f]/90 via-[#04140f]/30 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-8">
+            <p className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide backdrop-blur">
+              <Truck className="h-3.5 w-3.5" aria-hidden="true" />
+              NaijaSend
+            </p>
+            <h1 className="mt-3 max-w-3xl font-display text-3xl font-extrabold leading-tight sm:text-4xl">
+              Send parcels across town, tracked at every step
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/80">
+              Marketplace delivery runs on the NaijaSend manual courier workflow: pickup, transit and delivery
+              events are recorded by the assigned courier, and escrow releases on confirmed delivery.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-3">
+        {features.map((feature) => {
+          const Icon = feature.icon;
+          return (
+            <div key={feature.title} className="rounded-2xl border border-border-soft bg-canvas p-4">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary-soft text-primary">
+                <Icon className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <p className="mt-2 text-sm font-extrabold">{feature.title}</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted">{feature.body}</p>
+            </div>
+          );
+        })}
+      </section>
+
+      <section className="rounded-2xl border border-border-soft bg-canvas p-5">
+        <h2 className="font-display text-lg font-extrabold">Current status</h2>
+        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted">
+          The manual courier workflow is live for marketplace orders. External carrier integrations are not
+          configured, so no third-party pickup promises are made and no parcel is marked delivered without a
+          recorded event.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/orders" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white">
+            Track an order
+            <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
+          </Link>
+          <Link href="/naijashop" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border-soft px-4 text-sm font-bold">
+            Browse NaijaShop
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

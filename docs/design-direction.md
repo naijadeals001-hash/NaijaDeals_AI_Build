@@ -181,3 +181,10 @@ full-bleed storefront:
 
 Verified at 1440 and 390: no sidebar on the homepage, hero image loads, rail has 10 links, no
 horizontal overflow, axe 0, no console errors (`qa-artifacts/preview/home-redesign-*.png`).
+
+
+**NaijaSend artwork (2026-11-03):** the owner supplied an airport cargo-hub illustration with a
+branded NaijaSend truck. It is stored as `public/brand-photography/send-airport-logistics.jpg`
+(1280-wide JPEG) and drives both the NaijaSend ecosystem card and a new landing hero, followed by
+three honest capability cards (recorded events, escrow release, Lagos coverage) and a status card
+stating that external carrier integrations are not configured.

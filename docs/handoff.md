@@ -409,6 +409,12 @@ table with order, buyer, seller, status, escrow state and opened date plus the r
 row rendered, dialog reason present, axe 0; anonymous access returns **401**. Resolution actions are
 deliberately not exposed yet.
 
+**NaijaSend landing (same pass):** the supplied airport cargo-hub image now drives the NaijaSend
+ecosystem card and a new `/naijasend` hero ("Send parcels across town, tracked at every step"),
+followed by recorded-events / escrow-release / Lagos-coverage cards and a status card that states
+external carrier credentials are not configured. Verified: image loads, 3 feature cards, axe 0,
+0 overflow at 1440 and 390.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only
