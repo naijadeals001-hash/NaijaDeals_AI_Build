@@ -14,6 +14,13 @@ import {
   Search,
   ShieldCheck,
   ShoppingCart,
+  Bike,
+  Coffee,
+  CakeSlice,
+  Salad,
+  Soup,
+  Sandwich,
+  Pizza,
   Star,
   Store,
   Truck,
@@ -1867,32 +1874,264 @@ export function AdminOpsPage() {
   );
 }
 
-function NaijaEatsLanding() {
+const EATS_CATEGORY_ICONS: Array<{ label: string; match: (cuisine: string) => boolean; icon: typeof UtensilsCrossed }> = [
+  { label: "Nigerian meals", match: (cuisine) => /nigerian|home/i.test(cuisine), icon: UtensilsCrossed },
+  { label: "Grills", match: (cuisine) => /grill|suya|barbecue/i.test(cuisine), icon: Pizza },
+  { label: "Fast food", match: (cuisine) => /fast|burger|pizza/i.test(cuisine), icon: Sandwich },
+  { label: "Breakfast", match: (cuisine) => /breakfast|pastry/i.test(cuisine), icon: Coffee },
+  { label: "Salads", match: (cuisine) => /salad|healthy/i.test(cuisine), icon: Salad },
+  { label: "Soups", match: (cuisine) => /soup|swallow/i.test(cuisine), icon: Soup },
+  { label: "Drinks", match: (cuisine) => /drink|juice|bar/i.test(cuisine), icon: CakeSlice }
+];
+
+export function NaijaEatsPage() {
+  const [restaurants, setRestaurants] = useState<EatsRestaurantRow[]>([]);
+  const [market, setMarket] = useState("all");
+  const [category, setCategory] = useState("all");
+  const [query, setQuery] = useState("");
+  const [mode, setMode] = useState<"delivery" | "pickup">("delivery");
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/eats/restaurants", { cache: "no-store" });
+        const body = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (!res.ok) throw new Error(body?.error ?? `Request failed with HTTP ${res.status}`);
+        setRestaurants(Array.isArray(body) ? (body as EatsRestaurantRow[]) : []);
+        setStatus("ready");
+      } catch (caught) {
+        if (cancelled) return;
+        setError(caught instanceof Error ? caught.message : "Could not load kitchens.");
+        setStatus("error");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const markets = Array.from(new Set(restaurants.map((row) => row.market))).sort();
+  const needle = query.trim().toLowerCase();
+  const filtered = restaurants.filter((row) => {
+    if (market !== "all" && row.market !== market) return false;
+    if (category !== "all") {
+      const definition = EATS_CATEGORY_ICONS.find((item) => item.label === category);
+      if (definition && !definition.match(row.cuisine)) return false;
+    }
+    if (needle) {
+      const haystack = [row.name, row.cuisine, row.market, ...row.menuItems.map((item) => item.name)]
+        .join(" ")
+        .toLowerCase();
+      if (!haystack.includes(needle)) return false;
+    }
+    return true;
+  });
+
   return (
-    <ModuleLanding
-      name="NaijaEats"
-      icon={UtensilsCrossed}
-      headline="Order food for delivery, once the kitchen is connected"
-      description="NaijaEats is the food vertical of the same account you use for shopping and rides. Verified kitchens publish their menus here; ordering opens per kitchen once dispatch is connected, and sample kitchens are labelled."
-      chips={["Verified kitchens", "Escrow-protected", "Sample data labelled"]}
-      image={{
-        src: "/brand-photography/eats-jollof-delivery.jpg",
-        alt: "Brand illustration of a NaijaEats courier holding a delivery bag with jollof rice, grilled chicken and plantain"
-      }}
-      features={[
-        { icon: ShieldCheck, title: "Escrow-protected", body: "Food orders follow the same verified payment and release rules as NaijaShop." },
-        { icon: Truck, title: "Tracked dispatch", body: "Pickup and delivery events are recorded by the assigned courier." },
-        { icon: UtensilsCrossed, title: "No fake kitchens", body: "No restaurant is listed until its menu and dispatch partner are connected." }
-      ]}
-      status={{
-        title: "Setup status",
-        body: "Menu browsing is live for verified kitchen partners. Ordering stays disabled until a kitchen is connected to dispatch; sample kitchens on this page are labelled as sample data and cannot take a real order."
-      }}
-      primaryCta={{ label: "Browse NaijaShop", href: "/naijashop" }}
-      secondaryCta={{ label: "How setup works", href: "/help" }}
-    />
+    <div className="space-y-4">
+      <section className="rounded-3xl bg-[#0b1a13] text-white">
+        <div className="flex flex-wrap items-center gap-3 rounded-t-3xl border-b border-white/10 bg-[#08200f] px-4 py-3">
+          <span className="inline-flex items-center gap-2 font-display text-lg font-extrabold">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-live text-[#04140f]">
+              <UtensilsCrossed className="h-4 w-4" aria-hidden="true" />
+            </span>
+            NaijaEats
+          </span>
+          <p className="hidden text-[11px] font-semibold text-white/60 sm:block">Food delivery across Nigeria and Africa</p>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <label className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold">
+              <MapPin className="h-3.5 w-3.5 text-primary-live" aria-hidden="true" />
+              <span className="sr-only">Delivery area</span>
+              <select
+                value={market}
+                onChange={(event) => setMarket(event.target.value)}
+                className="max-w-40 bg-transparent text-xs font-bold text-white outline-none"
+              >
+                <option value="all" className="text-ink">All Lagos areas</option>
+                {markets.map((item) => (
+                  <option key={item} value={item} className="text-ink">{item}</option>
+                ))}
+              </select>
+            </label>
+            <Link href="/cart" className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white">
+              Cart
+            </Link>
+            <Link href="/login?next=/naijaeats" className="rounded-full bg-primary-live px-3 py-1.5 text-xs font-extrabold text-[#04140f]">
+              Sign in
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid gap-0 lg:grid-cols-[1.02fr_0.98fr]">
+          <div className="p-5 sm:p-7">
+            <h1 className="font-display text-3xl font-extrabold leading-tight sm:text-4xl">
+              Your favourite meals, <span className="text-primary-live">delivered fast</span>
+            </h1>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-white/75">
+              Order from verified kitchens, local bukas and popular eateries near you. Menus come straight from the
+              kitchen; ordering opens when that kitchen is connected to dispatch.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setMode("delivery")}
+                className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-4 text-xs font-extrabold ${mode === "delivery" ? "bg-primary-live text-[#04140f]" : "border border-white/20 text-white/80"}`}
+              >
+                <Bike className="h-4 w-4" aria-hidden="true" /> Delivery
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("pickup")}
+                className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-4 text-xs font-extrabold ${mode === "pickup" ? "bg-primary-live text-[#04140f]" : "border border-white/20 text-white/80"}`}
+              >
+                <ShoppingBasket className="h-4 w-4" aria-hidden="true" /> Pickup
+              </button>
+            </div>
+            <div className="mt-4 flex items-center gap-2 rounded-2xl bg-white p-1.5 text-ink">
+              <Search className="ml-2 h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search for restaurants, dishes or cuisines…"
+                className="min-h-11 w-full min-w-0 bg-transparent px-1 text-sm font-semibold outline-none placeholder:text-muted/70"
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-3 text-[11px] font-bold text-white/70">
+              <span className="inline-flex items-center gap-1"><Bike className="h-3.5 w-3.5 text-primary-live" aria-hidden="true" /> Delivery</span>
+              <span className="inline-flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-primary-live" aria-hidden="true" /> Safe and reliable</span>
+              <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5 text-primary-live" aria-hidden="true" /> Verified kitchens</span>
+            </div>
+          </div>
+          <div className="relative min-h-[220px] lg:min-h-full">
+            <img
+              src="/brand-photography/eats-jollof-delivery.jpg"
+              alt="Brand illustration of a NaijaEats courier holding a delivery bag of jollof rice, grilled chicken and plantain"
+              className="absolute inset-0 h-full w-full object-cover"
+              fetchPriority="high"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0b1a13] via-[#0b1a13]/20 to-transparent lg:from-[#0b1a13]/70" />
+          </div>
+        </div>
+      </section>
+
+      <section aria-label="Food categories" className="rounded-2xl border border-border-soft bg-canvas p-3">
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={() => setCategory("all")}
+            className={`flex w-20 shrink-0 flex-col items-center gap-1 rounded-xl border px-2 py-2 text-center ${category === "all" ? "border-primary bg-primary-soft" : "border-border-soft"}`}
+          >
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-surface-low text-primary"><UtensilsCrossed className="h-4 w-4" aria-hidden="true" /></span>
+            <span className="text-[10px] font-bold leading-tight">All food</span>
+          </button>
+          {EATS_CATEGORY_ICONS.map((item) => {
+            const Icon = item.icon;
+            const active = category === item.label;
+            return (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => setCategory(active ? "all" : item.label)}
+                className={`flex w-20 shrink-0 flex-col items-center gap-1 rounded-xl border px-2 py-2 text-center ${active ? "border-primary bg-primary-soft" : "border-border-soft"}`}
+              >
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-surface-low text-primary"><Icon className="h-4 w-4" aria-hidden="true" /></span>
+                <span className="text-[10px] font-bold leading-tight">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section aria-label="Popular restaurants" className="rounded-2xl border border-border-soft bg-canvas p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-display text-xl font-extrabold">Popular restaurants near you</h2>
+          <span className="text-xs font-bold text-muted">{filtered.length} kitchen{filtered.length === 1 ? "" : "s"}</span>
+        </div>
+        {status === "loading" ? <p className="mt-4 text-sm text-muted">Loading kitchens…</p> : null}
+        {status === "error" ? <p role="alert" className="mt-4 text-sm font-bold text-crimson">{error}</p> : null}
+        {status === "ready" && filtered.length === 0 ? (
+          <p className="mt-4 rounded-xl border border-border-soft bg-surface-low p-4 text-sm text-muted">
+            No kitchens match this search yet. Try another area or cuisine; restaurant partners appear here after
+            verification.
+          </p>
+        ) : null}
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((restaurant, index) => {
+            const prices = restaurant.menuItems.map((item) => Number(item.priceKobo));
+            const min = prices.length ? Math.min(...prices) : 0;
+            const max = prices.length ? Math.max(...prices) : 0;
+            return (
+              <article key={restaurant.id} className="overflow-hidden rounded-2xl border border-border-soft bg-canvas">
+                <div
+                  className="relative flex h-28 items-end p-3"
+                  style={{ background: `linear-gradient(135deg, #0b6b3a 0%, #04140f 100%)` }}
+                >
+                  <span className="font-display text-4xl font-black text-white/25">{restaurant.name.slice(0, 1)}</span>
+                  {restaurant.isSample ? (
+                    <span className="absolute right-2 top-2 rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#B45309]">Sample</span>
+                  ) : null}
+                  <span className="absolute left-3 top-3 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold text-white">{index + 1 < 10 ? "0" : ""}{index + 1}</span>
+                </div>
+                <div className="p-4">
+                  <h3 className="font-display text-base font-extrabold">{restaurant.name}</h3>
+                  <p className="mt-0.5 text-xs font-semibold text-muted">{restaurant.cuisine} · {restaurant.market}</p>
+                  <p className="mt-2 text-[11px] text-muted">{restaurant.menuItems.length} menu item{restaurant.menuItems.length === 1 ? "" : "s"} · {min === max ? koboToNaira(min) : `${koboToNaira(min)} – ${koboToNaira(max)}`}</p>
+                  <ul className="mt-2 space-y-1">
+                    {restaurant.menuItems.slice(0, 2).map((item) => (
+                      <li key={item.id} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="truncate font-semibold">{item.name}</span>
+                        <span className="shrink-0 font-bold text-primary">{koboToNaira(item.priceKobo)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-3 rounded-lg bg-surface-low px-2 py-1.5 text-[10px] font-semibold text-muted">
+                    Menu preview · ordering opens with dispatch
+                  </p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-primary/20 bg-primary-soft p-5">
+        <h2 className="font-display text-lg font-extrabold text-primary">Run a kitchen?</h2>
+        <p className="mt-1 max-w-2xl text-sm text-muted">
+          Restaurant partners publish their own menus after verification. Ordering switches on per kitchen when a
+          dispatch partner is connected.
+        </p>
+        <Link href="/sell" className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-white">
+          Apply as a restaurant partner
+        </Link>
+      </section>
+    </div>
   );
 }
+
+interface EatsMenuItemRow {
+  id: string;
+  name: string;
+  description: string | null;
+  priceKobo: string;
+  available: boolean;
+}
+
+interface EatsRestaurantRow {
+  id: string;
+  slug: string;
+  name: string;
+  cuisine: string;
+  market: string;
+  address: string;
+  phone: string;
+  isSample: boolean;
+  menuItems: EatsMenuItemRow[];
+}
+
 export function NaijaFreshPage() {
   return (
     <ModuleLanding
@@ -2211,156 +2450,3 @@ function FreightQuoteForm() {
   );
 }
 
-export function NaijaEatsPage() {
-  return (
-    <div className="space-y-5">
-      <NaijaEatsLanding />
-      <EatsDiscovery />
-    </div>
-  );
-}
-
-interface EatsMenuItemRow {
-  id: string;
-  name: string;
-  description: string | null;
-  priceKobo: string;
-  available: boolean;
-}
-
-interface EatsRestaurantRow {
-  id: string;
-  slug: string;
-  name: string;
-  cuisine: string;
-  market: string;
-  address: string;
-  phone: string;
-  isSample: boolean;
-  menuItems: EatsMenuItemRow[];
-}
-
-function EatsDiscovery() {
-  const [restaurants, setRestaurants] = useState<EatsRestaurantRow[]>([]);
-  const [market, setMarket] = useState("all");
-  const [cuisine, setCuisine] = useState("all");
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/eats/restaurants", { cache: "no-store" });
-        const body = await res.json().catch(() => null);
-        if (cancelled) return;
-        if (!res.ok) throw new Error(body?.error ?? `Request failed with HTTP ${res.status}`);
-        setRestaurants(Array.isArray(body) ? (body as EatsRestaurantRow[]) : []);
-        setStatus("ready");
-      } catch (caught) {
-        if (cancelled) return;
-        setError(caught instanceof Error ? caught.message : "Could not load kitchens.");
-        setStatus("error");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const markets = Array.from(new Set(restaurants.map((row) => row.market))).sort();
-  const cuisines = Array.from(new Set(restaurants.map((row) => row.cuisine))).sort();
-  const filtered = restaurants.filter(
-    (row) => (market === "all" || row.market === market) && (cuisine === "all" || row.cuisine === cuisine)
-  );
-
-  return (
-    <section aria-label="Order food" className="rounded-3xl border border-border-soft bg-canvas p-5 sm:p-7">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-black uppercase tracking-wide text-primary">Order food</p>
-          <h2 className="mt-1 font-display text-2xl font-extrabold">Kitchens delivering near you</h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted">
-            Choose where you are eating, then pick a kitchen. Menus are published by verified kitchen partners; ordering
-            opens only when the kitchen is connected to dispatch.
-          </p>
-        </div>
-        <label className="text-xs font-bold uppercase tracking-wide text-muted">
-          Delivery area
-          <select
-            value={market}
-            onChange={(event) => setMarket(event.target.value)}
-            className="mt-1 block min-h-11 min-w-52 rounded-xl border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink"
-          >
-            <option value="all">All Lagos areas</option>
-            {markets.map((item) => (
-              <option key={item} value={item}>{item}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setCuisine("all")}
-          className={`rounded-full px-3 py-1.5 text-xs font-bold ${cuisine === "all" ? "bg-primary text-white" : "border border-border-soft text-muted"}`}
-        >
-          All cuisines
-        </button>
-        {cuisines.map((item) => (
-          <button
-            key={item}
-            type="button"
-            onClick={() => setCuisine(item)}
-            className={`rounded-full px-3 py-1.5 text-xs font-bold ${cuisine === item ? "bg-primary text-white" : "border border-border-soft text-muted"}`}
-          >
-            {item}
-          </button>
-        ))}
-      </div>
-
-      {status === "loading" ? <p className="mt-5 text-sm text-muted">Loading kitchens…</p> : null}
-      {status === "error" ? <p role="alert" className="mt-5 text-sm font-bold text-crimson">{error}</p> : null}
-      {status === "ready" && filtered.length === 0 ? (
-        <p className="mt-5 rounded-xl border border-border-soft bg-surface-low p-4 text-sm text-muted">
-          No kitchens are live in this area yet. Restaurant partners apply through the seller onboarding flow before
-          their menu appears here.
-        </p>
-      ) : null}
-
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        {filtered.map((restaurant) => (
-          <article key={restaurant.id} className="overflow-hidden rounded-2xl border border-border-soft bg-canvas">
-            <div className="flex items-start justify-between gap-3 border-b border-border-soft bg-surface-low p-4">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-display text-lg font-extrabold">{restaurant.name}</h3>
-                  {restaurant.isSample ? (
-                    <span className="rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#B45309]">Sample kitchen</span>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-xs font-semibold text-muted">{restaurant.cuisine} · {restaurant.market}</p>
-                <p className="mt-0.5 text-[11px] text-muted">{restaurant.address}</p>
-              </div>
-            </div>
-            <ul className="divide-y divide-border-soft">
-              {restaurant.menuItems.map((item) => (
-                <li key={item.id} className="flex items-start justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold">{item.name}</p>
-                    {item.description ? <p className="mt-0.5 text-xs text-muted">{item.description}</p> : null}
-                  </div>
-                  <span className="shrink-0 text-sm font-extrabold text-primary">{koboToNaira(item.priceKobo)}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="border-t border-border-soft px-4 py-3 text-[11px] text-muted">
-              Menu preview. Ordering opens when this kitchen is connected to dispatch; no order can be placed yet.
-            </p>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}

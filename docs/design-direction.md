@@ -263,3 +263,10 @@ full-bleed blended hero, capability cards, optional partner band and honest setu
 
 Ecosystem cards and the header sub-nav point at these landing routes; functional apps remain at
 `/wallet`, `/orders`, etc.
+
+**NaijaEats landing redesign (owner mockup, 2026-11-03):** /naijaeats now follows the supplied food
+delivery reference: dark-green NaijaEats bar with delivery area, cart and sign-in; hero headline
+"Your favourite meals, delivered fast" with the jollof/courier artwork; Delivery/Pickup switch;
+search across restaurants and dishes; category chips; and "Popular restaurants near you" cards with
+menu count, price range and two priced items. Ratings and delivery ETAs are not invented — cards show
+only menu data the kitchens published. Ordering remains gated per kitchen and the cards say so.
