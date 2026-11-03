@@ -1,0 +1,58 @@
+﻿[
+    {
+        "file":  "replace-sneakers.jpg",
+        "status":  "ok",
+        "title":  "File:Asics Gel-Cumulus 22.jpg",
+        "creator":  "Petar Milošević",
+        "license":  "CC BY-SA 4.0",
+        "source":  "https://commons.wikimedia.org/wiki/File:Asics_Gel-Cumulus_22.jpg"
+    },
+    {
+        "file":  "replace-handbag.jpg",
+        "status":  "ok",
+        "title":  "File:1935-45 Prada handbag, tooled and gilded leather 01.jpg",
+        "creator":  "Photographer for the Rhode Island School of Design - Museum of Art",
+        "license":  "CC0",
+        "source":  "https://commons.wikimedia.org/wiki/File:1935-45_Prada_handbag,_tooled_and_gilded_leather_01.jpg"
+    },
+    {
+        "file":  "replace-phone.jpg",
+        "status":  "ok",
+        "title":  "File:Blackview A60 Smartphone Android mobile phone and folio case.jpg",
+        "creator":  "Acabashi",
+        "license":  "CC BY-SA 4.0",
+        "source":  "https://commons.wikimedia.org/wiki/File:Blackview_A60_Smartphone_Android_mobile_phone_and_folio_case.jpg"
+    },
+    {
+        "file":  "replace-monitor.jpg",
+        "status":  "ok",
+        "title":  "File:EIZO Foris FG2421 VGA computer monitor displaying test pattern.png",
+        "creator":  "Lucasbosch",
+        "license":  "CC BY-SA 4.0",
+        "source":  "https://commons.wikimedia.org/wiki/File:EIZO_Foris_FG2421_VGA_computer_monitor_displaying_test_pattern.png"
+    },
+    {
+        "file":  "replace-keyboard.jpg",
+        "status":  "ok",
+        "title":  "File:Beautiful Mechanical Keyboard.jpg",
+        "creator":  "Anirban Saha",
+        "license":  "CC BY-SA 4.0",
+        "source":  "https://commons.wikimedia.org/wiki/File:Beautiful_Mechanical_Keyboard.jpg"
+    },
+    {
+        "file":  "replace-controller.jpg",
+        "status":  "ok",
+        "title":  "File:Microsoft-Xbox-One-Console-Set-wKinect.jpg",
+        "creator":  "Evan-Amos",
+        "license":  "Public domain",
+        "source":  "https://commons.wikimedia.org/wiki/File:Microsoft-Xbox-One-Console-Set-wKinect.jpg"
+    },
+    {
+        "file":  "replace-controller.jpg",
+        "status":  "ok",
+        "title":  "File:PS4 and Xbox One controller.jpg",
+        "creator":  "DavidLoveXbox ",
+        "license":  "CC BY-SA 3.0",
+        "source":  "https://commons.wikimedia.org/wiki/File:PS4_and_Xbox_One_controller.jpg"
+    }
+]

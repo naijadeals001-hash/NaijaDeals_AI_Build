@@ -60,14 +60,14 @@
   "source": "https://www.flickr.com/photos/64483003@N02/6782321291"
  },
  {
-  "path": "/products/demo3/fashion-1.jpg",
+  "path": "/products/replacements/replace-sneakers.jpg",
   "products": [
    "demo3-running-sneakers"
   ],
-  "title": "sneakers",
-  "creator": "Shockingly Tasty",
-  "license": "by-sa",
-  "source": "https://www.flickr.com/photos/49506223@N00/5170903067"
+  "title": "File:Asics Gel-Cumulus 22.jpg",
+  "creator": "Petar Milošević",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Asics_Gel-Cumulus_22.jpg"
  },
  {
   "path": "/products/demo3/fashion-4.jpg",
@@ -140,14 +140,14 @@
   "source": "https://www.flickr.com/photos/51219817@N04/4777334208"
  },
  {
-  "path": "/products/demo3/computer-monitor.jpg",
+  "path": "/products/replacements/replace-monitor.jpg",
   "products": [
    "demo3-monitor-setup"
   ],
-  "title": "new computer / monitor setup",
-  "creator": "hodgers",
-  "license": "by-sa",
-  "source": "https://www.flickr.com/photos/35468147887@N01/3126952638"
+  "title": "File:EIZO Foris FG2421 VGA computer monitor displaying test pattern.png",
+  "creator": "Lucasbosch",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:EIZO_Foris_FG2421_VGA_computer_monitor_displaying_test_pattern.png"
  },
  {
   "path": "/products/demo3/home-cookware.jpg",
@@ -170,14 +170,14 @@
   "source": "https://www.flickr.com/photos/137643065@N06/24217686692"
  },
  {
-  "path": "/products/demo4/phone-a3.jpg",
+  "path": "/products/replacements/replace-phone.jpg",
   "products": [
    "demo4-phone-hand"
   ],
-  "title": "Garmin-Asus A10 GPS Android smartphone review",
-  "creator": "liewcf",
-  "license": "by-sa",
-  "source": "https://www.flickr.com/photos/34353636@N00/5368269021"
+  "title": "File:Blackview A60 Smartphone Android mobile phone and folio case.jpg",
+  "creator": "Acabashi",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Blackview_A60_Smartphone_Android_mobile_phone_and_folio_case.jpg"
  },
  {
   "path": "/products/demo4/home-blender2.jpg",
@@ -190,14 +190,14 @@
   "source": "https://www.flickr.com/photos/101592688@N07/12317651403"
  },
  {
-  "path": "/products/demo4/fashion-handbag2.jpg",
+  "path": "/products/replacements/replace-handbag.jpg",
   "products": [
    "demo4-handbags"
   ],
-  "title": "Leather Handbags",
-  "creator": "Mike Prince",
-  "license": "by",
-  "source": "https://www.flickr.com/photos/70804987@N00/4782040554"
+  "title": "File:1935-45 Prada handbag, tooled and gilded leather 01.jpg",
+  "creator": "Photographer for the Rhode Island School of Design - Museum of Art",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:1935-45_Prada_handbag,_tooled_and_gilded_leather_01.jpg"
  },
  {
   "path": "/products/demo4/grocery-onions.jpg",
@@ -230,14 +230,14 @@
   "source": "https://www.flickr.com/photos/36484111@N00/31689572"
  },
  {
-  "path": "/products/demo4/gaming-keyboard2.jpg",
+  "path": "/products/replacements/replace-keyboard.jpg",
   "products": [
    "demo4-keyboard"
   ],
-  "title": "Razer BlackWidow Ultimate 2014 Elite Mechanical Gaming Keyboard",
-  "creator": "osman.gucel",
-  "license": "by",
-  "source": "https://www.flickr.com/photos/126089327@N04/14714880858"
+  "title": "File:Beautiful Mechanical Keyboard.jpg",
+  "creator": "Anirban Saha",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Beautiful_Mechanical_Keyboard.jpg"
  },
  {
   "path": "/products/demo5/phone-b1.jpg",
@@ -290,14 +290,14 @@
   "source": "https://www.flickr.com/photos/13724840@N00/7468313382"
  },
  {
-  "path": "/products/demo5/gaming-controller3.jpg",
+  "path": "/products/replacements/replace-controller.jpg",
   "products": [
    "demo5-controller-case"
   ],
-  "title": "XBOX Controller Case",
-  "creator": "Tim-Hoggarth",
-  "license": "by-sa",
-  "source": "https://www.flickr.com/photos/101300267@N05/13610398033"
+  "title": "File:Microsoft-Xbox-One-Console-Set-wKinect.jpg",
+  "creator": "Evan-Amos",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Microsoft-Xbox-One-Console-Set-wKinect.jpg"
  },
  {
   "path": "/products/demo5/beauty-moisturizer.jpg",
