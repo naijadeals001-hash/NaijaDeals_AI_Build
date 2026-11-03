@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  UserCircle,
   ShieldCheck,
   ShoppingCart,
   Bike,
