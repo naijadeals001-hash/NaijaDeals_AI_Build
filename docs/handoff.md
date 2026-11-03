@@ -426,6 +426,12 @@ Note: the development database predated the expanded staff-role list, so `ops`, 
 `support` and `moderator` were missing there; they were upserted (seed already defines them) and
 both dev and test databases now expose all ten roles.
 
+**NaijaEats landing (same pass):** the supplied food-delivery graphic was cropped past its baked-in
+text and now drives the NaijaEats card and a split hero ("Order food for delivery, once the kitchen
+is connected"), followed by escrow / tracked-dispatch / no-fake-kitchens cards and a setup-status
+card that keeps ordering disabled honestly. Verified: image loads on the page and homepage card,
+3 feature cards, axe 0, 0 overflow at 1440 and 390.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

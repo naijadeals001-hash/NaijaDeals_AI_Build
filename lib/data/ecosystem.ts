@@ -87,7 +87,7 @@ export const verticals: Vertical[] = [
     icon: ChefHat,
     label: "Food and restaurant delivery",
     description: "Restaurant and buka meals delivered hot to your door.",
-    image: "/real-photography/module-eats.jpg",
+    image: "/brand-photography/eats-jollof-delivery.jpg", // Owner-supplied NaijaEats brand artwork (AI-generated, not a real restaurant or courier).
     accent: "#f97316",
     status: "setup",
     statusLabel: "Setup required",

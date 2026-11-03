@@ -188,3 +188,10 @@ branded NaijaSend truck. It is stored as `public/brand-photography/send-airport-
 (1280-wide JPEG) and drives both the NaijaSend ecosystem card and a new landing hero, followed by
 three honest capability cards (recorded events, escrow release, Lagos coverage) and a status card
 stating that external carrier integrations are not configured.
+
+
+**NaijaEats artwork (2026-11-03):** the supplied NaijaEats delivery graphic is cropped past its
+baked-in marketing text and stored as `public/brand-photography/eats-jollof-delivery.jpg`
+(1280-wide). It drives the NaijaEats ecosystem card and a split landing hero with honest copy:
+ordering stays disabled until restaurant credentials, menus and dispatch partners are connected.
+Three capability cards and a setup-status card follow.

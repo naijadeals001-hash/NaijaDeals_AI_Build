@@ -19,6 +19,7 @@ import {
   Truck,
   Wallet,
   Smartphone,
+  UtensilsCrossed,
   Laptop,
   Sofa,
   Shirt,
@@ -1839,13 +1840,88 @@ export function AdminOpsPage() {
 }
 
 export function NaijaEatsPage() {
+  const capabilities = [
+    { icon: ShieldCheck, title: "Escrow-protected", body: "Food orders follow the same verified payment and release rules as NaijaShop." },
+    { icon: Truck, title: "Tracked dispatch", body: "Pickup and delivery events are recorded by the assigned courier." },
+    { icon: UtensilsCrossed, title: "No fake kitchens", body: "No restaurant is listed until its menu and dispatch partner are connected." }
+  ];
   return (
-    <div className="rounded-2xl border border-border-soft bg-canvas p-8">
-      <h1 className="font-display text-2xl font-extrabold">NaijaEats</h1>
-      <p className="mt-2 text-sm text-muted">
-        Food ordering is not configured in this environment. There are no restaurant credentials, menus or dispatch
-        partners connected, so ordering is disabled rather than simulated.
-      </p>
+    <div className="space-y-5">
+      <section className="overflow-hidden rounded-3xl border border-border-soft bg-[#04140f] text-white">
+        <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="p-6 sm:p-9">
+            <p className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide backdrop-blur">
+              <UtensilsCrossed className="h-3.5 w-3.5" aria-hidden="true" />
+              NaijaEats
+            </p>
+            <h1 className="mt-4 font-display text-3xl font-extrabold leading-tight sm:text-4xl">
+              Order food for delivery, once the kitchen is connected
+            </h1>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/75">
+              NaijaEats is the food vertical of the same account you use for shopping and rides. Ordering stays
+              disabled until restaurant credentials, menus and dispatch partners are actually connected — no
+              simulated restaurants and no fake delivery times.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2 text-xs font-bold">
+              <span className="rounded-full bg-white/10 px-3 py-1.5">Same NaijaDeals account</span>
+              <span className="rounded-full bg-white/10 px-3 py-1.5">Escrow-protected</span>
+              <span className="rounded-full bg-white/10 px-3 py-1.5">Honest setup state</span>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Link href="/naijashop" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-extrabold text-[#04140f]">
+                Browse NaijaShop
+                <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
+              </Link>
+              <Link href="#eats-status" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/25 px-4 text-sm font-bold text-white">
+                See setup status
+              </Link>
+            </div>
+          </div>
+          <div className="relative min-h-[260px] lg:min-h-full">
+            <img
+              src="/brand-photography/eats-jollof-delivery.jpg"
+              alt="Brand illustration of a NaijaEats courier holding a delivery bag with jollof rice, grilled chicken and plantain"
+              width={1280}
+              height={1255}
+              className="absolute inset-0 h-full w-full object-cover"
+              fetchPriority="high"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#04140f] via-[#04140f]/20 to-transparent lg:from-[#04140f]/80" />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-3">
+        {capabilities.map((entry) => {
+          const Icon = entry.icon;
+          return (
+            <div key={entry.title} className="rounded-2xl border border-border-soft bg-canvas p-4">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary-soft text-primary">
+                <Icon className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <p className="mt-2 text-sm font-extrabold">{entry.title}</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted">{entry.body}</p>
+            </div>
+          );
+        })}
+      </section>
+
+      <section id="eats-status" className="rounded-2xl border border-border-soft bg-canvas p-5">
+        <h2 className="font-display text-lg font-extrabold">Setup status</h2>
+        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted">
+          Food ordering is not configured in this environment. There are no restaurant credentials, menus or dispatch
+          partners connected, so ordering is disabled rather than simulated.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/help" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white">
+            Read how setup works
+            <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
+          </Link>
+          <Link href="/naijashop" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border-soft px-4 text-sm font-bold">
+            Browse NaijaShop
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
