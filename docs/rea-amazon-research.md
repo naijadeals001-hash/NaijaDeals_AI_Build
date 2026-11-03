@@ -61,3 +61,12 @@ The product-detail extraction did not complete (the sampled ASIN returned Page N
 
 Screenshot evidence: `qa-artifacts/preview/amazon-reference.png` (reference) and
 `qa-artifacts/preview/naijashop-after.png` (NaijaShop after the pass).
+
+
+## Homepage capture (owner screenshot, 2026-11-03)
+
+The owner supplied a full Amazon homepage capture. Added observations: a five-card horizontal
+merchandising carousel; four-up card shelves (each with a title, "See more", and a 2x2 image grid);
+a "See personalized recommendations" sign-in band; and a layered footer ("Back to top", four link
+columns, locale row, multi-column brand grid, legal line). NaijaShop now implements the carousel, eight
+category shelves, the sign-in band and the layered footer. Sample rows remain labelled.

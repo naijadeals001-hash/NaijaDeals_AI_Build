@@ -167,13 +167,13 @@ export function NaijaShopPage() {
   const [addingId, setAddingId] = useState("");
   const PAGE_SIZE = 12;
 
-  // Amazon-inspired CSS grid pattern classes
-  const gridPatterns = {
-    twoPack: "grid-template-areas: \"a b\" grid-template-columns: repeat(2,1fr) grid-template-rows: repeat(2,1fr)",
-    threePack: "grid-template-areas: \"a a\" grid-template-columns: repeat(2,1fr) grid-template-rows: repeat(3,1fr) \"b c\"",
-    fourPack: "grid-template-areas: \"a b\" grid-template-columns: repeat(2,1fr) grid-template-rows: repeat(2,1fr) \"c d\"",
-    ninePack: "grid-template-columns: repeat(12,1fr) grid-template-rows: repeat(3,1fr)",
-  };
+  // Amazon-inspired CSS grid pattern classes (commented out for ESLint parsing)
+  // const gridPatterns = {
+  //   twoPack: "grid-template-areas: \"a b\" grid-template-columns: repeat(2,1fr) grid-template-rows: repeat(2,1fr)",
+  //   threePack: "grid-template-areas: \"a a\" grid-template-columns: repeat(2,1fr) grid-template-rows: repeat(3,1fr) \"b c\"",
+  //   fourPack: "grid-template-areas: \"a b\" grid-template-columns: repeat(2,1fr) grid-template-rows: repeat(2,1fr) \"c d\"",
+  //   ninePack: "grid-template-columns: repeat(12,1fr) grid-template-rows: repeat(3,1fr)",
+  // };
 
   useEffect(() => {
     let active = true;
@@ -305,30 +305,73 @@ export function NaijaShopPage() {
         ))}
       </nav>
 
-      <section className="mt-2 overflow-hidden rounded-lg border border-border-soft bg-canvas">
-        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">NaijaShop marketplace</p>
-            <h1 className="mt-1 font-display text-2xl font-extrabold sm:text-3xl">Shop verified Nigerian sellers</h1>
-            <p className="mt-1 text-sm text-muted">
-              Escrow-protected checkout, tracked delivery and server-verified payments — {catalogue.length} listings from {vendors} sellers.
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-3 text-center text-[11px] font-bold text-muted sm:w-auto">
-            <div className="rounded-lg bg-surface-low px-3 py-2">
-              <ShieldCheck className="mx-auto mb-1 h-4 w-4 text-primary" aria-hidden="true" />
-              Escrow
-            </div>
-            <div className="rounded-lg bg-surface-low px-3 py-2">
-              <Truck className="mx-auto mb-1 h-4 w-4 text-primary" aria-hidden="true" />
-              Tracked
-            </div>
-            <div className="rounded-lg bg-surface-low px-3 py-2">
-              <PackageCheck className="mx-auto mb-1 h-4 w-4 text-primary" aria-hidden="true" />
-              Returns
-            </div>
-          </div>
+      <section aria-label="Featured collections" className="mt-3">
+        <div className="flex snap-x gap-3 overflow-x-auto pb-1">
+          {categories.slice(0, 6).map((item, index) => {
+            const items = products.filter((product) => product.category.id === item.id).slice(0, 4);
+            const backgrounds = ["#007185", "#b12704", "#0b6b3a", "#b0008f", "#9a3f00", "#232f3e"];
+            return (
+              <article
+                key={item.id}
+                className="relative flex min-h-[300px] w-[290px] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-lg p-4 text-white sm:w-[320px]"
+                style={{ backgroundColor: backgrounds[index % backgrounds.length] }}
+              >
+                <div>
+                  <h2 className="font-display text-2xl font-extrabold leading-tight">{item.name}</h2>
+                  <p className="mt-1 text-xs text-white/95">Shop verified sellers in this department.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {items.length > 0 ? items.map((product) => (
+                    <Link key={product.id} href={`/product/${product.slug}`} className="grid aspect-square place-items-center rounded bg-white/95 p-2">
+                      <img src={product.images[0]?.url || "/products/tecno-spark-20.svg"} alt={product.name} className="h-full w-full object-contain" loading="lazy" />
+                    </Link>
+                  )) : <span className="col-span-2 text-xs text-white/80">New listings coming soon.</span>}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setCategory(item.slug); setPreset("all"); resetPage(); }}
+                  className="mt-3 w-fit rounded bg-white px-3 py-1.5 text-xs font-bold text-[#0f1111] hover:bg-[#f7fafa]"
+                >
+                  Shop now
+                </button>
+              </article>
+            );
+          })}
         </div>
+      </section>
+
+      <section aria-label="Recommended collections" className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {categories.slice(0, 8).map((item) => {
+          const items = products.filter((product) => product.category.id === item.id).slice(0, 4);
+          return (
+            <article key={item.id} className="rounded-lg border border-border-soft bg-canvas p-4">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="line-clamp-1 text-lg font-extrabold text-[#0f1111]">{item.name}</h2>
+                <button type="button" onClick={() => { setCategory(item.slug); resetPage(); }} className="shrink-0 text-xs font-bold text-[#007185] hover:underline">
+                  See more
+                </button>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                {items.length > 0 ? items.map((product) => (
+                  <Link key={product.id} href={`/product/${product.slug}`} className="group">
+                    <div className="grid h-24 place-items-center rounded bg-white p-1">
+                      <img src={product.images[0]?.url || "/products/tecno-spark-20.svg"} alt={product.name} className="h-full w-full object-contain" loading="lazy" />
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-xs text-[#0f1111] group-hover:text-[#c45500] group-hover:underline">{product.name}</p>
+                  </Link>
+                )) : <p className="col-span-2 text-xs text-muted">Listings coming soon.</p>}
+              </div>
+            </article>
+          );
+        })}
+      </section>
+
+      <section className="mt-4 rounded-lg border border-border-soft bg-canvas px-4 py-5 text-center">
+        <h2 className="font-display text-xl font-extrabold text-[#0f1111]">See personalized recommendations</h2>
+        <Link href="/login?next=/naijashop" className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-[#ffd814] px-6 text-sm font-bold text-[#0f1111] hover:bg-[#f7ca00]">
+          Sign in
+        </Link>
+        <p className="mt-1 text-[11px] text-[#565959]">New customer? <Link href="/register" className="text-[#007185] underline">Start here.</Link></p>
       </section>
 
       {notice ? (
@@ -382,82 +425,7 @@ export function NaijaShopPage() {
         </div>
       ) : null}
 
-      <section aria-label="Shop by category" className="mt-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-extrabold text-ink">Shop by category</h2>
-          <button
-            type="button"
-            onClick={() => { setCategory("all"); setPreset("all"); resetPage(); }}
-            className="text-xs font-bold text-primary hover:underline"
-          >
-            View all
-          </button>
-        </div>
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-          {categories.slice(0, 10).map((item) => {
-            const Icon = categoryIcon(item.name);
-            const active = category === item.slug;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => { setCategory(item.slug); resetPage(); }}
-                aria-pressed={active}
-                className={`flex w-20 shrink-0 flex-col items-center gap-1 rounded-xl border p-2 text-center transition ${active ? "border-primary bg-primary-soft" : "border-border-soft bg-canvas hover:border-primary/40"}`}
-              >
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-surface-low text-primary">
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <span className="line-clamp-2 text-[10px] font-bold leading-tight text-ink">{item.name}</span>
-              </button>
-            );
-          })}
-          <Link href="/search" className="flex w-20 shrink-0 flex-col items-center gap-1 rounded-xl border border-border-soft bg-canvas p-2 text-center hover:border-primary/40">
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-surface-low text-primary">
-              <Tag className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <span className="text-[10px] font-bold text-ink">More</span>
-          </Link>
-        </div>
-      </section>
-
-      <section aria-label="Promotions" className="mt-3 grid gap-3 sm:grid-cols-3">
-        <button
-          type="button"
-          onClick={() => { setPreset("deals"); setCategory("all"); setPriceBand("all"); resetPage(); }}
-          aria-pressed={preset === "deals"}
-          className={`rounded-xl bg-[#b91c1c] p-4 text-left text-white transition hover:brightness-110 ${preset === "deals" ? "ring-2 ring-white/70" : ""}`}
-        >
-          <Flame className="h-5 w-5" aria-hidden="true" />
-          <p className="mt-1 font-display text-lg font-extrabold">Today's deals</p>
-          <p className="text-xs text-white/85">{dealCount} product{dealCount === 1 ? "" : "s"} with real savings</p>
-          <span className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-[#b91c1c]">Shop deals</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => { setPreset("top"); setCategory("all"); setPriceBand("all"); resetPage(); }}
-          aria-pressed={preset === "top"}
-          className={`rounded-xl bg-[#f3b33d] p-4 text-left text-[#0b1a13] transition hover:brightness-105 ${preset === "top" ? "ring-2 ring-[#0b1a13]/40" : ""}`}
-        >
-          <Award className="h-5 w-5" aria-hidden="true" />
-          <p className="mt-1 font-display text-lg font-extrabold">Top rated</p>
-          <p className="text-xs text-[#0b1a13]/80">{ratedCount} reviewed product{ratedCount === 1 ? "" : "s"}</p>
-          <span className="mt-2 inline-flex rounded-full bg-[#0b1a13] px-3 py-1 text-xs font-bold text-white">Shop bestsellers</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => { setPreset("new"); setCategory("all"); setPriceBand("all"); resetPage(); }}
-          aria-pressed={preset === "new"}
-          className={`rounded-xl bg-[#0b6b3a] p-4 text-left text-white transition hover:brightness-110 ${preset === "new" ? "ring-2 ring-white/70" : ""}`}
-        >
-          <PackagePlus className="h-5 w-5" aria-hidden="true" />
-          <p className="mt-1 font-display text-lg font-extrabold">New arrivals</p>
-          <p className="text-xs text-white/85">Fresh listings from verified sellers</p>
-          <span className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-[#0b6b3a]">Shop new</span>
-        </button>
-      </section>
-
-      <div className="mt-4 grid gap-5 lg:grid-cols[2]">
+<div className="mt-4 grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
         <div className={showFilters ? "block" : "hidden lg:block"}>
         <ShopFilters
           categories={categories}

@@ -783,3 +783,13 @@ catalogue when no live listings exist. Screenshot qa-artifacts/preview/naijashop
 **NaijaShop footer fix (2026-11-03):** removed the duplicate ShopFooter render (the page had two
 instances) and suppressed the global AppShell footer on /naijashop so the storefront has exactly one
 footer. Also darkened the discount badge text for contrast; axe is clean again.
+
+
+## NaijaShop Amazon homepage pass (2026-11-03)
+
+Replaced the marketplace hero and promo tiles with a colored collection carousel, eight category
+shelves (2x2 images + See more), a personalized-recommendations sign-in band, and a layered Amazon-style
+footer. Result rows and filters remain below the shelves. Verified on the working dev server at
+http://localhost:3001/naijashop: 1 footer, 8 shelves, axe 0, no overflow. The canonical port 3000 is
+currently returning 500 from an orphaned dev-server socket (PID 60680) that could not be terminated;
+the 3001 server serves the same repository and latest build.
