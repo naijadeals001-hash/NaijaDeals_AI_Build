@@ -1990,6 +1990,13 @@ export function NaijaEatsPage() {
               >
                 <ShoppingBasket className="h-4 w-4" aria-hidden="true" /> Pickup
               </button>
+              <span
+                aria-disabled="true"
+                title="Dine-in is not available in this build"
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/10 px-4 text-xs font-extrabold text-white/40"
+              >
+                <UtensilsCrossed className="h-4 w-4" aria-hidden="true" /> Dine in
+              </span>
             </div>
             <div className="mt-4 flex items-center gap-2 rounded-2xl bg-white p-1.5 text-ink">
               <Search className="ml-2 h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
@@ -2006,7 +2013,7 @@ export function NaijaEatsPage() {
               <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5 text-primary-live" aria-hidden="true" /> Verified kitchens</span>
             </div>
           </div>
-          <div className="relative min-h-[220px] lg:min-h-full">
+          <div className="relative min-h-[260px] lg:min-h-[360px]">
             <img
               src="/brand-photography/eats-jollof-delivery.jpg"
               alt="Brand illustration of a NaijaEats courier holding a delivery bag of jollof rice, grilled chicken and plantain"
@@ -2023,9 +2030,9 @@ export function NaijaEatsPage() {
           <button
             type="button"
             onClick={() => setCategory("all")}
-            className={`flex w-20 shrink-0 flex-col items-center gap-1 rounded-xl border px-2 py-2 text-center ${category === "all" ? "border-primary bg-primary-soft" : "border-border-soft"}`}
+            className={`flex w-24 shrink-0 flex-col items-center gap-1.5 rounded-xl border px-2 py-2.5 text-center ${category === "all" ? "border-primary bg-primary-soft" : "border-border-soft"}`}
           >
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-surface-low text-primary"><UtensilsCrossed className="h-4 w-4" aria-hidden="true" /></span>
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-[#0b6b3a] text-white"><UtensilsCrossed className="h-5 w-5" aria-hidden="true" /></span>
             <span className="text-[10px] font-bold leading-tight">All food</span>
           </button>
           {EATS_CATEGORY_ICONS.map((item) => {
@@ -2038,7 +2045,9 @@ export function NaijaEatsPage() {
                 onClick={() => setCategory(active ? "all" : item.label)}
                 className={`flex w-20 shrink-0 flex-col items-center gap-1 rounded-xl border px-2 py-2 text-center ${active ? "border-primary bg-primary-soft" : "border-border-soft"}`}
               >
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-surface-low text-primary"><Icon className="h-4 w-4" aria-hidden="true" /></span>
+                <span className="grid h-12 w-12 place-items-center rounded-full text-white" style={{ backgroundColor: ["#0b6b3a", "#b45309", "#a21caf", "#0369a1", "#be123c", "#15803d", "#c2410c"][EATS_CATEGORY_ICONS.findIndex((entry) => entry.label === item.label) % 7] }}>
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </span>
                 <span className="text-[10px] font-bold leading-tight">{item.label}</span>
               </button>
             );
@@ -2059,18 +2068,22 @@ export function NaijaEatsPage() {
             verification.
           </p>
         ) : null}
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {filtered.map((restaurant, index) => {
             const prices = restaurant.menuItems.map((item) => Number(item.priceKobo));
             const min = prices.length ? Math.min(...prices) : 0;
             const max = prices.length ? Math.max(...prices) : 0;
             return (
               <article key={restaurant.id} className="overflow-hidden rounded-2xl border border-border-soft bg-canvas">
-                <div
-                  className="relative flex h-28 items-end p-3"
-                  style={{ background: `linear-gradient(135deg, #0b6b3a 0%, #04140f 100%)` }}
-                >
-                  <span className="font-display text-4xl font-black text-white/25">{restaurant.name.slice(0, 1)}</span>
+                <div className="relative flex h-36 items-end p-3">
+                  <img
+                    src="/brand-photography/eats-jollof-delivery.jpg"
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 h-full w-full object-cover"
+                    style={{ objectPosition: index % 2 === 0 ? "40% 78%" : "80% 70%" }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#04140f]/80 via-[#04140f]/20 to-transparent" />
                   {restaurant.isSample ? (
                     <span className="absolute right-2 top-2 rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#B45309]">Sample</span>
                   ) : null}
@@ -2095,18 +2108,22 @@ export function NaijaEatsPage() {
               </article>
             );
           })}
+          <article className="flex flex-col justify-between rounded-2xl bg-[#0b6b3a] p-5 text-white">
+            <div>
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-white/15">
+                <UtensilsCrossed className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <h3 className="mt-3 font-display text-xl font-extrabold">Run a kitchen?</h3>
+              <p className="mt-1 text-xs leading-relaxed text-white/75">
+                Publish your menu, take orders and get paid through NaijaDeals. Verification comes first; dispatch
+                switches on per kitchen.
+              </p>
+            </div>
+            <Link href="/sell" className="mt-4 inline-flex min-h-10 w-fit items-center gap-2 rounded-xl bg-white px-4 text-xs font-extrabold text-[#0b1a13]">
+              Apply as a restaurant partner
+            </Link>
+          </article>
         </div>
-      </section>
-
-      <section className="rounded-2xl border border-primary/20 bg-primary-soft p-5">
-        <h2 className="font-display text-lg font-extrabold text-primary">Run a kitchen?</h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          Restaurant partners publish their own menus after verification. Ordering switches on per kitchen when a
-          dispatch partner is connected.
-        </p>
-        <Link href="/sell" className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-white">
-          Apply as a restaurant partner
-        </Link>
       </section>
     </div>
   );

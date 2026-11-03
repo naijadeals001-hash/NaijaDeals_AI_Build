@@ -597,3 +597,9 @@ tracking) remains to be built and is explicitly marked as not available.
 TEST_BASE_URL and covers registration -> application -> admin rejection -> 403 + redirect -> rejection
 notification, vendor suspension notification + mark-all-read, and courier suspension notification.
 Latest run: 9/9 passed.
+
+**NaijaEats layout parity (2026-11-03):** full-bleed /naijaeats with green brand bar, hero, mode tabs,
+colored categories, photo-cover restaurant cards and a partner CTA tile. Verified: no sidebar, 2
+kitchen cards + promo tile, 0 overflow, axe 0. Freight-style ordering foundation added as
+lib/services/core/eats-order.service.ts (wallet-debited food orders with kitchen/courier transitions
+and events); APIs and UI are not wired yet.

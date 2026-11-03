@@ -35,8 +35,9 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
     return <>{children}</>;
   }
 
-  // The public homepage is a full-bleed storefront; the ecosystem sidebar starts on inner routes.
-  const isHome = pathname === "/";
+  // The storefront and NaijaEats landing use the full-bleed layout; the ecosystem
+  // sidebar starts on the remaining inner routes.
+  const isHome = pathname === "/" || pathname === "/naijaeats";
 
   const topLinks = [
     { href: "/", label: t("nav.home") },

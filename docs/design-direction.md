@@ -270,3 +270,9 @@ delivery reference: dark-green NaijaEats bar with delivery area, cart and sign-i
 search across restaurants and dishes; category chips; and "Popular restaurants near you" cards with
 menu count, price range and two priced items. Ratings and delivery ETAs are not invented — cards show
 only menu data the kitchens published. Ordering remains gated per kitchen and the cards say so.
+
+**NaijaEats full-bleed pass (owner feedback, 2026-11-03):** /naijaeats now hides the ecosystem sidebar
+and uses the full page width like the supplied reference. Added a green NaijaEats brand bar, a taller
+hero with the jollof artwork, Delivery/Pickup/Dine-in tabs (Dine-in visibly disabled), colored
+category circles, restaurant cards with food-photo covers and prices, and a green partner CTA tile in
+the restaurant grid. Sample kitchens stay labelled; ratings and delivery ETAs are still not invented.
