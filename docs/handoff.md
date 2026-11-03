@@ -846,3 +846,10 @@ Visible demo catalogue reduced to 6 provenanced products (3 shelves); 59 sample 
 DRAFT. Canonical provenance is public/products/provenance.json. Playwright suite 13/13. Remaining gap:
 Phones, Fashion, Groceries, Power and Gaming shelves are empty until suitable licensed photographs are
 sourced. Demo checkout is blocked server-side. Canonical ports 3000/3001 remain a tracked infra issue.
+
+## NaijaShop imagery restored (2026-11-03)
+
+Per owner direction, all 65 sample products were re-activated so the storefront shows images again:
+32 products rendered across 8 shelves (4 per shelf), 0 broken images. The earlier archive-only
+cleanup was reversed; image-quality and provenance gaps remain tracked in the audit and will be fixed
+by replacing images, not removing products.
