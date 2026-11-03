@@ -167,10 +167,11 @@ dialogs are introduced.
 - Evidence: suspend → catalogue hidden, create blocked 403, overview status SUSPENDED with reason, reactivate → create 201 (cleaned up); screenshot `qa-artifacts/preview/seller-suspended.png`
 - Driver suspension: admin Drivers tab action, audited `driver.status_changed` before/after, suspended drivers cannot accept new rides (403 verified), reactivation restores acceptance, and existing active work stays readable
 - Seller earnings now include **NaijaPay ledger balances** (available/held) from the vendor wallet; verified figures matched the wallet table exactly (2,450,000 available / 1,665,000 held)
+- Courier suspension: admin Couriers tab action with required reason, audited `courier.status_changed` before/after, suspended couriers rejected from new delivery assignment (**409 courier_suspended** with the reason), reactivation restores assignment; existing assigned deliveries remain updatable so active work can finish
 
 **Still open for a Phase 06 PASS:**
-- Courier suspension parity
-- Rejected-application access re-verification and suspension *during an active job* policy
+- Rejected-application access re-verification
+- Explicit end-to-end test of "suspension during an active job" for each partner type
 - Partner notifications and profile management primitives
 
 ## Phase 07 — Wallet, payments, escrow and settlement correctness

@@ -493,6 +493,12 @@ shows a banner on `/seller`. Verified: suspend 200 → catalogue product absent 
 overview SUSPENDED → reactivate 200 → create 201 (probe deleted). Driver/courier suspension, rejected-
 application access and ledger-based earnings remain open for Phase 06.
 
+**Phase 06 courier suspension (2026-11-03):** Couriers table now has Suspend/Reactivate with a required
+reason and an audited `courier.status_changed` row. Assignment checks the suspension first and returns
+**409 courier_suspended** with the reason; reactivation clears it. Courier delivery updates stay open so
+an assigned delivery can be finished. Verified: suspend 200 → assign 409 → reactivate 200, audit
+before/after present.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

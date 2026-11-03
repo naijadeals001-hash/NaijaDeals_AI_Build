@@ -1,0 +1,1 @@
+ALTER TABLE "Courier" ADD COLUMN IF NOT EXISTS "suspendedReason" TEXT;

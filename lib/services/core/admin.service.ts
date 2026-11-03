@@ -180,6 +180,37 @@ async function syncDeliveryForOrderStatus(tx: Prisma.TransactionClient, actorId:
 }
 
 
+export async function setCourierStatus(input: {
+  adminId: string;
+  courierId: string;
+  active: boolean;
+  reason?: string;
+}) {
+  const courier = await prisma.courier.findUnique({ where: { id: input.courierId } });
+  if (!courier) throw new ApiError(404, "courier_not_found", "Courier not found.");
+  const reason = input.reason?.trim() ?? "";
+  if (!input.active && reason.length === 0) {
+    throw new ApiError(400, "reason_required", "A suspension reason is required.");
+  }
+  if (courier.active === input.active) return courier;
+
+  const updated = await prisma.courier.update({
+    where: { id: courier.id },
+    data: { active: input.active, suspendedReason: input.active ? null : reason }
+  });
+  await recordAudit({
+    actorId: input.adminId,
+    action: "courier.status_changed",
+    entity: "Courier",
+    entityId: courier.id,
+    metadata: {
+      before: { active: courier.active, suspendedReason: courier.suspendedReason },
+      after: { active: updated.active, suspendedReason: updated.suspendedReason }
+    }
+  });
+  return updated;
+}
+
 export async function setDriverStatus(input: {
   adminId: string;
   userId: string;
@@ -391,7 +422,13 @@ export async function assignCourier(input: { adminId: string; deliveryId: string
     prisma.courier.findUnique({ where: { id: input.courierId } })
   ]);
   if (!delivery) throw new ApiError(404, "delivery_not_found", "Delivery not found.");
-  if (!courier || !courier.active) throw new ApiError(400, "courier_unavailable", "Courier is not active.");
+  if (!courier || !courier.active) {
+    throw new ApiError(
+      409,
+      "courier_suspended",
+      courier?.suspendedReason ? `Courier suspended: ${courier.suspendedReason}` : "Courier is not active and cannot take new deliveries."
+    );
+  }
   if (!["ready_for_pickup", "courier_assigned"].includes(delivery.order.status)) {
     throw new ApiError(409, "seller_not_ready", "The seller must mark the order ready for pickup before a courier is assigned.");
   }

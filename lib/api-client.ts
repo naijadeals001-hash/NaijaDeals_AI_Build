@@ -426,6 +426,8 @@ export const apiClient = {
   adminApplications: () => requestJson<Array<Record<string, unknown>>>("/api/admin/applications"),
   adminReviewApplication: (id: string, decision: "approve" | "reject", note?: string) =>
     requestJson<Record<string, unknown>>(`/api/admin/applications/${id}`, { method: "POST", body: JSON.stringify({ decision, note }) }),
+  adminSetCourierStatus: (id: string, active: boolean, reason?: string) =>
+    requestJson<Record<string, unknown>>(`/api/admin/couriers/${id}/status`, { method: "POST", body: JSON.stringify({ active, reason }) }),
   adminSetDriverStatus: (userId: string, status: "approved" | "suspended", reason?: string) =>
     requestJson<Record<string, unknown>>(`/api/admin/drivers/${userId}/status`, { method: "POST", body: JSON.stringify({ status, reason }) }),
   adminSetVendorStatus: (id: string, status: "VERIFIED" | "SUSPENDED", reason?: string) =>

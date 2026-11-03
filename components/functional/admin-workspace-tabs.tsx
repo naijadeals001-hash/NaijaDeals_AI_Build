@@ -1550,7 +1550,33 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
             { header: "Phone", cell: (row) => <span>{text(row.phone)}</span> },
             { header: "Account", cell: (row) => <span className="text-xs text-[#8B949E]">{text(value(row, "user.email"))}</span> },
             { header: "Active", cell: (row) => <StatusBadge status={row.active ? "active" : "inactive"} /> },
-            { header: "Joined", cell: (row) => <span className="text-xs text-[#8B949E]">{date(row.createdAt)}</span> }
+            { header: "Joined", cell: (row) => <span className="text-xs text-[#8B949E]">{date(row.createdAt)}</span> },
+            {
+              header: "Access",
+              cell: (row) => {
+                const active = row.active === true;
+                const busy = busyId === String(row.id);
+                return (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      if (active) {
+                        const reason = window.prompt(`Reason for suspending ${text(row.name)}?`);
+                        if (!reason || !reason.trim()) return;
+                        void run(String(row.id), () => apiClient.adminSetCourierStatus(String(row.id), false, reason.trim()), `${text(row.name)} suspended.`);
+                        return;
+                      }
+                      if (!window.confirm(`Reactivate ${text(row.name)}? They can take new deliveries again.`)) return;
+                      void run(String(row.id), () => apiClient.adminSetCourierStatus(String(row.id), true), `${text(row.name)} reactivated.`);
+                    }}
+                    className="rounded-lg border border-[#21262D] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D] disabled:opacity-50"
+                  >
+                    {busy ? "Working…" : active ? "Suspend" : "Reactivate"}
+                  </button>
+                );
+              }
+            }
           ]}
         />
       </Panel>
