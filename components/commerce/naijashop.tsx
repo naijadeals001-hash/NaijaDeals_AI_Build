@@ -326,8 +326,8 @@ export function NaijaShopPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {items.length > 0 ? items.map((product) => (
-                    <Link key={product.id} href={`/product/${product.slug}`} className="grid aspect-square place-items-center rounded bg-white/95 p-2">
-                      <img src={product.images[0]?.url || "/products/tecno-spark-20.svg"} alt={product.name} className="h-full w-full object-contain" style={{ width: "100%", height: "100%", objectFit: "contain" }} loading="lazy" />
+                    <Link key={product.id} href={`/product/${product.slug}`} className="relative grid aspect-square place-items-center overflow-hidden rounded bg-white/95 p-2">
+                      <img src={product.images[0]?.url || "/products/tecno-spark-20.svg"} alt={product.name} className="absolute inset-0 m-auto max-h-full max-w-full object-contain p-2" loading="lazy" />
                     </Link>
                   )) : <span className="col-span-2 text-xs text-white/80">New listings coming soon.</span>}
                 </div>
@@ -362,8 +362,8 @@ export function NaijaShopPage() {
               <div className="mt-3 grid grid-cols-2 gap-3">
                 {items.length > 0 ? items.map((product) => (
                   <Link key={product.id} href={`/product/${product.slug}`} className="group">
-                    <div className="grid h-24 place-items-center rounded bg-white p-1">
-                      <img src={product.images[0]?.url || "/products/tecno-spark-20.svg"} alt={product.name} className="h-full w-full object-contain" style={{ width: "100%", height: "100%", objectFit: "contain" }} loading="lazy" />
+                    <div className="relative grid h-24 place-items-center overflow-hidden rounded bg-white p-1">
+                      <img src={product.images[0]?.url || "/products/tecno-spark-20.svg"} alt={product.name} className="absolute inset-0 m-auto max-h-full max-w-full object-contain p-1" loading="lazy" />
                     </div>
                     <p className="mt-1 line-clamp-2 text-xs text-[#0f1111] group-hover:text-[#c45500] group-hover:underline">{product.name}</p>
                   </Link>
@@ -649,7 +649,7 @@ function ShopResultRow({ product, onAdd }: { product: ApiProduct; onAdd: (produc
 
   return (
     <article className="flex gap-4 p-4 transition hover:bg-[#f7fafa]">
-      <Link href={`/product/${product.slug}`} className="grid h-40 w-40 shrink-0 place-items-center overflow-hidden rounded-md border border-border-soft bg-white">
+      <Link href={`/product/${product.slug}`} className="relative grid h-40 w-40 shrink-0 place-items-center overflow-hidden rounded-md border border-border-soft bg-white">
         <img
           src={product.images[0]?.url || "/products/tecno-spark-20.svg"}
           alt={product.images[0]?.alt || product.name}
