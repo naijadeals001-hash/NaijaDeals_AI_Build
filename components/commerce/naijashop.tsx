@@ -321,6 +321,21 @@ export function NaijaShopPage() {
               <Link href="/search?sort=newest" onClick={() => setAllMenuOpen(false)} className="block py-1 text-sm hover:underline">New Releases</Link>
             </div>
             <div className="border-t border-border-soft px-4 py-3">
+              <p className="text-base font-extrabold">Digital Content &amp; Devices</p>
+              {[
+                ["NaijaEats", "/naijaeats"],
+                ["NaijaStream", "/naijastream"],
+                ["NaijaPay", "/naijapay"],
+                ["Aura AI", "/aura-ai"],
+                ["NaijaFresh", "/naijafresh"]
+              ].map(([label, href]) => (
+                <Link key={href} href={href} onClick={() => setAllMenuOpen(false)} className="flex items-center justify-between py-1.5 text-sm hover:underline">
+                  {label}
+                  <ChevronRight className="h-4 w-4 text-muted" aria-hidden="true" />
+                </Link>
+              ))}
+            </div>
+            <div className="border-t border-border-soft px-4 py-3">
               <p className="text-base font-extrabold">Shop by Department</p>
               {categories.map((item) => (
                 <Link key={item.id} href={`/search?category=${item.slug}`} onClick={() => setAllMenuOpen(false)} className="flex items-center justify-between py-1.5 text-sm hover:underline">
