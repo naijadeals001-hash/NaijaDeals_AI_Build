@@ -838,3 +838,11 @@ docs/audits/naijashop-image-audit.md records the 32-product audit: 13 images hav
 19 lack complete source/licence records, and the phone/kettle/charger/cookware images are not acceptable
 packshots. The 12 branded samples remain archived. Demo checkout is blocked server-side and the
 Playwright suite passes 12/12. Image completion is NOT done; see the audit for the remaining gaps.
+
+
+## NaijaShop catalogue cleanup (2026-11-03)
+
+Visible demo catalogue reduced to 6 provenanced products (3 shelves); 59 sample records archived as
+DRAFT. Canonical provenance is public/products/provenance.json. Playwright suite 13/13. Remaining gap:
+Phones, Fashion, Groceries, Power and Gaming shelves are empty until suitable licensed photographs are
+sourced. Demo checkout is blocked server-side. Canonical ports 3000/3001 remain a tracked infra issue.
