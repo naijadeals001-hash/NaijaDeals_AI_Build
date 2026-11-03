@@ -383,6 +383,14 @@ escrow states it replaced. Verified against the isolated database: a refund prod
 `paid/held/vendor_notified → refunded` and opening a dispute produced `completed/released →
 disputed`; marketplace suite still **13/13**.
 
+**Phase 05 exit-gate run (2026-11-03):** fresh isolated database → admin **19/19**, marketplace
+**13/13**, drive **28/28**, `tsc` clean. Dashboard KPIs matched direct SQL across six figures
+(products 12, vendors 2, orders 0, trips 43, completed 20, drivers 2). Bulk partial failure was
+exercised by injecting a 500 on one selected product: the other row was suspended, the blocked row
+stayed ACTIVE, and the UI surfaced the row failure. Admin at 390×844 has 0 document overflow,
+in-container table scrolling, working navigation and axe 0. Phase 05 stays **IN PROGRESS** only for
+work coverage: role-assignment UI, disputes admin view, city activation.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only
