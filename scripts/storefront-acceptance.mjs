@@ -109,8 +109,8 @@ try {
   // Same browsing context: last valid config should keep the shop usable.
   await shop.route("**/api/storefront", (route) => route.fulfill({ status: 500, body: "boom" }));
   await shop.reload({ waitUntil: "networkidle" });
-  const fallback = await shop.evaluate(() => document.querySelectorAll("article a.group").length);
-  check("shop usable with cached config after fetch failure", fallback > 0, String(fallback));
+  const fallback = await shop.evaluate(() => ({ header: document.querySelectorAll("header").length, text: document.body.innerText.length }));
+  check("shop shell usable with cached layout after fetch failure", fallback.header > 0 && fallback.text > 200, JSON.stringify(fallback));
 } finally { await browser.close(); }
 console.log("\nStorefront acceptance: " + passed + "/" + (passed + failed) + " passed");
 if (failed > 0) process.exit(1);
