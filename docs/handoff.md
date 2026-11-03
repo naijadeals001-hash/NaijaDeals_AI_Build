@@ -338,6 +338,12 @@ Absent rows fall back to `lib/config/commerce.ts`. Because the long-running dev 
 Prisma client from before the model existed, the service uses parameterised raw SQL; a normal
 restart can switch it to `prisma.countrySetting` without behaviour change.
 
+**Preservation repair (same pass):** several files the app already imports were never tracked —
+`lib/auth/api-error.ts`, `lib/auth/scope.ts`, the super-admin role route, and the
+`20261102173000_admin_region_scope` migration. They are now committed (`c5d89ea`) and an import
+audit confirms every local `@/`/relative import resolves to a tracked file. Build directories,
+test results and the REA bundle are now ignored explicitly.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only
