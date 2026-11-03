@@ -120,6 +120,10 @@ dialogs are introduced.
 - Server-side pagination, safe bulk actions and record-detail views
 - Explicit operations/finance/support/moderation role scopes and cross-region allow/deny tests
 - Role-assignment writes and protection against self-escalation
+- Phase 05 acceptance run (2026-11-03, fresh isolated database): admin security **19/19**,
+  marketplace **13/13**, drive **28/28**, `tsc` clean, in the order admin → marketplace → drive.
+  The admin suite's cross-region product fixture now carries an image, removing the suite-order
+  coupling that made marketplace fail when it ran second.
 - Country activation (2026-11-03): `CountrySetting` overrides (migration `20261103130000_country_settings`)
   with a super-admin panel for sell/delivery switches, `countries:write` permission, audited
   `country.updated` before/after, and real enforcement in checkout (disabled → 400

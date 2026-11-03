@@ -353,6 +353,13 @@ and a **red/amber/green promo trio** — Today's deals, Top rated, New arrivals 
 data and filtering (deals reduced 12 sample cards to the 6 with genuine savings; aria-pressed and
 axe clean). The next design increment is the NaijaDrive landing composition (reference 04).
 
+**Phase 05 acceptance (same pass):** on a freshly migrated/seeded isolated database, run in the
+order admin → marketplace → drive, the suites report **19/19**, **13/13**, **28/28** with
+`tsc --noEmit` clean. One coupling was fixed: the admin suite's cross-region product fixture had no
+image, which made the marketplace catalogue check fail when it ran second; the fixture now carries
+an image. Reminder: restart the test server after dropping/recreating its database, otherwise
+Prisma reports "Server has closed the connection".
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

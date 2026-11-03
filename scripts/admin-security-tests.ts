@@ -343,7 +343,8 @@ async function main() {
         categoryId: product.categoryId,
         priceKobo: 100000n,
         countryCode: "GH",
-        status: "ACTIVE"
+        status: "ACTIVE",
+        images: { create: [{ url: "/products/tecno-spark-20.svg", alt: "Accra Security Product", sortOrder: 0 }] }
       }
     });    const denied = await moderator.client.post(`/api/admin/products/${ghProduct.id}/moderate`, { status: "SUSPENDED" });
     isStatus(denied, 403, "moderator suspends GH product while scoped to NG");
