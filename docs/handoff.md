@@ -371,6 +371,12 @@ yet"), then the existing live fare/vehicle/request flow. Verified: headline rend
 selecting another service swaps it for a module card with an "Open" link, and switching back restores
 the search. Verified: 6 tabs, form ⇄ CTA swap, axe 0, no mobile overflow.
 
+**Remote naming:** the single named remote is now `github-preservation` →
+`https://github.com/naijadeals001-hash/NaijaDeals_AI_Build.git`, per the project preservation rule;
+the duplicate `origin` entry was removed. Pushes still return **403 (denied to BetFuz)**, so the
+verified local bare backup at `C:\Users\User\naijadeals-backup.git` and the dated bundle remain the
+authoritative recovery path until GitHub authentication is fixed.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only
