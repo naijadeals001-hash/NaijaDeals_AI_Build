@@ -580,3 +580,9 @@ naijadeals001-hash/NaijaDeals_AI_Build.git denied to BetFuz` — and `gh auth st
 reports no logged-in GitHub host. The remote branch is unchanged at `d28a6be`. Recovery:
 authenticate (`gh auth login` or an authorised token) and push the existing commit; no
 history rewrite is required.
+
+**Phase 06 seller profile management (2026-11-03):** /seller now has a Business profile form
+(name, description, pickup address/phone, payout bank/account name/number) backed by
+GET/PATCH /api/seller/profile; changes are audited as vendor.profile_updated with the account number
+masked. Updated values appear in the seller overview immediately. Notifications and the full
+rejected-application verification remain.

@@ -27,6 +27,16 @@ export function SellerDashboard() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState("");
   const [showProductForm, setShowProductForm] = useState(false);
+  const [profile, setProfile] = useState({
+    name: "",
+    description: "",
+    pickupAddress: "",
+    pickupPhone: "",
+    payoutBank: "",
+    payoutAccountName: "",
+    payoutAccountNumber: ""
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -40,6 +50,15 @@ export function SellerDashboard() {
     try {
       const [data, cats] = await Promise.all([apiClient.sellerOverview(), apiClient.getCategories()]);
       setOverview(data);
+      setProfile({
+        name: data.vendor.name ?? "",
+        description: data.vendor.description ?? "",
+        pickupAddress: data.vendor.pickupAddress ?? "",
+        pickupPhone: data.vendor.pickupPhone ?? "",
+        payoutBank: data.vendor.payoutBank ?? "",
+        payoutAccountName: data.vendor.payoutAccountName ?? "",
+        payoutAccountNumber: data.vendor.payoutAccountNumber ?? ""
+      });
       setCategories(cats);
       setForm((current) => ({ ...current, categoryId: current.categoryId || cats[0]?.id || "" }));
       setStatus("ready");
@@ -55,6 +74,21 @@ export function SellerDashboard() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function saveProfile() {
+    setSavingProfile(true);
+    setError("");
+    setNotice("");
+    try {
+      await apiClient.sellerUpdateProfile(profile);
+      setNotice("Business profile saved.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save the profile.");
+    } finally {
+      setSavingProfile(false);
+    }
+  }
 
   async function advance(order: ApiOrder, next: "accepted" | "preparing" | "ready_for_pickup") {
     setBusy(order.id);
@@ -208,6 +242,37 @@ export function SellerDashboard() {
             Balances come from the vendor wallet ledger, not from order totals.
           </p>
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-border-soft bg-canvas p-5">
+        <h2 className="font-display text-lg font-extrabold">Business profile</h2>
+        <p className="mt-1 text-xs text-muted">Payout changes are audited. Only the last four digits are stored in the audit trail.</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="text-xs font-bold uppercase tracking-wide text-muted">Business name
+            <input value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+          </label>
+          <label className="text-xs font-bold uppercase tracking-wide text-muted">Pickup phone
+            <input value={profile.pickupPhone} onChange={(e) => setProfile({ ...profile, pickupPhone: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+          </label>
+          <label className="text-xs font-bold uppercase tracking-wide text-muted sm:col-span-2">Pickup address
+            <input value={profile.pickupAddress} onChange={(e) => setProfile({ ...profile, pickupAddress: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+          </label>
+          <label className="text-xs font-bold uppercase tracking-wide text-muted sm:col-span-2">Description
+            <textarea rows={2} value={profile.description} onChange={(e) => setProfile({ ...profile, description: e.target.value })} className="mt-1 block w-full rounded-lg border border-border-soft bg-surface-low px-3 py-2 text-sm font-semibold text-ink" />
+          </label>
+          <label className="text-xs font-bold uppercase tracking-wide text-muted">Payout bank
+            <input value={profile.payoutBank} onChange={(e) => setProfile({ ...profile, payoutBank: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+          </label>
+          <label className="text-xs font-bold uppercase tracking-wide text-muted">Account name
+            <input value={profile.payoutAccountName} onChange={(e) => setProfile({ ...profile, payoutAccountName: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+          </label>
+          <label className="text-xs font-bold uppercase tracking-wide text-muted">Account number
+            <input value={profile.payoutAccountNumber} onChange={(e) => setProfile({ ...profile, payoutAccountNumber: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+          </label>
+        </div>
+        <button type="button" onClick={() => void saveProfile()} disabled={savingProfile} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white disabled:opacity-60">
+          {savingProfile ? "Saving…" : "Save profile"}
+        </button>
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

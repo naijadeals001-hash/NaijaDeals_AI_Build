@@ -55,6 +55,10 @@ export async function getSellerOverview(userId: string) {
       market: vendor.market,
       pickupAddress: vendor.pickupAddress,
       pickupPhone: vendor.pickupPhone,
+      description: vendor.description,
+      payoutBank: vendor.payoutBank,
+      payoutAccountName: vendor.payoutAccountName,
+      payoutAccountNumber: vendor.payoutAccountNumber,
       trustScore: vendor.trustScore,
       commissionBps: vendor.commissionBps
     },
@@ -293,4 +297,78 @@ export async function resolveReturn(userId: string, returnId: string, action: "a
     where: { id: request.id },
     data: { status: "REFUNDED", refundKobo: BigInt(refund.refundedKobo) }
   });
+}
+
+
+const PROFILE_FIELDS = {
+  name: 120,
+  description: 1000,
+  pickupAddress: 200,
+  pickupPhone: 40,
+  payoutBank: 80,
+  payoutAccountName: 120,
+  payoutAccountNumber: 40
+} as const;
+
+/** Seller-editable profile. Payout changes are audited with the account number masked. */
+export async function updateSellerProfile(input: {
+  userId: string;
+  actorId: string;
+  patch: Record<string, unknown>;
+}) {
+  const vendor = await getVendorForUser(input.userId);
+  const data: Record<string, string | null> = {};
+
+  for (const [field, max] of Object.entries(PROFILE_FIELDS)) {
+    if (!(field in input.patch)) continue;
+    const raw = input.patch[field];
+    if (raw === null) {
+      data[field] = field === "name" || field === "pickupAddress" || field === "pickupPhone" ? vendor[field] : null;
+      continue;
+    }
+    const value = String(raw).trim();
+    if (field === "name" && value.length < 2) throw new ApiError(400, "validation_error", "Business name is too short.");
+    if (field !== "description" && field.startsWith("payout") && value.length === 0) {
+      data[field] = null;
+      continue;
+    }
+    if (value.length > max) throw new ApiError(400, "validation_error", `${field} must be at most ${max} characters.`);
+    data[field] = value;
+  }
+  if (Object.keys(data).length === 0) return vendor;
+
+  const before = {
+    name: vendor.name,
+    description: vendor.description,
+    pickupAddress: vendor.pickupAddress,
+    pickupPhone: vendor.pickupPhone,
+    payoutBank: vendor.payoutBank,
+    payoutAccountName: vendor.payoutAccountName,
+    payoutAccountNumber: maskAccount(vendor.payoutAccountNumber)
+  };
+  const updated = await prisma.vendor.update({ where: { id: vendor.id }, data });
+  await recordAudit({
+    actorId: input.actorId,
+    action: "vendor.profile_updated",
+    entity: "Vendor",
+    entityId: vendor.id,
+    metadata: {
+      before,
+      after: {
+        name: updated.name,
+        description: updated.description,
+        pickupAddress: updated.pickupAddress,
+        pickupPhone: updated.pickupPhone,
+        payoutBank: updated.payoutBank,
+        payoutAccountName: updated.payoutAccountName,
+        payoutAccountNumber: maskAccount(updated.payoutAccountNumber)
+      }
+    }
+  });
+  return updated;
+}
+
+function maskAccount(value: string | null) {
+  if (!value) return null;
+  return value.length <= 4 ? "****" : `****${value.slice(-4)}`;
 }

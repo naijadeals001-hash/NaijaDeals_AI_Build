@@ -222,3 +222,12 @@ and still governed by Phases 07–08; this is a presentation and interaction sli
 - Backup/restore procedures not tested
 
 **Next action:** Verify Phase 01 exit criteria before proceeding to Phase 02
+## Phase 06 progress notes (2026-11-03)
+
+- Seller profile management landed: PATCH /api/seller/profile updates business name, description,
+  pickup address/phone and payout account from /seller; audited as vendor.profile_updated with the
+  account number masked (verified ****6789).
+- Active-job seller rule verified: a suspended seller advanced an assigned order while new listings
+  stayed blocked.
+- Still open for Phase 06 PASS: rejected-application verification (submit -> reject -> denied), driver
+  and courier active-job tests, partner notifications.

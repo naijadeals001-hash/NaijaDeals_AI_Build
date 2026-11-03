@@ -176,7 +176,7 @@ export type SessionUser = {
 
 export type SellerOverview = {
   wallet: { availableKobo: ApiMoney; heldKobo: ApiMoney };
-  vendor: { id: string; name: string; slug: string; status: string; market: string; pickupAddress: string; pickupPhone: string; trustScore: number; commissionBps: number; suspendedReason?: string | null };
+  vendor: { id: string; name: string; slug: string; status: string; market: string; pickupAddress: string; pickupPhone: string; description?: string | null; payoutBank?: string | null; payoutAccountName?: string | null; payoutAccountNumber?: string | null; trustScore: number; commissionBps: number; suspendedReason?: string | null };
   stats: {
     productCount: number;
     lowStockCount: number;
@@ -413,6 +413,8 @@ export const apiClient = {
   getTracking: (id: string) => requestJson<Record<string, unknown>>(`/api/tracking/${id}`),
 
   sellerOverview: () => requestJson<SellerOverview>("/api/seller/overview"),
+  sellerUpdateProfile: (patch: Record<string, unknown>) =>
+    requestJson<Record<string, unknown>>("/api/seller/profile", { method: "PATCH", body: JSON.stringify(patch) }),
   sellerCreateProduct: (input: Record<string, unknown>) =>
     requestJson<ApiProduct>("/api/seller/products", { method: "POST", body: JSON.stringify(input) }),
   sellerUpdateProduct: (id: string, input: Record<string, unknown>) =>
