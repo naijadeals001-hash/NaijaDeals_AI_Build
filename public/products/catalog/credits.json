@@ -1,0 +1,30 @@
+﻿[
+    {
+        "slug":  "phones-1",
+        "file":  "File:5 different Smartphones.jpg",
+        "license":  "CC BY-SA 4.0",
+        "artist":  "Kskhh",
+        "url":  "https://commons.wikimedia.org/wiki/File:5_different_Smartphones.jpg"
+    },
+    {
+        "slug":  "phones-2",
+        "file":  "File:Leaflet at Narita arrival. Requirement to have a smartphone to enter Japan during COVID-19 pandemic.jpg",
+        "license":  "CC0",
+        "artist":  "Syced",
+        "url":  "https://commons.wikimedia.org/wiki/File:Leaflet_at_Narita_arrival._Requirement_to_have_a_smartphone_to_enter_Japan_during_COVID-19_pandemic.jpg"
+    },
+    {
+        "slug":  "computers-1",
+        "file":  "File:IBM Thinkpad R51.jpg",
+        "license":  "CC BY-SA 4.0",
+        "artist":  "André Karwath aka Aka\n",
+        "url":  "https://commons.wikimedia.org/wiki/File:IBM_Thinkpad_R51.jpg"
+    },
+    {
+        "slug":  "computers-2",
+        "file":  "File:Laptop-2411303 960 720.jpg",
+        "license":  "CC0",
+        "artist":  "Mediamodifier",
+        "url":  "https://commons.wikimedia.org/wiki/File:Laptop-2411303_960_720.jpg"
+    }
+]

@@ -808,3 +808,10 @@ block links to /account, and the search page renders Amazon-style result rows wi
 (signed-in) that feeds /cart and its checkout action. Verified: Fashion nav -> /search?category=fashion;
 search "phone" -> 3 Add to cart buttons; adding an item shows the cart notice; /cart shows the item and a
 checkout link; product page exposes Add to cart and Buy now; mobile menu opens; language switcher opens.
+
+## NaijaShop visual fill (2026-11-03)
+
+Added licensed category product photography and seeded 20 extra labelled sample products so every
+department shelf shows four tiles (photos plus existing illustrations). Added working left/right
+carousel arrows. Verified on 3001: 8 shelves, arrows scroll 0 -> 352px, axe 0, one footer. Product
+photo licences are listed on /credits.

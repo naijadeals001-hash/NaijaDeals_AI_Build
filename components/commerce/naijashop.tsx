@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -12,6 +12,8 @@ import {
   MapPin,
   PackageCheck,
   Search,
+  ChevronLeft,
+  ChevronRight,
   ShieldCheck,
   ShoppingCart,
   Bike,
@@ -166,6 +168,7 @@ export function NaijaShopPage() {
   const [notice, setNotice] = useState("");
   const [addingId, setAddingId] = useState("");
   const PAGE_SIZE = 12;
+  const collectionRef = useRef<HTMLDivElement>(null);
 
   // Amazon-inspired CSS grid pattern classes (commented out for ESLint parsing)
   // const gridPatterns = {
@@ -298,15 +301,23 @@ export function NaijaShopPage() {
         </p>
       ) : null}
 
-      <section aria-label="Featured collections" className="mt-3">
-        <div className="flex snap-x gap-3 overflow-x-auto pb-1">
+      <section aria-label="Featured collections" className="relative mt-3">
+        <button
+          type="button"
+          aria-label="Previous collections"
+          onClick={() => collectionRef.current?.scrollBy({ left: -340, behavior: "smooth" })}
+          className="absolute left-0 top-1/2 z-10 hidden h-12 w-9 -translate-y-1/2 items-center justify-center rounded-r bg-white/90 text-[#0f1111] shadow hover:bg-white sm:flex"
+        >
+          <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+        </button>
+        <div ref={collectionRef} className="flex snap-x gap-3 overflow-x-auto scroll-smooth pb-1">
           {categories.slice(0, 6).map((item, index) => {
             const items = products.filter((product) => product.category.id === item.id).slice(0, 4);
             const backgrounds = ["#007185", "#b12704", "#0b6b3a", "#b0008f", "#9a3f00", "#232f3e"];
             return (
               <article
                 key={item.id}
-                className="relative flex min-h-[300px] w-[290px] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-lg p-4 text-white sm:w-[320px]"
+                className="relative flex min-h-[360px] w-[300px] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-lg p-4 text-white sm:w-[340px]"
                 style={{ backgroundColor: backgrounds[index % backgrounds.length] }}
               >
                 <div>
@@ -327,6 +338,14 @@ export function NaijaShopPage() {
             );
           })}
         </div>
+        <button
+          type="button"
+          aria-label="Next collections"
+          onClick={() => collectionRef.current?.scrollBy({ left: 340, behavior: "smooth" })}
+          className="absolute right-0 top-1/2 z-10 hidden h-12 w-9 -translate-y-1/2 items-center justify-center rounded-l bg-white/90 text-[#0f1111] shadow hover:bg-white sm:flex"
+        >
+          <ChevronRight className="h-5 w-5" aria-hidden="true" />
+        </button>
       </section>
 
       <section aria-label="Recommended collections" className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -980,7 +999,7 @@ export function ShopCartPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+        <div className="grid gap-5 lg:grid-cols[2]">
           <div className="space-y-3">
             {active.map((item) => (
               <article key={item.id} className="flex gap-3 rounded-2xl border border-border-soft bg-canvas p-3">
