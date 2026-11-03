@@ -183,7 +183,7 @@ export async function getAdminDisputes(scope: { countryCode?: string } = {}) {
   return prisma.dispute.findMany({
     where: scope.countryCode ? { order: { countryCode: scope.countryCode } } : undefined,
     include: {
-      order: { select: { id: true, orderNumber: true, totalKobo: true, currency: true, status: true, countryCode: true } },
+      order: { select: { id: true, orderNumber: true, totalKobo: true, currency: true, status: true, paymentStatus: true, countryCode: true } },
       customer: { select: { id: true, name: true, email: true } },
       vendor: { select: { id: true, name: true } },
       escrow: { select: { id: true, status: true, amountKobo: true } }

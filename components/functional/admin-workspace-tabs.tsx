@@ -354,6 +354,168 @@ interface AssignableRole {
   description?: string | null;
 }
 
+function DisputeResolveDialog({
+  row,
+  onClose,
+  onResolved
+}: {
+  row: Row;
+  onClose: () => void;
+  onResolved: (message: string) => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const order = (row.order ?? {}) as Row;
+  const escrow = (row.escrow ?? null) as Row | null;
+  const paymentStatus = text(order.paymentStatus, "unknown");
+  const escrowStatus = escrow ? text(escrow.status, "unknown") : "none";
+  const canRefund = paymentStatus === "paid";
+  const canRelease = Boolean(escrow) && ["held", "disputed"].includes(escrowStatus);
+  const [decision, setDecision] = useState<"refund" | "release">(canRefund ? "refund" : "release");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (ref.current && !ref.current.open) ref.current.showModal();
+  }, []);
+
+  function trapFocus(event: React.KeyboardEvent<HTMLDialogElement>) {
+    if (event.key !== "Tab") return;
+    const dialog = ref.current;
+    if (!dialog) return;
+    const focusable = Array.from(
+      dialog.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+    ).filter((element) => !element.hasAttribute("disabled"));
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  async function submit() {
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/disputes/${encodeURIComponent(String(row.id))}/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision, note })
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(body?.error ?? `Request failed with HTTP ${res.status}`);
+        setSaving(false);
+        return;
+      }
+      onResolved(
+        `${text(order.orderNumber, "Dispute")} ${decision === "refund" ? "refunded to the buyer" : "released to the seller"}.`
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not resolve this dispute.");
+      setSaving(false);
+    }
+  }
+
+  return (
+    <dialog
+      ref={ref}
+      onClose={onClose}
+      onKeyDown={trapFocus}
+      aria-labelledby="admin-dispute-title"
+      className="w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-[#21262D] bg-[#161B22] p-0 text-[#F0F6FC] shadow-soft backdrop:bg-black/70"
+    >
+      <div className="flex items-start justify-between gap-4 border-b border-[#21262D] px-5 py-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-[#8B949E]">Resolve dispute</p>
+          <h2 id="admin-dispute-title" className="font-display text-lg font-extrabold">{text(order.orderNumber, "Order")}</h2>
+          <p className="text-xs text-[#8B949E]">{money(order.totalKobo)} · payment {statusLabel(paymentStatus)} · escrow {statusLabel(escrowStatus)}</p>
+        </div>
+        <button type="button" onClick={onClose} aria-label="Close dispute resolution" className="rounded-lg border border-[#21262D] px-2.5 py-1 text-sm font-bold hover:bg-[#21262D]">
+          &#10005;
+        </button>
+      </div>
+
+      <div className="space-y-4 px-5 py-4">
+        <fieldset className="space-y-2">
+          <legend className="text-[11px] font-bold uppercase tracking-wide text-[#8B949E]">Decision</legend>
+          <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${decision === "refund" ? "border-[#00E676]/50 bg-[#00E676]/10" : "border-[#21262D] bg-[#0B0E14]"} ${canRefund ? "" : "opacity-50"}`}>
+            <input
+              type="radio"
+              name="dispute-decision"
+              value="refund"
+              checked={decision === "refund"}
+              disabled={!canRefund}
+              onChange={() => setDecision("refund")}
+              className="mt-0.5 h-4 w-4 accent-[#00E676]"
+            />
+            <span>
+              <span className="block text-sm font-bold">Refund the buyer</span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-[#8B949E]">
+                Reverses the completed payment, restores escrow to refunded and marks the order refunded. Available when the order is paid.
+              </span>
+            </span>
+          </label>
+          <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${decision === "release" ? "border-[#00E676]/50 bg-[#00E676]/10" : "border-[#21262D] bg-[#0B0E14]"} ${canRelease ? "" : "opacity-50"}`}>
+            <input
+              type="radio"
+              name="dispute-decision"
+              value="release"
+              checked={decision === "release"}
+              disabled={!canRelease}
+              onChange={() => setDecision("release")}
+              className="mt-0.5 h-4 w-4 accent-[#00E676]"
+            />
+            <span>
+              <span className="block text-sm font-bold">Release escrow to the seller</span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-[#8B949E]">
+                Credits the seller's payable, retains commission and completes the order. Available while escrow is held or disputed.
+              </span>
+            </span>
+          </label>
+        </fieldset>
+
+        <label className="block text-[11px] font-bold uppercase tracking-wide text-[#8B949E]">
+          Note
+          <textarea
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            rows={3}
+            placeholder="Recorded in the audit trail"
+            className="mt-1 block w-full rounded-lg border border-[#21262D] bg-[#0B0E14] px-2 py-2 text-sm font-semibold text-[#F0F6FC]"
+          />
+        </label>
+
+        {error ? <p role="alert" className="rounded-lg border border-crimson/30 bg-crimson/10 p-3 text-xs font-bold text-[#FFB4AB]">{error}</p> : null}
+        {!canRefund && !canRelease ? (
+          <p role="alert" className="rounded-lg border border-crimson/30 bg-crimson/10 p-3 text-xs font-bold text-[#FFB4AB]">
+            This order has neither a refundable payment nor releasable escrow, so no resolution is available from the Control Center.
+          </p>
+        ) : null}
+
+        <div className="flex justify-end gap-2 border-t border-[#21262D] pt-3">
+          <button type="button" onClick={onClose} className="rounded-lg border border-[#21262D] px-4 py-2 text-sm font-bold hover:bg-[#21262D]">
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={saving || (decision === "refund" ? !canRefund : !canRelease)}
+            className="rounded-lg bg-[#00E676] px-4 py-2 text-sm font-extrabold text-[#0B0E14] disabled:opacity-50"
+          >
+            {saving ? "Resolving…" : decision === "refund" ? "Refund buyer" : "Release to seller"}
+          </button>
+        </div>
+      </div>
+    </dialog>
+  );
+}
+
 function RoleDialog({ user, onClose, onSaved }: { user: Row; onClose: () => void; onSaved: (message: string) => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [loading, setLoading] = useState(true);
@@ -666,6 +828,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [roleUser, setRoleUser] = useState<Row | null>(null);
+  const [disputeRow, setDisputeRow] = useState<Row | null>(null);
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -1421,11 +1584,39 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
             { header: "Seller", cell: (row) => <span className="text-xs">{text(value(row, "vendor.name"), "—")}</span> },
             { header: "Status", cell: (row) => <StatusBadge status={text(row.status)} /> },
             { header: "Escrow", cell: (row) => <span className="text-xs">{statusLabel(text(value(row, "escrow.status"), "—"))}</span> },
-            { header: "Opened", cell: (row) => <span className="text-xs text-[#8B949E]">{date(row.createdAt)}</span> }
+            { header: "Opened", cell: (row) => <span className="text-xs text-[#8B949E]">{date(row.createdAt)}</span> },
+            {
+              header: "Action",
+              cell: (row) => {
+                const closed = ["resolved_refund", "resolved_release", "rejected"].includes(String(row.status));
+                return (
+                  <button
+                    type="button"
+                    disabled={closed}
+                    onClick={() => setDisputeRow(row)}
+                    className="rounded-lg border border-[#21262D] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D] disabled:opacity-40"
+                  >
+                    Resolve
+                  </button>
+                );
+              }
+            }
           ]}
         />
       </Panel>
       {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      {disputeRow ? (
+        <DisputeResolveDialog
+          row={disputeRow}
+          onClose={() => setDisputeRow(null)}
+          onResolved={(message) => {
+            setDisputeRow(null);
+            setMessage(message);
+            setError("");
+            onRefresh();
+          }}
+        />
+      ) : null}
       </>
     );
   }

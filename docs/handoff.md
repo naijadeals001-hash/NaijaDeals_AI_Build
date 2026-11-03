@@ -450,6 +450,20 @@ they duplicated the module rail, produced a horizontal scrollbar at narrow width
 search-first hero. Verified: no chip group in the hero, search and both CTAs present, 0 page
 overflow, axe 0.
 
+**Dispute resolution (same pass):** disputes can now be resolved from the Control Center with an
+audited decision — **refund the buyer** (reverses the completed payment, escrow to refunded, order
+refunded) or **release escrow to the seller** (credits the seller payable, retains commission,
+order completed).
+
+Verified on the isolated instance: refund produced `refunded / refunded / refunded` and dispute
+`resolved_refund`; release moved escrow to `released`, completed the order, credited the vendor
+wallet **555,000** and closed the dispute as `resolved_release`; both wrote `dispute.resolved` audit
+rows with before/after. The dialog disables an action when the payment or escrow cannot support it,
+axe is 0, and attempting a release on already-released escrow returns **409
+`escrow_not_releasable`** — a guard added because opening a dispute must not make released money
+releasable a second time. Dismissal is deliberately not exposed (the order status machine cannot
+restore an arbitrary pre-dispute status).
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only
