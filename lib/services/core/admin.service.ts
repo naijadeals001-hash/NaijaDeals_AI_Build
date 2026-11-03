@@ -1,6 +1,8 @@
 import type { DeliveryStatus, OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
+import type { SessionUser } from "@/lib/auth/session";
+import { hasPermission, unheldPermissions } from "@/lib/auth/permissions";
 import { recordAudit } from "./audit.service";
 import { recordSystemEvent } from "./event.service";
 import { updateDeliveryStatus } from "./delivery.service";
@@ -73,8 +75,9 @@ export async function getAdminOverview() {
   };
 }
 
-export async function getAdminOrders() {
+export async function getAdminOrders(scope: { countryCode?: string } = {}) {
   return prisma.order.findMany({
+    where: scope.countryCode ? { countryCode: scope.countryCode } : undefined,
     include: {
       customer: { select: { id: true, name: true, email: true, phone: true } },
       vendor: true,
@@ -124,7 +127,7 @@ export async function adminUpdateOrderStatus(input: { adminId: string; orderId: 
         action: "admin.order_status_updated",
         entity: "Order",
         entityId: input.orderId,
-        metadata: { status: input.status, note: input.note ?? null }
+        metadata: { before: order.status, after: input.status, note: input.note ?? null }
       }
     });
     await recordSystemEvent({
@@ -141,7 +144,12 @@ export async function adminUpdateOrderStatus(input: { adminId: string; orderId: 
       action: "admin.action_logged",
       entity: "AdminAction",
       entityId: action.id,
-      metadata: { orderId: input.orderId, status: input.status }
+      metadata: {
+        orderId: input.orderId,
+        before: { status: order.status },
+        after: { status: input.status },
+        note: input.note ?? null
+      }
     });
     return updated;
   });
@@ -178,8 +186,9 @@ export async function getAuditLogs() {
   });
 }
 
-export async function listSellerApplications() {
+export async function listSellerApplications(scope: { countryCode?: string } = {}) {
   return prisma.sellerApplication.findMany({
+    where: scope.countryCode ? { countryCode: scope.countryCode } : undefined,
     include: { user: { select: { id: true, name: true, email: true, phone: true } } },
     orderBy: { createdAt: "desc" }
   });
@@ -273,7 +282,7 @@ export async function moderateProduct(input: { adminId: string; productId: strin
       action: "product.moderated",
       entity: "Product",
       entityId: product.id,
-      metadata: { status: input.status, note: input.note ?? null }
+      metadata: { before: product.status, after: input.status, note: input.note ?? null }
     });
     return updated;
   });
@@ -379,7 +388,12 @@ export async function markPayoutPaid(input: { adminId: string; payoutId: string 
       action: "payout.paid",
       entity: "Payout",
       entityId: payout.id,
-      metadata: { amountKobo: payout.amountKobo.toString() }
+      metadata: {
+        vendorId: payout.vendorId,
+        amountKobo: payout.amountKobo.toString(),
+        before: { status: payout.status, paidAt: payout.paidAt?.toISOString() ?? null },
+        after: { status: "PAID", paidAt: paid.paidAt?.toISOString() ?? null }
+      }
     });
     return paid;
   });
@@ -394,10 +408,131 @@ export async function getAdminUsers() {
       actorType: true,
       phone: true,
       createdAt: true,
+      scopeCountryCode: true,
+      scopeCityCode: true,
       roles: { include: { role: true } },
       vendors: { select: { id: true, name: true, status: true } }
     },
     orderBy: { createdAt: "desc" },
     take: 200
+  });
+}
+
+export async function listAssignableRoles() {
+  return prisma.role.findMany({
+    select: { name: true, description: true },
+    orderBy: { name: "asc" }
+  });
+}
+
+const ROLE_NAMES = ["super_admin", "admin", "ops", "finance", "support", "moderator", "customer", "vendor", "courier", "driver"];
+
+/**
+ * Replace a user's roles and region scope.
+ *
+ * Invariants enforced inside one transaction, so a rejected write leaves no
+ * partial state and no audit record:
+ *  - only a holder of `roles:write` may call this (checked here as well as in the route);
+ *  - an administrator cannot change their own roles;
+ *  - an actor cannot delegate a permission they do not hold;
+ *  - the last active super administrator cannot be demoted;
+ *  - the change and its before/after audit record commit together.
+ */
+export async function setUserRoles(input: {
+  actor: SessionUser;
+  userId: string;
+  roles: string[];
+  scopeCountryCode?: string | null;
+  scopeCityCode?: string | null;
+}) {
+  if (!hasPermission(input.actor, "roles:write")) {
+    throw new ApiError(403, "permission_denied", "The \"roles:write\" permission is required for this action.");
+  }
+  if (input.actor.id === input.userId) {
+    throw new ApiError(403, "self_escalation", "You cannot change your own roles or scope.");
+  }
+
+  const requested = [...new Set(input.roles.map((role) => role.trim()).filter(Boolean))];
+  if (requested.length === 0) {
+    throw new ApiError(400, "validation_error", "At least one role is required.");
+  }
+  const unknown = requested.filter((role) => !ROLE_NAMES.includes(role));
+  if (unknown.length > 0) {
+    throw new ApiError(400, "unknown_role", `Unknown role: ${unknown.join(", ")}.`);
+  }
+
+  const escalated = unheldPermissions(input.actor, requested);
+  if (escalated.length > 0) {
+    throw new ApiError(403, "privilege_delegation_denied", `You cannot grant permissions you do not hold: ${escalated.join(", ")}.`);
+  }
+
+  const target = await prisma.user.findUnique({
+    where: { id: input.userId },
+    include: { roles: { include: { role: true } } }
+  });
+  if (!target) throw new ApiError(404, "user_not_found", "User not found.");
+
+  const before = {
+    roles: target.roles.map((entry) => entry.role.name).sort(),
+    scopeCountryCode: target.scopeCountryCode,
+    scopeCityCode: target.scopeCityCode
+  };
+  const after = {
+    roles: [...requested].sort(),
+    scopeCountryCode: input.scopeCountryCode === undefined ? target.scopeCountryCode : input.scopeCountryCode,
+    scopeCityCode: input.scopeCityCode === undefined ? target.scopeCityCode : input.scopeCityCode
+  };
+
+  const removingSuperAdmin = before.roles.includes("super_admin") && !after.roles.includes("super_admin");
+
+  const roles = await prisma.role.findMany({
+    where: { name: { in: requested } },
+    select: { id: true, name: true }
+  });
+
+  return prisma.$transaction(async (tx) => {
+    if (removingSuperAdmin) {
+      const remaining = await tx.userRole.count({
+        where: { role: { name: "super_admin" }, userId: { not: input.userId } }
+      });
+      if (remaining === 0) {
+        throw new ApiError(409, "last_super_admin", "The last active super administrator cannot be demoted.");
+      }
+    }
+
+    await tx.userRole.deleteMany({ where: { userId: input.userId } });
+    if (roles.length > 0) {
+      await tx.userRole.createMany({
+        data: roles.map((role) => ({ userId: input.userId, roleId: role.id }))
+      });
+    }
+    await tx.user.update({
+      where: { id: input.userId },
+      data: { scopeCountryCode: after.scopeCountryCode, scopeCityCode: after.scopeCityCode }
+    });
+
+    await recordAudit({
+      tx,
+      actorId: input.actor.id,
+      action: "admin.roles_updated",
+      entity: "User",
+      entityId: input.userId,
+      metadata: {
+        before: { roles: before.roles, scopeCountryCode: before.scopeCountryCode, scopeCityCode: before.scopeCityCode },
+        after: { roles: after.roles, scopeCountryCode: after.scopeCountryCode, scopeCityCode: after.scopeCityCode }
+      }
+    });
+
+    return tx.user.findUnique({
+      where: { id: input.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        scopeCountryCode: true,
+        scopeCityCode: true,
+        roles: { include: { role: true } }
+      }
+    });
   });
 }

@@ -303,6 +303,12 @@ summary and a refresh. Verified in Chrome: 12 selected via the header checkbox, 
 suspended and then restored to ACTIVE, selection cleared, axe 0 with the bar visible. Bulk actions
 for orders, rides and payments are intentionally not enabled yet.
 
+Sensitive admin mutations now record their previous state: `product.moderated` and
+`admin.order_status_updated` write `{ before, after, note }` into the audit row, and the record
+dialog renders an "Audit metadata" block (verified: a product suspended then restored produced
+`before: ACTIVE, after: SUSPENDED` in the audit detail). Payouts and role changes already stored
+before-state; refunds and disputes still need the same treatment.
+
 Every operational admin table (orders, deliveries, rides, payouts, products, applications,
 payments, users, vendors, couriers, audit) now exposes the shared `View` dialog; audit rows title
 themselves by action (e.g. `product.moderated`) and rides by ride number. Verified: ride dialog

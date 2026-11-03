@@ -449,6 +449,14 @@ function RecordDialog({ row, onClose }: { row: Row; onClose: () => void }) {
           </div>
         ))}
       </dl>
+      {row.metadata && typeof row.metadata === "object" ? (
+        <div className="border-t border-[#21262D] px-5 py-4">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-[#8B949E]">Audit metadata</p>
+          <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-[#0B0E14] p-3 text-xs text-[#8B949E]">
+            {JSON.stringify(row.metadata, null, 2)}
+          </pre>
+        </div>
+      ) : null}
       <div className="border-t border-[#21262D] px-5 py-3 text-right">
         <button type="button" onClick={onClose} className="rounded-lg bg-[#00E676] px-4 py-2 text-sm font-extrabold text-[#0B0E14]">
           Close
