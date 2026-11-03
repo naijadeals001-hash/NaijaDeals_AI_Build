@@ -771,3 +771,12 @@ search, category row, 9 promo cards, four footer columns). NaijaShop now runs fu
 ecosystem sidebar, keeps the two-row commerce header, dense four-column results, department rail,
 sort control and a Back-to-top footer. No Amazon trademarks, ratings or imagery were copied; the
 reference and resulting screenshots are recorded in docs/rea-amazon-research.md.
+
+
+## NaijaShop Amazon pass 2 (2026-11-03)
+
+REA also captured amazon.com search results: result count bar with sort options, left refinements, and
+list rows with image, title, stars/review count, price/list price and add-to-cart. NaijaShop now renders
+populated Amazon-style result rows (image left, rating/no-ratings, price, delivery, seller, yellow Add to
+cart), a full-bleed dark header with a dark department strip, and automatically shows the labelled demo
+catalogue when no live listings exist. Screenshot qa-artifacts/preview/naijashop-after.png.

@@ -174,6 +174,7 @@ export function NaijaShopPage() {
         if (!active) return;
         setProducts(items);
         setCategories(cats);
+        if (items.every((item) => item.isSample)) setShowSamples(true);
         setStatus("ready");
       })
       .catch((err) => {
@@ -274,12 +275,12 @@ export function NaijaShopPage() {
     <div className="space-y-0">
       <MarketplaceBar categories={categories} />
 
-      <nav aria-label="Shop departments" className="mt-3 flex gap-1.5 overflow-x-auto pb-2">
+      <nav aria-label="Shop departments" className="-mx-3 mt-0 flex items-center gap-0.5 overflow-x-auto bg-[#232f3e] px-2 py-1.5 text-white sm:-mx-5 sm:px-4 lg:-mx-8 lg:px-6">
         <button
           type="button"
           onClick={() => { setCategory("all"); resetPage(); }}
           aria-pressed={category === "all"}
-          className={chipClass(category === "all")}
+          className={`whitespace-nowrap rounded px-2.5 py-1 text-xs font-bold ${category === "all" ? "bg-white/15" : "hover:bg-white/10"}`}
         >
           All departments
         </button>
@@ -289,7 +290,7 @@ export function NaijaShopPage() {
             type="button"
             onClick={() => { setCategory(item.slug); resetPage(); }}
             aria-pressed={category === item.slug}
-            className={chipClass(category === item.slug)}
+            className={`whitespace-nowrap rounded px-2.5 py-1 text-xs font-bold ${category === item.slug ? "bg-white/15" : "hover:bg-white/10"}`}
           >
             {item.name}
           </button>
@@ -526,10 +527,10 @@ export function NaijaShopPage() {
             </div>
           ) : null}
           {status === "ready" && visible.length > 0 ? (
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-3 divide-y divide-border-soft rounded-lg border border-border-soft bg-canvas">
               {visible.map((product) => (
                 <div key={product.id} className={addingId === product.id ? "pointer-events-none opacity-60" : ""}>
-                  <ShopResultCard product={product} onAdd={add} />
+                  <ShopResultRow product={product} onAdd={add} />
                 </div>
               ))}
             </div>
@@ -574,7 +575,7 @@ function chipClass(active: boolean) {
 function MarketplaceBar({ categories }: { categories: ApiCategory[] }) {
   const [scope, setScope] = useState("all");
   return (
-    <div className="rounded-lg bg-[#0b1a13] px-3 py-2.5 text-white sm:px-4">
+    <div className="-mx-3 bg-[#131921] px-3 py-2.5 text-white sm:-mx-5 sm:px-5 lg:-mx-8 lg:px-8">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-4">
         <Link href="/" className="flex items-center gap-2 rounded px-2 py-1 text-sm font-extrabold">
           <span className="grid h-7 w-7 place-items-center rounded bg-primary-live text-[11px] font-black text-[#04140f]">ND</span>
@@ -768,6 +769,67 @@ function Stars({ average, count }: { average: number | null | undefined; count: 
       </span>
       <span className="font-bold text-[#007185]">{count > 0 ? count.toLocaleString() : "0"}</span>
     </span>
+  );
+}
+
+function ShopResultRow({ product, onAdd }: { product: ApiProduct; onAdd: (product: ApiProduct) => void }) {
+  const available = product.available ?? 0;
+  const rating = product.rating?.average ?? 0;
+  const reviewCount = product.rating?.count ?? 0;
+  const discount = product.compareAtKobo && Number(product.compareAtKobo) > Number(product.priceKobo)
+    ? Math.round((1 - Number(product.priceKobo) / Number(product.compareAtKobo)) * 100)
+    : 0;
+
+  return (
+    <article className="flex gap-4 p-4 transition hover:bg-[#f7fafa]">
+      <Link href={`/product/${product.slug}`} className="grid h-40 w-40 shrink-0 place-items-center overflow-hidden rounded-md border border-border-soft bg-white">
+        <img
+          src={product.images[0]?.url || "/products/tecno-spark-20.svg"}
+          alt={product.images[0]?.alt || product.name}
+          className="h-full w-full object-contain p-2"
+          loading="lazy"
+        />
+      </Link>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {product.isSample ? <span className="rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase text-[#B45309]">Sample</span> : null}
+          {product.saleMode === "contact" ? <span className="rounded bg-[#131921] px-1.5 py-0.5 text-[10px] font-black uppercase text-white">Contact seller</span> : null}
+        </div>
+        <Link href={`/product/${product.slug}`} className="mt-0.5 line-clamp-2 text-lg font-medium leading-snug text-[#0f1111] hover:text-[#c45500] hover:underline">
+          {product.name}
+        </Link>
+        <div className="mt-1 flex items-center gap-1 text-sm" aria-label={reviewCount ? `${rating.toFixed(1)} out of 5 stars, ${reviewCount} ratings` : "No ratings yet"}>
+          <span className="text-[#ffa41c]" aria-hidden="true">{"★".repeat(Math.round(rating))}<span className="text-[#d5d9d9]">{"★".repeat(5 - Math.round(rating))}</span></span>
+          <span className="text-xs text-[#007185]">{reviewCount > 0 ? `${reviewCount} ratings` : "No ratings yet"}</span>
+        </div>
+        <div className="mt-1 flex flex-wrap items-baseline gap-2">
+          <span className="text-2xl font-medium text-[#0f1111]">{koboToNaira(product.priceKobo)}</span>
+          {discount > 0 ? (
+            <>
+              <span className="text-xs text-muted line-through">{koboToNaira(product.compareAtKobo as string)}</span>
+              <span className="rounded bg-[#cc0c39] px-1.5 py-0.5 text-[10px] font-bold text-white">-{discount}%</span>
+            </>
+          ) : null}
+        </div>
+        <p className="mt-1 text-xs text-[#0f1111]">Delivery to <span className="font-bold">Lagos</span> · options shown at checkout</p>
+        <p className="text-xs text-muted">Sold by {product.vendor?.name ?? "a verified seller"}{available > 0 ? ` · ${available} in stock` : " · out of stock"}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {product.saleMode === "contact" ? (
+            <Link href={`/product/${product.slug}`} className="rounded-full bg-[#ffd814] px-4 py-1.5 text-xs font-bold text-[#0f1111] hover:bg-[#f7ca00]">Contact seller</Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onAdd(product)}
+              disabled={available <= 0}
+              className="rounded-full bg-[#ffd814] px-4 py-1.5 text-xs font-bold text-[#0f1111] hover:bg-[#f7ca00] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Add to cart
+            </button>
+          )}
+          <Link href={`/product/${product.slug}`} className="text-xs font-bold text-[#007185] hover:underline">View details</Link>
+        </div>
+      </div>
+    </article>
   );
 }
 
