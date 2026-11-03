@@ -2,7 +2,9 @@
 
 ## Repository audit snapshot (2026-11-03)
 
-Full audit recorded in `docs/audits/` (8 documents + machine manifests). Verified: 664 in-scope
+Full audit recorded in `docs/audits/` (8 documents + machine manifests). Documentation
+reconciled 2026-11-03: `architecture.md` and `requirements-matrix.md` rewritten to the verified
+state, and `functional-gap-report.md` marked historical (it described the June localStorage demo). Verified: 664 in-scope
 files, 279 inspected in full, 70 API routes, 25 pages, 39 Prisma models, playbook of 21 canonical
 phases (00–20) plus 10 advisory Part M workstreams. No phase status was upgraded by the audit.
 

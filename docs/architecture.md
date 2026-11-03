@@ -1,98 +1,90 @@
 # NaijaDeals Architecture Overview
 
-## Stack
-- **Framework:** Next.js 14 (App Router) with TypeScript
-- **UI:** React 18, Tailwind CSS 3, lucide-react icons
-- **ORM:** Prisma 6 with PostgreSQL
-- **Auth:** Next.js cookies + Prisma session management; RBAC with ActorType (CUSTOMER, VENDOR, COURIER, DRIVER, ADMIN, SYSTEM)
-- **State:** Server Components for data fetching, Client Components for interactive UI
-- **Design:** Custom color tokens (canvas, ink, muted, surface, primary, primary-live, primary-soft, amber, amber-soft, crimson, crimson-soft, night), Inter/sans-serif and Plus Jakarta Sans/display fonts
+Last verified against the repository: **2026-11-03** (HEAD `7590af5`). This document replaces the
+earlier version that referenced commit `61b066ee` and a stash that no longer exists.
 
-## Core Data Model (Prisma Schema)
-The schema defines 50+ models across these domains:
+## Stack (verified from manifests and code)
 
-### Identity & Access
-- `User`, `Role`, `UserRole` - RBAC with 5 actor types
-- `Session` - cookie-based sessions with HHO validation
+| Layer | Technology |
+| --- | --- |
+| Framework | Next.js 14.2 (App Router) + React 18.3 + TypeScript |
+| Styling | Tailwind CSS 3, custom tokens in `tailwind.config.ts`, `clsx`, lucide-react |
+| Data | PostgreSQL + Prisma 6.19 (`prisma/schema.prisma`, 39 models, 19 enums, 5 migrations) |
+| Auth | Custom cookie sessions; scrypt password hashing; SHA-256 token hash; `Session` table |
+| Payments | `lib/payments/service.ts` with wallet, Paystack, Flutterwave and a test adapter gated by `isTestPaymentsEnabled` |
+| Maps | Leaflet dependency + `drive-map.tsx`; no live map provider configured (UI says so) |
+| Media | `sharp`, 43 public images |
+| Tests | `tsx` suites (`scripts/*-tests.ts`) + Playwright/Chrome for browser QA |
+| CI | `.github/workflows/ci.yml`: type-check, lint, build, PostgreSQL-service test suites, Docker build — **no deploy job** |
 
-### Commerce
-- `Vendor`, `Category`, `Product` (with variants, images, stock)
-- `Cart`, `CartItem` - unified cart across all verticals
-- `Order`, `OrderStatusEvent`, `OrderItem` - full lifecycle tracking
-- `Payment`, `PaymentMethod` - multi-provider (Paystack, Flutterwave, Wallet, Test)
-- `EscrowHold`, `EscrowEvent`, `EscrowStatus` - 1% fee protection
+There is no `middleware.ts`; authorization is enforced per route and per page.
 
-### Wallet & Ledger
-- `Wallet` (ownerType: CUSTOMER|VENDOR|COURIER|DRIVER|SYSTEM)
-- `WalletTransaction`, `LedgerEntry` - double-entry bookkeeping
-- `Payout`, `ReturnRequest` - vendor payouts and customer returns
+## Request flow
 
-### NaijaDrive (Mobility)
-- `Courier`, `DriverProfile`, `Ride`, `RideStatus`, `RideEvent`, `AssignmentDeadline`
-- Saved places, fare quotes/breakdowns, ride timelines
+1. Client components call the typed `apiClient` (`lib/api-client.ts`).
+2. Route handlers (`app/api/**/route.ts`) resolve the session cookie, hash the token and read the
+   `Session` row, then call `requireUser` / `requireAdmin` / `requireAdminPermission` /
+   `requireSuperAdmin` from `lib/auth/guard.ts`.
+3. Services in `lib/services/core/` own transactions, state machines and ledger writes.
+4. Sensitive mutations write `AdminAction` / `AuditLog` rows.
 
-### NaijaSend (Logistics)
-- `Delivery`, `DeliveryStatus`, `TrackingEvent`, `Courier` assignment workflow
+### Authorization model (2026-11-03)
 
-### Social & Reputation
-- `Review`, `Dispute`, `DisputeStatus`, `SellerApplication`
+- `isAdmin()` = actor `ADMIN` or role `admin`/`super_admin`.
+- `hasAdminConsoleAccess()` = `isAdmin()` **or** any staff role (ops, finance, support, moderator).
+- `requireAdminPermission(permission)` gates each admin capability via
+  `lib/auth/permissions.ts`; `lib/auth/scope.ts` enforces country/city scope with
+  `region_forbidden` errors.
+- Role administration is super-admin only (`requireSuperAdmin`, `roles:write`).
 
-### Audit & Administration
-- `AdminAction`, `AuditLog`, `SystemEvent`
+## Data model
 
-## Vertical Ecosystem (10 planned services)
+39 models across identity (User, Role, UserRole, Session), commerce (Vendor, Category, Product,
+Variant, InventoryStock, Cart, Order, OrderItem, OrderStatusEvent), money (Wallet,
+WalletTransaction, LedgerEntry, EscrowHold, EscrowEvent, Payment, WebhookEvent, Payout,
+ReturnRequest), mobility/logistics (DriverProfile, Ride, RideEvent, Courier, Delivery,
+TrackingEvent, SavedPlace), reputation/support (Review, Dispute, SellerApplication), governance
+(AdminAction, AuditLog, SystemEvent) and addresses (Address, SavedItem).
 
-| Key | Name | Status | Route | State |
-|-----|------|--------|-------|-------|
-| shop | NaijaShop | ✅ Live | /naijashop | Product catalog, cart, checkout, escrow |
-| eats | NaijaEats | ⚠️ Setup | /naijaeats | Status: "Setup required" |
-| fresh | NaijaFresh | ⚠️ Setup | /naijafresh | Route only |
-| gigs | NaijaGigs | ⚠️ Setup | /naijagigs | Route only |
-| stay | NaijaStay | ⚠️ Setup | /naijastay | Route only |
-| drive | NaijaDrive | ✅ Live | /naijadride | Bookings, quotes, driver assignment, tracking |
-| send | NaijaSend | ⚠️ Setup | /naijasend | Manual courier workflow UI |
-| wallet | NaijaPay | ✅ Live | /wallet | Ledger-backed balance, escrow holds |
-| stream | NaijaStream | ⚠️ Setup | /naijastream | Route only |
-| aura | Aura AI | ⚠️ Setup | /aura-ai | Route only |
+Migrations: `20260605163319_core_commerce_engine` → `20261102173000_admin_region_scope`.
 
-## API Surface
-All API routes are proxied through `lib/api-client.ts` (client-side):
-- Auth, Products, Categories, Cart, Checkout
-- Orders, Payments, Wallet, Account management
-- Seller CRUD, Product moderation
-- Admin: overview, orders, users, vendors, products, payments, payouts, couriers, rides, audit logs
-- Courier: deliveries, status updates
-- Drive: quotes, rides, driver actions
+**No models exist yet for** restaurants/menus (NaijaEats), grocery (NaijaFresh), gigs, stays/
+property, streaming media or AI conversations — those verticals are not functional.
 
-## Authentication Flow
-1. Login/register via `/api/auth/login` / `/api/auth/register`
-2. Session cookie (`nd_session` or env-configured name)
-3. Server-side `getSessionUser()` validates tokenHash against Prisma `session` table
-4. RBAC checks: `isAdmin()`, `isVendor()`, `isCourier()`, `isDriver()`
-5. Role-based navigation: admin → Control Center, vendor → Seller Dashboard, driver → Driver Board, courier → Courier Dashboard
+## Routes
 
-## Payment Flow
-1. Add to cart → Checkout (address + payment method selection)
-2. Server-side escrow hold (1% fee) before order confirmed
-3. On delivery confirmation → Escrow released to vendor
-4. Wallet ledger: credit/debit transactions with memo audit trail
-5. Payouts: vendor receives net amount (gross - commission) per period
+- 25 page routes: `/`, `/products`, `/product/[id]`, `/search`, `/cart`, `/checkout`,
+  `/orders`, `/account`, `/wallet`, `/naijashop`, `/naijadrive`, `/naijaeats`, `/naijasend`,
+  `/seller`, `/driver`, `/courier`, `/admin`, `/super-admin`, `/sell`, `/login`, `/register`,
+  `/tracking/[id]`, `/business/[vertical]`, `/onboarding/[type]`, `/[slug]` (generic fallback).
+- 70 API route handlers: auth, catalog/cart/checkout/orders, payments + webhooks, wallet/ledger,
+  drive (quotes, rides, driver actions, places), deliveries/courier, seller, admin and
+  super-admin.
 
-## Key Design Decisions
-- **Honest UI:** "Setup required" pages explicitly name missing data; no simulated live data
-- **Landmark-based routing:** NaijaDrive uses predefined Lagos locations, no GPS-invented addresses
-- **Integer kobo:** All money uses NGN kobo (minor units), no float arithmetic
-- **Server-verified:** All payments, orders, tracking events are real DB records
-- **One account:** Unified user identity across all verticals via shared `User` model and `ActorType`
+## Module status (see `docs/audits/deepseek-module-capability-matrix.md`)
 
-## Admin Control Center
-Single `/admin` and `/super-admin` entry point (same `AdminDashboard` component):
-- RBAC: super-admin, operations, finance, support, moderation, regional staff
-- Separate navigation from public flow
-- Audit logging on all sensitive actions
-- Pagination, filtering, bulk actions on all record lists
+| Module | Status |
+| --- | --- |
+| NaijaShop | PARTIAL — catalog, cart, checkout, escrow, orders, seller tools; live payment providers unconfigured |
+| NaijaDrive | PARTIAL — quotes, booking, dispatch, driver lifecycle, saved places, expiry sweeper; no live GPS/map |
+| NaijaSend | PARTIAL — courier workflow for marketplace deliveries; parcel booking is a status page |
+| NaijaPay | PARTIAL — wallet balance/ledger/holds read; admin payouts; no customer deposit/withdraw |
+| NaijaEats / Fresh / Gigs / Stay / Stream / Aura AI | NOT STARTED — status/generic pages only |
+| NaijaProperty | NOT STARTED — no model or route |
 
-## Recovery & Backup
-- Git branch: `naijashop-marketplace` with remote `origin/naijashop-marketplace`
-- Last commit: `61b066ee` "Increment 5: assignment deadlines, saved places and no invented cancellation fee"
-- Stash available for rollback: `git stash list` shows backup state
+## Verification
+
+- Isolated database `naijadeals_test` migrated + seeded; suites pass:
+  marketplace **13/13**, admin security **19/19**, drive **28/28**; `tsc --noEmit` clean.
+- Browser captures and tooling evidence: `docs/reference-and-tooling-evidence.md`,
+  `docs/audits/`.
+
+## Known technical debt
+
+1. Ten `lib/services/*-service.ts` stub files (TODO-only) are exported by an unused index —
+   dead surface that should be removed or wired.
+2. No background queue/outbox; `startDriveSweeper` is an in-process timer.
+3. No email/SMS provider, no live map provider, no image-generation endpoint wired.
+4. Admin tables lack pagination, bulk actions and record-detail views (Phase 05 open).
+5. No observability (metrics/traces/health endpoint) and no rate limiting.
+6. Documentation drift is being corrected in this pass; four older documents were stale.

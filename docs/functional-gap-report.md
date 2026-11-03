@@ -1,4 +1,10 @@
-# NaijaDeals Functional Gap Report
+# NaijaDeals Functional Gap Report (historical)
+
+> **Superseded 2026-11-03.** This report describes the June 2026 localStorage demo era
+> (`lib/demo-store.ts`, typed demo data, no server). The application is now
+> Prisma/PostgreSQL-backed with real sessions, escrow and ledger. Current status lives in
+> `docs/audits/deepseek-module-capability-matrix.md` and `docs/requirements-matrix.md`.
+> Keep this file only as a historical record of that stage.
 
 Date: 2026-06-05
 

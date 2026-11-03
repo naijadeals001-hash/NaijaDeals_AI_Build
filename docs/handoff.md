@@ -192,9 +192,13 @@ then `TEST_BASE_URL=http://localhost:3101 npx tsx scripts/<suite>.ts`. Suites ar
 idempotent on a shared database (marketplace rejects catalog products without images created by
 a previous run; drive needs no active ride), so reset and reseed between full runs.
 
+**Documentation reconciliation (same pass):** `docs/architecture.md` and
+`docs/requirements-matrix.md` were rewritten from the verified code and test evidence;
+`docs/functional-gap-report.md` is now explicitly historical (it described the June 2026
+localStorage demo). Stale claims (commit `61b066ee`, phantom stash, "no tests/CI") are gone.
+
 **Still blocked:** the deliberately failing CI check (push returns 403), and the remaining
-Phase 05 items (role-assignment writes beyond the existing endpoint, audit before/after detail,
-country activation).
+Phase 05 items (pagination/bulk/detail views, country activation, audit before/after detail).
 
 ## Repository audit (2026-11-03)
 

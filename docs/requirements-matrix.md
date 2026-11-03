@@ -1,104 +1,103 @@
 # NaijaDeals Requirements Matrix
 
-## Legend
-- **Missing** - Not implemented in codebase
-- **Implemented-but-unverified** - Code exists but not end-to-end tested locally
-- **Locally verified** - Works in local dev environment
-- **Staging verified** - Tested against staging environment
-- **Production verified** - Deployed and validated in production
+Statuses use the playbook vocabulary: **PASS / PARTIAL / BLOCKED / NOT STARTED**.
+Evidence columns name the code path and the execution that proved it. Last verified
+2026-11-03 (HEAD `7590af5`) against the isolated `naijadeals_test` database.
 
-## Requirements Coverage Matrix
+## Identity and access
 
-### Identity & Authentication
 | Requirement | Status | Evidence |
-|-------------|--------|----------|
-| User registration | ✅ Locally verified | `app/register/page.tsx`, `apiClient.register()`, Prisma `user.create()` |
-| User login | ✅ Locally verified | `app/login/page.tsx`, `apiClient.login()`, session cookie validation |
-| Session management | ✅ Locally verified | `lib/auth/session.ts` with `getSessionUser()`, `createSession()`, `destroySession()` |
-| RBAC (actorType checks) | ✅ Locally verified | `isAdmin()`, `isVendor()`, `isCourier()`, `isDriver()` in session.ts |
-| Password hashing | ✅ Locally verified | Prisma seed uses scrypt; `hashPassword()` in seed.cjs |
-| Logout/invalidation | ✅ Locally verified | `apiClient.logout()`, session deleteMany by tokenHash |
+| --- | --- | --- |
+| Registration | PASS | `/api/auth/register`, exercised by marketplace suite ("Auth, roles and server-side RBAC") |
+| Login / logout | PASS | `/api/auth/login|logout`, session cookie `nd_session`, suite coverage |
+| Session validation | PASS | `lib/auth/session.ts` `getSessionUser()`; expired rows deleted |
+| RBAC (server-side) | PASS | `lib/auth/guard.ts`; cross-tenant rejection in marketplace suite |
+| Scoped staff roles (ops/finance/support/moderator) | PASS | `requireAdminPermission` + `permissions.ts`; admin suite 19/19 |
+| Region scope enforcement | PASS | `lib/auth/scope.ts`; `region_forbidden` cases in admin suite |
+| Super-admin boundary | PASS | `requireSuperAdmin`; admin suite 403/200 cases |
+| Password reset (expiring, single-use) | NOT STARTED | No reset route or token storage |
+| Email verification | NOT STARTED | No provider |
+| Admin MFA | NOT STARTED | No enrolment or recovery |
+| Rate limiting | NOT STARTED | No limiter in route handlers |
 
-### Commerce & Products
+## Commerce (NaijaShop)
+
 | Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Product catalog browsing | ✅ Locally verified | `app/naijashop/page.tsx`, `NaijaShopPage` with product listing |
-| Category filtering | ✅ Locally verified | Category filter in NaijaShop Search and browse |
-| Cart management | ✅ Locally verified | `Cart` model, `CartItem` CRUD, `addCartItem`, `updateCartItem`, `deleteCartItem` |
-| Escrow-protected checkout | ✅ Locally verified | Checkout flow with 1% escrow fee, server-verified payment |
-| Multi-vendor orders | ✅ Locally verified | Orders have `vendorId`, seller dashboard per-vendor overview |
-| Product reviews | ✅ Locally verified | `createReview`, `OrdersPageApi` review submission |
-| Returns & refunds | ✅ Locally verified | `requestReturn`, seller `resolveReturn` with approve/reject/receive |
+| --- | --- | --- |
+| Catalog, categories, product detail | PASS | `/api/products`, `/api/categories`; marketplace suite |
+| Cart and variants | PASS | `/api/cart*`; variant-option check in suite |
+| Checkout with server-side price/stock | PASS | `checkout.service`; oversell race test |
+| Escrow hold + release | PASS | `EscrowHold`/`EscrowEvent`; purchase and release tests |
+| Duplicate callback idempotency | PASS | "idempotent duplicate callback" check |
+| Refunds and restock | PASS | paid-cancellation test |
+| Returns | PARTIAL | `ReturnRequest` model + seller resolve; no customer end-to-end test |
+| Seller tools | PASS | seller product/fulfilment tests |
+| Live payment provider | BLOCKED | Paystack/Flutterwave credentials absent; test adapter only |
+| Product images for all active listings | PARTIAL | seller-created product without an image can appear in catalog (found in test run) |
 
-### NaijaDrive (Rides)
+## Mobility and delivery
+
 | Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Ride booking with fare quote | ✅ Locally verified | `DrivePage` with `driveQuote()`, fare breakdown (base + distance + time) |
-| Driver assignment | ✅ Locally verified | `driverAcceptRide`, `driverRideStatus` progression |
-| Active ride tracking | ✅ Locally verified | `ActiveRideCard` with live status, `RideTimeline` with events |
-| Assignment deadlines | ✅ Locally verified | `AssignmentDeadline` component with countdown, auto-release on expiry |
-| Saved places | ✅ Locally verified | `SavedPlaces` with device-local persistence + server sync |
-| Cash vs wallet payment | ✅ Locally verified | Payment method radio buttons, fare hold behavior differs |
-| Ride cancellation | ✅ Locally verified | `driverCancelRide`, `apiClient.driverCancelRide()` |
-| Two-driver acceptance race | ⚠️ Implemented-unverified | Code supports single-winner; no test for simultaneous accepts |
+| --- | --- | --- |
+| Ride quote and fare breakdown | PASS | `/api/drive/quote`, drive suite |
+| Booking, dispatch, accept/arrive/start/complete | PASS | drive suite 28/28 |
+| Two-driver acceptance yields one winner | PASS | race checks in drive suite |
+| Assignment expiry released without UI reads | PASS | sweeper + expiry tests |
+| Saved places CRUD | PASS | drive suite |
+| Live GPS/map telemetry | BLOCKED | No map provider |
+| Parcel booking with size/weight rules | NOT STARTED | `/naijasend` is a status page |
+| Courier delivery workflow (marketplace) | PASS | delivery tests in marketplace suite |
 
-### NaijaPay (Wallet)
+## Money (NaijaPay)
+
 | Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Wallet balance display | ✅ Locally verified | `NaijaPayPage` shows availableKobo, heldInEscrowKobo, open holds count |
-| Transaction ledger | ✅ Locally verified | `getWalletLedger()` with debit/credit entries |
-| Escrow holds | ✅ Locally verified | Wallet shows open escrow holds with amounts and reasons |
-| Deposit/credit transactions | ✅ Locally verified | `walletFixture` in seed.cgs, ledger entries created on seed |
-| Withdrawal/payout | ⚠️ Implemented-unverified | Admin `adminCreatePayout` + `adminPayPayout` exist; no client workflow |
-| Cross-vertical wallet | ✅ Locally verified | Single wallet serves all ecosystem services |
+| --- | --- | --- |
+| Integer minor units | PASS | `BigInt` kobo throughout (D-001) |
+| Wallet balance / ledger / holds | PASS | `/api/wallet`, `/api/wallet/ledger` |
+| Webhook signature verification | PASS | invalid/unconfigured signature test |
+| Payouts (admin) | PASS | admin suite finance cases |
+| Customer deposit/withdraw | NOT STARTED | No endpoints or UI |
+| Reconciliation reports | NOT STARTED | No report surface |
 
-### Admin Control Center
+## Control Center
+
 | Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Admin dashboard overview | ✅ Locally verified | `AdminDashboard` with users, vendors, products, orders, payments metrics |
-| Order status management | ✅ Locally verified | Status dropdown with all OrderStatus values + refund action |
-| Seller application review | ✅ Locally verified | `adminReviewApplication` approve/reject |
-| Product moderation | ✅ Locally verified | `adminModerateProduct` ACTIVE↔SUSPENDED |
-| User management | ✅ Locally verified | Table view with roles, vendor assignments |
-| Delivery management | ✅ Locally verified | Courier assignment + delivery status workflow |
-| Ride management | ✅ Locally verified | View all rides, admin cancel |
-| Payout creation | ✅ Locally verified | `adminCreatePayout` with vendor/period/amount |
-| Payout payment | ✅ Locally verified | `adminPayPayout` marks payout as PAID |
-| Audit log viewing | ✅ Locally verified | `adminAuditLogs` table with action/entity/actor/timestamp |
-| RBAC enforcement | ✅ Locally verified | `isAdmin()` check on page, redirects non-admin away |
+| --- | --- | --- |
+| Unified `/admin` + `/super-admin` | PASS | Both render `AdminDashboard`; QA report |
+| Real data tables (orders, rides, payouts, users, audit…) | PASS | `.qa/control-center` run 29/29 |
+| Permission + region enforcement | PASS | admin suite 19/19 |
+| Audit trail for sensitive changes | PARTIAL | `admin.roles_updated` covered; before/after detail incomplete |
+| Pagination / bulk actions / record detail | NOT STARTED | Tables render full lists; no pagination controls |
+| Country/city activation | NOT STARTED | No Country model or workflow |
+| Live operations map | BLOCKED | No provider; UI shows honest placeholder |
+| Notifications centre | NOT STARTED | Bell is decorative |
 
-### Internationalization
+## Platform, i18n, design
+
 | Requirement | Status | Evidence |
-|-------------|--------|----------|
-| English (en) | ✅ Locally verified | Full dictionary `DICTIONARIES.en` |
-| Swahili (sw) | ✅ Locally verified | Full dictionary `DICTIONARIES.sw` |
-| Arabic (ar) | ✅ Locally verified | Full dictionary `DICTIONARIES.ar` with RTL support |
-| `isRtl()` detection | ✅ Locally verified | Returns true for Arabic language code |
-| Locale provider | ✅ Locally verified | `LocaleProvider` + `readLocale()` in layout |
+| --- | --- | --- |
+| English / Swahili / Arabic dictionaries + RTL | PASS | `lib/i18n/*`, locale QA script |
+| Design tokens | PARTIAL | `tailwind.config.ts` tokens; no documented component system |
+| Accessible shells | PARTIAL | App shell + QA markers; no screen-reader/contrast audit |
+| Original imagery | PARTIAL | 17 module images present, 0 broken; provenance not registered |
+| PWA installability | NOT STARTED | No manifest or service worker |
+| Native Android/iOS | NOT STARTED | No mobile project |
 
-### Design System
+## Engineering gates
+
 | Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Color tokens | ✅ Locally verified | `tailwind.config.ts` with 15 custom colors |
-| Typography | ✅ Locally verified | Inter/sans-serif and Plus Jakarta Sans/display fonts |
-| Component library | ⚠️ Implemented-but-unverified | Only `badge.tsx` and `states.tsx` in `components/ui/` |
-| Responsive breakpoints | ✅ Locally verified | sm, md, lg, xl throughout UI |
-| Accessible ARIA labels | ✅ Locally verified | Numerous aria-hidden, aria-live attributes |
+| --- | --- | --- |
+| Type-check | PASS | `npx tsc --noEmit` clean |
+| Lint | PARTIAL | `next lint` script exists; not run in this audit |
+| Automated suites | PASS | marketplace 13/13, admin 19/19, drive 28/28 |
+| CI pipeline | PASS | `.github/workflows/ci.yml` with PostgreSQL service; no deploy |
+| Disposable failing CI check | BLOCKED | Requires push; GitHub returns 403 |
+| Isolated test database | PASS | `naijadeals_test` created/migrated/seeded locally |
+| Browser screenshot regression baseline | NOT STARTED | QA screenshots exist but no diff baseline |
+| Observability / health endpoint | NOT STARTED | None |
 
-### Tests & Quality
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Type checking (`tsc`) | ✅ Configurable | `package.json` has `type-check` script; `tsconfig.json` strict mode |
-| Lint (`eslint`) | ✅ Configurable | `package.json` has `lint` script; `eslint-config-next` |
-| Build (`next build`) | ✅ Configurable | `package.json` has `build` script |
-| Automated test suite | ❌ Missing | No test files found in root; `scripts/` contains manual QA scripts only |
-| CI/CD pipeline | ❌ Missing | No GitHub Actions found |
-| Preview/development server | ✅ Locally verified | `npm run dev` starts Next.js on default port |
+## Notes
 
-### Gaps & Blockers
-1. **No automated test suite** - Only manual scripts in `scripts/` (visual-qa, ecosystem-smoke, drive-tests, marketplace-tests)
-2. **No CI/CD** - No GitHub Actions or automated build/test pipeline
-3. **NaijaEats/Fresh/Gigs/Stay/Stream** - Routes defined but no functional UI (status pages only)
-4. **Aura AI** - Route exists, no implementation
-5. **Wallet payout workflow** - Admin API exists, no client-facing deposit/withdraw UI beyond balance display
-6. **Multi-tenant isolation** - No explicit row-level security beyond Prisma relations; relies on app-layer RBAC
+- "PASS" here means the stated evidence was executed, not that the whole phase is accepted.
+  Phase acceptance still follows the playbook's exit gates in `docs/phase-tracker.md`.
+- Older claims in this file ("no tests", "no CI") were stale and have been replaced.
