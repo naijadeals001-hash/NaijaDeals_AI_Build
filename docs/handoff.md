@@ -592,3 +592,8 @@ API (raw SQL so the long-running preview works), two labelled sample kitchens, a
 on /naijaeats with delivery-area filter, cuisine chips and priced menus. Verified 2 kitchens / 6 items,
 axe 0, no mobile overflow. Ordering journey (cart, fees, payment, kitchen acceptance, dispatch,
 tracking) remains to be built and is explicitly marked as not available.
+
+**Partner lifecycle regression (2026-11-03):** scripts/partner-lifecycle-tests.mjs runs against
+TEST_BASE_URL and covers registration -> application -> admin rejection -> 403 + redirect -> rejection
+notification, vendor suspension notification + mark-all-read, and courier suspension notification.
+Latest run: 9/9 passed.
