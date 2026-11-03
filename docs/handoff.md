@@ -830,3 +830,11 @@ serves the same commit on port 3010 with /, /home and /naijashop returning 200. 
 Added 16 further demo products (Openverse CC images, credits in public/products/demo2/credits.json)
 so every department shelf renders four distinct products: 32 demo products, 32 unique local images.
 Names were aligned to the actual photographs; mismatched branded samples remain archived as DRAFT.
+
+
+## NaijaShop image audit (2026-11-03)
+
+docs/audits/naijashop-image-audit.md records the 32-product audit: 13 images have recorded provenance,
+19 lack complete source/licence records, and the phone/kettle/charger/cookware images are not acceptable
+packshots. The 12 branded samples remain archived. Demo checkout is blocked server-side and the
+Playwright suite passes 12/12. Image completion is NOT done; see the audit for the remaining gaps.
