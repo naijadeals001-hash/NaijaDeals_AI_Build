@@ -824,3 +824,9 @@ process is gone). Next and Tailwind both scan app/**, so every route on the orig
 aijadeals-live
 serves the same commit on port 3010 with /, /home and /naijashop returning 200. The canonical ports
 3000/3001 still hold the ghost listener (PID 60680) and need a host restart or handle release.
+
+## Demo catalogue four-per-shelf (2026-11-03)
+
+Added 16 further demo products (Openverse CC images, credits in public/products/demo2/credits.json)
+so every department shelf renders four distinct products: 32 demo products, 32 unique local images.
+Names were aligned to the actual photographs; mismatched branded samples remain archived as DRAFT.

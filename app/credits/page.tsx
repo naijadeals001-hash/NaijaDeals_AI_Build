@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import foodCredits from "../../public/food/credits.json";
 import catalogCredits from "../../public/products/catalog/credits.json";
+import demo2Credits from "../../public/products/demo2/credits.json";
 
 export const metadata: Metadata = { title: "Photography credits" };
 
 type Credit = { slug: string; file: string; license: string; artist: string; url: string };
 
 export default function Page() {
-  const rows = [...(foodCredits as Credit[]), ...(catalogCredits as Credit[])];
+  const rows = [...(foodCredits as Credit[]), ...(catalogCredits as Credit[]), ...(demo2Credits as unknown as Credit[])];
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <header>
