@@ -886,3 +886,16 @@ re-expose demos an admin hid. Acceptance suite extended to 14 checks, all passin
 
 Persistence wording: cross-request database persistence is demonstrated. A process restart and a
 migration replay against an existing database were NOT executed; those remain outstanding.
+
+
+## Imagery priority pass (2026-11-03)
+
+Storefront shows 6 provenanced demo products across 3 shelves (Computers 3, Home & Kitchen 1, Beauty 2);
+59 sample records are archived as DRAFT, not deleted. Every displayed image loads, matches its listing,
+and has source/author/licence in public/products/provenance.json. Suitability is 5/6 (monitor is a desk
+scene). Remaining shelves are empty until suitable licensed photos are sourced; no branded lookalikes
+or AI packshots were used. Screenshots: qa-artifacts/preview/imagery-final-desktop.png and
+imagery-final-mobile.png. Shop E2E 13/13; storefront acceptance 15/15 (includes stale-cache fail-closed).
+
+Cached config may preserve layout/copy during outages, but demo visibility is never read from cache and
+defaults to hidden whenever current configuration cannot be fetched.
