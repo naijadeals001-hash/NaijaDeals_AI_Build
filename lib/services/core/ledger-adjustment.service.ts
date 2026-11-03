@@ -55,3 +55,37 @@ export async function applyLedgerAdjustment(adjustmentKey: string, actor: string
     return { status: "applied", adjustmentId: adjustment.id, transactionId: transaction.id };
   }, { isolationLevel: "Serializable" });
 }
+
+
+/** Validate each adjustment journal across LedgerEntry and AccountPosting. */
+export async function reconcileAdjustmentJournals(client: Db = prisma) {
+  const adjustments = await client.ledgerAdjustment.findMany({ include: { postings: true } });
+  const issues: string[] = [];
+  const rows = [];
+  for (const adjustment of adjustments) {
+    const transaction = await client.walletTransaction.findFirst({
+      where: { reference: `ADJ-${adjustment.adjustmentKey}` },
+      include: { ledger: true }
+    });
+    const walletCredits = transaction?.ledger.filter((e) => e.direction === "CREDIT").reduce((sum, e) => sum + e.amountKobo, 0n) ?? 0n;
+    const walletDebits = transaction?.ledger.filter((e) => e.direction === "DEBIT").reduce((sum, e) => sum + e.amountKobo, 0n) ?? 0n;
+    const accountDebits = adjustment.postings.filter((p) => p.direction === "DEBIT").reduce((sum, p) => sum + p.amountKobo, 0n);
+    const accountCredits = adjustment.postings.filter((p) => p.direction === "CREDIT").reduce((sum, p) => sum + p.amountKobo, 0n);
+    const totalCredits = walletCredits + accountCredits;
+    const totalDebits = walletDebits + accountDebits;
+    const status = adjustment.status;
+    const linked = adjustment.postings.every((p) => p.transactionId === transaction?.id && p.adjustmentId === adjustment.id);
+    const valid = status === "PREPARED"
+      ? !transaction && adjustment.postings.length === 0
+      : status === "APPLIED" && Boolean(transaction) && adjustment.postings.length === 1 && totalCredits === totalDebits && linked && Boolean(adjustment.appliedAt);
+    if (!valid) issues.push(adjustment.adjustmentKey);
+    rows.push({
+      key: adjustment.adjustmentKey, status, appliedAt: adjustment.appliedAt,
+      walletCredits: walletCredits.toString(), walletDebits: walletDebits.toString(),
+      accountDebits: accountDebits.toString(), accountCredits: accountCredits.toString(),
+      totalCredits: totalCredits.toString(), totalDebits: totalDebits.toString(),
+      postings: adjustment.postings.length, linked, valid
+    });
+  }
+  return { adjustments: adjustments.length, issues, rows };
+}

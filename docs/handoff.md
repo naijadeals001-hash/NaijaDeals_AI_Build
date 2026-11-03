@@ -1003,3 +1003,14 @@ concurrent apply, forced-failure rollback, retry-after-failure, all wallets reco
 correction remains PREPARED/unapplied. Lifetime suite relabelled as containment, not full
 reconciliation. Shared DB warning: 3010 and authoritative checkout both use
 localhost:5432/naijadeals_core.
+
+
+## Phase 07 cross-table check and policy choices (2026-11-03)
+
+reconcileAdjustmentJournals validates adjustment journals across LedgerEntry and AccountPosting.
+Shared DB: one PREPARED adjustment, zero postings, valid. Isolated applied test: wallet credits 2.5m =
+account debits 2.5m, valid. Lifetime suite labels the shared result as containment only. Policy A
+(negative SYSTEM clearing) versus Policy B (FIXTURE_EQUITY contra) documented with consequences; neither
+applied. Provider readiness: Paystack/Flutterwave secrets and ENABLE_TEST_PAYMENTS missing; sandbox
+reconciliation blocked on credentials. naijadeals_core is the shared local development database; the
+pending adjustment is a shared-database adjustment, not production.

@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { PrismaClient } from "@prisma/client";
-import { applyLedgerAdjustment } from "../lib/services/core/ledger-adjustment.service";
+import { applyLedgerAdjustment, reconcileAdjustmentJournals } from "../lib/services/core/ledger-adjustment.service";
 
 const schema = "phase07_apply_test";
 const base = process.env.DATABASE_URL ?? "";
@@ -47,6 +47,8 @@ async function seedAdjustment(key: string, systemId: string, amount: bigint) {
   const customerAfter = await db.wallet.findUniqueOrThrow({ where: { id: customer.id } });
   const equity = await db.ledgerAccount.findUniqueOrThrow({ where: { code: "FIXTURE_EQUITY" } });
   const postings = await db.accountPosting.count({ where: { adjustmentId: adjustment.id } });
+  const journals = await reconcileAdjustmentJournals(db as never);
+  check("journal balances across LedgerEntry and AccountPosting", journals.issues.length === 0, JSON.stringify(journals.rows));
   check("SYSTEM ledger reconciles with stored", systemAfter.availableKobo === 0n, systemAfter.availableKobo.toString());
   check("customer balance untouched", customerAfter.availableKobo === 2500000n, customerAfter.availableKobo.toString());
   check("contra account holds -2.5m", equity.balanceKobo === -2500000n, equity.balanceKobo.toString());

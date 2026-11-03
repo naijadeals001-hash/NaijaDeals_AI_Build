@@ -172,3 +172,57 @@ naijadeals_core.
 The 3010 preview worktree and authoritative checkout both use **localhost:5432/naijadeals_core**.
 Migrations and financial tests therefore affect both. Any future application test must use a
 disposable schema/database, as the isolated test does.
+
+
+## Cross-table journal reconciliation (2026-11-03)
+
+`reconcileAdjustmentJournals()` validates every adjustment across **LedgerEntry** and
+**AccountPosting**, linked by the adjustment and its wallet transaction:
+
+- PREPARED must have no wallet transaction and no contra posting.
+- APPLIED must have exactly one wallet CREDIT and one contra DEBIT, equal amounts, matching
+  transactionId/adjustmentId, and appliedAt set.
+- Totals must balance across both tables (wallet credits + account credits = wallet debits + account debits).
+
+Results:
+
+| Context | Adjustment | Wallet credits | Account debits | Total credits | Total debits | Valid |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Shared DB | PHASE07-FIXTURE-FUNDING-20261103 (PREPARED) | 0 | 0 | 0 | 0 | yes |
+| Isolated test | PHASE07-ISOLATED-TEST (APPLIED) | 2,500,000 | 2,500,000 | 2,500,000 | 2,500,000 | yes |
+
+Wallet-only balancing is no longer applied to `ADJ-` transactions; the cross-table check owns them.
+
+## Accounting policy choices
+
+### A. SYSTEM negative clearing position
+Post the 2.5m as a SYSTEM clearing liability/overdraft: stored SYSTEM becomes -560,000 and the ledger
+stays -560,000. Consequences: reconciliation passes; no equity account; but the only SYSTEM wallet goes
+negative, breaking the “all wallets non-negative” invariant and making a platform overdraft look like
+spendable balance. Requires an explicit negative-balance exception for SYSTEM.
+
+### B. Separate FIXTURE_EQUITY contra account (implemented, unapplied)
+Keep SYSTEM stored at 1,940,000; credit SYSTEM ledger +2,500,000; debit FIXTURE_EQUITY 2,500,000
+(balance -2,500,000). Consequences: all wallets non-negative; fixture money is visibly absorbed by
+equity; requires a non-wallet account and reporting; customer fixture balance remains an asset with no
+external cash backing. Recommended pending approval.
+
+Neither choice is applied to the shared database. The adjustment remains PREPARED.
+
+## Provider sandbox preparation
+
+`scripts/phase07-provider-readiness.ts` loads .env and reports presence only (no network, no values):
+
+- PAYSTACK_SECRET_KEY: **missing**
+- FLUTTERWAVE_SECRET_KEY: **missing**
+- FLUTTERWAVE_WEBHOOK_HASH: **missing**
+- ENABLE_TEST_PAYMENTS: **not true**
+- APP_URL: configured
+
+Provider sandbox reconciliation remains **BLOCKED** on credentials/test mode, not on code.
+
+## Terminology
+
+`naijadeals_core` is the **shared local development database**, used by both the authoritative checkout
+and the 3010 worktree. The pending correction is a **shared-database adjustment**, not a production
+adjustment. No production environment or deployment exists for this work.

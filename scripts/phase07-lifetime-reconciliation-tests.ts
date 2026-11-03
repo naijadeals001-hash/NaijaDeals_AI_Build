@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { reconcileAdjustmentJournals } from "../lib/services/core/ledger-adjustment.service";
 const prisma = new PrismaClient();
 const QUARANTINED = new Set(["cmvzwmxzx002cv4ucop26i63c"]);
 let failed = 0;
@@ -19,14 +20,17 @@ const check = (name: string, ok: boolean, detail = "") => {
   const mismatches = rows.filter((r) => r.available + r.held !== r.net);
   check("known discrepancy remains contained (NOT full reconciliation)", mismatches.every((m) => QUARANTINED.has(m.id)) && mismatches.length <= 1, JSON.stringify(mismatches.map((m) => ({ id: m.id, diff: (m.available + m.held - m.net).toString() }))));
 
-  const groups = await prisma.$queryRaw<Array<{ transactionId: string; debits: bigint; credits: bigint }>>`
-    SELECT "transactionId",
-      COALESCE(SUM(CASE WHEN direction = 'DEBIT' THEN "amountKobo" ELSE 0 END), 0)::bigint AS debits,
-      COALESCE(SUM(CASE WHEN direction = 'CREDIT' THEN "amountKobo" ELSE 0 END), 0)::bigint AS credits
-    FROM "LedgerEntry" GROUP BY "transactionId"`;
-  const unbalanced = groups.filter((g) => g.debits !== g.credits);
+  const groups = await prisma.$queryRaw<Array<{ transactionId: string; reference: string; debits: bigint; credits: bigint }>>`
+    SELECT e."transactionId", t.reference,
+      COALESCE(SUM(CASE WHEN e.direction = 'DEBIT' THEN e."amountKobo" ELSE 0 END), 0)::bigint AS debits,
+      COALESCE(SUM(CASE WHEN e.direction = 'CREDIT' THEN e."amountKobo" ELSE 0 END), 0)::bigint AS credits
+    FROM "LedgerEntry" e JOIN "WalletTransaction" t ON t.id = e."transactionId"
+    GROUP BY e."transactionId", t.reference`;
+  const unbalanced = groups.filter((g) => !g.reference.startsWith("ADJ-") && g.debits !== g.credits);
   check("every ledger transaction group balances", unbalanced.length === 0, JSON.stringify(unbalanced.slice(0, 5).map((g) => ({ id: g.transactionId, debits: g.debits.toString(), credits: g.credits.toString() }))));
 
+  const journals = await reconcileAdjustmentJournals(prisma);
+  check("adjustment journals balance across LedgerEntry and AccountPosting", journals.issues.length === 0, JSON.stringify(journals.rows));
   const prepared = await prisma.ledgerAdjustment.findMany({ where: { adjustmentKey: "PHASE07-FIXTURE-FUNDING-20261103" } });
   check("at most one correction is prepared", prepared.length <= 1, String(prepared.length));
   check("correction remains unapplied", prepared.every((a) => a.status === "PREPARED" && a.appliedAt === null));
