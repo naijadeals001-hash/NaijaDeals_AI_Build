@@ -228,6 +228,31 @@ localStorage demo). Stale claims (commit `61b066ee`, phantom stash, "no tests/CI
 **Still blocked:** the deliberately failing CI check (push returns 403), and the remaining
 Phase 05 items (pagination/bulk/detail views, country activation, audit before/after detail).
 
+## Repository preservation (2026-11-03)
+
+GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only
+stored credential is for `BetFuz` (which lacks permission on
+`naijadeals001-hash/NaijaDeals_AI_Build`), and a push/dry-run is rejected with `403`. No token
+exists in the environment. **Nothing was force-pushed and no history was rewritten.**
+
+A verified local preservation remote was created *outside* the repository:
+
+| Artifact | Value |
+| --- | --- |
+| Bare backup repo | `C:\Users\User\naijadeals-backup.git` |
+| Verified head | `0fcee5dd55e981e2dc8e7626cb0103b8768c1820` (matches local HEAD at backup time) |
+| `git fsck --full` | clean (no output) |
+| Bundle | `C:\Users\User\naijadeals-backup-20261103.bundle` (10,355,018 bytes) |
+| Bundle verify | `The bundle records a complete history` (exit 0) |
+
+Recovery: clone from the bare repo or `git clone <bundle>`; push new commits to the bare repo with
+`git push C:\Users\User\naijadeals-backup.git "refs/heads/*:refs/heads/*"`. Restore GitHub access
+with `gh auth login` or a PAT with `repo` scope for an account that owns/collaborates on
+`naijadeals001-hash/NaijaDeals_AI_Build`, then push; the local branch history is intact.
+
+**Final verification on a freshly migrated/seeded isolated database (2026-11-03):**
+marketplace **13/13**, admin security **19/19**, drive **28/28**, `tsc --noEmit` clean.
+
 ## Repository audit (2026-11-03)
 
 Eight audit deliverables were produced under `docs/audits/` with two machine manifests
