@@ -60,6 +60,11 @@ export async function checkout(input: {
   });
   if (!cart || cart.items.length === 0) throw new ApiError(400, "empty_cart", "Your cart is empty.");
 
+  const demoItem = cart.items.find((item) => item.product.isSample);
+  if (demoItem) {
+    throw new ApiError(409, "demo_inventory", "Demo inventory is for visual review only and cannot be purchased. Remove demo items before checking out.");
+  }
+
   const unavailable = cart.items.find(
     (item) =>
       item.product.status !== "ACTIVE" ||
@@ -69,10 +74,6 @@ export async function checkout(input: {
   );
   if (unavailable) {
     throw new ApiError(409, "item_unavailable", `${unavailable.product.name} is no longer available. Remove it from the cart.`);
-  }
-  const demoItem = cart.items.find((item) => item.product.isSample);
-  if (demoItem) {
-    throw new ApiError(409, "demo_inventory", "Demo inventory is for visual review only and cannot be purchased. Remove demo items before checking out.");
   }
 
   const deliveryAddress = formatAddress(input.address);

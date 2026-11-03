@@ -41,7 +41,7 @@ try {
   const firstProduct = page.locator("a[href^='/product/']").first();
   const href = await firstProduct.getAttribute("href");
   await firstProduct.click();
-  await page.waitForTimeout(500);
+  await page.waitForSelector("h1", { timeout: 8000 }).catch(() => null);
   check("product details load", (await page.locator("h1").count()) === 1, page.url());
 
   await page.goto(BASE + "/login?next=/naijashop", { waitUntil: "networkidle" });
