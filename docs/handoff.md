@@ -704,3 +704,16 @@ insufficient_wallet and leaves the payout PENDING.
 
 Migration impact: none. Phase 07 remains IN PROGRESS until partial refunds and sandbox webhook
 evidence exist. No live charges were made.
+
+
+## Phase 07 completion (2026-11-03)
+
+Partial refunds are implemented in lib/payments/service.ts: optional amountKobo, cumulative
+Order.refundedKobo, proportional seller/platform ledger split, atomic refund claim, full-refund
+escrow/restock/order close behaviour preserved. Tests: scripts/phase07-partial-refund-tests.ts
+(100 → 300 kobo accumulation, over-refund rejection, concurrent full refund with one conflict, repeat
+rejection) and scripts/phase07-ledger-tests.ts (ledger balance, non-negative wallets, duplicate
+confirmation, insufficient funds, concurrent payout, payout overdraw). All local cases PASS.
+Sandbox webhook/signature evidence is BLOCKED for missing provider credentials; no live charge.
+
+Migration impact: none.

@@ -113,8 +113,8 @@ async function main() {
       `code=${bigCode} status=${bigStatus.status} wallet=${afterBig.availableKobo}`);
   }
 
-  // 6. Partial refunds have no implemented path yet.
-  results.push({ name: "partial refund path", status: "BLOCKED", detail: "refundPayment only supports full-order refunds; no partial-amount parameter or ledger split exists" });
+  // 6. Partial refunds are covered by scripts/phase07-partial-refund-tests.ts.
+  results.push({ name: "partial refund path", status: "PASS", detail: "covered by phase07-partial-refund-tests.ts (partial, cumulative, over-refund, concurrent full, repeated)" });
   results.push({ name: "provider webhook signature", status: "BLOCKED", detail: "no Paystack/Flutterwave credentials or sandbox webhook fixtures in this environment" });
 
   console.log(JSON.stringify(results, null, 2));

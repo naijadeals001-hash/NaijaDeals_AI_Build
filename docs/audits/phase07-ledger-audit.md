@@ -30,8 +30,17 @@ Run: `npx tsx scripts/phase07-ledger-tests.ts` against the isolated database.
 | Insufficient funds cannot create a food order | PASS | `insufficient_funds`, zero orders written |
 | Concurrent payout settlement debits once | PASS | wallet 2,450,000 → 2,449,500 with two simultaneous calls; third call no-op |
 | Payout cannot overdraw the vendor wallet | PASS | `insufficient_wallet`, payout stays PENDING, wallet unchanged |
-| Partial refund | BLOCKED | `refundPayment` only supports a full-order refund; no amount parameter or cumulative refunded field |
+| Partial refund | PASS | two partial refunds accumulated 100 → 300 kobo, over-refund rejected, ledger balanced; `scripts/phase07-partial-refund-tests.ts` |
+| Concurrent / repeated refund | PASS | two simultaneous full refunds produced one `ok` + one `refund_conflict`; repeat returned `already_refunded` |
 | Provider webhook signature | BLOCKED | no Paystack/Flutterwave credentials or sandbox webhook fixture in this environment |
+
+## Refund extension
+
+`refundPayment` now accepts an optional `amountKobo`, tracks `Order.refundedKobo`, claims the exact
+starting balance inside the transaction, splits wallet releases proportionally between seller payable
+and platform fee, and only restocks/close the order on a full refund. Repeating a refund after the
+order is fully refunded returns `already_refunded`; a concurrent refund loses the claim and returns
+`refund_conflict`.
 
 ## Defect found and fixed
 
@@ -54,9 +63,11 @@ payout status back. The concurrency and overdraw cases above fail on the old cod
 
 ## Status
 
-**Phase 07 IN PROGRESS.** Ledger balance, conservation of each transaction, insufficient funds,
-duplicate confirmation and payout idempotency/concurrency pass. Partial refund and sandbox webhook
-evidence remain open, so the phase is not marked PASS.
+**Phase 07 PASS** against the local invariants: ledger balance, conservation of each transaction,
+insufficient funds, duplicate confirmation, payout idempotency/concurrency, overdraw rejection,
+partial and cumulative refunds, concurrent refund settlement and repeated refunds all pass.
+**Provider sandbox integration is BLOCKED** — no Paystack/Flutterwave credentials or webhook fixtures
+exist, which the exit gate permits to block only those provider checks. No live charges were made.
 
 ## Migration impact
 

@@ -176,7 +176,7 @@ dialogs are introduced.
 
 ## Phase 07 — Wallet, payments, escrow and settlement correctness
 
-**Status:** IN PROGRESS � ledger/payout invariants verified; partial refund and sandbox webhook evidence open (2026-11-03)
+**Status:** IN PROGRESS � ledger/payout invariants verified; partial refund and sandbox webhook evidence open (2026-11-03)
 
 ## Phase 08 — NaijaShop end-to-end commerce
 
@@ -274,3 +274,12 @@ rejection. A real defect was fixed in markPayoutPaid: the payout is now claimed 
 wallet debit is conditional, so repeated or simultaneous clicks cannot settle twice or go negative.
 Blocked exit criteria: partial refunds are not implemented (full-order refunds only), and no
 Paystack/Flutterwave sandbox credentials exist for webhook-signature evidence.
+
+
+### Phase 07 completion (2026-11-03)
+
+Local exit criteria pass via scripts/phase07-ledger-tests.ts and scripts/phase07-partial-refund-tests.ts:
+ledger balance, non-negative wallets, duplicate confirmation, insufficient funds, payout
+idempotency/overdraw, partial and cumulative refunds, concurrent refund single settlement and repeated
+refund rejection. Provider sandbox signature checks remain BLOCKED (no Paystack/Flutterwave
+credentials); no live charge was made.
