@@ -683,3 +683,8 @@ path is not implemented.
 **Tooling note:** the order-detail and status routes now read restaurant/courier ownership with raw SQL
 because the long-running dev server's Prisma client predates those models; this removed the 500 that
 previously blocked kitchen transitions.
+
+**Preservation after ordering increment (2026-11-03):** commit e1c0ea9 is on local
+naijashop-marketplace; the GitHub push again exited 128 and the remote branch stayed at
+d28a6beadbd10cdc42424270b79b3ff627d0d3b7 (account access still denied). Local backup remote and bundle
+were updated; production remains gated.
