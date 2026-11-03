@@ -432,6 +432,12 @@ is connected"), followed by escrow / tracked-dispatch / no-fake-kitchens cards a
 card that keeps ordering disabled honestly. Verified: image loads on the page and homepage card,
 3 feature cards, axe 0, 0 overflow at 1440 and 390.
 
+**NaijaFresh landing (same pass):** the supplied market graphic (cropped past its baked-in text)
+now drives the NaijaFresh card and a new `/naijafresh` split hero — "Fresh groceries from Lagos
+markets, once vendors are connected" — with verified-vendor / escrow / honest-availability cards
+and a setup-status card. Verified: image loads on page and homepage, 3 cards, axe 0, 0 overflow at
+1440 and 390.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

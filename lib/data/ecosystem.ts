@@ -101,7 +101,7 @@ export const verticals: Vertical[] = [
     icon: Leaf,
     label: "Groceries and market produce",
     description: "Fresh produce and staples picked for you.",
-    image: "/real-photography/module-fresh.jpg",
+    image: "/brand-photography/fresh-market-groceries.jpg", // Owner-supplied NaijaFresh brand artwork (AI-generated, not a real market vendor).
     accent: "#84cc16",
     status: "setup",
     statusLabel: "Setup required",

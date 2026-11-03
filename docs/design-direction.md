@@ -195,3 +195,10 @@ baked-in marketing text and stored as `public/brand-photography/eats-jollof-deli
 (1280-wide). It drives the NaijaEats ecosystem card and a split landing hero with honest copy:
 ordering stays disabled until restaurant credentials, menus and dispatch partners are connected.
 Three capability cards and a setup-status card follow.
+
+
+**NaijaFresh artwork (2026-11-03):** the supplied market-groceries graphic is cropped past its
+baked-in "Order fresh groceries" panel and stored as
+`public/brand-photography/fresh-market-groceries.jpg`. It drives the NaijaFresh ecosystem card and
+a new split landing hero on `/naijafresh`, with three capability cards and an honest setup-status
+card (ordering disabled until market vendors, catalogue and delivery slots are connected).
