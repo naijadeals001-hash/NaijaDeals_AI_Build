@@ -853,3 +853,16 @@ Per owner direction, all 65 sample products were re-activated so the storefront 
 32 products rendered across 8 shelves (4 per shelf), 0 broken images. The earlier archive-only
 cleanup was reversed; image-quality and provenance gaps remain tracked in the audit and will be fixed
 by replacing images, not removing products.
+
+
+## Admin-managed NaijaShop storefront (2026-11-03)
+
+Added StorefrontConfig (singleton JSON) with admin API GET/PATCH at /api/admin/storefront
+(products:moderate), public GET /api/storefront, and a Storefront controls panel in the Control Center
+Products tab. Admin now controls: announcement banner, hero title/subtitle, visible departments, shelf
+order, shelf item limit (1-8), demo-inventory visibility, and hero/shelf visibility. Changes are audited
+as storefront.updated.
+
+Verified live: admin PATCH 200 changed heroTitle to "Admin-managed NaijaShop" and the announcement;
+/api/storefront and /naijashop reflected both. Screenshot qa-artifacts/preview/admin-managed-storefront.png.
+Migration 20261103250000_storefront_config.
