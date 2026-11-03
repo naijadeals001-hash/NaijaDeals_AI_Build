@@ -1900,7 +1900,7 @@ export function NaijaFreshPage() {
     />
   );
 }
-export function NaijaSendPage() {
+function NaijaSendLanding() {
   return (
     <ModuleLanding
       name="NaijaSend"
@@ -1924,5 +1924,227 @@ export function NaijaSendPage() {
       primaryCta={{ label: "Track an order", href: "/orders" }}
       secondaryCta={{ label: "Browse NaijaShop", href: "/naijashop" }}
     />
+  );
+}
+
+export function NaijaSendPage() {
+  return (
+    <div className="space-y-5">
+      <NaijaSendLanding />
+      <FreightQuoteForm />
+    </div>
+  );
+}
+
+const FREIGHT_SERVICES = [
+  { id: "bus", label: "Bus cargo", hint: "Terminal-to-terminal luggage bay" },
+  { id: "air", label: "Air freight", hint: "Airport-to-airport cargo" },
+  { id: "truck", label: "Truck / haulage", hint: "Long-haul truckload or shared space" },
+  { id: "last_mile", label: "Last-mile pickup", hint: "Courier collects from your address" }
+];
+
+const FREIGHT_STATUS: Record<string, string> = {
+  quote_requested: "Quote requested",
+  quoted: "Quoted",
+  carrier_assigned: "Carrier assigned",
+  in_transit: "In transit",
+  delivered: "Delivered",
+  cancelled: "Cancelled"
+};
+
+interface FreightRow {
+  id: string;
+  reference: string;
+  serviceType: string;
+  originCity: string;
+  destinationCity: string;
+  commodity: string;
+  weightKg: number;
+  status: string;
+  createdAt: string;
+}
+
+function FreightQuoteForm() {
+  const [requests, setRequests] = useState<FreightRow[]>([]);
+  const [signedOut, setSignedOut] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [created, setCreated] = useState<string>("");
+  const [form, setForm] = useState({
+    serviceType: "bus",
+    originCity: "Lagos",
+    destinationCity: "",
+    commodity: "",
+    weightKg: "20",
+    dimensions: "",
+    pickupRequired: false,
+    notes: ""
+  });
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/send/freight", { cache: "no-store" });
+      if (res.status === 401) {
+        setSignedOut(true);
+        return;
+      }
+      const body = await res.json().catch(() => null);
+      if (res.ok && Array.isArray(body)) setRequests(body as FreightRow[]);
+    } catch {
+      // The form still works; history is a convenience.
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    setCreated("");
+    try {
+      const res = await fetch("/api/send/freight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, weightKg: Number(form.weightKg) })
+      });
+      const body = await res.json().catch(() => null);
+      if (res.status === 401) {
+        setSignedOut(true);
+        throw new Error("Sign in to request a freight quote.");
+      }
+      if (!res.ok) throw new Error(body?.error ?? `Request failed with HTTP ${res.status}`);
+      setCreated(body.reference);
+      setForm((current) => ({ ...current, commodity: "", destinationCity: "", dimensions: "", notes: "" }));
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not submit the quote request.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section id="freight-quote" className="rounded-3xl border border-border-soft bg-canvas p-5 sm:p-7">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide text-primary">Freight quote</p>
+          <h2 className="mt-1 font-display text-2xl font-extrabold">Quote, book and track cargo</h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            Tell us the route and the load. An operator reviews every request before a carrier is assigned — no
+            automatic price or pickup promise is made.
+          </p>
+        </div>
+        <Link href="/orders" className="text-sm font-bold text-primary underline">
+          Track an order
+        </Link>
+      </div>
+
+      {signedOut ? (
+        <div className="mt-4 rounded-xl border border-primary/20 bg-primary-soft p-4 text-sm">
+          <p className="font-bold text-primary">Sign in to request a freight quote</p>
+          <Link href="/login?next=/naijasend" className="mt-2 inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-xs font-bold text-white">
+            Sign in
+          </Link>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="mt-5 grid gap-4 lg:grid-cols-2">
+          <fieldset className="lg:col-span-2">
+            <legend className="text-xs font-black uppercase tracking-wide text-muted">Service</legend>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {FREIGHT_SERVICES.map((service) => (
+                <label
+                  key={service.id}
+                  className={`cursor-pointer rounded-xl border p-3 ${form.serviceType === service.id ? "border-primary bg-primary-soft" : "border-border-soft bg-surface-low"}`}
+                >
+                  <input
+                    type="radio"
+                    name="freight-service"
+                    value={service.id}
+                    checked={form.serviceType === service.id}
+                    onChange={() => setForm({ ...form, serviceType: service.id })}
+                    className="sr-only"
+                  />
+                  <span className="block text-sm font-extrabold">{service.label}</span>
+                  <span className="mt-0.5 block text-[11px] leading-snug text-muted">{service.hint}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <label className="text-xs font-bold uppercase tracking-wide text-muted">
+            Origin city
+            <input required value={form.originCity} onChange={(e) => setForm({ ...form, originCity: e.target.value })} className="mt-1 block min-h-11 w-full rounded-xl border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+          </label>
+          <label className="text-xs font-bold uppercase tracking-wide text-muted">
+            Destination city
+            <input required value={form.destinationCity} onChange={(e) => setForm({ ...form, destinationCity: e.target.value })} className="mt-1 block min-h-11 w-full rounded-xl border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+          </label>
+          <label className="text-xs font-bold uppercase tracking-wide text-muted">
+            Commodity
+            <input required value={form.commodity} onChange={(e) => setForm({ ...form, commodity: e.target.value })} placeholder="e.g. dried pepper sacks" className="mt-1 block min-h-11 w-full rounded-xl border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+          </label>
+          <label className="text-xs font-bold uppercase tracking-wide text-muted">
+            Weight (kg)
+            <input required type="number" min={1} max={40000} value={form.weightKg} onChange={(e) => setForm({ ...form, weightKg: e.target.value })} className="mt-1 block min-h-11 w-full rounded-xl border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+          </label>
+          <label className="text-xs font-bold uppercase tracking-wide text-muted">
+            Dimensions (optional)
+            <input value={form.dimensions} onChange={(e) => setForm({ ...form, dimensions: e.target.value })} placeholder="e.g. 120 × 80 × 90 cm" className="mt-1 block min-h-11 w-full rounded-xl border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+          </label>
+          <label className="flex items-center gap-2 self-end text-sm font-semibold">
+            <input type="checkbox" checked={form.pickupRequired} onChange={(e) => setForm({ ...form, pickupRequired: e.target.checked })} className="h-4 w-4 accent-[#00A651]" />
+            Pick up from my address
+          </label>
+          <label className="text-xs font-bold uppercase tracking-wide text-muted lg:col-span-2">
+            Notes (optional)
+            <textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="mt-1 block w-full rounded-xl border border-border-soft bg-surface-low px-3 py-2 text-sm font-semibold text-ink" />
+          </label>
+
+          {error ? <p role="alert" className="lg:col-span-2 rounded-xl border border-crimson/30 bg-crimson-soft p-3 text-sm font-bold text-crimson">{error}</p> : null}
+          {created ? (
+            <p role="status" className="lg:col-span-2 rounded-xl border border-primary/20 bg-primary-soft p-3 text-sm font-bold text-primary">
+              Quote request {created} received. An operator will review the route and assign a carrier.
+            </p>
+          ) : null}
+
+          <div className="lg:col-span-2">
+            <button type="submit" disabled={saving} className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-extrabold text-white disabled:opacity-60">
+              {saving ? "Submitting…" : "Request freight quote"}
+              <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
+            </button>
+          </div>
+        </form>
+      )}
+
+      {requests.length > 0 ? (
+        <div className="mt-6 overflow-x-auto">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead>
+              <tr className="border-y border-border-soft text-[11px] uppercase tracking-wide text-muted">
+                <th className="px-3 py-2 font-bold">Reference</th>
+                <th className="px-3 py-2 font-bold">Route</th>
+                <th className="px-3 py-2 font-bold">Service</th>
+                <th className="px-3 py-2 font-bold">Weight</th>
+                <th className="px-3 py-2 font-bold">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-soft">
+              {requests.map((row) => (
+                <tr key={row.id}>
+                  <td className="px-3 py-2 font-bold">{row.reference}</td>
+                  <td className="px-3 py-2 text-xs">{row.originCity} → {row.destinationCity}</td>
+                  <td className="px-3 py-2 text-xs">{row.serviceType}</td>
+                  <td className="px-3 py-2 text-xs">{row.weightKg} kg</td>
+                  <td className="px-3 py-2 text-xs">{FREIGHT_STATUS[row.status] ?? row.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </section>
   );
 }

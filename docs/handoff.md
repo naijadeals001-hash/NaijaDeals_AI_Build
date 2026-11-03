@@ -503,6 +503,13 @@ before/after present.
 (`requireAdmin()` → `requireAdminPermission("deliveries:read")`) that was already in the working tree
 from the earlier RBAC migration; it was exercised by the admin suite before commit.
 
+**REA module research map + NaijaSend freight (2026-11-03):** the ten-module journey map is now
+recorded in `docs/rea-module-research.md`, with references, journeys and status per module. Journey 1
+was captured with REA from GIG Logistics (entry points and calculator factors, with limitations
+noted). NaijaDeals implemented its own first freight slice: `FreightRequest` (bus/air/truck/last-mile
+quote requests), validated API with audit, freight form + history on `/naijasend`, and an operator
+queue API. Verified quote NFS-20261103-BF20 end to end, axe 0.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

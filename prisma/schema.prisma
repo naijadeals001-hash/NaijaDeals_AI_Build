@@ -173,6 +173,7 @@ model User {
   driverProfile     DriverProfile?
   rides             Ride[]             @relation("RiderRides")
   savedPlaces       SavedPlace[]
+  freightRequests  FreightRequest[] @relation("CustomerFreight")
 }
 
 model Role {
@@ -838,4 +839,43 @@ model CitySetting {
 
   @@unique([countryCode, code])
   @@index([countryCode])
+}
+
+
+enum FreightServiceType {
+  bus
+  air
+  truck
+  last_mile
+}
+
+enum FreightStatus {
+  quote_requested
+  quoted
+  carrier_assigned
+  in_transit
+  delivered
+  cancelled
+}
+
+/// Freight quote requests captured from NaijaSend before any carrier is chosen.
+model FreightRequest {
+  id              String             @id @default(cuid())
+  reference       String             @unique
+  customerId      String
+  serviceType     FreightServiceType
+  originCity      String
+  destinationCity String
+  commodity       String
+  weightKg        Int
+  dimensions      String?
+  pickupRequired  Boolean            @default(false)
+  notes           String?
+  status          FreightStatus      @default(quote_requested)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  customer        User               @relation("CustomerFreight", fields: [customerId], references: [id])
+
+  @@index([customerId, status])
+  @@index([status, createdAt])
 }
