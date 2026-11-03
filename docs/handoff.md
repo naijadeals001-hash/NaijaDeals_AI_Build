@@ -297,6 +297,12 @@ without a restart; a normal restart can switch them back to the token.
 
 ## Control Center record detail (2026-11-03)
 
+The Products table now supports **bulk moderation**: row and select-all checkboxes, a live
+"N selected" bar, Suspend/Activate selected with a confirmation step, per-row outcomes, a failure
+summary and a refresh. Verified in Chrome: 12 selected via the header checkbox, two products
+suspended and then restored to ACTIVE, selection cleared, axe 0 with the bar visible. Bulk actions
+for orders, rides and payments are intentionally not enabled yet.
+
 Orders, Vendors, Products and Users tables now expose a shared `View` action that opens an accessible native modal dialog
 with the row's real fields (status, payment, total, customer/vendor, market, owner, counts,
 created). Verified in Chrome: `showModal` modal semantics, labelled title, initial focus inside,

@@ -212,12 +212,18 @@ function DataTable({
   columns,
   rows,
   emptyLabel,
-  onDetail
+  onDetail,
+  selected,
+  onToggleRow,
+  onToggleAll
 }: {
   columns: Array<{ header: string; cell: (row: Row) => React.ReactNode; className?: string }>;
   rows: Row[];
   emptyLabel: string;
   onDetail?: (row: Row) => void;
+  selected?: Set<string>;
+  onToggleRow?: (id: string) => void;
+  onToggleAll?: (ids: string[], checked: boolean) => void;
 }) {
   const [page, setPage] = useState(0);
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -239,6 +245,17 @@ function DataTable({
       <table className="w-full min-w-[720px] text-left text-sm">
         <thead>
           <tr className="border-y border-[#21262D] bg-[#0B0E14] text-xs uppercase tracking-wide text-[#8B949E]">
+            {onToggleRow ? (
+              <th scope="col" className="w-10 px-3 py-3">
+                <input
+                  type="checkbox"
+                  aria-label="Select all visible rows"
+                  checked={rows.length > 0 && rows.every((row) => selected?.has(String(row.id)))}
+                  onChange={(event) => onToggleAll?.(rows.map((row) => String(row.id)), event.target.checked)}
+                  className="h-4 w-4 accent-[#00E676]"
+                />
+              </th>
+            ) : null}
             {columns.map((column) => (
               <th key={column.header} scope="col" className={`px-4 py-3 font-bold ${column.className ?? ""}`}>
                 {column.header}
@@ -250,6 +267,17 @@ function DataTable({
         <tbody className="divide-y divide-[#21262D]">
           {visible.map((row, index) => (
             <tr key={String(row.id ?? index)} className="hover:bg-[#21262D]/50">
+              {onToggleRow ? (
+                <td className="px-3 py-3 align-top">
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${text(row.name ?? row.orderNumber ?? row.id)}`}
+                    checked={selected?.has(String(row.id)) ?? false}
+                    onChange={() => onToggleRow(String(row.id))}
+                    className="h-4 w-4 accent-[#00E676]"
+                  />
+                </td>
+              ) : null}
               {columns.map((column) => (
                 <td key={column.header} className={`px-4 py-3 align-top text-[#F0F6FC] ${column.className ?? ""}`}>
                   {column.cell(row)}
@@ -431,13 +459,41 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [detail, setDetail] = useState<Row | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   useEffect(() => {
     setQuery(initialQuery);
     setStatusFilter("all");
     setMessage("");
     setError("");
+    setSelected(new Set());
   }, [tab, initialQuery]);
+
+  async function bulkModerateProducts(target: "ACTIVE" | "SUSPENDED") {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    const verb = target === "SUSPENDED" ? "Suspend" : "Activate";
+    if (!window.confirm(`${verb} ${ids.length} selected product(s)?`)) return;
+    setBulkBusy(true);
+    setMessage("");
+    setError("");
+    let changed = 0;
+    const failures: string[] = [];
+    for (const id of ids) {
+      try {
+        await apiClient.adminModerateProduct(id, target);
+        changed += 1;
+      } catch (caught) {
+        failures.push(caught instanceof Error ? caught.message : "request failed");
+      }
+    }
+    setBulkBusy(false);
+    setSelected(new Set());
+    if (changed > 0) setMessage(`${changed} product(s) set to ${statusLabel(target)}.`);
+    if (failures.length > 0) setError(`${failures.length} product(s) could not be updated: ${failures.slice(0, 3).join("; ")}`);
+    onRefresh();
+  }
 
   const run = useCallback(
     async (id: string, action: () => Promise<unknown>, successMessage: string) => {
@@ -737,10 +793,57 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           onRefresh={onRefresh}
         />
         <ActionFeedback message={message} error={error} />
+        {selected.size > 0 ? (
+          <div role="status" className="flex flex-wrap items-center gap-2 border-b border-[#21262D] bg-[#0B0E14] px-4 py-2.5 text-xs font-bold text-[#F0F6FC]">
+            <span className="mr-1">{selected.size} selected</span>
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => void bulkModerateProducts("SUSPENDED")}
+              className="rounded-lg border border-crimson/50 bg-crimson/10 px-3 py-1.5 text-crimson hover:bg-crimson/20 disabled:opacity-50"
+            >
+              Suspend selected
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => void bulkModerateProducts("ACTIVE")}
+              className="rounded-lg border border-[#00E676]/50 bg-[#00E676]/10 px-3 py-1.5 text-[#00E676] hover:bg-[#00E676]/20 disabled:opacity-50"
+            >
+              Activate selected
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="rounded-lg border border-[#21262D] px-3 py-1.5 text-[#8B949E] hover:bg-[#21262D]"
+            >
+              Clear
+            </button>
+          </div>
+        ) : null}
         <DataTable
           rows={rows}
           emptyLabel={props.products.length === 0 ? "No products exist yet." : "No products match this filter."}
           onDetail={setDetail}
+          selected={selected}
+          onToggleRow={(id) =>
+            setSelected((previous) => {
+              const next = new Set(previous);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            })
+          }
+          onToggleAll={(ids, checked) =>
+            setSelected((previous) => {
+              const next = new Set(previous);
+              for (const id of ids) {
+                if (checked) next.add(id);
+                else next.delete(id);
+              }
+              return next;
+            })
+          }
           columns={[
             {
               header: "Product",
