@@ -1083,3 +1083,12 @@ model Refund {
 
   @@index([orderId, status])
 }
+
+
+/// Singleton admin-managed storefront configuration.
+model StorefrontConfig {
+  id        String   @id @default("default")
+  config    Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+}

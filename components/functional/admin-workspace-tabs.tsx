@@ -2,6 +2,7 @@
 
 import { AdminKitchenApplications } from "./admin-kitchen-applications";
 import { AdminFoodOrders } from "./admin-food-orders";
+import { AdminStorefrontPanel } from "./admin-storefront-panel";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -1276,6 +1277,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           ]}
         />
       </Panel>
+      <AdminStorefrontPanel />
       {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
       </>
     );

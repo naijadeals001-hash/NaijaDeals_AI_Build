@@ -172,6 +172,37 @@ export function NaijaShopPage() {
   const PAGE_SIZE = 12;
   const collectionRef = useRef<HTMLDivElement>(null);
   const [allMenuOpen, setAllMenuOpen] = useState(false);
+  const [storefront, setStorefront] = useState({
+    announcement: "",
+    heroTitle: "Shop verified sellers across Africa",
+    heroSubtitle: "Escrow-protected checkout, tracked delivery and server-verified payments.",
+    visibleCategories: [] as string[],
+    categoryOrder: [] as string[],
+    shelfLimit: 4,
+    showDemoProducts: true,
+    showHero: true,
+    showShelves: true
+  });
+
+  useEffect(() => {
+    fetch("/api/storefront")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((value) => { if (value) setStorefront((current) => ({ ...current, ...value })); })
+      .catch(() => undefined);
+  }, []);
+
+  const visibleCategories = categories
+    .filter((item) => storefront.visibleCategories.length === 0 || storefront.visibleCategories.includes(item.slug))
+    .sort((a, b) => {
+      const ai = storefront.categoryOrder.indexOf(a.slug);
+      const bi = storefront.categoryOrder.indexOf(b.slug);
+      if (ai === -1 && bi === -1) return 0;
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+
+
   const allButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -315,10 +346,8 @@ export function NaijaShopPage() {
         ))}
       </nav>
 
-      {showSamples ? (
-        <p className="mt-2 rounded border border-[#B45309]/30 bg-amber/10 px-3 py-2 text-[11px] text-ink">
-          <strong>Demo inventory.</strong> These listings are for visual testing only; prices and stock are illustrative.
-        </p>
+      {storefront.announcement ? (
+        <p className="mt-2 rounded border border-[#B45309]/30 bg-amber/10 px-3 py-2 text-[11px] text-ink">{storefront.announcement}</p>
       ) : null}
 
       {allMenuOpen ? (
@@ -372,7 +401,7 @@ export function NaijaShopPage() {
         </div>
       ) : null}
 
-      <section aria-label="Featured collections" className="relative mt-3">
+      <section aria-label="Featured collections" className={"relative mt-3" + (storefront.showHero ? "" : " hidden")}>
         <button
           type="button"
           aria-label="Previous collections"
@@ -382,7 +411,7 @@ export function NaijaShopPage() {
           <ChevronLeft className="h-5 w-5" aria-hidden="true" />
         </button>
         <div ref={collectionRef} className="flex snap-x gap-3 overflow-x-auto scroll-smooth pb-1">
-          {categories.filter((item) => products.some((product) => product.category.id === item.id)).slice(0, 6).map((item, index) => {
+          {visibleCategories.filter((item) => shelfProducts.some((product) => product.category.id === item.id)).slice(0, 6).map((item, index) => {
             const items = products.filter((product) => product.category.id === item.id).slice(0, 4);
             const backgrounds = ["#007185", "#b12704", "#0b6b3a", "#b0008f", "#9a3f00", "#232f3e"];
             return (
@@ -393,7 +422,7 @@ export function NaijaShopPage() {
               >
                 <div>
                   <h2 className="font-display text-2xl font-extrabold leading-tight">{item.name}</h2>
-                  <p className="mt-1 text-xs text-white/95">Shop verified sellers in this department.</p>
+                  <p className="mt-1 text-xs text-white/95">{storefront.heroSubtitle}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {items.length > 0 ? items.map((product) => (
@@ -419,9 +448,9 @@ export function NaijaShopPage() {
         </button>
       </section>
 
-      <section aria-label="Recommended collections" className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {categories.filter((item) => products.some((product) => product.category.id === item.id)).slice(0, 8).map((item) => {
-          const items = products.filter((product) => product.category.id === item.id).slice(0, 4);
+      <section aria-label="Recommended collections" className={"mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" + (storefront.showShelves ? "" : " hidden")}>
+        {visibleCategories.filter((item) => shelfProducts.some((product) => product.category.id === item.id)).slice(0, 8).map((item) => {
+          const items = shelfProducts.filter((product) => product.category.id === item.id).slice(0, storefront.shelfLimit);
           return (
             <article key={item.id} className="rounded-lg border border-border-soft bg-canvas p-4">
               <div className="flex items-center justify-between gap-2">
@@ -2007,6 +2036,8 @@ export function NaijaEatsPage() {
     }
     return true;
   });
+
+  const shelfProducts = storefront.showDemoProducts ? products : products.filter((product) => !product.isSample);
 
   const cartLines = Object.entries(cart);
   const cartCount = cartLines.reduce((total, [, line]) => total + line.quantity, 0);
