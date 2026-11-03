@@ -303,6 +303,10 @@ summary and a refresh. Verified in Chrome: 12 selected via the header checkbox, 
 suspended and then restored to ACTIVE, selection cleared, axe 0 with the bar visible. Bulk actions
 for orders, rides and payments are intentionally not enabled yet.
 
+**Commit note:** `0ff7e2b` also carried the previously uncommitted admin-service
+scope/permission edits that already backed the 19/19 admin suite; they were exercised in the running
+app before being committed, and the file is now clean.
+
 Sensitive admin mutations now record their previous state: `product.moderated` and
 `admin.order_status_updated` write `{ before, after, note }` into the audit row, and the record
 dialog renders an "Audit metadata" block (verified: a product suspended then restored produced
