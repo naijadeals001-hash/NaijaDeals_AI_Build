@@ -305,6 +305,12 @@ export function NaijaShopPage() {
         ))}
       </nav>
 
+      {showSamples ? (
+        <p className="mt-2 rounded border border-[#B45309]/30 bg-amber/10 px-3 py-2 text-[11px] text-ink">
+          <strong>Demo catalogue.</strong> Sample listings are shown to preview the storefront; live seller listings replace them.
+        </p>
+      ) : null}
+
       <section aria-label="Featured collections" className="mt-3">
         <div className="flex snap-x gap-3 overflow-x-auto pb-1">
           {categories.slice(0, 6).map((item, index) => {
@@ -327,13 +333,9 @@ export function NaijaShopPage() {
                     </Link>
                   )) : <span className="col-span-2 text-xs text-white/80">New listings coming soon.</span>}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => { setCategory(item.slug); setPreset("all"); resetPage(); }}
-                  className="mt-3 w-fit rounded bg-white px-3 py-1.5 text-xs font-bold text-[#0f1111] hover:bg-[#f7fafa]"
-                >
+                <Link href={`/search?category=${item.slug}`} className="mt-3 w-fit rounded bg-white px-3 py-1.5 text-xs font-bold text-[#0f1111] hover:bg-[#f7fafa]">
                   Shop now
-                </button>
+                </Link>
               </article>
             );
           })}
@@ -347,9 +349,9 @@ export function NaijaShopPage() {
             <article key={item.id} className="rounded-lg border border-border-soft bg-canvas p-4">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="line-clamp-1 text-lg font-extrabold text-[#0f1111]">{item.name}</h2>
-                <button type="button" onClick={() => { setCategory(item.slug); resetPage(); }} className="shrink-0 text-xs font-bold text-[#007185] hover:underline">
+                <Link href={`/search?category=${item.slug}`} className="shrink-0 text-xs font-bold text-[#007185] hover:underline">
                   See more
-                </button>
+                </Link>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 {items.length > 0 ? items.map((product) => (
@@ -395,12 +397,7 @@ export function NaijaShopPage() {
         </div>
       ) : null}
 
-      {showSamples ? (
-        <div role="status" className="mt-4 rounded-lg border border-[#B45309]/40 bg-amber/10 px-4 py-3 text-sm text-ink">
-          <strong>Sample catalogue.</strong> These are demonstration rows seeded for local development, not real seller listings.
-          Real listings appear when verified sellers publish products from their dashboard.
-        </div>
-      ) : null}
+
 
       {!showSamples && realProducts.length === 0 ? (
         <div className="mt-4 rounded-lg border border-dashed border-border-soft bg-canvas p-8 text-center">
@@ -425,118 +422,6 @@ export function NaijaShopPage() {
         </div>
       ) : null}
 
-<div className="mt-4 grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <div className={showFilters ? "block" : "hidden lg:block"}>
-        <ShopFilters
-          categories={categories}
-          categoryCounts={categoryCounts}
-          category={category}
-          onCategory={(value) => { setCategory(value); resetPage(); }}
-          priceBands={priceBands}
-          priceBand={priceBand}
-          onPriceBand={(value) => { setPriceBand(value); resetPage(); }}
-          minRating={minRating}
-          onMinRating={(value) => { setMinRating(value); resetPage(); }}
-          inStockOnly={inStockOnly}
-          onInStockOnly={(value) => { setInStockOnly(value); resetPage(); }}
-          hasFilters={hasFilters}
-          onClear={() => { setCategory("all"); setPriceBand("all"); setMinRating(0); setInStockOnly(false); resetPage(); }}
-        />
-        </div>
-
-        <section aria-label="Products">
-          <div className="flex flex-col gap-2 rounded-lg border border-border-soft bg-surface-low px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-bold text-ink">
-              {status === "ready" ? (
-                filtered.length > 0 ? (
-                  <>
-                    Showing <span className="text-primary">{filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–{Math.min(filtered.length, currentPage * PAGE_SIZE)}</span> of {filtered.length} results
-                  </>
-                ) : (
-                  "No results"
-                )
-              ) : (
-                "Loading products…"
-              )}
-            </p>
-            <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setShowFilters((value) => !value)}
-              aria-expanded={showFilters}
-              className="min-h-9 rounded-lg border border-border-soft bg-canvas px-3 text-xs font-bold text-ink lg:hidden"
-            >
-              Filters
-            </button>
-            <label className="flex items-center gap-2 text-xs font-bold text-muted">
-              Sort by:
-              <select
-                value={sort}
-                onChange={(event) => { setSort(event.target.value); resetPage(); }}
-                className="min-h-9 rounded-lg border border-border-soft bg-canvas px-2 text-sm font-semibold text-ink focus:border-primary focus:outline-none"
-              >
-                <option value="featured">Featured</option>
-                <option value="price-asc">Price: low to high</option>
-                <option value="price-desc">Price: high to low</option>
-                <option value="rating">Average customer review</option>
-              </select>
-            </label>
-            </div>
-          </div>
-
-          {status === "loading" ? <div className="mt-4"><Loading /></div> : null}
-          {status === "error" ? <div className="mt-4"><ErrorBox message={error} /></div> : null}
-          {status === "ready" && filtered.length === 0 ? (
-            <div className="mt-4 rounded-lg border border-dashed border-border-soft bg-canvas p-10 text-center">
-              <PackageCheck className="mx-auto mb-3 h-8 w-8 text-primary" aria-hidden="true" />
-              <p className="font-bold">No listings match these filters.</p>
-              <p className="mt-1 text-sm text-muted">Try clearing a filter or browsing all departments.</p>
-              {hasFilters ? (
-                <button
-                  type="button"
-                  onClick={() => { setCategory("all"); setPriceBand("all"); setMinRating(0); setInStockOnly(false); resetPage(); }}
-                  className="mt-4 min-h-10 rounded-lg border border-border-soft px-4 text-sm font-bold text-primary"
-                >
-                  Clear filters
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-          {status === "ready" && visible.length > 0 ? (
-            <div className="mt-3 divide-y divide-border-soft rounded-lg border border-border-soft bg-canvas">
-              {visible.map((product) => (
-                <div key={product.id} className={addingId === product.id ? "pointer-events-none opacity-60" : ""}>
-                  <ShopResultRow product={product} onAdd={add} />
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {pageCount > 1 ? (
-            <div className="mt-6 flex items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => setPage((value) => Math.max(1, value - 1))}
-                disabled={currentPage === 1}
-                className="min-h-10 rounded-lg border border-border-soft px-4 text-sm font-bold disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <span className="text-sm font-bold text-muted" aria-live="polite">
-                Page {currentPage} of {pageCount}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
-                disabled={currentPage === pageCount}
-                className="min-h-10 rounded-lg border border-border-soft px-4 text-sm font-bold disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          ) : null}
-        </section>
-      </div>
     </div>
   );
 }

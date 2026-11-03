@@ -793,3 +793,10 @@ footer. Result rows and filters remain below the shelves. Verified on the workin
 http://localhost:3001/naijashop: 1 footer, 8 shelves, axe 0, no overflow. The canonical port 3000 is
 currently returning 500 from an orphaned dev-server socket (PID 60680) that could not be terminated;
 the 3001 server serves the same repository and latest build.
+
+## NaijaShop homepage cleanup (2026-11-03)
+
+Removed the results/filter block that sat below the personalized-recommendations band; the homepage now
+ends with the carousel, eight shelves, the sign-in band and the footer, and the demo note is a compact
+strip at the top. Shop now / See more links go to /search?category=... where the result rows and
+filters live. Verified on the 3001 server: axe 0, no overflow, one footer.
