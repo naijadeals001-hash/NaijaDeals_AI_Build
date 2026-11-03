@@ -2,6 +2,7 @@ import type { OrderStatus, Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { recordAudit } from "./audit.service";
+import { notifyVendorOwner } from "./notification.service";
 import { recordSystemEvent } from "./event.service";
 import { assertOrderTransition } from "./state-machines";
 import { ensureWallet } from "@/lib/payments/service";
@@ -77,6 +78,17 @@ export async function updateOrderStatus(input: {
     entityId: order.id,
     metadata: { from: current.status, to: input.status }
   });
+
+  if (input.status === "vendor_notified") {
+    await notifyVendorOwner({
+      tx: db,
+      vendorId: order.vendorId,
+      kind: "order_paid",
+      title: "New paid order",
+      body: `Order ${order.orderNumber} is ready to accept.`,
+      href: "/seller"
+    });
+  }
 
   return order;
 }

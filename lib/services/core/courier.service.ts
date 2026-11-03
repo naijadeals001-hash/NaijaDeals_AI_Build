@@ -61,14 +61,16 @@ export async function syncOrderForDelivery(input: {
   }
 }
 
-export async function getCourierForUser(userId: string) {
+export async function getCourierForUser(userId: string, requireActive = true) {
   const courier = await prisma.courier.findUnique({ where: { userId } });
-  if (!courier || !courier.active) throw new ApiError(403, "not_a_courier", "No active courier profile is linked to this account.");
+  if (!courier) throw new ApiError(403, "not_a_courier", "No courier profile is linked to this account.");
+  if (requireActive && !courier.active) throw new ApiError(403, "not_a_courier", "No active courier profile is linked to this account.");
   return courier;
 }
 
 export async function listCourierDeliveries(userId: string) {
-  const courier = await getCourierForUser(userId);
+  // Suspended couriers can still see the deliveries they already hold.
+  const courier = await getCourierForUser(userId, false);
   return prisma.delivery.findMany({
     where: { courierId: courier.id },
     include: {
@@ -97,7 +99,8 @@ export async function updateCourierDelivery(input: {
   note?: string;
   proofCode?: string;
 }) {
-  const courier = await getCourierForUser(input.userId);
+  // A suspended courier may finish the delivery already assigned to them.
+  const courier = await getCourierForUser(input.userId, false);
   const delivery = await prisma.delivery.findUnique({ where: { id: input.deliveryId }, include: { order: true } });
   if (!delivery) throw new ApiError(404, "delivery_not_found", "Delivery not found.");
   if (delivery.courierId !== courier.id) throw new ApiError(403, "forbidden", "This delivery is assigned to another courier.");

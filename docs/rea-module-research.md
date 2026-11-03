@@ -93,3 +93,22 @@ NaijaDeals implementation: a `saleMode` on every product â€” **escrow** (default
   **400 `contact_seller_only`**.
 - Verified: the sample Ankara sneakers listing is `contact` while the Dell monitor stays
   `escrow`; card badge and detail panel render, no Add to cart on contact, cart rejected, axe 0.
+
+## Journey 4 — NaijaEats research (2026-11-03)
+
+Reference access via REA CDP browser:
+
+- **Chowdeck** (https://chowdeck.com/) - accessible. Observed: "What's on Deck?", "Restaurants",
+  "CUISINES NEAR YOU", "POPULAR"; verticals Restaurants, Shops, Pharmacies, Local Markets, Events,
+  Bills; "Order now" CTA; restaurant names by area (Ogudu, Bodija, Ikeja, Egbeda); vendor/rider
+  entry points; wallet, service fee and surge fee FAQ entries.
+- **Bolt Food** (https://food.bolt.eu/en-ng/) - accessible (title "Home | Bolt Food").
+- **Uber Eats** (https://www.ubereats.com/ng) - blocked by a Cloudflare challenge; recorded as
+  unavailable.
+
+Implementation plan from the capture: location first, then restaurant discovery by cuisine/area, menu
+with options and quantity, fee breakdown (subtotal, delivery, service), payment, merchant acceptance,
+preparation, courier pickup, status timeline and delivery confirmation. Sample kitchens will be
+labelled and ordering will only claim what the server records.
+
+NaijaEats data model and discovery slice begin in the next round.

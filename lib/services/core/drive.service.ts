@@ -406,10 +406,10 @@ export async function cancelRide(input: {
   });
 }
 
-export async function getDriverForUser(userId: string) {
+export async function getDriverForUser(userId: string, requireApproved = true) {
   const driver = await prisma.driverProfile.findUnique({ where: { userId } });
   if (!driver) throw new ApiError(403, "not_a_driver", "No driver profile is linked to this account.");
-  if (driver.status !== "approved" || !driver.active) {
+  if (requireApproved && (driver.status !== "approved" || !driver.active)) {
     throw new ApiError(403, "driver_not_approved", "This driver profile is not approved for trips.");
   }
   return driver;
@@ -528,7 +528,9 @@ export async function driverUpdateRideStatus(input: {
   rideId: string;
   status: Extract<RideStatus, "driver_arriving" | "in_progress" | "completed">;
 }) {
-  const driver = await getDriverForUser(input.userId);
+  // A driver suspended mid-trip may finish the ride they already hold; only
+  // accepting new rides is blocked by the approved-status guard.
+  const driver = await getDriverForUser(input.userId, false);
 
   // The transaction reports what happened instead of throwing on expiry. A throw
   // inside `$transaction` rolls the release back, so the 409 has to be raised after

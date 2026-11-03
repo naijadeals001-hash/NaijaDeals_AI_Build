@@ -5,6 +5,7 @@ import type { SessionUser } from "@/lib/auth/session";
 import { hasPermission, unheldPermissions } from "@/lib/auth/permissions";
 import { recordAudit } from "./audit.service";
 import { isCityActivated } from "./city.service";
+import { notifyUser, notifyVendorOwner } from "./notification.service";
 import { recordSystemEvent } from "./event.service";
 import { updateDeliveryStatus } from "./delivery.service";
 import { updateOrderStatus } from "./order.service";
@@ -208,6 +209,13 @@ export async function setCourierStatus(input: {
       after: { active: updated.active, suspendedReason: updated.suspendedReason }
     }
   });
+  await notifyUser({
+    userId: courier.userId,
+    kind: updated.active ? "courier_reactivated" : "courier_suspended",
+    title: updated.active ? "Courier account reactivated" : "Courier account suspended",
+    body: updated.active ? "You can receive new deliveries again." : updated.suspendedReason,
+    href: "/courier"
+  });
   return updated;
 }
 
@@ -246,6 +254,13 @@ export async function setDriverStatus(input: {
       after: { status: updated.status, active: updated.active, suspendedReason: updated.suspendedReason }
     }
   });
+  await notifyUser({
+    userId: profile.userId,
+    kind: input.status === "suspended" ? "driver_suspended" : "driver_reactivated",
+    title: input.status === "suspended" ? "Driver account suspended" : "Driver account reactivated",
+    body: input.status === "suspended" ? reason : "You can accept new rides again.",
+    href: "/driver"
+  });
   return updated;
 }
 
@@ -280,6 +295,13 @@ export async function setVendorStatus(input: {
       before: { status: vendor.status, suspendedReason: vendor.suspendedReason },
       after: { status: updated.status, suspendedReason: updated.suspendedReason }
     }
+  });
+  await notifyVendorOwner({
+    vendorId: vendor.id,
+    kind: updated.status === "SUSPENDED" ? "vendor_suspended" : "vendor_reactivated",
+    title: updated.status === "SUSPENDED" ? "Seller account suspended" : "Seller account reactivated",
+    body: updated.status === "SUSPENDED" ? updated.suspendedReason : "You can create listings and take orders again.",
+    href: "/seller"
   });
   return updated;
 }
@@ -328,10 +350,18 @@ export async function reviewSellerApplication(input: {
   if (application.status !== "SUBMITTED") throw new ApiError(409, "already_reviewed", "This application has already been reviewed.");
 
   if (input.decision === "reject") {
-    return prisma.sellerApplication.update({
+    const rejected = await prisma.sellerApplication.update({
       where: { id: application.id },
       data: { status: "REJECTED", note: input.note ?? "Application rejected by administrator.", reviewedAt: new Date() }
     });
+    await notifyUser({
+      userId: application.userId,
+      kind: "application_rejected",
+      title: "Seller application rejected",
+      body: rejected.note ?? "Your seller application was rejected.",
+      href: "/sell"
+    });
+    return rejected;
   }
 
   const baseSlug = application.businessName
@@ -375,6 +405,14 @@ export async function reviewSellerApplication(input: {
     const reviewed = await tx.sellerApplication.update({
       where: { id: application.id },
       data: { status: "APPROVED", note: input.note ?? "Approved by administrator.", reviewedAt: new Date() }
+    });
+    await notifyUser({
+      tx,
+      userId: application.userId,
+      kind: "application_approved",
+      title: "Seller application approved",
+      body: `${vendor.name} is now live in the seller hub.`,
+      href: "/seller"
     });
     await recordAudit({
       tx,
@@ -435,6 +473,14 @@ export async function assignCourier(input: { adminId: string; deliveryId: string
 
   return prisma.$transaction(async (tx) => {
     await tx.delivery.update({ where: { id: delivery.id }, data: { courierId: courier.id } });
+    await notifyUser({
+      tx,
+      userId: courier.userId,
+      kind: "delivery_assigned",
+      title: "New delivery assigned",
+      body: `${delivery.order.orderNumber}: ${delivery.pickupAddress} → ${delivery.dropoffAddress}`,
+      href: "/courier"
+    });
     if (delivery.status === "pending_assignment" || delivery.status === "failed") {
       await updateDeliveryStatus({ tx, actorId: input.adminId, deliveryId: delivery.id, status: "assigned", note: `Assigned to ${courier.name}.` });
     }

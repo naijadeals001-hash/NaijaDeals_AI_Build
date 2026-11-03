@@ -231,3 +231,21 @@ and still governed by Phases 07–08; this is a presentation and interaction sli
   stayed blocked.
 - Still open for Phase 06 PASS: rejected-application verification (submit -> reject -> denied), driver
   and courier active-job tests, partner notifications.
+
+## Phase 06 exit-gate evidence (2026-11-03)
+
+| Criterion | Evidence |
+| --- | --- |
+| Application -> admin approval -> role access | Admin suite approval path (19/19); rejection chain verified separately: register 201 -> application 201 -> admin reject 200 (REJECTED) -> seller API 403 and /seller redirect to /sell |
+| Rejected/suspended cannot take new jobs | Rejected applicant denied seller API; suspended vendor products hidden and writes 403 vendor_suspended; suspended driver accept 403; suspended courier assignment 409 courier_suspended |
+| Assigned work scoped correctly | Seller overview scoped to own vendor; courier and driver lists only their own; admin suite cross-tenant checks pass |
+| Earnings reflect ledger | Seller dashboard available/held matched the vendor wallet exactly (2,450,000 / 1,665,000) |
+| Loading and recovery | Seller profile, role editor, dispute dialog, freight actions and partner updates expose loading/error states |
+
+Active-job rule verified: suspended driver moved an assigned ride to driver_arriving (200) and a
+suspended courier moved an assigned delivery to pickup_started (200), while new acceptance/assignment
+stayed blocked. Partner notifications verified for vendor and courier suspension, with application,
+order-paid and delivery-assigned hooks implemented. Notifications for every hook are not yet covered
+by an automated regression suite.
+
+**Status: PASS** (exit criteria met; notification automation is the remaining hardening item).
