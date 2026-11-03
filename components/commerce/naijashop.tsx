@@ -172,6 +172,23 @@ export function NaijaShopPage() {
   const PAGE_SIZE = 12;
   const collectionRef = useRef<HTMLDivElement>(null);
   const [allMenuOpen, setAllMenuOpen] = useState(false);
+  const allButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!allMenuOpen) return;
+    closeButtonRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setAllMenuOpen(false);
+        allButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [allMenuOpen]);
+
+
 
   // Amazon-inspired CSS grid pattern classes (commented out for ESLint parsing)
   // const gridPatterns = {
@@ -290,7 +307,7 @@ export function NaijaShopPage() {
       <MarketplaceBar categories={categories} />
 
       <nav aria-label="Shop departments" className="-mx-3 mt-0 flex items-center gap-0.5 overflow-x-auto bg-[#232f3e] px-2 py-1.5 text-white sm:-mx-5 sm:px-4 lg:-mx-8 lg:px-6">
-        <button type="button" onClick={() => setAllMenuOpen(true)} aria-expanded={allMenuOpen} className="whitespace-nowrap rounded px-2.5 py-1 text-xs font-bold hover:bg-white/10">All departments</button>
+        <button ref={allButtonRef} type="button" onClick={() => setAllMenuOpen(true)} aria-expanded={allMenuOpen} className="whitespace-nowrap rounded px-2.5 py-1 text-xs font-bold hover:bg-white/10">All departments</button>
         {categories.map((item) => (
           <Link key={item.id} href={`/search?category=${item.slug}`} className="whitespace-nowrap rounded px-2.5 py-1 text-xs font-bold hover:bg-white/10">
             {item.name}
@@ -311,7 +328,7 @@ export function NaijaShopPage() {
             <div className="flex items-center gap-2 bg-[#232f3e] px-4 py-3 text-white">
               <UserCircle className="h-6 w-6" aria-hidden="true" />
               <span className="text-sm font-extrabold">Hello, sign in</span>
-              <button type="button" onClick={() => setAllMenuOpen(false)} aria-label="Close menu" className="ml-auto rounded p-1 hover:bg-white/10">
+              <button ref={closeButtonRef} type="button" onClick={() => setAllMenuOpen(false)} aria-label="Close menu" className="ml-auto rounded p-1 hover:bg-white/10">
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
