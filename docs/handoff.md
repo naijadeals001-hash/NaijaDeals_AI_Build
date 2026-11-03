@@ -925,3 +925,12 @@ Replaced six weak photos with licensed packshots (Asics shoes, Prada handbag, Bl
 FG2421 monitor, mechanical keyboard, PS4/Xbox controllers). Removed unsupported 16GB/refurbished
 claims. 32/32 products display 4 per shelf with 0 broken images; provenance 32/32; shop E2E 13/13.
 Presentation ~28/32; the 27-inch monitor desk scene remains weak. Screenshots refreshed.
+
+
+## Demo catalogue population — CLOSED (2026-11-03)
+
+32 products, 8 departments x 4, 32 unique images, 0 broken, 32/32 provenance. Desktop and mobile
+reviewed; horizontal category carousel is intentional. The four below-standard presentation images
+(LED Monitor, Apple iPhone 5s, Coffee Maker, Smartphone on Desk) are tracked separately as visual
+polish, not as a population blocker. Spec claims narrowed (no 27-inch/16GB/refurbished/filter/vintage
+claims). Shop E2E 13/13.

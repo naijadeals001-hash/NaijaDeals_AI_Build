@@ -161,3 +161,26 @@ the source title/photo supports.
 
 Presentation now approximately 28/32; the "27-inch LED Monitor" desk scene remains the weakest.
 Images load 32/32, accuracy 32/32, provenance 32/32. DRAFT remains 59 of 91 sample records.
+
+
+## Presentation assessment — explicit four (2026-11-03)
+
+Criteria applied: correct item; unobstructed; neutral product presentation; sufficient resolution;
+no embedded marketing text; claims supported by the source. Four images fail **neutral presentation**
+(the correct item is visible, but the scene is environmental rather than a packshot):
+
+| Listing | Image | Item correct | Neutral presentation | Issue |
+| --- | --- | --- | --- | --- |
+| LED Monitor (formerly 27-inch) | demo2/monitor-led.jpg | yes | no | in-use desk scene; screen size not visible or sourced (27-inch claim removed) |
+| Apple iPhone 5s | demo5/phone-b1.jpg | yes | no | desk scene with unrelated props; phone is secondary |
+| Coffee Maker | demo5/home-coffee.jpg | yes | no | kitchen scene, product not isolated |
+| Smartphone on Desk | demo4/phone-a1.jpg | yes | no | styled desk with cable/notebook; product is secondary |
+
+The other 28 images meet the presentation criteria: neutral or near-neutral background, product
+dominant and unobstructed. These four improvements are tracked separately and do not block the
+demo-catalogue population milestone.
+
+Specification audit: removed 27-inch screen size, "16GB" storage, "(Refurbished)" condition, "Filter"
+coffee type, and "Vintage" period claim. Remaining model/material claims are supported by the source
+file titles (Asics Gel-Cumulus 22, Blackview A60, EIZO FG2421, Prada tooled leather, iPhone 5s/6 silver,
+red patent leather baby shoes).
