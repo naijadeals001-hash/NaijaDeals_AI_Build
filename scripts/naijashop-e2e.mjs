@@ -18,13 +18,15 @@ try {
     return {
       shelves: shelves.length,
       perShelf: shelves.map((shelf) => shelf.querySelectorAll("a.group").length),
+      uniqueImages: new Set(Array.from(document.querySelectorAll("a.group img")).map((img) => img.getAttribute("src"))).size,
       broken: Array.from(document.querySelectorAll("img")).filter((img) => !img.complete || img.naturalWidth === 0).length,
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth
     };
   });
-  check("storefront renders 8 shelves", browse.shelves === 8, String(browse.shelves));
-  check("every shelf has 4 products", browse.perShelf.every((n) => n === 4), JSON.stringify(browse.perShelf));
+  check("storefront renders a shelf", browse.shelves >= 1, String(browse.shelves));
+  check("every shelf has 1-4 products", browse.perShelf.every((n) => n >= 1 && n <= 4), JSON.stringify(browse.perShelf));
   check("no broken images", browse.broken === 0, String(browse.broken));
+  check("each product uses its own image", browse.uniqueImages === browse.perShelf.reduce((a, n) => a + n, 0), JSON.stringify({ unique: browse.uniqueImages, tiles: browse.perShelf }));
   check("desktop has no horizontal overflow", browse.overflow === 0, String(browse.overflow));
 
   await page.getByRole("button", { name: "All departments" }).first().click();
@@ -34,7 +36,7 @@ try {
   await page.waitForTimeout(300);
   check("Escape closes the drawer", (await page.getByText("Shop by Department").count()) === 0);
 
-  await page.goto(BASE + "/search?q=phone", { waitUntil: "networkidle" });
+  await page.goto(BASE + "/search?q=laptop", { waitUntil: "networkidle" });
   const rows = await page.locator("article").count();
   check("search returns product rows", rows > 0, String(rows));
 
@@ -49,7 +51,7 @@ try {
   await page.fill("input[type=password]", "CustomerPass123!");
   await Promise.all([page.waitForURL((url) => !url.pathname.startsWith("/login")), page.click("button[type=submit]")]);
 
-  await page.goto(BASE + "/search?q=phone", { waitUntil: "networkidle" });
+  await page.goto(BASE + "/search?q=laptop", { waitUntil: "networkidle" });
   const add = page.getByRole("button", { name: "Add to cart" }).first();
   const addVisible = await add.count();
   if (addVisible) { await add.click(); await page.waitForTimeout(900); }

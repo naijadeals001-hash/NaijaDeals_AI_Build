@@ -1,0 +1,62 @@
+[
+ {
+  "path": "/products/catalog/computers-1.jpg",
+  "products": [
+   "demo-laptop-14"
+  ],
+  "title": "File:IBM Thinkpad R51.jpg",
+  "creator": "André Karwath aka Aka\n",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:IBM_Thinkpad_R51.jpg"
+ },
+ {
+  "path": "/products/catalog/computers-2.jpg",
+  "products": [
+   "demo-laptop-15"
+  ],
+  "title": "File:Laptop-2411303 960 720.jpg",
+  "creator": "Mediamodifier",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Laptop-2411303_960_720.jpg"
+ },
+ {
+  "path": "/products/demo2/monitor-led.jpg",
+  "products": [
+   "demo2-monitor"
+  ],
+  "title": "new computer / monitor setup",
+  "creator": "hodgers",
+  "license": "by-sa",
+  "source": "https://www.flickr.com/photos/35468147887@N01/3126952638"
+ },
+ {
+  "path": "/products/demo2/toaster.jpg",
+  "products": [
+   "demo2-toaster"
+  ],
+  "title": "toaster",
+  "creator": "healthserviceglasses",
+  "license": "by-sa",
+  "source": "https://www.flickr.com/photos/55408947@N00/3256234213"
+ },
+ {
+  "path": "/products/demo2/perfume.jpg",
+  "products": [
+   "demo2-perfume"
+  ],
+  "title": "Perfume Bottles",
+  "creator": "Vetiver Aromatics",
+  "license": "by-sa",
+  "source": "https://www.flickr.com/photos/64483003@N02/6782330983"
+ },
+ {
+  "path": "/products/demo2/perfume-set.jpg",
+  "products": [
+   "demo2-perfume-set"
+  ],
+  "title": "Love Stories Perfume",
+  "creator": "Vetiver Aromatics",
+  "license": "by-sa",
+  "source": "https://www.flickr.com/photos/64483003@N02/6782321291"
+ }
+]

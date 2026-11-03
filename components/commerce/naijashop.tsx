@@ -382,7 +382,7 @@ export function NaijaShopPage() {
           <ChevronLeft className="h-5 w-5" aria-hidden="true" />
         </button>
         <div ref={collectionRef} className="flex snap-x gap-3 overflow-x-auto scroll-smooth pb-1">
-          {categories.slice(0, 6).map((item, index) => {
+          {categories.filter((item) => products.some((product) => product.category.id === item.id)).slice(0, 6).map((item, index) => {
             const items = products.filter((product) => product.category.id === item.id).slice(0, 4);
             const backgrounds = ["#007185", "#b12704", "#0b6b3a", "#b0008f", "#9a3f00", "#232f3e"];
             return (
@@ -420,7 +420,7 @@ export function NaijaShopPage() {
       </section>
 
       <section aria-label="Recommended collections" className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {categories.slice(0, 8).map((item) => {
+        {categories.filter((item) => products.some((product) => product.category.id === item.id)).slice(0, 8).map((item) => {
           const items = products.filter((product) => product.category.id === item.id).slice(0, 4);
           return (
             <article key={item.id} className="rounded-lg border border-border-soft bg-canvas p-4">
