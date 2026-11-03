@@ -297,7 +297,7 @@ without a restart; a normal restart can switch them back to the token.
 
 ## Control Center record detail (2026-11-03)
 
-Orders and Vendors tables now expose a `View` action that opens an accessible native modal dialog
+Orders, Vendors, Products and Users tables now expose a shared `View` action that opens an accessible native modal dialog
 with the row's real fields (status, payment, total, customer/vendor, market, owner, counts,
 created). Verified in Chrome: `showModal` modal semantics, labelled title, initial focus inside,
 Tab/Shift+Tab trapped (explicit wrap handler), Escape closes, focus returns to the triggering

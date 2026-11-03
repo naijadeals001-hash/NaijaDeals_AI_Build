@@ -211,11 +211,13 @@ const PAGE_SIZE = 10;
 function DataTable({
   columns,
   rows,
-  emptyLabel
+  emptyLabel,
+  onDetail
 }: {
   columns: Array<{ header: string; cell: (row: Row) => React.ReactNode; className?: string }>;
   rows: Row[];
   emptyLabel: string;
+  onDetail?: (row: Row) => void;
 }) {
   const [page, setPage] = useState(0);
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -242,6 +244,7 @@ function DataTable({
                 {column.header}
               </th>
             ))}
+            {onDetail ? <th scope="col" className="px-4 py-3 font-bold">Details</th> : null}
           </tr>
         </thead>
         <tbody className="divide-y divide-[#21262D]">
@@ -252,6 +255,17 @@ function DataTable({
                   {column.cell(row)}
                 </td>
               ))}
+              {onDetail ? (
+                <td className="px-4 py-3 align-top">
+                  <button
+                    type="button"
+                    onClick={() => onDetail(row)}
+                    className="rounded-lg border border-[#21262D] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D]"
+                  >
+                    View
+                  </button>
+                </td>
+              ) : null}
             </tr>
           ))}
         </tbody>
@@ -343,11 +357,27 @@ function RecordDialog({ row, onClose }: { row: Row; onClose: () => void }) {
   add("Status", row.status);
   add("Payment", row.paymentStatus);
   add("Total", row.totalKobo, (input) => money(input));
+  add("Price", row.priceKobo, (input) => money(input));
+  add("Amount", row.amountKobo, (input) => money(input));
+  add("Email", row.email);
+  add("Phone", row.phone);
+  add("Actor type", row.actorType);
+  add("Roles", Array.isArray(row.roles) ? row.roles.map((entry: Row) => entry?.role?.name).filter(Boolean).join(", ") || undefined : undefined);
   add("Customer", value(row, "customer.name"));
   add("Vendor", value(row, "vendor.name"));
+  add("Category", value(row, "category.name"));
   add("Market", row.market);
   add("Owner", value(row, "owner.name"));
   add("Owner email", value(row, "owner.email"));
+  add("Reference", row.reference ?? row.providerReference);
+  add("Provider", row.provider);
+  add("Order", value(row, "order.orderNumber") ?? row.orderNumber ?? row.rideNumber);
+  add("Pickup", row.pickupAddress ?? row.pickupLabel);
+  add("Drop-off", row.dropoffAddress ?? row.dropoffLabel);
+  add("Courier", value(row, "courier.name"));
+  add("Business", row.businessName);
+  add("Applicant", value(row, "user.name"));
+  add("Trust score", row.trustScore);
   add("Created", row.createdAt, (input) => date(input));
   add("Products", value(row, "_count.products"));
   add("Orders", value(row, "_count.orders"));
@@ -465,6 +495,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
         <DataTable
           rows={rows}
           emptyLabel={props.orders.length === 0 ? "No orders exist yet." : "No orders match this filter."}
+          onDetail={setDetail}
           columns={[
             {
               header: "Order",
@@ -480,18 +511,6 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
             { header: "Status", cell: (row) => <StatusBadge status={text(row.status)} /> },
             { header: "Payment", cell: (row) => <StatusBadge status={text(row.paymentStatus)} /> },
             { header: "Total", cell: (row) => <span className="font-bold">{money(row.totalKobo)}</span>, className: "text-right" },
-            {
-              header: "Details",
-              cell: (row) => (
-                <button
-                  type="button"
-                  onClick={() => setDetail(row)}
-                  className="rounded-lg border border-[#21262D] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D]"
-                >
-                  View
-                </button>
-              )
-            },
             {
               header: "Change status",
               cell: (row) => {
@@ -706,6 +725,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     const rows = filterRows(props.products).filter((row) => matches(row, ["name", "vendor.name", "status"]));
     const statuses = Array.from(new Set(props.products.map((row) => String(row.status)))).sort();
     return (
+      <>
       <Panel title="Products" description="Marketplace catalogue. Suspending a product removes it from sale and is written to the audit log.">
         <Toolbar
           query={query}
@@ -720,6 +740,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
         <DataTable
           rows={rows}
           emptyLabel={props.products.length === 0 ? "No products exist yet." : "No products match this filter."}
+          onDetail={setDetail}
           columns={[
             {
               header: "Product",
@@ -767,6 +788,8 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           ]}
         />
       </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      </>
     );
   }
 
@@ -870,6 +893,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     const rows = props.users.filter((row) => matches(row, ["name", "email", "actorType", "phone"]) && (statusFilter === "all" || String(row.actorType) === statusFilter));
     const actorTypes = Array.from(new Set(props.users.map((row) => String(row.actorType)))).sort();
     return (
+      <>
       <Panel title="Users" description="Every account in the platform, including roles and linked vendors. Passwords are never exposed.">
         <Toolbar
           query={query}
@@ -883,6 +907,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
         <DataTable
           rows={rows}
           emptyLabel={props.users.length === 0 ? "No users exist yet." : "No users match this filter."}
+          onDetail={setDetail}
           columns={[
             {
               header: "User",
@@ -911,6 +936,8 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           ]}
         />
       </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      </>
     );
   }
 
@@ -932,25 +959,14 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
         <DataTable
           rows={rows}
           emptyLabel={props.vendors.length === 0 ? "No vendors exist yet." : "No vendors match this filter."}
+          onDetail={setDetail}
           columns={[
             { header: "Vendor", cell: (row) => <span className="font-bold">{text(row.name)}</span> },
             { header: "Owner", cell: (row) => <span>{text(value(row, "owner.name"))}<br /><span className="text-xs text-[#8B949E]">{text(value(row, "owner.email"))}</span></span> },
             { header: "Market", cell: (row) => <span>{text(row.market)}</span> },
             { header: "Status", cell: (row) => <StatusBadge status={text(row.status)} /> },
             { header: "Products", cell: (row) => <span>{text(value(row, "_count.products"), "0")}</span>, className: "text-right" },
-            { header: "Orders", cell: (row) => <span>{text(value(row, "_count.orders"), "0")}</span>, className: "text-right" },
-            {
-              header: "Details",
-              cell: (row) => (
-                <button
-                  type="button"
-                  onClick={() => setDetail(row)}
-                  className="rounded-lg border border-[#21262D] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D]"
-                >
-                  View
-                </button>
-              )
-            }
+            { header: "Orders", cell: (row) => <span>{text(value(row, "_count.orders"), "0")}</span>, className: "text-right" }
           ]}
         />
       </Panel>

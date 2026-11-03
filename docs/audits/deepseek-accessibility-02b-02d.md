@@ -54,8 +54,9 @@ dialogs are introduced (Phase 05 record detail), a trap/escape test must be adde
 
 ## Record-detail dialog (2026-11-03)
 
-The Control Center now has a record-detail view for Orders and Vendors. It uses a native
-`<dialog>` opened with `showModal()`:
+The Control Center now has a record-detail view for **Orders, Vendors, Products and Users**
+(shared `DataTable` action; richer field mapping per entity). It uses a native `<dialog>` opened
+with `showModal()`:
 
 | Check | Result |
 | --- | --- |
