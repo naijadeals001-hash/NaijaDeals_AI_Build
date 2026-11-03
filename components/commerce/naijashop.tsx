@@ -186,17 +186,35 @@ export function NaijaShopPage() {
 
   useEffect(() => {
     try {
-      const cached = window.localStorage.getItem("naijashop.storefront");
-      if (cached) setStorefront((current) => ({ ...current, ...JSON.parse(cached) }));
+      const raw = window.localStorage.getItem("naijashop.storefront");
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        const text = (value: unknown, max: number) => (typeof value === "string" && value.length <= max ? value : undefined);
+        const list = (value: unknown) => (Array.isArray(value) && value.length <= 40 && value.every((item) => typeof item === "string") ? value as string[] : undefined);
+        const cachedLayout = {
+          announcement: text(parsed.announcement, 200),
+          heroTitle: text(parsed.heroTitle, 90),
+          heroSubtitle: text(parsed.heroSubtitle, 220),
+          visibleCategories: list(parsed.visibleCategories),
+          categoryOrder: list(parsed.categoryOrder),
+          shelfLimit: Number.isInteger(parsed.shelfLimit) && Number(parsed.shelfLimit) >= 1 && Number(parsed.shelfLimit) <= 8 ? Number(parsed.shelfLimit) : undefined,
+          showHero: typeof parsed.showHero === "boolean" ? parsed.showHero : undefined,
+          showShelves: typeof parsed.showShelves === "boolean" ? parsed.showShelves : undefined
+        };
+        const cleaned = Object.fromEntries(Object.entries(cachedLayout).filter(([, value]) => value !== undefined));
+        // Cached copy/layout is allowed; demo visibility is never trusted from cache.
+        setStorefront((current) => ({ ...current, ...cleaned, showDemoProducts: false }));
+      }
     } catch {
-      // Ignore malformed cache and keep the conservative defaults.
+      setStorefront((current) => ({ ...current, showDemoProducts: false }));
     }
     fetch("/api/storefront")
       .then((response) => (response.ok ? response.json() : null))
       .then((value) => {
         if (!value) return;
         setStorefront((current) => ({ ...current, ...value }));
-        try { window.localStorage.setItem("naijashop.storefront", JSON.stringify(value)); } catch { /* storage may be unavailable */ }
+        const { showDemoProducts: _demoVisibility, ...cacheable } = value as Record<string, unknown>;
+        try { window.localStorage.setItem("naijashop.storefront", JSON.stringify(cacheable)); } catch { /* storage may be unavailable */ }
       })
       .catch(() => undefined);
   }, []);

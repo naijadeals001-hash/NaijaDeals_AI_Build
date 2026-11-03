@@ -90,6 +90,14 @@ try {
   // Admin hides demos; a config-fetch failure must not re-expose them.
   const hiddenConfig = await admin.evaluate(async () => (await (await fetch("/api/admin/storefront")).json()));
   await admin.evaluate(async (v) => (await fetch("/api/admin/storefront", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version: v, showDemoProducts: false }) })).status, hiddenConfig.version);
+  // A stale cached config that says showDemoProducts=true must not win during an outage.
+  await shop.evaluate(() => window.localStorage.setItem("naijashop.storefront", JSON.stringify({ showDemoProducts: true, heroTitle: "stale cache", shelfLimit: 4 })));
+  await shop.route("**/api/storefront", (route) => route.fulfill({ status: 500, body: "boom" }));
+  await shop.reload({ waitUntil: "networkidle" });
+  const staleTiles = await shop.evaluate(() => document.querySelectorAll("article a.group").length);
+  check("stale cache cannot expose demos during outage", staleTiles === 0, String(staleTiles));
+  await shop.unroute("**/api/storefront");
+
   const hiddenFail = await browser.newPage();
   await hiddenFail.route("**/api/storefront", (route) => route.fulfill({ status: 500, body: "boom" }));
   await hiddenFail.goto(BASE + "/naijashop", { waitUntil: "networkidle" });
