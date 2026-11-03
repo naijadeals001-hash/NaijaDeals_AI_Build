@@ -21,9 +21,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     if (!order) return NextResponse.json({ error: "Food order not found.", code: "not_found" }, { status: 404 });
 
     let role: "restaurant" | "courier" | "customer" | "admin" = "customer";
-    const restaurant = await prisma.restaurant.findUnique({ where: { id: order.restaurantId }, select: { ownerId: true } });
-    if (restaurant?.ownerId === user.id) role = "restaurant";
-    else if (order.courierId && (await prisma.courier.findFirst({ where: { id: order.courierId, userId: user.id } }))) role = "courier";
+    const owners = await prisma.$queryRaw<Array<{ ownerId: string }>>`
+      SELECT "ownerId" FROM "Restaurant" WHERE id = ${order.restaurantId} LIMIT 1`;
+    const couriers = order.courierId
+      ? await prisma.$queryRaw<Array<{ id: string }>>`SELECT id FROM "Courier" WHERE id = ${order.courierId} AND "userId" = ${user.id} LIMIT 1`
+      : [];
+    if (owners[0]?.ownerId === user.id) role = "restaurant";
+    else if (couriers[0]) role = "courier";
     else if (order.customerId !== user.id) throw new ApiError(403, "forbidden", "You cannot update this order.");
 
     const updated = await updateFoodOrderStatus({

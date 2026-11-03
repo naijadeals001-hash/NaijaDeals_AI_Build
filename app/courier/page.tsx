@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { CourierDashboard } from "@/components/functional/courier-dashboard";
+import { CourierFoodOrders } from "@/components/functional/courier-food-orders";
 import { PartnerNotifications } from "@/components/functional/partner-notifications";
 import { getSessionUser, isCourier } from "@/lib/auth/session";
 
@@ -19,6 +20,7 @@ export default async function Page() {
     <div className="space-y-5">
       <PartnerNotifications />
       <CourierDashboard />
+      <CourierFoodOrders />
     </div>
   );
 }

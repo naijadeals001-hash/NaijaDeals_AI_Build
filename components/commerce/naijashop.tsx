@@ -2184,7 +2184,14 @@ export function NaijaEatsPage() {
                         <span className="truncate font-semibold">{item.name}</span>
                         <span className="flex shrink-0 items-center gap-2">
                           <span className="font-bold text-primary">{koboToNaira(item.priceKobo)}</span>
-                          <span className="rounded bg-surface-low px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted">Published</span>
+                          <button
+                            type="button"
+                            onClick={() => addItem(restaurant, item)}
+                            aria-label={`Add ${item.name} to order`}
+                            className="grid h-7 w-7 place-items-center rounded-full bg-primary text-white"
+                          >
+                            +
+                          </button>
                         </span>
                       </li>
                     ))}
@@ -2201,7 +2208,7 @@ export function NaijaEatsPage() {
                     <button type="button" onClick={() => setExpanded({ ...expanded, [restaurant.id]: true })} className="mt-2 text-xs font-bold text-primary underline">Browse menu</button>
                   )}
                   <p className="mt-2 rounded-lg bg-surface-low px-2 py-1.5 text-[10px] font-semibold text-muted">
-                    Checkout is not open yet. Browse the published menu; ordering opens with dispatch.
+                    Pay from NaijaPay; the kitchen accepts and prepares your order next.
                   </p>
                 </div>
               </article>

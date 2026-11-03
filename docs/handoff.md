@@ -656,3 +656,30 @@ Remote naijadeals001-hash/NaijaDeals_AI_Build stayed at d28a6beadbd10cdc42424270
 the push failed with exit 128 and no updated remote ref (the same remote previously returned
 "Permission ... denied to BetFuz"). Local backup remote and bundle were updated instead. Production
 deployment remains gated.
+
+
+## NaijaEats ordering and dispatch (2026-11-03)
+
+Checkout is enabled for published menu items. Payment debits the customer NaijaPay wallet inside the
+same transaction that writes the FoodOrder, its items, the first event and the audit row; the kitchen,
+courier and customer screens all read the same order.
+
+**Tested route** (`http://localhost:3101`, isolated test database):
+- customer added a published item, paid ₦1,500; wallet moved from 1,480,000 to 1,330,000 kobo and the
+  order page opened at `/naijaeats/orders/<id>`;
+- kitchen clicked Accept order → Start preparing → Ready for pickup (all three badges confirmed);
+- admin opened `/admin?tab=deliveries` → NaijaEats orders, assigned Test Courier;
+- courier opened `/courier` → NaijaEats deliveries, clicked Mark picked up → Mark delivered;
+- customer timeline showed 7 events ending in Delivered.
+- A second browser run repeated the whole chain with the same result (order NFE-20261103-79B9).
+
+**Migration impact:** none in this slice (uses the FoodOrder tables from `20261103220000_food_orders`).
+
+**Rules:** only published + available items can be ordered; ownership is checked for kitchen and
+courier transitions; suspension blocks kitchen writes; totals equal the menu subtotal because no
+delivery or service fee has been approved. Cancellation/refund beyond the customer cancel-while-placed
+path is not implemented.
+
+**Tooling note:** the order-detail and status routes now read restaurant/courier ownership with raw SQL
+because the long-running dev server's Prisma client predates those models; this removed the 500 that
+previously blocked kitchen transitions.

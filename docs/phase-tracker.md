@@ -257,3 +257,10 @@ Bounded slice inside the Eats module: restaurant application → admin approval 
 menu publishing (draft/publish/unavailable) → customer discovery by delivery area, with ownership,
 suspension and unpublished-item denials verified on the isolated server. Checkout remains gated;
 kitchen dispatch is the next slice.
+
+
+### NaijaEats ordering and dispatch increment (2026-11-03)
+
+Wallet-paid food orders now run through kitchen acceptance, preparation, admin courier assignment and
+courier pickup/delivery with a customer timeline. Browser-verified end to end on the isolated server;
+checkout remains limited to single-kitchen orders and no delivery/service fee is charged.

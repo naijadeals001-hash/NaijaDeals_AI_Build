@@ -11,9 +11,13 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     const user = await requireUser();
     const order = await getFoodOrder(params.id);
     if (!order) return NextResponse.json({ error: "Food order not found.", code: "not_found" }, { status: 404 });
-    const restaurant = await prisma.restaurant.findUnique({ where: { id: order.restaurantId }, select: { ownerId: true } }).catch(() => null);
-    const isOwner = restaurant?.ownerId === user.id;
-    const isCourier = order.courierId ? (await prisma.courier.findFirst({ where: { id: order.courierId, userId: user.id } })) !== null : false;
+    const owners = await prisma.$queryRaw<Array<{ ownerId: string }>>`
+      SELECT "ownerId" FROM "Restaurant" WHERE id = ${order.restaurantId} LIMIT 1`;
+    const couriers = order.courierId
+      ? await prisma.$queryRaw<Array<{ id: string }>>`SELECT id FROM "Courier" WHERE id = ${order.courierId} AND "userId" = ${user.id} LIMIT 1`
+      : [];
+    const isOwner = owners[0]?.ownerId === user.id;
+    const isCourier = couriers.length > 0;
     if (order.customerId !== user.id && !isOwner && !isCourier) {
       return NextResponse.json({ error: "This order belongs to another account.", code: "forbidden" }, { status: 403 });
     }
