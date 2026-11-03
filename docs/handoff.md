@@ -747,3 +747,10 @@ SYSTEM clearing wallet. scripts/phase07-reconciliation.ts reports 3 of 37 wallet
 one SYSTEM wallet (balance 0 vs ledger net 2,418,000) and two VENDOR wallets (1,425,474 vs
 -25,974,526 and 2,446,726 vs 22,256,226). These predate the payout ledger change; a reviewed backfill
 is required and was not performed. Phase 07 remains IN PROGRESS.
+
+## Audit index and backfill preview (2026-11-03)
+
+docs/audits/README.md now indexes phase status, evidence commands, blockers and the preview URL.
+scripts/phase07-backfill-preview.ts is a dry run that proposes balanced reconciliation entries for the
+three mismatched wallets using a new SYSTEM reconciliation counter-account; it writes nothing and
+needs human approval. Phase 07 remains IN PROGRESS.
