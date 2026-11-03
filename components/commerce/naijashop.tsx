@@ -56,7 +56,7 @@ export function ProductCard({ product, onAdd }: { product: ApiProduct; onAdd?: (
   return (
     <article className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-border-soft bg-canvas shadow-sm transition hover:shadow-soft">
       {product.isSample ? (
-        <span className="absolute left-3 top-3 z-10 rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-strong">
+        <span className="absolute left-3 top-3 z-10 rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#B45309]">
           Sample
         </span>
       ) : null}
@@ -294,7 +294,7 @@ export function NaijaShopPage() {
       ) : null}
 
       {showSamples ? (
-        <div role="status" className="mt-4 rounded-lg border border-amber-strong/40 bg-amber/10 px-4 py-3 text-sm text-ink">
+        <div role="status" className="mt-4 rounded-lg border border-[#B45309]/40 bg-amber/10 px-4 py-3 text-sm text-ink">
           <strong>Sample catalogue.</strong> These are demonstration rows seeded for local development, not real seller listings.
           Real listings appear when verified sellers publish products from their dashboard.
         </div>
@@ -655,7 +655,7 @@ function ShopResultCard({ product, onAdd }: { product: ApiProduct; onAdd: (produ
   return (
     <article className="flex h-full flex-col rounded-lg border border-border-soft bg-canvas p-3 transition hover:shadow-soft">
       {product.isSample ? (
-        <span className="mb-1 inline-flex w-fit items-center rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-strong">
+        <span className="mb-1 inline-flex w-fit items-center rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#B45309]">
           Sample
         </span>
       ) : null}

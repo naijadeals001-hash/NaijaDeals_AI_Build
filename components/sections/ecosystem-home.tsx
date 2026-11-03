@@ -165,7 +165,7 @@ function EcosystemPulse() {
             {live} {t("status.live")}
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-amber-strong" aria-hidden="true" />
+            <span className="h-2 w-2 rounded-full bg-[#B45309]" aria-hidden="true" />
             {setup} {t("status.setup")}
           </span>
         </div>
@@ -236,7 +236,7 @@ function StatusPill({ vertical, onImage = false }: { vertical: Vertical; onImage
         onImage ? "bg-[#04140f]/80 text-white backdrop-blur" : "border border-border-soft bg-canvas text-ink"
       ].join(" ")}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${live ? "bg-primary-live" : onImage ? "bg-amber" : "bg-amber-strong"}`} aria-hidden="true" />
+      <span className={`h-1.5 w-1.5 rounded-full ${live ? "bg-primary-live" : onImage ? "bg-amber" : "bg-[#B45309]"}`} aria-hidden="true" />
       {label}
     </span>
   );

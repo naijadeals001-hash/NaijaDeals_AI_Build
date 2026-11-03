@@ -282,6 +282,19 @@ clearly-labelled "View sample catalogue (demo)" toggle. Sample cards, search res
 detail pages all carry a "Sample" warning. Migration, seed, API and UI changes are recorded in
 `docs/design-direction.md`; axe is clean in both states and the mobile layout has no overflow.
 
+## Shell and navigation polish (2026-11-03)
+
+Shared shell refreshed for the new design language: pill navigation with a labelled Search
+affordance, ecosystem and account section labels in the rail, active-module accent plus honest
+live/setup status dots, Orders and NaijaPay links, a safe-area-aware mobile tab bar with an active
+pill, and automatic menu close on navigation. All accessibility markers survived (skip link,
+`Primary`/`Marketplace`/`Account`/`Mobile` nav labels); axe is clean on desktop and mobile.
+
+Note for other agents: the long-running dev server on port 3000 could not be restarted from this
+session (its process survived kill attempts), so it still has the pre-`amber-strong` Tailwind
+config cached. The affected utilities now use `bg-[#B45309]`-style arbitrary values so they render
+without a restart; a normal restart can switch them back to the token.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

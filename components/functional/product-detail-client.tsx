@@ -116,7 +116,7 @@ export function ProductDetailClient({ id }: { id: string }) {
   return (
     <div className="space-y-8">
       {product.isSample ? (
-        <div role="status" className="rounded-lg border border-amber-strong/40 bg-amber/10 px-4 py-3 text-sm text-ink">
+        <div role="status" className="rounded-lg border border-[#B45309]/40 bg-amber/10 px-4 py-3 text-sm text-ink">
           <strong>Sample listing.</strong> This product is demonstration data for local development — not a real seller listing.
         </div>
       ) : null}

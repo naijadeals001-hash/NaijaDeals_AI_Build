@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Home,
   LayoutGrid,
@@ -24,6 +24,10 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
   const { t } = useLocale();
 
   // Skip AppShell for admin routes - they use AdminShell
@@ -76,7 +80,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
                 key={link.href}
                 href={link.href}
                 aria-current={isActive(link.href) ? "page" : undefined}
-                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${isActive(link.href) ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-low"}`}
+                className={`rounded-full px-3.5 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${isActive(link.href) ? "bg-primary-soft text-primary shadow-sm" : "text-ink/70 hover:bg-surface-low hover:text-ink"}`}
               >
                 {link.label}
               </Link>
@@ -84,8 +88,16 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
           </nav>
           <div className="flex items-center gap-0.5 sm:gap-1">
             <LocaleSwitcher />
-            <Link href="/search" className="rounded-full p-2 text-muted hover:bg-surface-low" aria-label={t("nav.search")}>
-              <Search className="h-5 w-5" />
+            <Link
+              href="/search"
+              className="hidden items-center gap-2 rounded-full border border-border-soft px-3 py-2 text-xs font-bold text-muted transition hover:border-primary/40 hover:text-primary xl:inline-flex"
+              aria-label={t("nav.search")}
+            >
+              <Search className="h-4 w-4" aria-hidden="true" />
+              {t("nav.search")}
+            </Link>
+            <Link href="/search" className="rounded-full p-2 text-muted hover:bg-surface-low xl:hidden" aria-label={t("nav.search")}>
+              <Search className="h-5 w-5" aria-hidden="true" />
             </Link>
             <Link href="/cart" className="rounded-full p-2 text-muted hover:bg-surface-low" aria-label={t("nav.cart")}>
               <ShoppingCart className="h-5 w-5" />
@@ -161,10 +173,11 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
             </>
           )}
         </div>
+        <p className="px-3 pb-1 text-[10px] font-black uppercase tracking-[0.18em] text-muted">Ecosystem</p>
         <nav className="space-y-1" aria-label="Marketplace">
           <Link
             href="/products"
-            className="flex items-center gap-3 rounded-xl bg-primary-soft px-3 py-3 text-sm font-extrabold text-primary"
+            className="flex items-center gap-3 rounded-xl bg-primary-soft px-3 py-2.5 text-sm font-extrabold text-primary transition hover:bg-primary-soft/80"
           >
             <LayoutGrid className="h-5 w-5" aria-hidden="true" />
             <span>{t("common.allProducts")}</span>
@@ -177,17 +190,36 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
                 <Link
                   key={vertical.key}
                   href={vertical.href}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold ${
-                    isActive(vertical.href) ? "bg-surface-low text-primary" : "text-muted hover:bg-surface-low hover:text-primary"
+                  aria-current={isActive(vertical.href) ? "page" : undefined}
+                  className={`flex items-center gap-3 rounded-xl border-l-2 px-3 py-2.5 text-sm font-semibold transition ${
+                    isActive(vertical.href)
+                      ? "border-primary bg-surface-low text-primary"
+                      : "border-transparent text-muted hover:bg-surface-low hover:text-primary"
                   }`}
                 >
                   <Icon className="h-5 w-5" aria-hidden="true" />
                   <span>{vertical.name}</span>
+                  <span
+                    className={`ml-auto h-1.5 w-1.5 rounded-full ${vertical.status === "live" ? "bg-primary-live" : "bg-[#B45309]"}`}
+                    aria-hidden="true"
+                  />
+                  <span className="sr-only">{vertical.status === "live" ? t("status.live") : t("status.setup")}</span>
                 </Link>
               );
             })}
         </nav>
-        <Link href="/sell" className="mt-5 flex items-center justify-center gap-2 rounded-xl bg-night px-4 py-3 text-sm font-bold text-white">
+        <p className="mt-5 px-3 pb-1 text-[10px] font-black uppercase tracking-[0.18em] text-muted">{t("nav.account")}</p>
+        <nav className="space-y-1" aria-label="Account">
+          <Link href="/orders" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted transition hover:bg-surface-low hover:text-primary">
+            <PackageCheck className="h-5 w-5" aria-hidden="true" />
+            {t("nav.orders")}
+          </Link>
+          <Link href="/wallet" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted transition hover:bg-surface-low hover:text-primary">
+            <UserCircle className="h-5 w-5" aria-hidden="true" />
+            NaijaPay
+          </Link>
+        </nav>
+        <Link href="/sell" className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-night px-4 py-3 text-sm font-bold text-white transition hover:bg-night/90">
           <Store className="h-4 w-4" />
           {t("common.sellOn")}
         </Link>
@@ -220,7 +252,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
         </div>
       </footer>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border-soft bg-canvas lg:hidden" aria-label="Mobile">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border-soft bg-canvas/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Mobile">
         <div className="grid grid-cols-5">
           {bottomLinks.map((link) => {
             const Icon = link.icon;
@@ -232,7 +264,9 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
                 aria-current={active ? "page" : undefined}
                 className={`flex min-h-14 flex-col items-center justify-center gap-1 py-2 text-[11px] font-bold ${active ? "text-primary" : "text-muted"}`}
               >
-                <Icon className="h-5 w-5" aria-hidden="true" />
+                <span className={`grid h-7 w-10 place-items-center rounded-full ${active ? "bg-primary-soft" : ""}`}>
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </span>
                 {link.label}
               </Link>
             );
