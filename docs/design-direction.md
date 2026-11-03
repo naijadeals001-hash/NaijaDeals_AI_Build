@@ -202,3 +202,28 @@ baked-in "Order fresh groceries" panel and stored as
 `public/brand-photography/fresh-market-groceries.jpg`. It drives the NaijaFresh ecosystem card and
 a new split landing hero on `/naijafresh`, with three capability cards and an honest setup-status
 card (ordering disabled until market vendors, catalogue and delivery slots are connected).
+
+
+## REA reference research — mobility super-app landing (2026-11-03)
+
+To ground the landing redesign in the reference apps instead of taste, REA's CDP provider inspected
+a live mobility super-app landing:
+
+- Provider: `rea-cdp-browser` v2, Chrome 156 headless, target `https://bolt.eu/en-ng/`
+- Evidence: `ev_d34fa5ed…e64` (target list) and `ev_77ddd6bc…32` (page inspection)
+- Captured sections (accessibility tree, names only): hero "Riding is the new driving"; "Our services";
+  "Meet Bolt 7"; "Bolt is the first European mobility super-app."; "Earn money with Bolt" with Drive /
+  delivery / sales / fleet paths; "Bolt Send"; "Download our apps"; "News and updates".
+- Primary actions observed: Start riding, Earn with Bolt, Register to drive / courier / Bolt Food /
+  fleet, Send items, View all.
+- Limitations recorded by REA: DOM and accessibility text are policy-filtered unless explicitly
+  requested; script/resource capture is origin-restricted; no pixel or layout-metric evidence.
+
+Translation into this build: every vertical landing uses one shared structure —
+**hero (badge, headline, description, proof chips, two CTAs, primary image + secondary thumbnail) →
+capability grid → earn/partner band → honest setup status** — matching the reference's
+hero → services → earn → download/news rhythm without copying its claims or assets.
+
+Applied so far: NaijaStay, NaijaStream, Aura AI, NaijaGigs (new), with NaijaEats, NaijaFresh and
+NaijaSend following the same pattern. NaijaDrive keeps its reference-04 hero; NaijaShop keeps the
+Amazon-derived storefront.

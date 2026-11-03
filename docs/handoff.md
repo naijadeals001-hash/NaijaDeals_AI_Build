@@ -438,6 +438,13 @@ markets, once vendors are connected" — with verified-vendor / escrow / honest-
 and a setup-status card. Verified: image loads on page and homepage, 3 cards, axe 0, 0 overflow at
 1440 and 390.
 
+**Landing redesign from REA evidence (same pass):** a shared `ModuleLanding` component now backs
+the vertical pages, derived from an REA capture of a live mobility super-app landing (hero → services
+→ earn → setup status). NaijaStay, NaijaStream, Aura AI and NaijaGigs were rebuilt on it, each with
+two images, capability cards, an optional partner band and an honest setup card. Verified: all images
+load, 3 feature cards each, axe 0, 0 overflow at 1440 and 390. NaijaEats/Fresh/Send already follow
+the same structure; Drive and Shop keep their reference-specific layouts.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only
