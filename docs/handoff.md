@@ -603,3 +603,10 @@ colored categories, photo-cover restaurant cards and a partner CTA tile. Verifie
 kitchen cards + promo tile, 0 overflow, axe 0. Freight-style ordering foundation added as
 lib/services/core/eats-order.service.ts (wallet-debited food orders with kitchen/courier transitions
 and events); APIs and UI are not wired yet.
+
+**KIE image generation blocked (2026-11-03):** .env, .env.txt and the standalone build env copies
+declare no KIE key; only .env.example lists KIE_API_KEY with an empty value, and no KIE variable
+exists in the Windows user or machine environment. Eleven properly licensed Nigerian food photographs
+were sourced from Wikimedia Commons instead (public/food + /credits). NaijaEats hero now uses the
+NaijaEats courier/jollof artwork with the mockup's category labels; ordering APIs/UI exist but the
+end-to-end run is still being verified (test wallet balance blocked the first attempt).

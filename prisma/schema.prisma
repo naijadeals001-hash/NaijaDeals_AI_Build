@@ -176,6 +176,7 @@ model User {
   freightRequests  FreightRequest[] @relation("CustomerFreight")
   partnerNotifications PartnerNotification[] @relation("PartnerNotifications")
   restaurants Restaurant[] @relation("RestaurantOwner")
+  foodOrders FoodOrder[] @relation("CustomerFoodOrders")
 }
 
 model Role {
@@ -472,6 +473,7 @@ model Courier {
   createdAt  DateTime   @default(now())
   user       User       @relation(fields: [userId], references: [id])
   deliveries Delivery[]
+  foodDeliveries FoodOrder[]
 }
 
 model Delivery {
@@ -945,6 +947,7 @@ model Restaurant {
   menuItems MenuItem[]
 
   @@index([status, market])
+  foodOrders FoodOrder[]
 }
 
 model MenuItem {
@@ -959,4 +962,66 @@ model MenuItem {
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
 
   @@index([restaurantId, available])
+}
+
+
+enum FoodOrderStatus {
+  placed
+  kitchen_accepted
+  preparing
+  ready_for_pickup
+  courier_assigned
+  picked_up
+  delivered
+  cancelled
+}
+
+model FoodOrder {
+  id             String          @id @default(cuid())
+  orderNumber    String          @unique
+  customerId     String
+  restaurantId   String
+  courierId      String?
+  status         FoodOrderStatus @default(placed)
+  paymentStatus  String          @default("paid")
+  subtotalKobo   BigInt
+  totalKobo      BigInt
+  currency       String          @default("NGN")
+  deliveryAddress String
+  contactName    String
+  contactPhone   String
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  customer       User            @relation("CustomerFoodOrders", fields: [customerId], references: [id])
+  restaurant     Restaurant      @relation(fields: [restaurantId], references: [id])
+  courier        Courier?        @relation(fields: [courierId], references: [id])
+  items          FoodOrderItem[]
+  events         FoodOrderEvent[]
+
+  @@index([customerId, createdAt])
+  @@index([restaurantId, status])
+}
+
+model FoodOrderItem {
+  id           String   @id @default(cuid())
+  orderId      String
+  menuItemId   String?
+  name         String
+  unitPriceKobo BigInt
+  quantity     Int
+  notes        String?
+  order        FoodOrder @relation(fields: [orderId], references: [id])
+}
+
+model FoodOrderEvent {
+  id        String          @id @default(cuid())
+  orderId   String
+  status    FoodOrderStatus
+  note      String?
+  actorId   String?
+  createdAt DateTime        @default(now())
+  order     FoodOrder       @relation(fields: [orderId], references: [id])
+
+  @@index([orderId, createdAt])
 }
