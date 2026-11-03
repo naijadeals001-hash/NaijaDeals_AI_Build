@@ -1875,16 +1875,16 @@ export function AdminOpsPage() {
 }
 
 const EATS_CATEGORY_IMAGES: Record<string, string> = {
-  "All food": "/food/jollof.jpg",
-  "Nigerian meals": "/food/jollof.jpg",
-  "Fast food": "/food/burger.jpg",
-  "Buka & local spots": "/food/breakfast.jpg",
-  Breakfast: "/food/breakfast.jpg",
-  Shawarma: "/food/shawarma.jpg",
-  Drinks: "/food/juice.jpg",
-  Desserts: "/food/cake.jpg",
-  "Healthy eats": "/food/salad.jpg",
-  "Swallows & soups": "/food/soup.jpg"
+  "All food": "/food/naijaeats/feast.jpg",
+  "Nigerian meals": "/food/naijaeats/feast.jpg",
+  "Fast food": "/food/naijaeats/fast-food.jpg",
+  "Buka & local spots": "/food/naijaeats/buka.jpg",
+  Breakfast: "/food/naijaeats/breakfast.jpg",
+  Shawarma: "/food/naijaeats/shawarma.jpg",
+  Drinks: "/food/naijaeats/drinks.jpg",
+  Desserts: "/food/naijaeats/desserts.jpg",
+  "Healthy eats": "/food/naijaeats/healthy.jpg",
+  "Swallows & soups": "/food/naijaeats/eba-soup.jpg"
 };
 
 const EATS_CATEGORY_ICONS: Array<{ label: string; match: (cuisine: string) => boolean; icon: typeof UtensilsCrossed }> = [
@@ -2119,7 +2119,7 @@ export function NaijaEatsPage() {
             onClick={() => setCategory("all")}
             className={`flex w-24 shrink-0 flex-col items-center gap-1.5 rounded-xl border px-2 py-2.5 text-center ${category === "all" ? "border-primary bg-primary-soft" : "border-border-soft"}`}
           >
-            <img src="/food/jollof.jpg" alt="" aria-hidden="true" className="h-14 w-14 rounded-full object-cover" />
+            <img src="/food/naijaeats/feast.jpg" alt="" aria-hidden="true" className="h-14 w-14 rounded-full object-cover" style={{ objectPosition: "35% 45%" }} />
             <span className="text-[10px] font-bold leading-tight">All food</span>
           </button>
           {EATS_CATEGORY_ICONS.map((item) => {
@@ -2132,7 +2132,7 @@ export function NaijaEatsPage() {
                 onClick={() => setCategory(active ? "all" : item.label)}
                 className={`flex w-20 shrink-0 flex-col items-center gap-1 rounded-xl border px-2 py-2 text-center ${active ? "border-primary bg-primary-soft" : "border-border-soft"}`}
               >
-                <img src={EATS_CATEGORY_IMAGES[item.label] ?? "/food/jollof.jpg"} alt="" aria-hidden="true" className="h-14 w-14 rounded-full object-cover" />
+                <img src={EATS_CATEGORY_IMAGES[item.label] ?? "/food/jollof.jpg"} alt="" aria-hidden="true" className="h-14 w-14 rounded-full object-cover" style={{ objectPosition: "68% 50%" }} />
                 <span className="text-[10px] font-bold leading-tight">{item.label}</span>
               </button>
             );
@@ -2162,7 +2162,7 @@ export function NaijaEatsPage() {
               <article key={restaurant.id} className="overflow-hidden rounded-2xl border border-border-soft bg-canvas">
                 <div className="relative flex h-36 items-end p-3">
                   <img
-                    src={/grill|suya/i.test(restaurant.cuisine) ? "/food/suya.jpg" : "/food/jollof.jpg"}
+                    src={/grill|suya/i.test(restaurant.cuisine) ? "/food/suya.jpg" : "/food/naijaeats/buka.jpg"}
                     alt=""
                     aria-hidden="true"
                     className="absolute inset-0 h-full w-full object-cover"

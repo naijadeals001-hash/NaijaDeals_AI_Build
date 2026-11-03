@@ -276,3 +276,9 @@ and uses the full page width like the supplied reference. Added a green NaijaEat
 hero with the jollof artwork, Delivery/Pickup/Dine-in tabs (Dine-in visibly disabled), colored
 category circles, restaurant cards with food-photo covers and prices, and a green partner CTA tile in
 the restaurant grid. Sample kitchens stay labelled; ratings and delivery ETAs are still not invented.
+
+**Owner NaijaEats category artwork (2026-11-03):** added the owner-supplied AI-generated NaijaEats
+banners (Nigerian feast, fast food, buka & local spots, breakfast, shawarma, drinks, desserts,
+healthy eats, eba & vegetable soup) under public/food/naijaeats as compressed JPEGs. They now supply
+the category rail and the home-kitchen cover; the courier/jollof photograph remains the hero. These
+are brand assets, not third-party stock, so they are credited here rather than on /credits.
