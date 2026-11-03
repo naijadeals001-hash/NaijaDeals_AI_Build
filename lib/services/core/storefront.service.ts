@@ -89,7 +89,7 @@ export async function updateStorefrontConfig(adminId: string, input: Record<stri
   const updated = await prisma.$executeRaw`
     UPDATE "StorefrontConfig"
     SET config = ${JSON.stringify(next)}::jsonb, "updatedBy" = ${adminId}, "updatedAt" = NOW()
-    WHERE id = 'default' AND (config->>'version')::int = ${current.version}`;
+    WHERE id = 'default' AND COALESCE((config->>'version')::int, 1) = ${current.version}`;
   if (updated === 0) throw new ApiError(409, "version_conflict", "Storefront settings changed since this form loaded. Reload before saving.");
   await recordAudit({
     actorId: adminId,
