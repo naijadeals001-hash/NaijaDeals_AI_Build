@@ -325,6 +325,19 @@ Tab/Shift+Tab trapped (explicit wrap handler), Escape closes, focus returns to t
 button, axe 0 with the dialog open. A StrictMode cleanup bug that dismissed the dialog immediately
 was found and fixed. Bulk actions and detail views for the remaining tables are still open.
 
+## Country activation (2026-11-03)
+
+`CountrySetting` rows now override the static catalogue at runtime. The Control Center Settings
+tab has a super-admin "Country activation" panel (sell/delivery checkboxes, source badge, save) backed
+by `GET/PATCH /api/admin/countries` and the new `countries:write` permission. Every change writes a
+`country.updated` audit row with before/after metadata.
+
+Checkout now consults the override: disabling Ghana returned **400 `country_disabled`**, re-enabling
+moved the request on to **503 `delivery_unconfigured`** (Ghana delivery is genuinely not configured).
+Absent rows fall back to `lib/config/commerce.ts`. Because the long-running dev server still has a
+Prisma client from before the model existed, the service uses parameterised raw SQL; a normal
+restart can switch it to `prisma.countrySetting` without behaviour change.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

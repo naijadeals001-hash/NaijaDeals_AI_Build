@@ -814,3 +814,12 @@ model SavedPlace {
   @@unique([userId, nickname])
   @@index([userId])
 }
+
+/// Runtime country activation overrides; defaults come from lib/config/commerce.ts.
+model CountrySetting {
+  code            String   @id
+  enabled         Boolean  @default(false)
+  deliveryEnabled Boolean  @default(false)
+  updatedById     String?
+  updatedAt       DateTime @updatedAt
+}

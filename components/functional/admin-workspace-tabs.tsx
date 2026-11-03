@@ -1202,7 +1202,12 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
   }
 
   if (tab === "settings") {
-    return <SuperAdminSettings isSuperAdmin={isSuperAdmin} />;
+    return (
+      <div className="space-y-4">
+        <SuperAdminSettings isSuperAdmin={isSuperAdmin} />
+        <CountryActivation isSuperAdmin={isSuperAdmin} />
+      </div>
+    );
   }
 
   return null;
@@ -1349,6 +1354,150 @@ function SuperAdminSettings({ isSuperAdmin }: { isSuperAdmin: boolean }) {
           Open the audit log
         </Link>
       </div>
+    </Panel>
+  );
+}
+
+
+interface CountryRow {
+  code: string;
+  name: string;
+  currency: string;
+  enabled: boolean;
+  deliveryEnabled: boolean;
+  configuredEnabled: boolean;
+  configuredDeliveryEnabled: boolean;
+  source: "database" | "configuration";
+  updatedAt: string | null;
+}
+
+function CountryActivation({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+  const [rows, setRows] = useState<CountryRow[]>([]);
+  const [draft, setDraft] = useState<Record<string, { enabled: boolean; deliveryEnabled: boolean }>>({});
+  const [loading, setLoading] = useState(isSuperAdmin);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState("");
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    let cancelled = false;
+    setLoading(true);
+    apiClient
+      .adminCountries()
+      .then((data) => {
+        if (cancelled) return;
+        const typed = data as unknown as CountryRow[];
+        setRows(typed);
+        setDraft(Object.fromEntries(typed.map((row) => [row.code, { enabled: row.enabled, deliveryEnabled: row.deliveryEnabled }])));
+        setLoading(false);
+      })
+      .catch((caught) => {
+        if (cancelled) return;
+        setError(caught instanceof Error ? caught.message : "Could not load country activation.");
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isSuperAdmin]);
+
+  async function save(row: CountryRow) {
+    const next = draft[row.code];
+    if (!next) return;
+    setBusy(row.code);
+    setMessage("");
+    setError("");
+    try {
+      await apiClient.adminUpdateCountry(row.code, next.enabled, next.deliveryEnabled);
+      const data = (await apiClient.adminCountries()) as unknown as CountryRow[];
+      setRows(data);
+      setDraft(Object.fromEntries(data.map((item) => [item.code, { enabled: item.enabled, deliveryEnabled: item.deliveryEnabled }])));
+      setMessage(`${row.name} activation saved.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not save country activation.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  if (!isSuperAdmin) return null;
+
+  return (
+    <Panel
+      title="Country activation"
+      description="Checkout and delivery honour these switches. Countries without a saved override follow lib/config/commerce.ts."
+    >
+      {message ? <p role="status" className="px-4 pt-3 text-xs font-bold text-[#00E676]">{message}</p> : null}
+      {error ? <p role="alert" className="px-4 pt-3 text-xs font-bold text-crimson">{error}</p> : null}
+      {loading ? (
+        <p className="px-4 py-6 text-sm text-[#8B949E]">Loading countries…</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead>
+              <tr className="border-y border-[#21262D] bg-[#0B0E14] text-xs uppercase tracking-wide text-[#8B949E]">
+                <th scope="col" className="px-4 py-3 font-bold">Country</th>
+                <th scope="col" className="px-4 py-3 font-bold">Sell enabled</th>
+                <th scope="col" className="px-4 py-3 font-bold">Delivery</th>
+                <th scope="col" className="px-4 py-3 font-bold">Source</th>
+                <th scope="col" className="px-4 py-3 font-bold">Save</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#21262D]">
+              {rows.map((row) => {
+                const current = draft[row.code] ?? { enabled: row.enabled, deliveryEnabled: row.deliveryEnabled };
+                const dirty = current.enabled !== row.enabled || current.deliveryEnabled !== row.deliveryEnabled;
+                return (
+                  <tr key={row.code}>
+                    <td className="px-4 py-3">
+                      <p className="font-bold text-[#F0F6FC]">{row.name}</p>
+                      <p className="text-xs text-[#8B949E]">{row.code} · {row.currency}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <label className="inline-flex items-center gap-2 text-xs font-semibold">
+                        <input
+                          type="checkbox"
+                          aria-label={`Sell enabled in ${row.name}`}
+                          checked={current.enabled}
+                          onChange={(event) => setDraft({ ...draft, [row.code]: { ...current, enabled: event.target.checked } })}
+                          className="h-4 w-4 accent-[#00E676]"
+                        />
+                        {current.enabled ? "On" : "Off"}
+                      </label>
+                    </td>
+                    <td className="px-4 py-3">
+                      <label className="inline-flex items-center gap-2 text-xs font-semibold">
+                        <input
+                          type="checkbox"
+                          aria-label={`Delivery enabled in ${row.name}`}
+                          checked={current.deliveryEnabled}
+                          onChange={(event) => setDraft({ ...draft, [row.code]: { ...current, deliveryEnabled: event.target.checked } })}
+                          className="h-4 w-4 accent-[#00E676]"
+                        />
+                        {current.deliveryEnabled ? "Configured" : "Not configured"}
+                      </label>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-[#8B949E]">
+                      {row.source === "database" ? "Saved override" : "Config default"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        disabled={!dirty || busy === row.code}
+                        onClick={() => void save(row)}
+                        className="rounded-lg border border-[#21262D] px-3 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D] disabled:opacity-40"
+                      >
+                        {busy === row.code ? "Saving…" : "Save"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </Panel>
   );
 }

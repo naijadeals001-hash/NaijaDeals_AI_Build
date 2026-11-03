@@ -6,6 +6,7 @@ import { recordAudit } from "./audit.service";
 import { recordSystemEvent } from "./event.service";
 import { updateOrderStatus } from "./order.service";
 import { availablePaymentMethods } from "@/lib/payments/service";
+import { activationFor } from "./country.service";
 
 export type CheckoutAddress = {
   label?: string;
@@ -31,8 +32,12 @@ export async function checkout(input: {
   saveAddress?: boolean;
 }) {
   const country = getCountry(input.address.countryCode);
-  if (!country.enabled) throw new ApiError(400, "country_disabled", `${country.name} is not open for checkout yet.`);
-  if (!country.deliveryEnabled) {
+  // Runtime activation overrides the static catalogue; absent rows fall back to config.
+  const activation = await activationFor(country.code);
+  const countryEnabled = activation?.enabled ?? country.enabled;
+  const deliveryEnabled = activation?.deliveryEnabled ?? country.deliveryEnabled;
+  if (!countryEnabled) throw new ApiError(400, "country_disabled", `${country.name} is not open for checkout yet.`);
+  if (!deliveryEnabled) {
     throw new ApiError(503, "delivery_unconfigured", `Delivery is not configured for ${country.name}. No order was created.`);
   }
 

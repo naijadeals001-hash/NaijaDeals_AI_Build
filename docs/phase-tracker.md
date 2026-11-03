@@ -120,6 +120,11 @@ dialogs are introduced.
 - Server-side pagination, safe bulk actions and record-detail views
 - Explicit operations/finance/support/moderation role scopes and cross-region allow/deny tests
 - Role-assignment writes and protection against self-escalation
+- Country activation (2026-11-03): `CountrySetting` overrides (migration `20261103130000_country_settings`)
+  with a super-admin panel for sell/delivery switches, `countries:write` permission, audited
+  `country.updated` before/after, and real enforcement in checkout (disabled → 400
+  `country_disabled`; delivery off → 503 `delivery_unconfigured`). Verified by disabling Ghana,
+  observing the 400, re-enabling and reaching the delivery check. Absent rows keep config defaults.
 - Before/after audit detail (2026-11-03): product moderation and order status changes now write
   `before → after` metadata into AuditLog/AdminAction (payouts and role changes already recorded
   before-state), and the record-detail dialog renders the metadata block. Refund/dispute transitions
