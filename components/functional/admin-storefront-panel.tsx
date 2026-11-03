@@ -12,6 +12,7 @@ type Config = {
   showDemoProducts: boolean;
   showHero: boolean;
   showShelves: boolean;
+  version: number;
 };
 
 const EMPTY: Config = {
@@ -23,7 +24,8 @@ const EMPTY: Config = {
   shelfLimit: 4,
   showDemoProducts: true,
   showHero: true,
-  showShelves: true
+  showShelves: true,
+  version: 0
 };
 
 export function AdminStorefrontPanel() {
@@ -56,12 +58,14 @@ export function AdminStorefrontPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...config,
+          version: config.version,
           categoryOrder: orderText.split(",").map((item) => item.trim()).filter(Boolean),
           visibleCategories: visibleText.split(",").map((item) => item.trim()).filter(Boolean)
         })
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error(body?.error ?? "Could not save storefront settings.");
+      setConfig((current) => ({ ...current, ...body, version: body.version ?? current.version + 1 }));
       setMessage("Storefront settings saved. The storefront updates on reload.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not save storefront settings.");
