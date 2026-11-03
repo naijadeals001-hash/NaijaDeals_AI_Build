@@ -1874,14 +1874,29 @@ export function AdminOpsPage() {
   );
 }
 
+const EATS_CATEGORY_IMAGES: Record<string, string> = {
+  "All food": "/food/jollof.jpg",
+  "Nigerian meals": "/food/jollof.jpg",
+  "Fast food": "/food/burger.jpg",
+  "Buka & local spots": "/food/breakfast.jpg",
+  Breakfast: "/food/breakfast.jpg",
+  Shawarma: "/food/shawarma.jpg",
+  Drinks: "/food/juice.jpg",
+  Desserts: "/food/cake.jpg",
+  "Healthy eats": "/food/salad.jpg",
+  "Swallows & soups": "/food/soup.jpg"
+};
+
 const EATS_CATEGORY_ICONS: Array<{ label: string; match: (cuisine: string) => boolean; icon: typeof UtensilsCrossed }> = [
   { label: "Nigerian meals", match: (cuisine) => /nigerian|home/i.test(cuisine), icon: UtensilsCrossed },
-  { label: "Grills", match: (cuisine) => /grill|suya|barbecue/i.test(cuisine), icon: Pizza },
   { label: "Fast food", match: (cuisine) => /fast|burger|pizza/i.test(cuisine), icon: Sandwich },
-  { label: "Breakfast", match: (cuisine) => /breakfast|pastry/i.test(cuisine), icon: Coffee },
-  { label: "Salads", match: (cuisine) => /salad|healthy/i.test(cuisine), icon: Salad },
-  { label: "Soups", match: (cuisine) => /soup|swallow/i.test(cuisine), icon: Soup },
-  { label: "Drinks", match: (cuisine) => /drink|juice|bar/i.test(cuisine), icon: CakeSlice }
+  { label: "Buka & local spots", match: (cuisine) => /buka|local|home/i.test(cuisine), icon: Soup },
+  { label: "Breakfast", match: (cuisine) => /breakfast|akara|pastry/i.test(cuisine), icon: Coffee },
+  { label: "Shawarma", match: (cuisine) => /shawarma|wrap/i.test(cuisine), icon: Pizza },
+  { label: "Drinks", match: (cuisine) => /drink|juice|bar/i.test(cuisine), icon: CakeSlice },
+  { label: "Desserts", match: (cuisine) => /dessert|cake|pastry/i.test(cuisine), icon: CakeSlice },
+  { label: "Healthy eats", match: (cuisine) => /salad|healthy|grill/i.test(cuisine), icon: Salad },
+  { label: "Swallows & soups", match: (cuisine) => /soup|swallow|home/i.test(cuisine), icon: Soup }
 ];
 
 export function NaijaEatsPage() {
@@ -1892,6 +1907,11 @@ export function NaijaEatsPage() {
   const [mode, setMode] = useState<"delivery" | "pickup">("delivery");
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
+  const [cart, setCart] = useState<Record<string, { restaurantId: string; name: string; priceKobo: string; quantity: number }>>({});
+  const [checkout, setCheckout] = useState({ contactName: "", contactPhone: "", deliveryAddress: "", notes: "" });
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
@@ -1930,6 +1950,71 @@ export function NaijaEatsPage() {
     }
     return true;
   });
+
+  const cartLines = Object.entries(cart);
+  const cartCount = cartLines.reduce((total, [, line]) => total + line.quantity, 0);
+  const cartTotal = cartLines.reduce((total, [, line]) => total + Number(line.priceKobo) * line.quantity, 0);
+
+  function addItem(restaurant: EatsRestaurantRow, item: EatsMenuItemRow) {
+    setPayError("");
+    setCart((current) => {
+      const existingRestaurant = Object.values(current)[0]?.restaurantId;
+      const base = existingRestaurant && existingRestaurant !== restaurant.id ? {} : { ...current };
+      const line = base[item.id];
+      base[item.id] = {
+        restaurantId: restaurant.id,
+        name: item.name,
+        priceKobo: item.priceKobo,
+        quantity: Math.min((line?.quantity ?? 0) + 1, 10)
+      };
+      return base;
+    });
+  }
+
+  function changeQuantity(id: string, delta: number) {
+    setCart((current) => {
+      const line = current[id];
+      if (!line) return current;
+      const quantity = line.quantity + delta;
+      const next = { ...current };
+      if (quantity <= 0) delete next[id];
+      else next[id] = { ...line, quantity: Math.min(quantity, 10) };
+      return next;
+    });
+  }
+
+  async function pay() {
+    const restaurantId = Object.values(cart)[0]?.restaurantId;
+    if (!restaurantId || cartLines.length === 0) return;
+    setPaying(true);
+    setPayError("");
+    try {
+      const res = await fetch("/api/eats/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          restaurantId,
+          items: cartLines.map(([menuItemId, line]) => ({ menuItemId, quantity: line.quantity })),
+          deliveryAddress: checkout.deliveryAddress,
+          contactName: checkout.contactName,
+          contactPhone: checkout.contactPhone,
+          notes: checkout.notes
+        })
+      });
+      if (res.status === 401) {
+        router.push("/login?next=/naijaeats");
+        return;
+      }
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.error ?? `Payment failed with HTTP ${res.status}`);
+      setCart({});
+      router.push(`/naijaeats/orders/${body.id}`);
+    } catch (caught) {
+      setPayError(caught instanceof Error ? caught.message : "Could not place the order.");
+    } finally {
+      setPaying(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -2013,14 +2098,15 @@ export function NaijaEatsPage() {
               <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5 text-primary-live" aria-hidden="true" /> Verified kitchens</span>
             </div>
           </div>
-          <div className="relative min-h-[260px] lg:min-h-[360px]">
+          <div className="relative min-h-[300px] lg:min-h-[430px]">
             <img
               src="/brand-photography/eats-jollof-delivery.jpg"
-              alt="Brand illustration of a NaijaEats courier holding a delivery bag of jollof rice, grilled chicken and plantain"
+              alt="NaijaEats courier holding a green delivery bag beside jollof rice, grilled chicken and plantain"
               className="absolute inset-0 h-full w-full object-cover"
+              style={{ objectPosition: "50% 60%" }}
               fetchPriority="high"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0b1a13] via-[#0b1a13]/20 to-transparent lg:from-[#0b1a13]/70" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0b1a13] via-[#0b1a13]/60 to-transparent" />
           </div>
         </div>
       </section>
@@ -2032,7 +2118,7 @@ export function NaijaEatsPage() {
             onClick={() => setCategory("all")}
             className={`flex w-24 shrink-0 flex-col items-center gap-1.5 rounded-xl border px-2 py-2.5 text-center ${category === "all" ? "border-primary bg-primary-soft" : "border-border-soft"}`}
           >
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-[#0b6b3a] text-white"><UtensilsCrossed className="h-5 w-5" aria-hidden="true" /></span>
+            <img src="/food/jollof.jpg" alt="" aria-hidden="true" className="h-14 w-14 rounded-full object-cover" />
             <span className="text-[10px] font-bold leading-tight">All food</span>
           </button>
           {EATS_CATEGORY_ICONS.map((item) => {
@@ -2045,9 +2131,7 @@ export function NaijaEatsPage() {
                 onClick={() => setCategory(active ? "all" : item.label)}
                 className={`flex w-20 shrink-0 flex-col items-center gap-1 rounded-xl border px-2 py-2 text-center ${active ? "border-primary bg-primary-soft" : "border-border-soft"}`}
               >
-                <span className="grid h-12 w-12 place-items-center rounded-full text-white" style={{ backgroundColor: ["#0b6b3a", "#b45309", "#a21caf", "#0369a1", "#be123c", "#15803d", "#c2410c"][EATS_CATEGORY_ICONS.findIndex((entry) => entry.label === item.label) % 7] }}>
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                </span>
+                <img src={EATS_CATEGORY_IMAGES[item.label] ?? "/food/jollof.jpg"} alt="" aria-hidden="true" className="h-14 w-14 rounded-full object-cover" />
                 <span className="text-[10px] font-bold leading-tight">{item.label}</span>
               </button>
             );
@@ -2077,11 +2161,11 @@ export function NaijaEatsPage() {
               <article key={restaurant.id} className="overflow-hidden rounded-2xl border border-border-soft bg-canvas">
                 <div className="relative flex h-36 items-end p-3">
                   <img
-                    src="/brand-photography/eats-jollof-delivery.jpg"
+                    src={/grill|suya/i.test(restaurant.cuisine) ? "/food/suya.jpg" : "/food/jollof.jpg"}
                     alt=""
                     aria-hidden="true"
                     className="absolute inset-0 h-full w-full object-cover"
-                    style={{ objectPosition: index % 2 === 0 ? "40% 78%" : "80% 70%" }}
+                    style={{ objectPosition: index % 2 === 0 ? "50% 50%" : "50% 45%" }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#04140f]/80 via-[#04140f]/20 to-transparent" />
                   {restaurant.isSample ? (
@@ -2097,7 +2181,17 @@ export function NaijaEatsPage() {
                     {restaurant.menuItems.slice(0, 2).map((item) => (
                       <li key={item.id} className="flex items-center justify-between gap-2 text-xs">
                         <span className="truncate font-semibold">{item.name}</span>
-                        <span className="shrink-0 font-bold text-primary">{koboToNaira(item.priceKobo)}</span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <span className="font-bold text-primary">{koboToNaira(item.priceKobo)}</span>
+                          <button
+                            type="button"
+                            onClick={() => addItem(restaurant, item)}
+                            aria-label={`Add ${item.name} to order`}
+                            className="grid h-7 w-7 place-items-center rounded-full bg-primary text-white"
+                          >
+                            +
+                          </button>
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -2114,7 +2208,7 @@ export function NaijaEatsPage() {
                 <UtensilsCrossed className="h-5 w-5" aria-hidden="true" />
               </span>
               <h3 className="mt-3 font-display text-xl font-extrabold">Run a kitchen?</h3>
-              <p className="mt-1 text-xs leading-relaxed text-white/75">
+              <p className="mt-1 text-xs leading-relaxed text-white/90">
                 Publish your menu, take orders and get paid through NaijaDeals. Verification comes first; dispatch
                 switches on per kitchen.
               </p>
@@ -2125,6 +2219,63 @@ export function NaijaEatsPage() {
           </article>
         </div>
       </section>
+
+      {cartCount > 0 ? (
+        <section aria-label="Your order" className="rounded-2xl border border-primary/30 bg-canvas p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display text-lg font-extrabold">Your order</h2>
+            <span className="text-xs font-bold text-muted">{cartCount} item{cartCount === 1 ? "" : "s"} · {koboToNaira(cartTotal)}</span>
+          </div>
+          <ul className="mt-3 divide-y divide-border-soft">
+            {cartLines.map(([id, line]) => (
+              <li key={id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">{line.name}</span>
+                  <span className="text-xs text-muted">{koboToNaira(line.priceKobo)} each</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <button type="button" onClick={() => changeQuantity(id, -1)} aria-label={`Remove one ${line.name}`} className="grid h-8 w-8 place-items-center rounded-full border border-border-soft">−</button>
+                  <span className="w-6 text-center text-sm font-bold">{line.quantity}</span>
+                  <button type="button" onClick={() => changeQuantity(id, 1)} aria-label={`Add one ${line.name}`} className="grid h-8 w-8 place-items-center rounded-full border border-border-soft">+</button>
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <label className="text-xs font-bold uppercase tracking-wide text-muted">Name
+              <input value={checkout.contactName} onChange={(event) => setCheckout({ ...checkout, contactName: event.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+            </label>
+            <label className="text-xs font-bold uppercase tracking-wide text-muted">Phone
+              <input value={checkout.contactPhone} onChange={(event) => setCheckout({ ...checkout, contactPhone: event.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+            </label>
+            <label className="text-xs font-bold uppercase tracking-wide text-muted sm:col-span-2">Delivery address
+              <input value={checkout.deliveryAddress} onChange={(event) => setCheckout({ ...checkout, deliveryAddress: event.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+            </label>
+            <label className="text-xs font-bold uppercase tracking-wide text-muted sm:col-span-2">Notes for the kitchen (optional)
+              <input value={checkout.notes} onChange={(event) => setCheckout({ ...checkout, notes: event.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink" />
+            </label>
+          </div>
+
+          {payError ? <p role="alert" className="mt-3 rounded-lg border border-crimson/30 bg-crimson-soft p-2 text-xs font-bold text-[#991B1B]">{payError}</p> : null}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] text-muted">Paid from your NaijaPay balance. No delivery fee is charged in this build.</p>
+            <button
+              type="button"
+              onClick={() => void pay()}
+              disabled={paying || !checkout.contactName || !checkout.contactPhone || !checkout.deliveryAddress}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-extrabold text-white disabled:opacity-50"
+            >
+              {paying ? "Paying…" : `Pay ${koboToNaira(cartTotal)} with NaijaPay`}
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      <p className="text-center text-[10px] text-muted">
+        Food photography from Wikimedia Commons contributors (CC0 / CC BY / CC BY-SA).{" "}
+        <a href="/credits" className="font-bold text-primary underline">Photo credits</a>
+      </p>
     </div>
   );
 }
