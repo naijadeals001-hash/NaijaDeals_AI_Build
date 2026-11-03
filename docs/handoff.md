@@ -978,3 +978,18 @@ balanced opening-equity journal is dry-run only; no history rewritten. Phase 07 
 
 Environment: 3010 = clean worktree C:\Users\User\naijadeals-live, detached HEAD 941991d, same
 naijadeals_core database as authoritative checkout (branch naijashop-marketplace, HEAD 941991d).
+
+
+## Phase 07 correction prepared, not applied (2026-11-03)
+
+Traced fixture: transaction SEED-WALLET-FIXTURE credits the customer 2.5m and debits SYSTEM 2.5m in the
+ledger, but the SYSTEM stored available was never reduced. SYSTEM is the platform clearing/funding
+wallet. Proposed opening-equity reclassification is therefore not duplicate funding. The generator that
+created SEED-WALLET-FIXTURE is not present in this checkout, so it cannot be fixed here; the new
+lifetime regression suite guards new databases.
+
+LedgerAdjustment migration 20261103260000 adds an append-only PREPARED correction
+PHASE07-FIXTURE-FUNDING-20261103 (references and balanced journal; appliedAt null). Prepare is
+idempotent. Lifetime suite passes: non-negative wallets, one quarantined mismatch only, all ledger
+transaction groups balanced, single PREPARED correction. Isolated 3-wallet DB remains unavailable and
+unresolved. Phase 07 remains IN PROGRESS; correction is unapplied.

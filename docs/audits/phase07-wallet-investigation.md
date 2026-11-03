@@ -87,3 +87,53 @@ Phase 07 remains **IN PROGRESS**. Required decisions/evidence:
 2. supply the isolated database if the old 3-wallet detail is still required;
 3. live provider sandbox reconciliation;
 4. refund-fee policy.
+
+
+## Fixture trace and accounting basis (2026-11-03)
+
+The 2,500,000 kobo is the **SEED-WALLET-FIXTURE** transaction
+(`cmvzwmxzy002ev4uc0dgm4qck`, description "Local test fixture funding (not a real payment)"):
+
+- CREDIT customer wallet `cmvzwmxzq002bv4ucesyvsyv8` +2,500,000 ("Fixture balance credited to test customer")
+- DEBIT SYSTEM wallet `cmvzwmxzx002cv4ucop26i63c` 2,500,000 ("Fixture funding source")
+
+The transaction group is balanced. The defect is that the **stored SYSTEM wallet was not decremented**
+when the fixture credited the customer balance. The SYSTEM wallet is the single platform
+clearing/funding account, not a customer or vendor wallet; it currently holds only the 1,940,000 from
+two NaijaEats order credits.
+
+The proposed 2,500,000 credit to SYSTEM is therefore **not duplicate funding**: the customer credit
+already exists and is unchanged; the credit only reclassifies the one-sided SYSTEM source debit to
+FIXTURE_EQUITY. No second customer credit is created.
+
+Fixture-generation source: a repository search found no code containing `SEED-WALLET-FIXTURE` or
+"Fixture funding source"; the generating path is not in this checkout (likely external/isolated seed).
+It therefore cannot be corrected here. The new lifetime reconciliation regression is the guard against
+a new database reproducing the mismatch.
+
+## Append-only correction prepared (unapplied)
+
+- Table: `LedgerAdjustment` (migration `20261103260000_ledger_adjustment`), unique `adjustmentKey`.
+- Key: `PHASE07-FIXTURE-FUNDING-20261103`
+- Status: **PREPARED**, `appliedAt = null`
+- References: SYSTEM wallet, earliest ledger entry, fixture transaction and reference, customer credit
+  ledger entry, stored/ledger/difference amounts.
+- Rerun `scripts/phase07-prepare-adjustment.ts`: second run returns `already_prepared`, no duplicate row.
+- No ledger entry or wallet balance was written.
+
+## Lifetime regression suite
+
+`scripts/phase07-lifetime-reconciliation-tests.ts` checks: non-negative wallets; only the known
+quarantined wallet may mismatch (and only one); every ledger transaction group has equal debits and
+credits; at most one correction row; correction remains PREPARED. Current result: **PASS**.
+
+## Isolated database
+
+Not available in this environment. The three historical IDs remain recorded as **unresolved historical
+evidence**; they are not in the current 10-wallet database and were not recreated.
+
+## Exact preview runtime
+
+Port 3010 is served from `C:\Users\User\naijadeals-live`, detached at the commit recorded below
+(after syncing this evidence commit). It uses the same `naijadeals_core` PostgreSQL database as the
+authoritative checkout. The SHA is recorded in the handoff at the time of this write.

@@ -1092,3 +1092,16 @@ model StorefrontConfig {
   updatedBy String?
   updatedAt DateTime @updatedAt
 }
+
+
+/// Append-only, unapplied financial correction prepared for review.
+model LedgerAdjustment {
+  id            String    @id @default(cuid())
+  adjustmentKey String    @unique
+  status        String    @default("PREPARED")
+  journal       Json
+  references    Json
+  preparedBy    String
+  preparedAt    DateTime  @default(now())
+  appliedAt     DateTime?
+}
