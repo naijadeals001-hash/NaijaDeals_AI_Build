@@ -58,12 +58,12 @@ phases (00–20) plus 10 advisory Part M workstreams. No phase status was upgrad
 - REA 6.8.0 verified: registration aligned, 229 tools, skill 8/8 file hashes match, browser CDP captures executed, JADX/apktool/adb executed against a real APK
 - ECC 2.2.3 discovered and inventoried (120 skills, 68 agents, 94 commands); Soup router executed and registered as an MCP server
 - Evidence and hashes recorded in `docs/reference-and-tooling-evidence.md`
+- Domain-to-skill selection recorded in `docs/skills-selection.md` (Soup output + explicit fallbacks for router gaps)
 - Repository audit complete: `docs/audits/` (file, playbook, architecture, module, admin, requirements, tooling, next actions)
 
 **Blocked:**
 - No genuine Uber/Bolt APK available (the `taxify-driver.apk` in the reference folder is Aptoide `cm.aptoide.pt` 10.0.0), so competitor Android analysis is unverified
 - No Android device or emulator attached
-- Skills selection per domain not yet documented as a project rule set
 - Disposable failing CI check not demonstrated
 - Test coverage baseline not established
 
