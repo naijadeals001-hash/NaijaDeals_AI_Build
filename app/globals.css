@@ -75,3 +75,12 @@ a {
   background-image: radial-gradient(circle at 2px 2px, rgba(0, 109, 56, 0.05) 1px, transparent 0);
   background-size: 24px 24px;
 }
+
+
+/* High-contrast / forced-colors: keep the tested brand surfaces instead of the
+   UA flattening image overlays and status pills into unreadable system colours. */
+@media (forced-colors: active) {
+  [data-forced-colors="preserve"] {
+    forced-color-adjust: none;
+  }
+}

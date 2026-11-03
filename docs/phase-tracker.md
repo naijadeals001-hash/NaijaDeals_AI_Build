@@ -81,7 +81,13 @@ refined trust/partner sections, `/drive` → `/naijadrive` redirect; see `docs/d
 **02A/02C evidence (2026-11-03):** axe-core WCAG A/AA audit is clean on 15 routes (desktop +
 mobile); contrast tokens measured (amber dot raised to 5.02:1), sidebar sign-in target raised to
 36 px, and the Leaflet map is now a labelled region instead of `aria-hidden` with focusable
-controls. 02B (map/dialog keyboard flows) and 02D (screen-reader/RTL/forced-colors) remain open.
+controls.
+
+**02B/02D evidence (2026-11-03):** Arabic RTL renders correctly with zero axe violations at 1440
+and no overflow at 320; 200 % text resize does not overflow; forced-colors mode was fixed with
+`forced-color-adjust` on brand surfaces (it previously produced white-on-white text); the Leaflet
+map pans with arrow keys. Remaining: a manual NVDA/VoiceOver pass and dialog focus traps when
+dialogs are introduced.
 
 **Required per playbook:**
 - Research Uber/Bolt ecosystem navigation and commerce/dashboard references through REA

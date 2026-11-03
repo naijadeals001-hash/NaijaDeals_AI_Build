@@ -252,6 +252,16 @@ heading order and image alts are clean; no horizontal overflow at 390 px. Full e
 `docs/audits/deepseek-accessibility-02a-02c.md`. 02B keyboard flows and 02D screen-reader/RTL
 checks remain open.
 
+## Accessibility pass 02B/02D (2026-11-03)
+
+Arabic RTL verified end to end (dir/lang, mirrored layout, 0 axe violations, no overflow at 1440
+or 320 px); 200 % text resize and 320 px reflow both pass without horizontal scrolling; the
+Leaflet map is keyboard-pannable (ArrowRight moves the map pane 80 px). Forced-colors mode
+initially broke the hero (white text on flattened backgrounds) and is fixed by opting brand
+surfaces out with `forced-color-adjust` under `@media (forced-colors: active)`. Semantic tree:
+header/nav ×3/main/footer/aside, zero unnamed controls. Evidence:
+`docs/audits/deepseek-accessibility-02b-02d.md`. A manual screen-reader pass remains.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

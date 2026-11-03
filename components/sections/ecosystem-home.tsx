@@ -49,7 +49,7 @@ function Hero() {
   const liveCount = verticals.filter((vertical) => vertical.status === "live").length;
 
   return (
-    <section className="relative isolate overflow-hidden rounded-[28px] bg-[#04140f] text-white shadow-[0_30px_80px_-40px_rgba(4,20,15,0.9)]">
+    <section data-forced-colors="preserve" className="relative isolate overflow-hidden rounded-[28px] bg-[#04140f] text-white shadow-[0_30px_80px_-40px_rgba(4,20,15,0.9)]">
       <img
         src="/real-photography/hero-ecosystem.jpg"
         alt="A warm Lagos evening with NaijaDeals delivering food, rides and payments"
@@ -230,6 +230,7 @@ function StatusPill({ vertical, onImage = false }: { vertical: Vertical; onImage
 
   return (
     <span
+      data-forced-colors="preserve"
       className={[
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide",
         onImage ? "bg-[#04140f]/80 text-white backdrop-blur" : "border border-border-soft bg-canvas text-ink"
@@ -328,7 +329,7 @@ function WalletBand() {
   const drive = verticals.find((vertical) => vertical.key === "drive");
 
   return (
-    <section className="overflow-hidden rounded-[28px] bg-[#0b1a13] text-white">
+    <section data-forced-colors="preserve" className="overflow-hidden rounded-[28px] bg-[#0b1a13] text-white">
       <div className="grid gap-6 p-5 sm:p-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-primary-live">{wallet?.name ?? "NaijaPay"}</p>
@@ -427,7 +428,7 @@ function PartnerBand() {
   const { t } = useLocale();
 
   return (
-    <section className="relative overflow-hidden rounded-[28px] bg-night px-5 py-8 text-white sm:px-8">
+    <section data-forced-colors="preserve" className="relative overflow-hidden rounded-[28px] bg-night px-5 py-8 text-white sm:px-8">
       <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" aria-hidden="true" />
       <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="max-w-xl">
