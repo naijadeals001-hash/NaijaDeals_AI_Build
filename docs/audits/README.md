@@ -36,7 +36,7 @@ npx tsx scripts/phase07-backfill-preview.ts   # dry run only, writes nothing
 1. **Reconciliation backfill** — 3 of 37 wallets differ from their ledger net; a reviewed backfill (and a decision on the counter-account) is required. No history was rewritten.
 2. **Provider sandbox delivery** — no live Paystack/Flutterwave credentials; signature verification is covered synthetically.
 3. **Refund fee policy** — recorded in `docs/decisions.md`; the 1% policy is unverified and unchanged.
-4. **GitHub preservation** — `gh` is not logged in; push exits 128 and the remote stays at `d28a6be`. Local backup remote and bundle are current.
+4. **GitHub preservation** — resolved: authorized token pushed `naijashop-marketplace`; remote verified at `c576e56c9d2fa3807086630484abfa2a3f9fa76c` (commit above is the pre-doc head).
 
 ## Runtime
 

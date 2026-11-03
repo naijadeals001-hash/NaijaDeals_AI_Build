@@ -754,3 +754,12 @@ docs/audits/README.md now indexes phase status, evidence commands, blockers and 
 scripts/phase07-backfill-preview.ts is a dry run that proposes balanced reconciliation entries for the
 three mismatched wallets using a new SYSTEM reconciliation counter-account; it writes nothing and
 needs human approval. Phase 07 remains IN PROGRESS.
+
+
+## GitHub preservation verified (2026-11-03)
+
+An authorized token was added to .env.txt (value never printed or committed). The token authenticates
+as **naijadeals001-hash** with push permission on naijadeals001-hash/NaijaDeals_AI_Build. The branch
+naijashop-marketplace pushed successfully and the remote ref resolved to
+**c576e56c9d2fa3807086630484abfa2a3f9fa76c**. CI runs tests only; no deployment workflow is triggered by
+this branch.
