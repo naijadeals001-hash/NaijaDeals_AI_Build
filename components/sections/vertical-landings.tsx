@@ -21,7 +21,6 @@ export function NaijaStayLanding() {
       description="NaijaStay lists accommodation with power, safety and access details recorded up front. Booking opens only when verified properties, calendars and host payouts are connected."
       chips={["Verified hosts", "Escrow-protected", "Honest setup state"]}
       image={{ src: "/brand-photography/stay-waterfront-apartment.jpg", alt: "Brand illustration of a Lagos waterfront apartment at golden hour" }}
-      secondaryImage={{ src: "/brand-photography/stay-courtyard-villa.jpg", alt: "Brand illustration of a courtyard villa with a pool at twilight" }}
       features={[
         { icon: BadgeCheck, title: "Verified properties", body: "Power, safety and access are recorded before a stay is published." },
         { icon: ShieldCheck, title: "Escrow hold", body: "Stay payments follow the same held-funds release rules as NaijaShop." },
@@ -54,7 +53,6 @@ export function NaijaStreamLanding() {
       description="NaijaStream is built for charts, creator rooms and licensed audio. Playback stays off until music licensing and a streaming provider are actually connected."
       chips={["Licensed catalogue", "Creator rooms", "Honest setup state"]}
       image={{ src: "/brand-photography/stream-studio-lagos.jpg", alt: "Brand illustration of a singer recording in a Lagos studio" }}
-      secondaryImage={{ src: "/brand-photography/stream-rooftop-lagos.jpg", alt: "Brand illustration of a listener with headphones on a Lagos rooftop at sunset" }}
       features={[
         { icon: Music2, title: "Licensed catalogue", body: "Tracks are listed only with a licence that covers the market they play in." },
         { icon: Sparkles, title: "Creator rooms", body: "Artists can host rooms and releases from the same NaijaDeals account." },
@@ -87,7 +85,6 @@ export function AuraAiLanding() {
       description="Aura helps across shopping, delivery and rides when a model provider and data policy are configured. Without them it stays off instead of inventing answers."
       chips={["Grounded answers", "Permission-aware", "Honest offline state"]}
       image={{ src: "/brand-photography/aura-concierge-lagos.jpg", alt: "Brand illustration of a customer using an AI concierge on her phone" }}
-      secondaryImage={{ src: "/brand-photography/aura-orb-lagos.jpg", alt: "Brand illustration of a glowing assistant orb overlooking Lagos at night" }}
       features={[
         { icon: Zap, title: "Grounded answers", body: "Responses are limited to records the requesting account can actually see." },
         { icon: ShieldCheck, title: "Permission-aware", body: "Aura cannot read another account's orders, wallet or admin data." },

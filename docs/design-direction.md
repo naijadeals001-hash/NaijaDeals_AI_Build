@@ -234,3 +234,10 @@ was removed. It duplicated the module rail directly beneath the hero, introduced
 scrollbar at narrow widths, and added a second switcher to a search-first hero. The hero now reads
 badges → headline → description → search → two CTAs → trust row, with navigation handled by the
 header sub-nav and the ten-tile module rail.
+
+
+**Full-bleed blended heroes (2026-11-03, owner feedback):** every vertical landing now uses one
+full-bleed photograph blended into the dark surface with a left-weighted gradient — matching the
+NaijaDrive header — instead of the earlier split panel with a floating secondary thumbnail. The
+shared `ModuleLanding` drives NaijaStay, NaijaStream, Aura AI, NaijaGigs, NaijaEats, NaijaFresh and
+NaijaSend; each page now has exactly one hero image.

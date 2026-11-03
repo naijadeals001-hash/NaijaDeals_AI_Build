@@ -429,6 +429,9 @@ export const apiClient = {
     requestJson<Record<string, unknown>>(`/api/admin/products/${id}/moderate`, { method: "POST", body: JSON.stringify({ status, note }) }),
   adminPayments: () => requestJson<Array<Record<string, unknown>>>("/api/admin/payments"),
   adminCountries: () => requestJson<Array<Record<string, unknown>>>("/api/admin/countries"),
+  adminCities: () => requestJson<Array<Record<string, unknown>>>("/api/admin/cities"),
+  adminUpdateCity: (countryCode: string, city: string, enabled: boolean) =>
+    requestJson<Record<string, unknown>>("/api/admin/cities", { method: "PATCH", body: JSON.stringify({ countryCode, city, enabled }) }),
   adminUpdateCountry: (code: string, enabled: boolean, deliveryEnabled: boolean) =>
     requestJson<Record<string, unknown>>("/api/admin/countries", { method: "PATCH", body: JSON.stringify({ code, enabled, deliveryEnabled }) }),
   adminProducts: () => requestJson<Array<Record<string, unknown>>>("/api/admin/products"),

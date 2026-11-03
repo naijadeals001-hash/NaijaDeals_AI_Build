@@ -823,3 +823,17 @@ model CountrySetting {
   updatedById     String?
   updatedAt       DateTime @updatedAt
 }
+
+/// City-level activation overrides used for onboarding and staff scopes.
+model CitySetting {
+  id              String   @id @default(cuid())
+  countryCode     String
+  code            String
+  name            String
+  enabled         Boolean  @default(false)
+  updatedById     String?
+  updatedAt       DateTime @updatedAt
+
+  @@unique([countryCode, code])
+  @@index([countryCode])
+}

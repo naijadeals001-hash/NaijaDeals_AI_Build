@@ -1830,6 +1830,8 @@ function CountryActivation({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState("");
+  const [cities, setCities] = useState<Array<Record<string, unknown> & { countryCode: string; city: string; code: string; enabled: boolean; source: string }>>([]);
+  const [cityBusy, setCityBusy] = useState("");
 
   useEffect(() => {
     if (!isSuperAdmin) return;
@@ -1837,12 +1839,14 @@ function CountryActivation({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     setLoading(true);
     apiClient
       .adminCountries()
-      .then((data) => {
+      .then(async (data) => {
         if (cancelled) return;
         const typed = data as unknown as CountryRow[];
         setRows(typed);
         setDraft(Object.fromEntries(typed.map((row) => [row.code, { enabled: row.enabled, deliveryEnabled: row.deliveryEnabled }])));
         setLoading(false);
+        const cityData = (await apiClient.adminCities()) as unknown as typeof cities;
+        if (!cancelled) setCities(cityData);
       })
       .catch((caught) => {
         if (cancelled) return;
@@ -1853,6 +1857,23 @@ function CountryActivation({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       cancelled = true;
     };
   }, [isSuperAdmin]);
+
+  async function toggleCity(entry: { countryCode: string; city: string; enabled: boolean }) {
+    const key = entry.countryCode + ":" + entry.city;
+    setCityBusy(key);
+    setMessage("");
+    setError("");
+    try {
+      await apiClient.adminUpdateCity(entry.countryCode, entry.city, !entry.enabled);
+      const data = (await apiClient.adminCities()) as unknown as typeof cities;
+      setCities(data);
+      setMessage(`${entry.city} availability saved.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update city availability.");
+    } finally {
+      setCityBusy("");
+    }
+  }
 
   async function save(row: CountryRow) {
     const next = draft[row.code];
@@ -1950,6 +1971,51 @@ function CountryActivation({ isSuperAdmin }: { isSuperAdmin: boolean }) {
           </table>
         </div>
       )}
+
+      <div className="border-t border-[#21262D] px-4 py-4">
+        <h3 className="text-sm font-extrabold text-[#F0F6FC]">City availability</h3>
+        <p className="mt-1 text-xs leading-relaxed text-[#8B949E]">
+          Controls whether a city can be selected for onboarding or staff scope. Cities without a saved override follow
+          the country's delivery readiness.
+        </p>
+        <div className="mt-3 max-h-64 overflow-y-auto rounded-xl border border-[#21262D]">
+          <table className="w-full min-w-[480px] text-left text-sm">
+            <thead className="sticky top-0 bg-[#0B0E14] text-[10px] uppercase tracking-wide text-[#8B949E]">
+              <tr>
+                <th scope="col" className="px-3 py-2 font-bold">Country</th>
+                <th scope="col" className="px-3 py-2 font-bold">City</th>
+                <th scope="col" className="px-3 py-2 font-bold">Available</th>
+                <th scope="col" className="px-3 py-2 font-bold">Source</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#21262D]">
+              {cities.map((entry) => {
+                const key = entry.countryCode + ":" + entry.city;
+                return (
+                  <tr key={key}>
+                    <td className="px-3 py-2 text-xs text-[#8B949E]">{entry.countryCode}</td>
+                    <td className="px-3 py-2 text-xs font-semibold">{entry.city}</td>
+                    <td className="px-3 py-2">
+                      <label className="inline-flex items-center gap-2 text-xs font-semibold">
+                        <input
+                          type="checkbox"
+                          aria-label={`${entry.city} available`}
+                          checked={Boolean(entry.enabled)}
+                          disabled={cityBusy === key}
+                          onChange={() => void toggleCity(entry)}
+                          className="h-4 w-4 accent-[#00E676]"
+                        />
+                        {entry.enabled ? "On" : "Off"}
+                      </label>
+                    </td>
+                    <td className="px-3 py-2 text-[11px] text-[#8B949E]">{entry.source === "database" ? "Saved" : "Config"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </Panel>
   );
 }

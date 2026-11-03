@@ -127,6 +127,13 @@ dialogs are introduced.
 | Sensitive changes create audit events | PASS — moderation, order status, refund and dispute rows carry before/after metadata |
 | Admin usable on smaller screens | PASS — 390×844: 0 document overflow, tables scroll inside their container, navigation available, axe 0 |
 
+- City activation (2026-11-03): `CitySetting` overrides with a `/api/admin/cities` API, a city
+  availability table in Settings, audited `city.updated` rows, and enforcement in staff scope
+  assignment (assigning a non-activated city returns **409 city_not_activated**). Verified by
+  activating Accra, assigning a GH/Accra scope (200), and rejecting GH/Kumasi (409).
+- Role-assignment UI and dispute resolution are covered in the handoff; the previously listed
+  coverage gaps are closed.
+
 **Still open for a Phase 05 PASS (WORK coverage, not exit gate):**
 - City-level activation (country activation shipped)
 - Phase 05 acceptance run (2026-11-03, fresh isolated database): admin security **19/19**,

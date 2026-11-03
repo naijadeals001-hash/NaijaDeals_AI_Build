@@ -464,6 +464,17 @@ axe is 0, and attempting a release on already-released escrow returns **409
 releasable a second time. Dismissal is deliberately not exposed (the order status machine cannot
 restore an arbitrary pre-dispute status).
 
+**City activation (same pass):** `CitySetting` rows override the configured city list for onboarding
+and staff scopes. Settings now shows a "City availability" table (country, city, on/off, config vs
+saved) with immediate saves, and every change writes a `city.updated` audit row with before/after.
+Role scope assignment validates the city: GH/Accra succeeded only after Accra was activated, while
+GH/Kumasi returned **409 `city_not_activated`**. Verified with axe 0 and state restored afterwards.
+
+**Blended landing heroes (owner feedback):** all seven vertical landings now use a single full-bleed
+hero image blended into the dark surface, matching the NaijaDrive header; the split panel and
+floating secondary thumbnails were removed. Each page reports exactly one hero image, axe 0 and no
+overflow.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

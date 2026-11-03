@@ -14,7 +14,6 @@ export interface ModuleLandingProps {
   description: string;
   chips: string[];
   image: { src: string; alt: string };
-  secondaryImage?: { src: string; alt: string };
   features: ModuleLandingFeature[];
   status: { title: string; body: string };
   primaryCta: { label: string; href: string };
@@ -26,8 +25,9 @@ export interface ModuleLandingProps {
  * Shared landing surface for ecosystem verticals.
  *
  * The structure follows the reference mobility super-app we re-engineered with
- * REA (hero → services/features → earn/partner band → honest setup state), while
- * every claim stays backed by this build's real configuration state.
+ * REA (hero → services/features → earn/partner band → honest setup state). The
+ * hero is one full-bleed photograph blended into the dark surface, matching the
+ * NaijaDrive header rather than a split two-image panel.
  */
 export function ModuleLanding({
   name,
@@ -36,7 +36,6 @@ export function ModuleLanding({
   description,
   chips,
   image,
-  secondaryImage,
   features,
   status,
   primaryCta,
@@ -45,9 +44,20 @@ export function ModuleLanding({
 }: ModuleLandingProps) {
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-3xl border border-border-soft bg-[#04140f] text-white">
-        <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="p-6 sm:p-9">
+      <section className="relative isolate overflow-hidden rounded-3xl bg-[#04140f] text-white shadow-[0_30px_80px_-40px_rgba(4,20,15,0.9)]">
+        <img
+          src={image.src}
+          alt={image.alt}
+          width={1536}
+          height={1024}
+          fetchPriority="high"
+          className="absolute inset-0 h-full w-full object-cover object-[72%_center]"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(3,16,12,0.98)_0%,rgba(3,16,12,0.93)_34%,rgba(3,16,12,0.6)_60%,rgba(3,16,12,0.12)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,16,12,0.45)_0%,transparent_45%,rgba(3,16,12,0.92)_100%)]" />
+
+        <div className="relative flex min-h-[520px] flex-col justify-end px-5 pb-7 pt-12 sm:px-8 sm:pb-9 lg:min-h-[560px] lg:px-12 lg:pb-11 lg:pt-14">
+          <div className="max-w-2xl">
             <p className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide backdrop-blur">
               <Icon className="h-3.5 w-3.5" aria-hidden="true" />
               {name}
@@ -70,26 +80,6 @@ export function ModuleLanding({
                 </Link>
               ) : null}
             </div>
-          </div>
-          <div className="relative min-h-[260px] lg:min-h-full">
-            <img
-              src={image.src}
-              alt={image.alt}
-              width={1280}
-              height={960}
-              className="absolute inset-0 h-full w-full object-cover"
-              fetchPriority="high"
-            />
-            {secondaryImage ? (
-              <img
-                src={secondaryImage.src}
-                alt={secondaryImage.alt}
-                width={640}
-                height={480}
-                className="absolute bottom-3 right-3 hidden h-28 w-40 rounded-xl border border-white/20 object-cover shadow-lift sm:block"
-              />
-            ) : null}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#04140f] via-[#04140f]/20 to-transparent lg:from-[#04140f]/80" />
           </div>
         </div>
       </section>

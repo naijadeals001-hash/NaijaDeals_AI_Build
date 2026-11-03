@@ -44,6 +44,7 @@ import {
   type ApiProduct,
   type CheckoutResult
 } from "@/lib/api-client";
+import { ModuleLanding } from "@/components/sections/module-landing";
 
 function ErrorBox({ message, action }: { message: string; action?: React.ReactNode }) {
   return (
@@ -1840,245 +1841,88 @@ export function AdminOpsPage() {
 }
 
 export function NaijaEatsPage() {
-  const capabilities = [
-    { icon: ShieldCheck, title: "Escrow-protected", body: "Food orders follow the same verified payment and release rules as NaijaShop." },
-    { icon: Truck, title: "Tracked dispatch", body: "Pickup and delivery events are recorded by the assigned courier." },
-    { icon: UtensilsCrossed, title: "No fake kitchens", body: "No restaurant is listed until its menu and dispatch partner are connected." }
-  ];
   return (
-    <div className="space-y-5">
-      <section className="overflow-hidden rounded-3xl border border-border-soft bg-[#04140f] text-white">
-        <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="p-6 sm:p-9">
-            <p className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide backdrop-blur">
-              <UtensilsCrossed className="h-3.5 w-3.5" aria-hidden="true" />
-              NaijaEats
-            </p>
-            <h1 className="mt-4 font-display text-3xl font-extrabold leading-tight sm:text-4xl">
-              Order food for delivery, once the kitchen is connected
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/75">
-              NaijaEats is the food vertical of the same account you use for shopping and rides. Ordering stays
-              disabled until restaurant credentials, menus and dispatch partners are actually connected — no
-              simulated restaurants and no fake delivery times.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2 text-xs font-bold">
-              <span className="rounded-full bg-white/10 px-3 py-1.5">Same NaijaDeals account</span>
-              <span className="rounded-full bg-white/10 px-3 py-1.5">Escrow-protected</span>
-              <span className="rounded-full bg-white/10 px-3 py-1.5">Honest setup state</span>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-2">
-              <Link href="/naijashop" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-extrabold text-[#04140f]">
-                Browse NaijaShop
-                <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
-              </Link>
-              <Link href="#eats-status" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/25 px-4 text-sm font-bold text-white">
-                See setup status
-              </Link>
-            </div>
-          </div>
-          <div className="relative min-h-[260px] lg:min-h-full">
-            <img
-              src="/brand-photography/eats-jollof-delivery.jpg"
-              alt="Brand illustration of a NaijaEats courier holding a delivery bag with jollof rice, grilled chicken and plantain"
-              width={1280}
-              height={1255}
-              className="absolute inset-0 h-full w-full object-cover"
-              fetchPriority="high"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#04140f] via-[#04140f]/20 to-transparent lg:from-[#04140f]/80" />
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        {capabilities.map((entry) => {
-          const Icon = entry.icon;
-          return (
-            <div key={entry.title} className="rounded-2xl border border-border-soft bg-canvas p-4">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary-soft text-primary">
-                <Icon className="h-4 w-4" aria-hidden="true" />
-              </span>
-              <p className="mt-2 text-sm font-extrabold">{entry.title}</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted">{entry.body}</p>
-            </div>
-          );
-        })}
-      </section>
-
-      <section id="eats-status" className="rounded-2xl border border-border-soft bg-canvas p-5">
-        <h2 className="font-display text-lg font-extrabold">Setup status</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted">
-          Food ordering is not configured in this environment. There are no restaurant credentials, menus or dispatch
-          partners connected, so ordering is disabled rather than simulated.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/help" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white">
-            Read how setup works
-            <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
-          </Link>
-          <Link href="/naijashop" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border-soft px-4 text-sm font-bold">
-            Browse NaijaShop
-          </Link>
-        </div>
-      </section>
-    </div>
+    <ModuleLanding
+      name="NaijaEats"
+      icon={UtensilsCrossed}
+      headline="Order food for delivery, once the kitchen is connected"
+      description="NaijaEats is the food vertical of the same account you use for shopping and rides. Ordering stays disabled until restaurant credentials, menus and dispatch partners are connected — no simulated restaurants and no fake delivery times."
+      chips={["Same NaijaDeals account", "Escrow-protected", "Honest setup state"]}
+      image={{
+        src: "/brand-photography/eats-jollof-delivery.jpg",
+        alt: "Brand illustration of a NaijaEats courier holding a delivery bag with jollof rice, grilled chicken and plantain"
+      }}
+      features={[
+        { icon: ShieldCheck, title: "Escrow-protected", body: "Food orders follow the same verified payment and release rules as NaijaShop." },
+        { icon: Truck, title: "Tracked dispatch", body: "Pickup and delivery events are recorded by the assigned courier." },
+        { icon: UtensilsCrossed, title: "No fake kitchens", body: "No restaurant is listed until its menu and dispatch partner are connected." }
+      ]}
+      status={{
+        title: "Setup status",
+        body: "Food ordering is not configured in this environment. There are no restaurant credentials, menus or dispatch partners connected, so ordering is disabled rather than simulated."
+      }}
+      primaryCta={{ label: "Browse NaijaShop", href: "/naijashop" }}
+      secondaryCta={{ label: "How setup works", href: "/help" }}
+    />
   );
 }
-
 export function NaijaFreshPage() {
-  const capabilities = [
-    { icon: Store, title: "Verified vendors", body: "Market sellers pass onboarding before their produce is listed." },
-    { icon: ShieldCheck, title: "Escrow-protected", body: "Produce is paid through the same held-funds flow as NaijaShop." },
-    { icon: ShoppingBasket, title: "Honest availability", body: "No stock, price or delivery slot is invented while the vertical is unconfigured." }
-  ];
   return (
-    <div className="space-y-5">
-      <section className="overflow-hidden rounded-3xl border border-border-soft bg-[#04140f] text-white">
-        <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="p-6 sm:p-9">
-            <p className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide backdrop-blur">
-              <ShoppingBasket className="h-3.5 w-3.5" aria-hidden="true" />
-              NaijaFresh
-            </p>
-            <h1 className="mt-4 font-display text-3xl font-extrabold leading-tight sm:text-4xl">
-              Fresh groceries from Lagos markets, once vendors are connected
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/75">
-              NaijaFresh is the grocery vertical of your NaijaDeals account. Market vendors, catalogue and delivery
-              slots are not connected yet, so ordering stays disabled — no invented produce, prices or delivery times.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2 text-xs font-bold">
-              <span className="rounded-full bg-white/10 px-3 py-1.5">Same NaijaDeals account</span>
-              <span className="rounded-full bg-white/10 px-3 py-1.5">Vendor-verified produce</span>
-              <span className="rounded-full bg-white/10 px-3 py-1.5">Honest setup state</span>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-2">
-              <Link href="/naijashop" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-extrabold text-[#04140f]">
-                Browse NaijaShop
-                <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
-              </Link>
-              <Link href="#fresh-status" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/25 px-4 text-sm font-bold text-white">
-                See setup status
-              </Link>
-            </div>
-          </div>
-          <div className="relative min-h-[260px] lg:min-h-full">
-            <img
-              src="/brand-photography/fresh-market-groceries.jpg"
-              alt="Brand illustration of a Lagos market vendor filling a NaijaFresh bag with tomatoes, okra, greens and plantain"
-              width={1280}
-              height={1581}
-              className="absolute inset-0 h-full w-full object-cover"
-              fetchPriority="high"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#04140f] via-[#04140f]/20 to-transparent lg:from-[#04140f]/80" />
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        {capabilities.map((entry) => {
-          const Icon = entry.icon;
-          return (
-            <div key={entry.title} className="rounded-2xl border border-border-soft bg-canvas p-4">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary-soft text-primary">
-                <Icon className="h-4 w-4" aria-hidden="true" />
-              </span>
-              <p className="mt-2 text-sm font-extrabold">{entry.title}</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted">{entry.body}</p>
-            </div>
-          );
-        })}
-      </section>
-
-      <section id="fresh-status" className="rounded-2xl border border-border-soft bg-canvas p-5">
-        <h2 className="font-display text-lg font-extrabold">Setup status</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted">
-          Grocery ordering is not configured in this environment. There are no market-vendor integrations, grocery
-          catalogues or delivery slots connected, so ordering is disabled rather than simulated.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/sell" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white">
-            Become a vendor
-            <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
-          </Link>
-          <Link href="/naijashop" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border-soft px-4 text-sm font-bold">
-            Browse NaijaShop
-          </Link>
-        </div>
-      </section>
-    </div>
+    <ModuleLanding
+      name="NaijaFresh"
+      icon={ShoppingBasket}
+      headline="Fresh groceries from Lagos markets, once vendors are connected"
+      description="NaijaFresh is the grocery vertical of your NaijaDeals account. Market vendors, catalogue and delivery slots are not connected yet, so ordering stays disabled — no invented produce, prices or delivery times."
+      chips={["Same NaijaDeals account", "Vendor-verified produce", "Honest setup state"]}
+      image={{
+        src: "/brand-photography/fresh-market-groceries.jpg",
+        alt: "Brand illustration of a Lagos market vendor filling a NaijaFresh bag with tomatoes, okra, greens and plantain"
+      }}
+      features={[
+        { icon: Store, title: "Verified vendors", body: "Market sellers pass onboarding before their produce is listed." },
+        { icon: ShieldCheck, title: "Escrow-protected", body: "Produce is paid through the same held-funds flow as NaijaShop." },
+        { icon: ShoppingBasket, title: "Honest availability", body: "No stock, price or delivery slot is invented while the vertical is unconfigured." }
+      ]}
+      status={{
+        title: "Setup status",
+        body: "Grocery ordering is not configured in this environment. There are no market-vendor integrations, grocery catalogues or delivery slots connected, so ordering is disabled rather than simulated."
+      }}
+      primaryCta={{ label: "Become a vendor", href: "/sell" }}
+      secondaryCta={{ label: "Browse NaijaShop", href: "/naijashop" }}
+      partner={{
+        title: "Earn with NaijaFresh",
+        body: "Market vendors keep their own catalogue and payout account; produce goes live only after onboarding and a connected payout method.",
+        links: [
+          { label: "Become a vendor", href: "/sell" },
+          { label: "How setup works", href: "/help" }
+        ]
+      }}
+    />
   );
 }
-
 export function NaijaSendPage() {
-  const features = [
-    { icon: PackageCheck, title: "Recorded events", body: "Pickup, transit and delivery are server records — no simulated courier movement." },
-    { icon: ShieldCheck, title: "Escrow release", body: "Funds stay held until the buyer or admin confirms delivery." },
-    { icon: MapPin, title: "Lagos coverage", body: "City-wide courier assignment. External carrier credentials are not configured." }
-  ];
   return (
-    <div className="space-y-5">
-      <section className="overflow-hidden rounded-3xl border border-border-soft bg-canvas">
-        <div className="relative">
-          <img
-            src="/brand-photography/send-airport-logistics.jpg"
-            alt="Brand illustration of a green NaijaSend truck at the Murtala Muhammed airport cargo hub"
-            width={1536}
-            height={1024}
-            className="h-64 w-full object-cover sm:h-80"
-            fetchPriority="high"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#04140f]/90 via-[#04140f]/30 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-8">
-            <p className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide backdrop-blur">
-              <Truck className="h-3.5 w-3.5" aria-hidden="true" />
-              NaijaSend
-            </p>
-            <h1 className="mt-3 max-w-3xl font-display text-3xl font-extrabold leading-tight sm:text-4xl">
-              Send parcels across town, tracked at every step
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/80">
-              Marketplace delivery runs on the NaijaSend manual courier workflow: pickup, transit and delivery
-              events are recorded by the assigned courier, and escrow releases on confirmed delivery.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        {features.map((feature) => {
-          const Icon = feature.icon;
-          return (
-            <div key={feature.title} className="rounded-2xl border border-border-soft bg-canvas p-4">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary-soft text-primary">
-                <Icon className="h-4 w-4" aria-hidden="true" />
-              </span>
-              <p className="mt-2 text-sm font-extrabold">{feature.title}</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted">{feature.body}</p>
-            </div>
-          );
-        })}
-      </section>
-
-      <section className="rounded-2xl border border-border-soft bg-canvas p-5">
-        <h2 className="font-display text-lg font-extrabold">Current status</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted">
-          The manual courier workflow is live for marketplace orders. External carrier integrations are not
-          configured, so no third-party pickup promises are made and no parcel is marked delivered without a
-          recorded event.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/orders" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white">
-            Track an order
-            <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
-          </Link>
-          <Link href="/naijashop" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border-soft px-4 text-sm font-bold">
-            Browse NaijaShop
-          </Link>
-        </div>
-      </section>
-    </div>
+    <ModuleLanding
+      name="NaijaSend"
+      icon={Truck}
+      headline="Send parcels across town, tracked at every step"
+      description="Marketplace delivery runs on the NaijaSend manual courier workflow: pickup, transit and delivery events are recorded by the assigned courier, and escrow releases on confirmed delivery."
+      chips={["Recorded events", "Escrow-protected", "Lagos coverage"]}
+      image={{
+        src: "/brand-photography/send-airport-logistics.jpg",
+        alt: "Brand illustration of a green NaijaSend truck at the Murtala Muhammed airport cargo hub"
+      }}
+      features={[
+        { icon: PackageCheck, title: "Recorded events", body: "Pickup, transit and delivery are server records — no simulated courier movement." },
+        { icon: ShieldCheck, title: "Escrow release", body: "Funds stay held until the buyer or admin confirms delivery." },
+        { icon: MapPin, title: "Lagos coverage", body: "City-wide courier assignment. External carrier credentials are not configured." }
+      ]}
+      status={{
+        title: "Setup status",
+        body: "The manual courier workflow is live for marketplace orders. External carrier integrations are not configured, so no third-party pickup promise is made and no parcel is marked delivered without a recorded event."
+      }}
+      primaryCta={{ label: "Track an order", href: "/orders" }}
+      secondaryCta={{ label: "Browse NaijaShop", href: "/naijashop" }}
+    />
   );
 }

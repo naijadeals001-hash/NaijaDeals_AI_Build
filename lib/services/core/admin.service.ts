@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/auth/guard";
 import type { SessionUser } from "@/lib/auth/session";
 import { hasPermission, unheldPermissions } from "@/lib/auth/permissions";
 import { recordAudit } from "./audit.service";
+import { isCityActivated } from "./city.service";
 import { recordSystemEvent } from "./event.service";
 import { updateDeliveryStatus } from "./delivery.service";
 import { updateOrderStatus } from "./order.service";
@@ -474,6 +475,13 @@ export async function setUserRoles(input: {
   const unknown = requested.filter((role) => !ROLE_NAMES.includes(role));
   if (unknown.length > 0) {
     throw new ApiError(400, "unknown_role", `Unknown role: ${unknown.join(", ")}.`);
+  }
+
+  if (input.scopeCountryCode && input.scopeCityCode) {
+    const activated = await isCityActivated(input.scopeCountryCode, input.scopeCityCode);
+    if (!activated) {
+      throw new ApiError(409, "city_not_activated", `${input.scopeCityCode} is not activated for ${input.scopeCountryCode}.`);
+    }
   }
 
   const escalated = unheldPermissions(input.actor, requested);
