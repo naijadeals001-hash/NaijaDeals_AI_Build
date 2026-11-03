@@ -17,7 +17,18 @@ export async function openDispute(input: { actorId: string; orderId: string; rea
     await tx.order.update({ where: { id: order.id }, data: { status: "disputed" } });
     if (order.escrowHolds[0]) await tx.escrowHold.update({ where: { id: order.escrowHolds[0].id }, data: { status: "disputed" } });
     await recordSystemEvent({ tx, type: "dispute.opened", actorId: input.actorId, entity: "Dispute", entityId: dispute.id, payload: { orderId: order.id } });
-    await recordAudit({ tx, actorId: input.actorId, action: "dispute.opened", entity: "Dispute", entityId: dispute.id, metadata: { orderId: order.id } });
+    await recordAudit({
+      tx,
+      actorId: input.actorId,
+      action: "dispute.opened",
+      entity: "Dispute",
+      entityId: dispute.id,
+      metadata: {
+        orderId: order.id,
+        before: { orderStatus: order.status, escrowStatus: order.escrowHolds[0]?.status ?? null },
+        after: { orderStatus: "disputed", escrowStatus: order.escrowHolds[0] ? "disputed" : null }
+      }
+    });
     return dispute;
   });
 }

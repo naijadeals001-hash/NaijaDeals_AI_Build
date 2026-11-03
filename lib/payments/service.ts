@@ -635,7 +635,14 @@ export async function refundPayment(input: { orderId: string; actorId: string; r
       action: "payment.refunded",
       entity: "Order",
       entityId: order.id,
-      metadata: { amountKobo: order.totalKobo.toString(), reason: input.reason, provider: completed.provider, restocked: Boolean(input.restock) }
+      metadata: {
+        before: { paymentStatus: order.paymentStatus, orderStatus: order.status, escrowStatus: escrow?.status ?? null },
+        after: { paymentStatus: "refunded", orderStatus: "refunded", escrowStatus: escrow ? "refunded" : null },
+        amountKobo: order.totalKobo.toString(),
+        reason: input.reason,
+        provider: completed.provider,
+        restocked: Boolean(input.restock)
+      }
     });
 
     return { orderId: order.id, refundedKobo: order.totalKobo.toString() };

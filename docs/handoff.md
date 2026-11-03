@@ -377,6 +377,12 @@ the duplicate `origin` entry was removed. Pushes still return **403 (denied to B
 verified local bare backup at `C:\Users\User\naijadeals-backup.git` and the dated bundle remain the
 authoritative recovery path until GitHub authentication is fixed.
 
+**Refund and dispute audit parity (same pass):** `payment.refunded` now stores
+`before`/`after` for payment, order and escrow status, and `dispute.opened` stores the order and
+escrow states it replaced. Verified against the isolated database: a refund produced
+`paid/held/vendor_notified → refunded` and opening a dispute produced `completed/released →
+disputed`; marketplace suite still **13/13**.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only
