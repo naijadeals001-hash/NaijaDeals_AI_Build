@@ -179,7 +179,7 @@ export function NaijaShopPage() {
     visibleCategories: [] as string[],
     categoryOrder: [] as string[],
     shelfLimit: 4,
-    showDemoProducts: true,
+    showDemoProducts: false,
     showHero: true,
     showShelves: true
   });

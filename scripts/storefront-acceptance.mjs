@@ -87,6 +87,17 @@ try {
   });
   check("audit trail records storefront updates", audit.found === true && audit.hasChanges === true && Boolean(audit.actor), JSON.stringify(audit));
 
+  // Admin hides demos; a config-fetch failure must not re-expose them.
+  const hiddenConfig = await admin.evaluate(async () => (await (await fetch("/api/admin/storefront")).json()));
+  await admin.evaluate(async (v) => (await fetch("/api/admin/storefront", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version: v, showDemoProducts: false }) })).status, hiddenConfig.version);
+  const hiddenFail = await browser.newPage();
+  await hiddenFail.route("**/api/storefront", (route) => route.fulfill({ status: 500, body: "boom" }));
+  await hiddenFail.goto(BASE + "/naijashop", { waitUntil: "networkidle" });
+  const hiddenTiles = await hiddenFail.evaluate(() => document.querySelectorAll("article a.group").length);
+  check("failure does not re-expose hidden demos", hiddenTiles === 0, String(hiddenTiles));
+  const restoreConfig = await admin.evaluate(async () => (await (await fetch("/api/admin/storefront")).json()));
+  await admin.evaluate(async (v) => (await fetch("/api/admin/storefront", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version: v, showDemoProducts: true }) })).status, restoreConfig.version);
+
   const failPage = await browser.newPage();
   await failPage.route("**/api/storefront", (route) => route.fulfill({ status: 500, body: "boom" }));
   await failPage.goto(BASE + "/naijashop", { waitUntil: "networkidle" });
