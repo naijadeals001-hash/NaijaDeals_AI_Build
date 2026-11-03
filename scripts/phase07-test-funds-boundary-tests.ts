@@ -39,6 +39,23 @@ const expect403 = async (fn: () => Promise<unknown>) => { try { await fn(); retu
     const after = await page.evaluate(async () => ({ payouts: (await (await fetch("/api/admin/payouts")).json()).length }));
     check("blocked payout created no record", before.payouts === after.payouts, JSON.stringify({ before, after }));
 
+    // Temporary settlement fixture; removed in cleanup. Endpoint must reject before mutation.
+    const vendor = await db.vendor.findFirstOrThrow({ where: { slug: "demo-inventory" }, select: { id: true } });
+    const fixture = await db.payout.create({ data: { vendorId: vendor.id, amountKobo: 100n, status: "PENDING", reference: "BOUNDARY-SETTLEMENT-TEST", periodStart: new Date("2026-01-01"), periodEnd: new Date("2026-01-31") } });
+    const walletBefore = await db.wallet.findFirst({ where: { vendorId: vendor.id }, select: { availableKobo: true, heldKobo: true } });
+    const ledgerBefore = await db.ledgerEntry.count({ where: { wallet: { vendorId: vendor.id } } });
+    const settle = await page.evaluate(async (id) => {
+      const res = await fetch("/api/admin/payouts/" + id + "/pay", { method: "POST" });
+      return { status: res.status, body: await res.json().catch(() => null) };
+    }, fixture.id);
+    const fixtureAfter = await db.payout.findUniqueOrThrow({ where: { id: fixture.id } });
+    const walletAfter = await db.wallet.findFirst({ where: { vendorId: vendor.id }, select: { availableKobo: true, heldKobo: true } });
+    const ledgerAfter = await db.ledgerEntry.count({ where: { wallet: { vendorId: vendor.id } } });
+    check("payout settlement endpoint blocked", settle.status === 403 && settle.body?.code === "test_funds_boundary", JSON.stringify(settle));
+    check("rejected settlement leaves payout PENDING", fixtureAfter.status === "PENDING" && fixtureAfter.paidAt === null, JSON.stringify({ status: fixtureAfter.status, paidAt: fixtureAfter.paidAt }));
+    check("rejected settlement leaves wallet and ledger unchanged", JSON.stringify(walletBefore) === JSON.stringify(walletAfter) && ledgerBefore === ledgerAfter, JSON.stringify({ walletBefore, walletAfter, ledgerBefore, ledgerAfter }));
+    await db.payout.delete({ where: { id: fixture.id } });
+
     const init = await page.evaluate(async () => {
       const res = await fetch("/api/payments/initialize", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ provider: "paystack", orderId: "boundary-test" }) });
       return { status: res.status, body: await res.json().catch(() => null) };

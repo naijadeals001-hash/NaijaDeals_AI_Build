@@ -276,3 +276,36 @@ No code change until a decision is recorded.
 The readiness script reports **credential/test-mode presence only**. Missing keys block execution; they
 do not prove the integration has no code defects. Sandbox delivery, webhook verification and
 reconciliation remain unexecuted until keys are securely configured.
+
+
+## Durable database classification (2026-11-03)
+
+Migration `20261103280000_database_classification` creates `DatabaseClassification` and inserts
+`TEST` for this database. `getDatabaseClassification()` returns TEST, LIVE or UNKNOWN; UNKNOWN denies
+live operations.
+
+- `assertLiveFinancialOperations` checks the **database row first**. TEST or UNKNOWN always denies,
+  even with NODE_ENV=production, FINANCIAL_ENV=live, ALLOW_LIVE_FINANCIAL_OPERATIONS=true.
+- `assertProviderOperation` permits Paystack/Flutterwave on a TEST database only when the credential is
+  test-shaped (`sk_test_`, `FLWSECK_TEST`); live/missing credentials are rejected. On LIVE it requires
+  live flags and rejects test credentials.
+- Guards are in the shared services (`createPayout`, `markPayoutPaid`) and the HTTP routes, so workers
+  and scripts calling the services are also blocked.
+
+### Boundary tests (PASS)
+
+- shared DB durably classified TEST
+- all live flags present -> TEST still blocks
+- TEST DB rejects live/missing provider credentials
+- admin payout creation -> 403, no record
+- payout settlement endpoint -> 403 with a temporary fixture; payout remains PENDING, wallet/ledger
+  unchanged (fixture deleted afterwards)
+- Paystack initialisation -> 403
+
+**Isolation caveat:** the settlement endpoint fixture was created in the shared TEST database and
+deleted after the check; it was not an isolated database run. The isolated-schema suite covers the
+adjustment application, not the settlement HTTP path. A fully isolated settlement-endpoint test remains
+outstanding.
+
+Existing Phase 07 ledger suite now reports concurrent payout idempotency as BLOCKED (no vendor wallet/
+admin fixture) rather than exercising live settlement, consistent with the boundary.

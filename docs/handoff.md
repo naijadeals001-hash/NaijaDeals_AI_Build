@@ -1033,3 +1033,13 @@ database. Tests pass for config permutations, admin payout creation (no record c
 init. Payout settlement HTTP path is guarded but was not exercised end-to-end (no payout row).
 Refund-fee wording corrected: retaining the fee is not aligned with the unverified 1% policy.
 Adjustment remains PREPARED; Phase 07 IN PROGRESS.
+
+
+## Durable financial boundary (2026-11-03)
+
+naijadeals_core is persisted as DatabaseClassification TEST. Live operations require a LIVE row plus
+the three environment flags; TEST/UNKNOWN cannot be overridden. Shared createPayout/markPayoutPaid
+services and HTTP routes are guarded; TEST allows provider sandbox only with test-shaped credentials.
+Boundary tests pass, including payout creation, settlement endpoint rejection with a temporary fixture
+(payout PENDING, wallet/ledger unchanged), and Paystack init rejection. The settlement fixture ran on
+the shared TEST DB and was deleted; a fully isolated settlement-endpoint test remains outstanding.
