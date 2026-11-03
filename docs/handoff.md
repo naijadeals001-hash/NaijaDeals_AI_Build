@@ -163,6 +163,27 @@ that it was a Bolt driver app was wrong.
   a deliberately failing CI check, a coverage baseline, and the regression suite for auth,
   purchase and ride flows.
 
+## Repository audit (2026-11-03)
+
+Eight audit deliverables were produced under `docs/audits/` with two machine manifests
+(`deepseek-file-manifest.json`, `source-facts.json`):
+
+| Document | Result |
+| --- | --- |
+| `deepseek-playbook-phase-inventory.md` | 21 canonical phases (00–20), 10 subphases (02A–D, 18A–F), 10 advisory Part M workstreams |
+| `deepseek-file-inventory.md` | 664 in-scope files; 279 read in full (42,308 lines); 349 metadata/visual; 36 excluded with reasons |
+| `deepseek-architecture-audit.md` | Next.js 14 / Prisma 6 / custom sessions; 39 models; 70 API routes; stale docs identified |
+| `deepseek-module-capability-matrix.md` | NaijaShop/Drive/Send/Pay = PARTIAL; Eats/Fresh/Gigs/Stay/Stream/Aura/Property = NOT STARTED |
+| `deepseek-admin-and-ui-audit.md` | Control Center structurally faithful; 15 gaps vs the master reference |
+| `deepseek-requirements-gap-analysis.md` | Discovery, Property, native apps, NaijaID/Search/Connect/Ads/Rewards/API/Insights lack phases |
+| `deepseek-tooling-readiness.md` | REA/ECC/Soup/Playwright/Android verified or blocked with evidence |
+| `deepseek-next-actions.md` | Phase 01 first; push/CI, email, map, APK, imagery blocked |
+
+No application code was changed by the audit. Phase 01 remains BLOCKED; Phase 05 remains IN
+PROGRESS. Documentation contradictions were recorded rather than silently "fixed" in the source
+documents that still need rewriting (`architecture.md`, `requirements-matrix.md`,
+`functional-gap-report.md`).
+
 **Push status (2026-11-03):** the documentation commit is **local only**. `git push origin
 naijashop-marketplace` was rejected with `403` — `Permission to
 naijadeals001-hash/NaijaDeals_AI_Build.git denied to BetFuz` — and `gh auth status`
