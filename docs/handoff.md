@@ -866,3 +866,13 @@ as storefront.updated.
 Verified live: admin PATCH 200 changed heroTitle to "Admin-managed NaijaShop" and the announcement;
 /api/storefront and /naijashop reflected both. Screenshot qa-artifacts/preview/admin-managed-storefront.png.
 Migration 20261103250000_storefront_config.
+
+
+## Storefront controls acceptance (2026-11-03)
+
+scripts/storefront-acceptance.mjs passes 13/13 locally on port 3010: unauthenticated 401, non-staff 403,
+length/boolean/slug/limit validation 400, stale version 409, valid save 200, public API omits version,
+script announcement rendered as text (no execution), demo visibility toggle, demo checkout guard 409,
+audit row with actor and change set, and shop fallback when /api/storefront returns 500.
+Optimistic concurrency uses a version in the config JSON; legacy rows without a version are treated as
+version 1. The config row persists in PostgreSQL (migration 20261103250000_storefront_config).
