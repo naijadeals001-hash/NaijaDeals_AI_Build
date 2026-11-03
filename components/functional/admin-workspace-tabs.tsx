@@ -1576,7 +1576,41 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
             { header: "Email", cell: (row) => <span className="text-xs text-[#8B949E]">{text(row.email)}</span> },
             { header: "Phone", cell: (row) => <span>{text(row.phone)}</span> },
             { header: "Roles", cell: (row) => <span className="text-xs">{roleNames(row)}</span> },
-            { header: "Joined", cell: (row) => <span className="text-xs text-[#8B949E]">{date(row.createdAt)}</span> }
+            { header: "Joined", cell: (row) => <span className="text-xs text-[#8B949E]">{date(row.createdAt)}</span> },
+            {
+              header: "Access",
+              cell: (row) => {
+                const profile = row.driverProfile as Row | null;
+                if (!profile) return <span className="text-xs text-[#8B949E]">No profile</span>;
+                const status = String(profile.status);
+                if (status === "pending") return <span className="text-xs text-[#8B949E]">Pending</span>;
+                const suspended = status === "suspended";
+                const busy = busyId === String(row.id);
+                return (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      if (suspended) {
+                        if (!window.confirm(`Reactivate ${text(row.name)}? They can accept new rides again.`)) return;
+                        void run(String(row.id), () => apiClient.adminSetDriverStatus(String(row.id), "approved"), `${text(row.name)} reactivated.`);
+                        return;
+                      }
+                      const reason = window.prompt(`Reason for suspending ${text(row.name)}?`);
+                      if (!reason || !reason.trim()) return;
+                      void run(
+                        String(row.id),
+                        () => apiClient.adminSetDriverStatus(String(row.id), "suspended", reason.trim()),
+                        `${text(row.name)} suspended.`
+                      );
+                    }}
+                    className="rounded-lg border border-[#21262D] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D] disabled:opacity-50"
+                  >
+                    {busy ? "Working…" : suspended ? "Reactivate" : "Suspend"}
+                  </button>
+                );
+              }
+            }
           ]}
         />
       </Panel>
@@ -1588,7 +1622,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     const statuses = Array.from(new Set(props.disputes.map((row) => String(row.status)))).sort();
     return (
       <>
-      <Panel title="Disputes" description="Buyer-opened disputes with their order, escrow state and reason. Resolution actions are not exposed yet.">
+      <Panel title="Disputes" description="Buyer-opened disputes with their order, escrow state and reason. Resolve by refunding the buyer or releasing escrow to the seller.">
         <Toolbar
           query={query}
           onQuery={setQuery}

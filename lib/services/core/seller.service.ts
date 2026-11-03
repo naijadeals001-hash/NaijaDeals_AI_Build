@@ -12,7 +12,7 @@ export async function getVendorForUser(userId: string) {
 
 export async function getSellerOverview(userId: string) {
   const vendor = await getVendorForUser(userId);
-  const [orders, products, lowStock, returns, payouts] = await Promise.all([
+  const [orders, products, lowStock, returns, payouts, wallet] = await Promise.all([
     prisma.order.findMany({
       where: { vendorId: vendor.id },
       include: { items: true, customer: { select: { name: true } }, deliveries: true },
@@ -30,7 +30,8 @@ export async function getSellerOverview(userId: string) {
       include: { order: { select: { orderNumber: true } }, user: { select: { name: true } } },
       orderBy: { createdAt: "desc" }
     }),
-    prisma.payout.findMany({ where: { vendorId: vendor.id }, orderBy: { createdAt: "desc" } })
+    prisma.payout.findMany({ where: { vendorId: vendor.id }, orderBy: { createdAt: "desc" } }),
+    prisma.wallet.findFirst({ where: { vendorId: vendor.id, ownerType: "VENDOR" } })
   ]);
 
   const paid = orders.filter((order) => order.paymentStatus === "paid");
@@ -41,6 +42,10 @@ export async function getSellerOverview(userId: string) {
   );
 
   return {
+    wallet: {
+      availableKobo: (wallet?.availableKobo ?? BigInt(0)).toString(),
+      heldKobo: (wallet?.heldKobo ?? BigInt(0)).toString()
+    },
     vendor: {
       id: vendor.id,
       name: vendor.name,

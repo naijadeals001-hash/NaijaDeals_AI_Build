@@ -417,6 +417,13 @@ export async function getDriverForUser(userId: string) {
 
 export async function acceptRide(input: { userId: string; rideId: string }) {
   const driver = await getDriverForUser(input.userId);
+  if (driver.status !== "approved") {
+    throw new ApiError(
+      403,
+      "driver_suspended",
+      driver.suspendedReason ? `Driver account suspended: ${driver.suspendedReason}` : "Driver account is not approved to accept new rides."
+    );
+  }
   return prisma.$transaction(async (tx) => {
     const ride = await tx.ride.findUnique({ where: { id: input.rideId } });
     if (!ride) throw new ApiError(404, "ride_not_found", "Ride not found.");

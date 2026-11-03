@@ -180,6 +180,44 @@ async function syncDeliveryForOrderStatus(tx: Prisma.TransactionClient, actorId:
 }
 
 
+export async function setDriverStatus(input: {
+  adminId: string;
+  userId: string;
+  status: "approved" | "suspended";
+  reason?: string;
+}) {
+  const profile = await prisma.driverProfile.findUnique({ where: { userId: input.userId } });
+  if (!profile) throw new ApiError(404, "driver_not_found", "Driver profile not found.");
+  if (profile.status === "pending") {
+    throw new ApiError(409, "driver_pending", "Pending drivers are approved through onboarding before suspension.");
+  }
+  if (profile.status === input.status) return profile;
+  const reason = input.reason?.trim() ?? "";
+  if (input.status === "suspended" && reason.length === 0) {
+    throw new ApiError(400, "reason_required", "A suspension reason is required.");
+  }
+
+  const updated = await prisma.driverProfile.update({
+    where: { id: profile.id },
+    data: {
+      status: input.status,
+      active: input.status === "approved",
+      suspendedReason: input.status === "suspended" ? reason : null
+    }
+  });
+  await recordAudit({
+    actorId: input.adminId,
+    action: "driver.status_changed",
+    entity: "DriverProfile",
+    entityId: profile.id,
+    metadata: {
+      before: { status: profile.status, active: profile.active, suspendedReason: profile.suspendedReason },
+      after: { status: updated.status, active: updated.active, suspendedReason: updated.suspendedReason }
+    }
+  });
+  return updated;
+}
+
 export async function setVendorStatus(input: {
   adminId: string;
   vendorId: string;
@@ -462,7 +500,8 @@ export async function getAdminUsers() {
       scopeCountryCode: true,
       scopeCityCode: true,
       roles: { include: { role: true } },
-      vendors: { select: { id: true, name: true, status: true } }
+      vendors: { select: { id: true, name: true, status: true } },
+      driverProfile: { select: { id: true, status: true, active: true, suspendedReason: true } }
     },
     orderBy: { createdAt: "desc" },
     take: 200

@@ -193,6 +193,23 @@ export function SellerDashboard() {
         </div>
       ) : null}
 
+      <section className="rounded-2xl border border-border-soft bg-canvas p-5">
+        <p className="text-xs font-black uppercase tracking-wide text-muted">NaijaPay ledger</p>
+        <div className="mt-2 flex flex-wrap gap-8">
+          <div>
+            <p className="text-xs font-semibold text-muted">Available balance</p>
+            <p className="font-display text-2xl font-extrabold text-primary">{koboToNaira(overview.wallet.availableKobo)}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-muted">Held in escrow</p>
+            <p className="font-display text-2xl font-extrabold">{koboToNaira(overview.wallet.heldKobo)}</p>
+          </div>
+          <p className="max-w-xs self-end text-[11px] leading-snug text-muted">
+            Balances come from the vendor wallet ledger, not from order totals.
+          </p>
+        </div>
+      </section>
+
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           ["Products", String(overview.stats.productCount)],

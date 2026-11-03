@@ -171,6 +171,7 @@ export type SessionUser = {
 };
 
 export type SellerOverview = {
+  wallet: { availableKobo: ApiMoney; heldKobo: ApiMoney };
   vendor: { id: string; name: string; slug: string; status: string; market: string; pickupAddress: string; pickupPhone: string; trustScore: number; commissionBps: number; suspendedReason?: string | null };
   stats: {
     productCount: number;
@@ -425,6 +426,8 @@ export const apiClient = {
   adminApplications: () => requestJson<Array<Record<string, unknown>>>("/api/admin/applications"),
   adminReviewApplication: (id: string, decision: "approve" | "reject", note?: string) =>
     requestJson<Record<string, unknown>>(`/api/admin/applications/${id}`, { method: "POST", body: JSON.stringify({ decision, note }) }),
+  adminSetDriverStatus: (userId: string, status: "approved" | "suspended", reason?: string) =>
+    requestJson<Record<string, unknown>>(`/api/admin/drivers/${userId}/status`, { method: "POST", body: JSON.stringify({ status, reason }) }),
   adminSetVendorStatus: (id: string, status: "VERIFIED" | "SUSPENDED", reason?: string) =>
     requestJson<Record<string, unknown>>(`/api/admin/vendors/${id}/status`, { method: "POST", body: JSON.stringify({ status, reason }) }),
   adminModerateProduct: (id: string, status: string, note?: string) =>

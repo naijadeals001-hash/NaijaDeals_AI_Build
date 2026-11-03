@@ -165,11 +165,12 @@ dialogs are introduced.
 - Existing seller (`/seller`), driver (`/driver`) and courier (`/courier`) portals retained; seller overview is scoped to the signed-in vendor only
 - Vendor suspension end to end: admin `POST /api/admin/vendors/[id]/status` (audited `vendor.status_changed` before/after), suspended products disappear from the catalogue, seller writes return **403 vendor_suspended** with the reason, the seller dashboard shows a suspension banner, and reactivation restores product creation
 - Evidence: suspend → catalogue hidden, create blocked 403, overview status SUSPENDED with reason, reactivate → create 201 (cleaned up); screenshot `qa-artifacts/preview/seller-suspended.png`
+- Driver suspension: admin Drivers tab action, audited `driver.status_changed` before/after, suspended drivers cannot accept new rides (403 verified), reactivation restores acceptance, and existing active work stays readable
+- Seller earnings now include **NaijaPay ledger balances** (available/held) from the vendor wallet; verified figures matched the wallet table exactly (2,450,000 available / 1,665,000 held)
 
 **Still open for a Phase 06 PASS:**
-- Rejected application access path (no vendor role) and suspension *during an active job* policy
-- Driver and courier suspension parity
-- Seller earnings tied to wallet-ledger entries rather than order aggregates
+- Courier suspension parity
+- Rejected-application access re-verification and suspension *during an active job* policy
 - Partner notifications and profile management primitives
 
 ## Phase 07 — Wallet, payments, escrow and settlement correctness
