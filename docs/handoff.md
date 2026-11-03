@@ -516,6 +516,12 @@ writes a `FreightEvent` and an audited `freight.status_changed` row. The Control
 tab in the NaijaSend workspace and the sender sees milestones on `/naijasend`. Verified: truck Lagos →
 Kano 800 kg quoted ₦450,000, assigned, in transit, delivered; 4 events shown to the customer; axe 0.
 
+**Journey 2 ride fare comparison (2026-11-03):** REA captured `https://www.uber.com/ng/en/ride/`
+("Request a ride", "Ride options", "Pickup now", "Choose date and time", auto-fill cue) with the
+repo's limitations recorded. NaijaDrive now compares fares across every class: `/api/drive/quote?all=true`
+returns four server quotes and the vehicle cards show each price while the selected class drives the
+booked fare. Verified prices ₦4,650 / ₦7,750 / ₦11,250 / ₦14,900 and axe 0.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

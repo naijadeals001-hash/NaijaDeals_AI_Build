@@ -55,3 +55,23 @@ NaijaDeals implementation (first slice):
 - Verified end to end: truck request Lagos → Kano (800 kg, solar panels) quoted at ₦450,000 with
   "Kobo360 Haulage", assigned, moved in transit and delivered; customer API returned 4 events and
   the timeline rendered; operator queue showed both requests; axe 0.
+
+
+## Journey 2 — NaijaDrive ride booking (2026-11-03)
+
+REA capture (`rea-cdp-browser` v2, Chrome 156, `https://www.uber.com/ng/en/ride/`):
+
+- Headings: **Request a ride**, **Ride options**, **Plan for later**, "Use the Uber app to help you
+  travel your way", "Do more in the app", FAQ, "Download the Uber app".
+- Journey cues: **Pickup now**, **Change city**, **Choose date and time**, **Auto-fill my location**,
+  **Next**; global coverage claims (700+ airports, 15,000+ cities).
+- Limitations: class names and prices were not exposed in the accessibility capture; no dispatch,
+  pricing formula or matching logic observed.
+
+NaijaDeals implementation (this slice): **fare comparison across every ride class**. The quote API
+supports `all=true` and returns one server-computed quote per class; the vehicle cards now show the
+price for each class (Bike ₦4,650 · Economy ₦7,750 · Comfort ₦11,250 · XL ₦14,900 on the default
+Lagos route) while the selected class still drives the booked fare.
+
+Next gaps: schedule-for-later, "auto-fill my location" affordance, and a side-by-side ride-option
+detail view (ETA, capacity, luggage) without copying competitor prices.

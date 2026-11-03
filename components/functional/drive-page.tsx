@@ -68,6 +68,7 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
   const [quote, setQuote] = useState<ApiDriveQuote | null>(null);
   const [quoteState, setQuoteState] = useState<LoadState>("idle");
   const [quoteError, setQuoteError] = useState("");
+  const [classPrices, setClassPrices] = useState<Record<string, string>>({});
   const [rides, setRides] = useState<ApiRide[]>([]);
   const [ridesState, setRidesState] = useState<LoadState>("idle");
   const [ridesError, setRidesError] = useState("");
@@ -277,6 +278,30 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
     }
   }
 
+  useEffect(() => {
+    if (!pickup || !dropoff || pickup === dropoff) {
+      setClassPrices({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/drive/quote?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&all=true`, { cache: "no-store" });
+        if (!res.ok) return;
+        const body = await res.json().catch(() => null);
+        if (cancelled || !Array.isArray(body?.quotes)) return;
+        const prices: Record<string, string> = {};
+        for (const quote of body.quotes) prices[String(quote.vehicleClass?.id)] = String(quote.fareKobo);
+        setClassPrices(prices);
+      } catch {
+        // The selected-class quote above still drives the booking.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pickup, dropoff]);
+
   const canCancel = activeRide && ["requested", "driver_assigned", "driver_arriving"].includes(activeRide.status);
 
   return (
@@ -474,6 +499,9 @@ export function DrivePage({ viewer }: { viewer: Viewer }) {
                     <span className="mt-2 text-sm font-extrabold">{vehicle.label}</span>
                     <span className="mt-0.5 text-[11px] leading-snug text-muted">{vehicle.description}</span>
                     <span className="mt-auto pt-1 text-[11px] font-bold text-muted">{vehicle.seats} seat{vehicle.seats === 1 ? "" : "s"}</span>
+                    <span className="mt-0.5 text-xs font-extrabold text-primary">
+                      {classPrices[vehicle.id] ? koboToNaira(classPrices[vehicle.id]) : "—"}
+                    </span>
                   </label>
                 );
               })}
