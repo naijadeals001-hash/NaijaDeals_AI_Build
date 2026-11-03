@@ -202,6 +202,10 @@ export function NaijaShopPage() {
       return ai - bi;
     });
 
+  const shelfProducts = storefront.showDemoProducts ? products : products.filter((product) => !product.isSample);
+
+
+
 
   const allButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -2036,8 +2040,6 @@ export function NaijaEatsPage() {
     }
     return true;
   });
-
-  const shelfProducts = storefront.showDemoProducts ? products : products.filter((product) => !product.isSample);
 
   const cartLines = Object.entries(cart);
   const cartCount = cartLines.reduce((total, [, line]) => total + line.quantity, 0);
