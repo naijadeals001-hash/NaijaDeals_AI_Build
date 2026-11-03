@@ -688,3 +688,19 @@ previously blocked kitchen transitions.
 naijashop-marketplace; the GitHub push again exited 128 and the remote branch stayed at
 d28a6beadbd10cdc42424270b79b3ff627d0d3b7 (account access still denied). Local backup remote and bundle
 were updated; production remains gated.
+
+## Phase 07 audit and payout fix (2026-11-03)
+
+Started Phase 07 after Phase 06 PASS. docs/audits/phase07-ledger-audit.md records the reviewed
+services, acceptance cases and results. scripts/phase07-ledger-tests.ts runs eight cases against
+the isolated database: ledger balance, non-negative wallets, duplicate confirmation, insufficient
+funds, concurrent payout, payout overdraw (PASS) plus partial refund and sandbox webhook (BLOCKED).
+
+markPayoutPaid had a double-settlement race: two concurrent calls could both decrement the vendor
+wallet, and an oversized payout could overdraw it. It now claims the payout with a conditional
+updateMany and debits the wallet only when availableKobo >= amountKobo inside the same transaction.
+Wallet 2,450,000 to 2,449,500 exactly once under two simultaneous calls; a larger payout returns
+insufficient_wallet and leaves the payout PENDING.
+
+Migration impact: none. Phase 07 remains IN PROGRESS until partial refunds and sandbox webhook
+evidence exist. No live charges were made.

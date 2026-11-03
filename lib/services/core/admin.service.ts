@@ -546,14 +546,23 @@ export async function markPayoutPaid(input: { adminId: string; payoutId: string 
   if (!payout) throw new ApiError(404, "payout_not_found", "Payout not found.");
   if (payout.status === "PAID") return payout;
   return prisma.$transaction(async (tx) => {
-    const paid = await tx.payout.update({
-      where: { id: payout.id },
+    // Claim the payout atomically so concurrent/repeated calls settle it once.
+    const claim = await tx.payout.updateMany({
+      where: { id: payout.id, status: { not: "PAID" } },
       data: { status: "PAID", paidAt: new Date() }
     });
-    await tx.wallet.updateMany({
-      where: { vendorId: payout.vendorId },
+    if (claim.count === 0) return tx.payout.findUniqueOrThrow({ where: { id: payout.id } });
+
+    // The wallet debit is conditional: a payout can never push the vendor balance negative.
+    const debit = await tx.wallet.updateMany({
+      where: { vendorId: payout.vendorId, availableKobo: { gte: payout.amountKobo } },
       data: { availableKobo: { decrement: payout.amountKobo } }
     });
+    if (debit.count === 0) {
+      throw new ApiError(409, "insufficient_wallet", "Vendor available balance does not cover this payout.");
+    }
+
+    const paid = await tx.payout.findUniqueOrThrow({ where: { id: payout.id } });
     await recordAudit({
       tx,
       actorId: input.adminId,

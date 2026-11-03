@@ -176,7 +176,7 @@ dialogs are introduced.
 
 ## Phase 07 — Wallet, payments, escrow and settlement correctness
 
-**Status:** NOT STARTED (depends on Phase 05, 06)
+**Status:** IN PROGRESS � ledger/payout invariants verified; partial refund and sandbox webhook evidence open (2026-11-03)
 
 ## Phase 08 — NaijaShop end-to-end commerce
 
@@ -264,3 +264,13 @@ kitchen dispatch is the next slice.
 Wallet-paid food orders now run through kitchen acceptance, preparation, admin courier assignment and
 courier pickup/delivery with a customer timeline. Browser-verified end to end on the isolated server;
 checkout remains limited to single-kitchen orders and no delivery/service fee is charged.
+
+### Phase 07 progress (2026-11-03)
+
+Audit and invariant tests are recorded in docs/audits/phase07-ledger-audit.md. Passing on the isolated
+database: per-transaction debit/credit balance, non-negative wallets, duplicate confirmation,
+insufficient-funds rejection, concurrent payout settlement (single debit) and payout overdraw
+rejection. A real defect was fixed in markPayoutPaid: the payout is now claimed atomically and the
+wallet debit is conditional, so repeated or simultaneous clicks cannot settle twice or go negative.
+Blocked exit criteria: partial refunds are not implemented (full-order refunds only), and no
+Paystack/Flutterwave sandbox credentials exist for webhook-signature evidence.
