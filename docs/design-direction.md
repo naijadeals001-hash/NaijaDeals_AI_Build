@@ -82,3 +82,23 @@ no invented delivery promises, no fake deals — discounts only render when a re
 Verified: 12 cards / 9 add buttons / 3 variant cards, axe-core **0 violations**, 390 px layout has
 no overflow and the filter panel toggles, anonymous add-to-cart returns the real 401 path with a
 "Sign in to add items" alert (`qa-artifacts/preview/shop-amazon-*.png`).
+
+## Catalogue provenance (2026-11-03)
+
+The seed catalogue (12 items, generated SVG artwork, fixture vendors) is **not** real inventory.
+To stop it being presented as real seller listings:
+
+- `Product.isSample` (migration `20261103120000_product_sample_flag`, default false) marks
+  fixture rows; `prisma/seed.cjs` sets it for every seeded product.
+- `/api/products` and `/api/products/[id]` return the flag; the running dev server also falls
+  back to vendor+image provenance while its Prisma client predates the column.
+- `/naijashop` shows **only genuine seller listings by default**. With none in the dev database it
+  renders an honest empty state ("No live seller listings yet") with a Sell CTA and an explicit
+  **View sample catalogue (demo)** button. Samples then appear behind a banner, carry a "Sample"
+  badge, and the product-detail page repeats the warning.
+- Search result cards and the shared `ProductCard` carry the same badge.
+- A real listing is a product published by a verified seller from `/seller`; nothing is invented
+  on the storefront.
+
+Verified: default storefront 0 cards + empty state; demo toggle 12 labelled cards; detail banner
+present; axe-core 0 violations in both states; 390 px layout has no overflow.

@@ -33,6 +33,7 @@ export type ApiProduct = {
   priceKobo: ApiMoney;
   compareAtKobo?: ApiMoney | null;
   status: string;
+  isSample?: boolean;
   category: ApiCategory;
   vendor: ApiVendor;
   images: Array<{ id: string; url: string; alt: string | null; sortOrder: number }>;

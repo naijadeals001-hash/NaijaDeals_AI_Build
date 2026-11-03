@@ -273,6 +273,15 @@ yellow Add to cart / See options). Mobile collapses filters behind a Filters but
 2-column grid. Verified: 12 cards build from live API data, axe 0 violations, no mobile overflow,
 anonymous add-to-cart surfaces the real sign-in error. Details: `docs/design-direction.md`.
 
+## Catalogue provenance (2026-11-03)
+
+The 12 seeded products are now explicitly marked as samples (`Product.isSample`) instead of being
+presented as real listings. `/naijashop` shows only genuine seller-published products; the dev
+database currently has none, so the storefront renders an honest empty state with a Sell CTA and a
+clearly-labelled "View sample catalogue (demo)" toggle. Sample cards, search results and product
+detail pages all carry a "Sample" warning. Migration, seed, API and UI changes are recorded in
+`docs/design-direction.md`; axe is clean in both states and the mobile layout has no overflow.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

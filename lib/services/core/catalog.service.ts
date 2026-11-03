@@ -30,6 +30,22 @@ export async function getCategories() {
   return prisma.category.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } });
 }
 
+/**
+ * Fixture listings are seeded demo rows. The database column is authoritative;
+ * the vendor/image check is a fallback for a running dev server whose generated
+ * Prisma client predates the column.
+ */
+const FIXTURE_VENDOR_SLUGS = new Set(["ikeja-mobile-hub", "yaba-home-living"]);
+
+export function isFixtureListing(product: CatalogProduct): boolean {
+  const flag = (product as { isSample?: boolean }).isSample;
+  if (typeof flag === "boolean") return flag;
+  return (
+    FIXTURE_VENDOR_SLUGS.has(product.vendor.slug) &&
+    product.images.some((image) => image.url.startsWith("/products/"))
+  );
+}
+
 export function ratingSummary(reviews: Array<{ rating: number }>) {
   if (reviews.length === 0) return { average: null, count: 0 };
   const total = reviews.reduce((sum, review) => sum + review.rating, 0);

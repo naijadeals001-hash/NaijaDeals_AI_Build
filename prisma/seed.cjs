@@ -246,6 +246,10 @@ async function main() {
   const roleData = [
     { name: "super_admin", description: "Platform super-administrator" },
     { name: "admin", description: "Control Center administrator" },
+    { name: "ops", description: "Operations: orders, deliveries and rides" },
+    { name: "finance", description: "Finance: payouts, payments and reconciliation" },
+    { name: "support", description: "Support: read-only customer and order context" },
+    { name: "moderator", description: "Moderation: catalogue and seller applications" },
     { name: "customer", description: "Buyer account" },
     { name: "vendor", description: "Seller operator" },
     { name: "courier", description: "Courier operator" },
@@ -423,6 +427,7 @@ async function main() {
         compareAtKobo: product.compareAt,
         weightGrams: 500,
         status: "ACTIVE",
+        isSample: true,
         images: { create: [{ url: product.image, alt: product.name, sortOrder: 0 }] },
         stock: { create: { quantity: product.stock, lowStockLevel: 3 } },
         variants: product.variants.length

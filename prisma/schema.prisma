@@ -143,6 +143,13 @@ model User {
   name              String
   phone             String?
   countryCode       String             @default("NG")
+  /**
+   * Administrative region scope. Null means platform-wide (for example a super
+   * administrator). A non-null country restricts every scoped read and write to
+   * records in that country, and a non-null city narrows it further.
+   */
+  scopeCountryCode  String?
+  scopeCityCode     String?
   actorType         ActorType          @default(CUSTOMER)
   verifiedAt        DateTime?
   createdAt         DateTime           @default(now())
@@ -253,6 +260,8 @@ model Product {
   orderItems     OrderItem[]
   reviews        Review[]
   savedBy        SavedItem[]
+  /// Sample/fixture catalogue rows are excluded from the public storefront by default.
+  isSample          Boolean            @default(false)
 }
 
 model ProductImage {

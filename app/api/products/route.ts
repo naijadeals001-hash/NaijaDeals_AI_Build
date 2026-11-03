@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { availableQuantity, listProducts, ratingSummary } from "@/lib/services/core/catalog.service";
+import { availableQuantity, isFixtureListing, listProducts, ratingSummary } from "@/lib/services/core/catalog.service";
 import { jsonSafe } from "@/lib/services/core/serialize";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
 
   const payload = products.map((product) => ({
     ...product,
+    isSample: isFixtureListing(product),
     available: availableQuantity(product),
     rating: ratingSummary(product.reviews)
   }));

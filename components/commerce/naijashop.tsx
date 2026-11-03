@@ -54,7 +54,12 @@ export function ProductCard({ product, onAdd }: { product: ApiProduct; onAdd?: (
   const rating = product.rating;
   const available = product.available ?? 0;
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border-soft bg-canvas shadow-sm transition hover:shadow-soft">
+    <article className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-border-soft bg-canvas shadow-sm transition hover:shadow-soft">
+      {product.isSample ? (
+        <span className="absolute left-3 top-3 z-10 rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-strong">
+          Sample
+        </span>
+      ) : null}
       <Link href={`/product/${product.slug}`} className="block bg-surface-low">
         <img
           src={product.images[0]?.url || "/products/tecno-spark-20.svg"}
@@ -120,6 +125,7 @@ export function NaijaShopPage() {
   const [inStockOnly, setInStockOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+  const [showSamples, setShowSamples] = useState(false);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -145,11 +151,16 @@ export function NaijaShopPage() {
     };
   }, []);
 
+  // The public storefront only shows genuine seller listings. Seeded demo rows are
+  // flagged in the database and stay behind an explicit, clearly-labelled toggle.
+  const realProducts = useMemo(() => products.filter((product) => !product.isSample), [products]);
+  const catalogue = showSamples ? products : realProducts;
+
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const product of products) counts.set(product.category.slug, (counts.get(product.category.slug) ?? 0) + 1);
+    for (const product of catalogue) counts.set(product.category.slug, (counts.get(product.category.slug) ?? 0) + 1);
     return counts;
-  }, [products]);
+  }, [catalogue]);
 
   const priceBands = useMemo(
     () => [
@@ -164,7 +175,7 @@ export function NaijaShopPage() {
 
   const filtered = useMemo(() => {
     const band = priceBands.find((item) => item.id === priceBand) ?? priceBands[0];
-    const list = products.filter((product) => {
+    const list = catalogue.filter((product) => {
       if (category !== "all" && product.category.slug !== category) return false;
       const price = Number(product.priceKobo);
       if (price < band.min || price > band.max) return false;
@@ -178,12 +189,12 @@ export function NaijaShopPage() {
     if (sort === "price-desc") sorted.sort((a, b) => Number(b.priceKobo) - Number(a.priceKobo));
     if (sort === "rating") sorted.sort((a, b) => (b.rating?.average ?? 0) - (a.rating?.average ?? 0) || (b.rating?.count ?? 0) - (a.rating?.count ?? 0));
     return sorted;
-  }, [products, category, priceBand, minRating, inStockOnly, sort, priceBands]);
+  }, [catalogue, category, priceBand, minRating, inStockOnly, sort, priceBands]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const vendors = useMemo(() => new Set(products.map((product) => product.vendor.id)).size, [products]);
+  const vendors = useMemo(() => new Set(catalogue.map((product) => product.vendor.id)).size, [catalogue]);
 
   function resetPage() {
     setPage(1);
@@ -241,7 +252,7 @@ export function NaijaShopPage() {
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">NaijaShop marketplace</p>
             <h1 className="mt-1 font-display text-2xl font-extrabold sm:text-3xl">Shop verified Nigerian sellers</h1>
             <p className="mt-1 text-sm text-muted">
-              Escrow-protected checkout, tracked delivery and server-verified payments — {products.length} listings from {vendors} sellers.
+              Escrow-protected checkout, tracked delivery and server-verified payments — {catalogue.length} listings from {vendors} sellers.
             </p>
           </div>
           <div className="grid grid-cols-3 gap-3 text-center text-[11px] font-bold text-muted sm:w-auto">
@@ -279,6 +290,36 @@ export function NaijaShopPage() {
               </Link>
             }
           />
+        </div>
+      ) : null}
+
+      {showSamples ? (
+        <div role="status" className="mt-4 rounded-lg border border-amber-strong/40 bg-amber/10 px-4 py-3 text-sm text-ink">
+          <strong>Sample catalogue.</strong> These are demonstration rows seeded for local development, not real seller listings.
+          Real listings appear when verified sellers publish products from their dashboard.
+        </div>
+      ) : null}
+
+      {!showSamples && realProducts.length === 0 ? (
+        <div className="mt-4 rounded-lg border border-dashed border-border-soft bg-canvas p-8 text-center">
+          <PackageCheck className="mx-auto mb-3 h-8 w-8 text-primary" aria-hidden="true" />
+          <p className="font-bold">No live seller listings yet.</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+            The storefront only shows products published by verified sellers. Once a seller adds a product it appears here with
+            its real photos, stock and price.
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Link href="/sell" className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-bold text-white">
+              Sell on NaijaDeals
+            </Link>
+            <button
+              type="button"
+              onClick={() => setShowSamples(true)}
+              className="inline-flex min-h-10 items-center rounded-lg border border-border-soft px-4 text-sm font-bold text-ink"
+            >
+              View sample catalogue (demo)
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -613,6 +654,11 @@ function ShopResultCard({ product, onAdd }: { product: ApiProduct; onAdd: (produ
 
   return (
     <article className="flex h-full flex-col rounded-lg border border-border-soft bg-canvas p-3 transition hover:shadow-soft">
+      {product.isSample ? (
+        <span className="mb-1 inline-flex w-fit items-center rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-strong">
+          Sample
+        </span>
+      ) : null}
       <Link href={`/product/${product.slug}`} className="grid place-items-center bg-white">
         <img
           src={product.images[0]?.url || "/products/tecno-spark-20.svg"}
