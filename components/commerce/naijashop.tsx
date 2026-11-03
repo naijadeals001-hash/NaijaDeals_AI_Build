@@ -14,6 +14,7 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  X,
   ShieldCheck,
   ShoppingCart,
   Bike,
@@ -169,6 +170,7 @@ export function NaijaShopPage() {
   const [addingId, setAddingId] = useState("");
   const PAGE_SIZE = 12;
   const collectionRef = useRef<HTMLDivElement>(null);
+  const [allMenuOpen, setAllMenuOpen] = useState(false);
 
   // Amazon-inspired CSS grid pattern classes (commented out for ESLint parsing)
   // const gridPatterns = {
@@ -287,7 +289,7 @@ export function NaijaShopPage() {
       <MarketplaceBar categories={categories} />
 
       <nav aria-label="Shop departments" className="-mx-3 mt-0 flex items-center gap-0.5 overflow-x-auto bg-[#232f3e] px-2 py-1.5 text-white sm:-mx-5 sm:px-4 lg:-mx-8 lg:px-6">
-        <Link href="/search" className="whitespace-nowrap rounded px-2.5 py-1 text-xs font-bold hover:bg-white/10">All departments</Link>
+        <button type="button" onClick={() => setAllMenuOpen(true)} aria-expanded={allMenuOpen} className="whitespace-nowrap rounded px-2.5 py-1 text-xs font-bold hover:bg-white/10">All departments</button>
         {categories.map((item) => (
           <Link key={item.id} href={`/search?category=${item.slug}`} className="whitespace-nowrap rounded px-2.5 py-1 text-xs font-bold hover:bg-white/10">
             {item.name}
@@ -299,6 +301,42 @@ export function NaijaShopPage() {
         <p className="mt-2 rounded border border-[#B45309]/30 bg-amber/10 px-3 py-2 text-[11px] text-ink">
           <strong>Demo catalogue.</strong> Sample listings are shown to preview the storefront; live seller listings replace them.
         </p>
+      ) : null}
+
+      {allMenuOpen ? (
+        <div className="fixed inset-0 z-[60] flex">
+          <button type="button" aria-label="Close all departments menu" onClick={() => setAllMenuOpen(false)} className="absolute inset-0 bg-black/50" />
+          <aside className="relative z-10 flex h-full w-[340px] max-w-[85vw] flex-col overflow-y-auto bg-white text-[#0f1111] shadow-2xl">
+            <div className="flex items-center gap-2 bg-[#232f3e] px-4 py-3 text-white">
+              <UserCircle className="h-6 w-6" aria-hidden="true" />
+              <span className="text-sm font-extrabold">Hello, sign in</span>
+              <button type="button" onClick={() => setAllMenuOpen(false)} aria-label="Close menu" className="ml-auto rounded p-1 hover:bg-white/10">
+                <X className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="px-4 py-3">
+              <p className="text-base font-extrabold">Trending</p>
+              <Link href="/search?sort=rating" onClick={() => setAllMenuOpen(false)} className="mt-1 block py-1 text-sm hover:underline">Best Sellers</Link>
+              <Link href="/search?sort=newest" onClick={() => setAllMenuOpen(false)} className="block py-1 text-sm hover:underline">New Releases</Link>
+            </div>
+            <div className="border-t border-border-soft px-4 py-3">
+              <p className="text-base font-extrabold">Shop by Department</p>
+              {categories.map((item) => (
+                <Link key={item.id} href={`/search?category=${item.slug}`} onClick={() => setAllMenuOpen(false)} className="flex items-center justify-between py-1.5 text-sm hover:underline">
+                  {item.name}
+                  <ChevronRight className="h-4 w-4 text-muted" aria-hidden="true" />
+                </Link>
+              ))}
+            </div>
+            <div className="border-t border-border-soft px-4 py-3">
+              <p className="text-base font-extrabold">Help &amp; Settings</p>
+              <Link href="/account" onClick={() => setAllMenuOpen(false)} className="block py-1.5 text-sm hover:underline">Your Account</Link>
+              <Link href="/orders" onClick={() => setAllMenuOpen(false)} className="block py-1.5 text-sm hover:underline">Returns &amp; Orders</Link>
+              <Link href="/naijapay" onClick={() => setAllMenuOpen(false)} className="block py-1.5 text-sm hover:underline">NaijaPay</Link>
+              <Link href="/login" onClick={() => setAllMenuOpen(false)} className="block py-1.5 text-sm hover:underline">Sign in</Link>
+            </div>
+          </aside>
+        </div>
       ) : null}
 
       <section aria-label="Featured collections" className="relative mt-3">
@@ -441,6 +479,7 @@ function chipClass(active: boolean) {
 
 function MarketplaceBar({ categories }: { categories: ApiCategory[] }) {
   const [scope, setScope] = useState("all");
+  const [accountOpen, setAccountOpen] = useState(false);
   return (
     <div className="-mx-3 bg-[#131921] px-3 py-2.5 text-white sm:-mx-5 sm:px-5 lg:-mx-8 lg:px-8">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-4">
@@ -490,10 +529,38 @@ function MarketplaceBar({ categories }: { categories: ApiCategory[] }) {
         </form>
 
         <div className="flex items-center gap-4 text-xs font-bold">
-          <Link href="/account" className="hidden leading-tight hover:text-primary-live sm:block">
-            <span className="block text-white/70">Hello, sign in</span>
-            <span className="text-sm">Account &amp; lists</span>
-          </Link>
+          <div className="relative hidden sm:block">
+            <button
+              type="button"
+              onClick={() => setAccountOpen((value) => !value)}
+              aria-expanded={accountOpen}
+              aria-haspopup="menu"
+              className="text-left leading-tight hover:text-primary-live"
+            >
+              <span className="block text-white/70">Hello, sign in</span>
+              <span className="text-sm">Account &amp; lists</span>
+            </button>
+            {accountOpen ? (
+              <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-72 rounded bg-white p-3 text-left text-ink shadow-2xl">
+                <Link href="/login" className="block rounded bg-[#ffd814] px-3 py-2 text-center text-sm font-bold text-[#0f1111] hover:bg-[#f7ca00]">Sign in</Link>
+                <p className="mt-1 text-center text-[10px] text-muted">New customer? <Link href="/register" className="text-[#007185] underline">Start here.</Link></p>
+                <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border-soft pt-3 text-xs">
+                  <div>
+                    <p className="font-extrabold">Your Lists</p>
+                    <Link href="/account" className="mt-1 block text-[#007185] hover:underline">Account</Link>
+                    <Link href="/orders" className="block text-[#007185] hover:underline">Orders</Link>
+                    <Link href="/cart" className="block text-[#007185] hover:underline">Cart</Link>
+                  </div>
+                  <div>
+                    <p className="font-extrabold">Your Account</p>
+                    <Link href="/naijapay" className="mt-1 block text-[#007185] hover:underline">NaijaPay</Link>
+                    <Link href="/seller" className="block text-[#007185] hover:underline">Seller dashboard</Link>
+                    <Link href="/courier" className="block text-[#007185] hover:underline">Courier hub</Link>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
           <Link href="/orders" className="hidden leading-tight hover:text-primary-live sm:block">
             <span className="block text-white/70">Returns</span>
             <span className="text-sm">&amp; Orders</span>
