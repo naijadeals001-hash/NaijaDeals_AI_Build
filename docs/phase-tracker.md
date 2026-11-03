@@ -72,7 +72,11 @@ phases (00–20) plus 10 advisory Part M workstreams. No phase status was upgrad
 
 ## Phase 02 — Design system and accessible application shells
 
-**Status:** NOT STARTED (depends on Phase 01)
+**Status:** IN PROGRESS — visual direction applied to the homepage (2026-11-03); sub-phases 02A–02D
+(contrast/keyboard/ARIA/screen-reader audits) remain open, and Phase 01 is still blocked on its CI gate.
+
+**Landed:** editorial homepage hero, ecosystem pulse, asymmetric service bento, wallet band,
+refined trust/partner sections, `/drive` → `/naijadrive` redirect; see `docs/design-direction.md`
 
 **Required per playbook:**
 - Research Uber/Bolt ecosystem navigation and commerce/dashboard references through REA

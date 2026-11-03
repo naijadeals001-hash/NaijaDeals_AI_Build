@@ -228,6 +228,19 @@ localStorage demo). Stale claims (commit `61b066ee`, phantom stash, "no tests/CI
 **Still blocked:** the deliberately failing CI check (push returns 403), and the remaining
 Phase 05 items (pagination/bulk/detail views, country activation, audit before/after detail).
 
+## Homepage redesign (2026-11-03)
+
+The homepage was rebuilt against the project's own specification
+(`docs/design-direction.md`): editorial hero with location/currency/live badges and a glass
+search, an honest ecosystem pulse strip, an asymmetric service bento (Shop and Drive featured),
+a "One wallet" band, refined trust/partner sections and a `/drive` → `/naijadrive` redirect.
+Copy and i18n keys are unchanged; no new dependencies; shell markers preserved.
+
+Verified in Chrome at 1440×1100, 820×1000 and 390×844: HTTP 200, zero console errors, 11 module
+images loaded, and `/naijashop`, `/naijadrive`, `/wallet`, `/products` all 200. Screenshots in
+`qa-artifacts/preview/final-redesign-*.png` (Git-ignored). The preview is served from the
+project's dedicated `.next-preview` build directory so concurrent agent servers cannot corrupt it.
+
 ## Repository preservation (2026-11-03)
 
 GitHub write access is still unavailable: `gh auth status` reports no logged-in host, the only

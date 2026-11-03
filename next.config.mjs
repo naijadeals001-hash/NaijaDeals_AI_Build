@@ -4,6 +4,11 @@ const nextConfig = {
   // preview can run side by side without overwriting each other's artifacts.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   output: "standalone",
+  async redirects() {
+    // "/drive" was reaching the generic [slug] placeholder; the ride experience
+    // lives at /naijadrive, so send visitors to the real service.
+    return [{ source: "/drive", destination: "/naijadrive", permanent: false }];
+  },
   async headers() {
     return [
       {
