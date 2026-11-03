@@ -876,3 +876,13 @@ script announcement rendered as text (no execution), demo visibility toggle, dem
 audit row with actor and change set, and shop fallback when /api/storefront returns 500.
 Optimistic concurrency uses a version in the config JSON; legacy rows without a version are treated as
 version 1. The config row persists in PostgreSQL (migration 20261103250000_storefront_config).
+
+
+## Storefront fallback hardening (2026-11-03)
+
+When /api/storefront is unavailable the shop now uses the last valid configuration cached in
+localStorage; with no cache it fails closed (showDemoProducts=false), so a failed fetch cannot
+re-expose demos an admin hid. Acceptance suite extended to 14 checks, all passing locally on 3010.
+
+Persistence wording: cross-request database persistence is demonstrated. A process restart and a
+migration replay against an existing database were NOT executed; those remain outstanding.
