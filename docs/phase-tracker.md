@@ -116,10 +116,21 @@ dialogs are introduced.
 - Desktop reference comparison at 1440×1000 and mobile usability at 390×844 with zero horizontal overflow; mobile sidebar closes after navigation
 - Evidence: `node scripts/control-center-visual-qa.mjs` **29/29**, `npm run test:drive` **28/28**, `npm run qa:idle-sweep` **3/3**, `npx tsc --noEmit` clean, production build successful; screenshots in `.qa/control-center/`
 
-**Still open for a Phase 05 PASS:**
-- Server-side pagination, safe bulk actions and record-detail views
-- Explicit operations/finance/support/moderation role scopes and cross-region allow/deny tests
-- Role-assignment writes and protection against self-escalation
+**Exit-gate evidence (2026-11-03):**
+
+| Exit criterion | Result |
+| --- | --- |
+| Allow/deny and cross-region API tests | PASS — admin security suite **19/19** (region-scoped moderation, dashboard, payouts, audit, role delegation) |
+| No self-escalation | PASS — covered by the same suite (self role change and privilege delegation rejected) |
+| Dashboard figures reconcile | PASS — rendered KPIs matched direct SQL: products 12, vendors 2, orders 0, trips 43, completed trips 20, drivers 2 |
+| Pagination / filter / bulk-action error paths | PASS — filters/pagination exercised in-browser; bulk partial failure injected a 500 for one row → 1 suspended, 1 unchanged, failure surfaced with the row message |
+| Sensitive changes create audit events | PASS — moderation, order status, refund and dispute rows carry before/after metadata |
+| Admin usable on smaller screens | PASS — 390×844: 0 document overflow, tables scroll inside their container, navigation available, axe 0 |
+
+**Still open for a Phase 05 PASS (WORK coverage, not exit gate):**
+- Role-assignment UI (the roles:write API and guards exist; no Control Center surface yet)
+- Disputes admin view
+- City-level activation (country activation shipped)
 - Phase 05 acceptance run (2026-11-03, fresh isolated database): admin security **19/19**,
   marketplace **13/13**, drive **28/28**, `tsc` clean, in the order admin → marketplace → drive.
   The admin suite's cross-region product fixture now carries an image, removing the suite-order
