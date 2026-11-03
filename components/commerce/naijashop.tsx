@@ -284,24 +284,11 @@ export function NaijaShopPage() {
       <MarketplaceBar categories={categories} />
 
       <nav aria-label="Shop departments" className="-mx-3 mt-0 flex items-center gap-0.5 overflow-x-auto bg-[#232f3e] px-2 py-1.5 text-white sm:-mx-5 sm:px-4 lg:-mx-8 lg:px-6">
-        <button
-          type="button"
-          onClick={() => { setCategory("all"); resetPage(); }}
-          aria-pressed={category === "all"}
-          className={`whitespace-nowrap rounded px-2.5 py-1 text-xs font-bold ${category === "all" ? "bg-white/15" : "hover:bg-white/10"}`}
-        >
-          All departments
-        </button>
+        <Link href="/search" className="whitespace-nowrap rounded px-2.5 py-1 text-xs font-bold hover:bg-white/10">All departments</Link>
         {categories.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => { setCategory(item.slug); resetPage(); }}
-            aria-pressed={category === item.slug}
-            className={`whitespace-nowrap rounded px-2.5 py-1 text-xs font-bold ${category === item.slug ? "bg-white/15" : "hover:bg-white/10"}`}
-          >
+          <Link key={item.id} href={`/search?category=${item.slug}`} className="whitespace-nowrap rounded px-2.5 py-1 text-xs font-bold hover:bg-white/10">
             {item.name}
-          </button>
+          </Link>
         ))}
       </nav>
 
@@ -443,12 +430,12 @@ function MarketplaceBar({ categories }: { categories: ApiCategory[] }) {
           NaijaDeals
         </Link>
 
-        <div className="hidden items-start gap-1.5 px-2 text-xs leading-tight text-white/80 sm:flex">
+        <Link href="/account" className="hidden items-start gap-1.5 px-2 text-xs leading-tight text-white/80 hover:text-white sm:flex">
           <MapPin className="mt-0.5 h-4 w-4 text-primary-live" aria-hidden="true" />
           <span>
             Deliver to <span className="font-extrabold text-white">Lagos, Nigeria</span>
           </span>
-        </div>
+        </Link>
 
         <form action="/search" method="get" className="flex flex-1 items-stretch overflow-hidden rounded-lg bg-white text-ink">
           <label htmlFor="shop-department" className="sr-only">
@@ -733,7 +720,7 @@ function ShopResultCard({ product, onAdd }: { product: ApiProduct; onAdd: (produ
       <div className="mt-1.5 flex flex-wrap items-baseline gap-2">
         <span className="font-display text-lg font-extrabold text-ink">{koboToNaira(product.priceKobo)}</span>
         {discount > 0 ? (
-          <span className="rounded bg-[#cc0c39] px-1.5 py-0.5 text-[10px] font-black text-white">-{discount}%</span>
+          <span className="rounded bg-[#00E676] px-1.5 py-0.5 text-[10px] font-black text-white">-{discount}%</span>
         ) : null}
       </div>
       {product.compareAtKobo ? (
@@ -784,6 +771,26 @@ export function SearchPage() {
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [adding, setAdding] = useState("");
+  const router = useRouter();
+
+  async function add(product: ApiProduct) {
+    setAdding(product.id);
+    setError("");
+    try {
+      await apiClient.addCartItem(product.id, 1);
+      setNotice(`${product.name} added to cart.`);
+    } catch (err) {
+      if (err instanceof ApiRequestError && err.status === 401) {
+        router.push("/login?next=/cart");
+        return;
+      }
+      setError(err instanceof Error ? err.message : "Could not add this item to the cart.");
+    } finally {
+      setAdding("");
+    }
+  }
 
   const load = useCallback(async () => {
     setStatus("loading");
@@ -864,17 +871,24 @@ export function SearchPage() {
 
       {status === "loading" ? <Loading /> : null}
       {status === "error" ? <ErrorBox message={error} /> : null}
+      {notice ? <div role="status" className="rounded-lg border border-primary/20 bg-primary-soft p-3 text-sm font-bold text-primary">{notice} <Link href="/cart" className="underline">View cart</Link></div> : null}
       {status === "ready" ? (
         <>
-          <p className="text-sm font-bold text-muted">{products.length} result(s)</p>
+          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border-soft pb-2">
+            <h2 className="text-xl font-extrabold text-[#0f1111]">Results</h2>
+            <p className="text-sm text-muted">1–{products.length} of {products.length} results{query ? ` for "${query}"` : ""}</p>
+          </div>
           {products.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border-soft bg-canvas p-8 text-center">
+            <div className="rounded-lg border border-dashed border-border-soft bg-canvas p-8 text-center">
               <p className="font-bold">No products matched your filters.</p>
+              <p className="mt-1 text-sm text-muted">Try a broader search or browse a department from the shop header.</p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="divide-y divide-border-soft rounded-lg border border-border-soft bg-canvas">
               {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <div key={product.id} className={adding === product.id ? "pointer-events-none opacity-60" : ""}>
+                  <ShopResultRow product={product} onAdd={add} />
+                </div>
               ))}
             </div>
           )}

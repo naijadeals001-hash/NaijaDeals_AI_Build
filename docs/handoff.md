@@ -800,3 +800,11 @@ Removed the results/filter block that sat below the personalized-recommendations
 ends with the carousel, eight shelves, the sign-in band and the footer, and the demo note is a compact
 strip at the top. Shop now / See more links go to /search?category=... where the result rows and
 filters live. Verified on the 3001 server: axe 0, no overflow, one footer.
+
+## NaijaShop controls + search flow (2026-11-03)
+
+Department nav items and All departments now link to /search?category=..., the shop header's deliver-to
+block links to /account, and the search page renders Amazon-style result rows with a working Add to cart
+(signed-in) that feeds /cart and its checkout action. Verified: Fashion nav -> /search?category=fashion;
+search "phone" -> 3 Add to cart buttons; adding an item shows the cart notice; /cart shows the item and a
+checkout link; product page exposes Add to cart and Buy now; mobile menu opens; language switcher opens.
