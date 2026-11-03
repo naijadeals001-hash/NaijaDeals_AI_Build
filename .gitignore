@@ -1,4 +1,6 @@
 .next/
+.next-*/
+.next.bak/
 .next-prod/
 node_modules/
 out/
@@ -16,3 +18,5 @@ yarn-error.log*
 logs/
 qa-artifacts/
 .qa/
+test-results/
+/rea-evidence
