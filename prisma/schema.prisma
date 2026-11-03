@@ -1133,3 +1133,12 @@ model AccountPosting {
   @@index([accountId])
   @@unique([adjustmentId, accountId])
 }
+
+
+/// Durable database identity used to gate live financial operations.
+model DatabaseClassification {
+  id             String   @id @default("default")
+  classification String   @default("UNKNOWN")
+  updatedBy      String?
+  updatedAt      DateTime @updatedAt
+}

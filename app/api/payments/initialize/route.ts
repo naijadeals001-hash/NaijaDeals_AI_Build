@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { initializePayment } from "@/lib/payments/service";
-import { assertLiveFinancialOperations } from "@/lib/payments/boundary";
+import { assertProviderOperation } from "@/lib/payments/boundary";
 import type { AdapterId } from "@/lib/payments/adapters";
 import { assertSameOrigin, jsonError, readJson, requireString, requireUser } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unknown payment method.", code: "unknown_provider" }, { status: 400 });
     }
     if (provider === "paystack" || provider === "flutterwave") {
-      assertLiveFinancialOperations("Live payment initialisation via " + provider);
+      await assertProviderOperation("Payment initialisation via " + provider, provider);
     }
     const origin = new URL(request.url).origin;
     const result = await initializePayment({

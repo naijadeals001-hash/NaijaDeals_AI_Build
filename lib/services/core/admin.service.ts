@@ -11,6 +11,7 @@ import { updateDeliveryStatus } from "./delivery.service";
 import { updateOrderStatus } from "./order.service";
 import { refundPayment } from "@/lib/payments/service";
 import { ensureWallet, listPaymentMethods } from "@/lib/payments/service";
+import { assertLiveFinancialOperations } from "@/lib/payments/boundary";
 
 const deliverySequence: DeliveryStatus[] = ["assigned", "pickup_started", "picked_up", "in_transit", "delivered"];
 
@@ -504,6 +505,7 @@ export async function listCouriers() {
 }
 
 export async function createPayout(input: { adminId: string; vendorId: string; periodStart: Date; periodEnd: Date }) {
+  await assertLiveFinancialOperations("Vendor payout creation");
   const orders = await prisma.order.findMany({
     where: {
       vendorId: input.vendorId,
@@ -542,6 +544,7 @@ export async function createPayout(input: { adminId: string; vendorId: string; p
 }
 
 export async function markPayoutPaid(input: { adminId: string; payoutId: string }) {
+  await assertLiveFinancialOperations("Vendor payout settlement");
   const payout = await prisma.payout.findUnique({ where: { id: input.payoutId } });
   if (!payout) throw new ApiError(404, "payout_not_found", "Payout not found.");
   if (payout.status === "PAID") return payout;

@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
     const admin = await requireAdminPermission("finance:payouts:write");
-    assertLiveFinancialOperations("Vendor payout creation");
+    await assertLiveFinancialOperations("Vendor payout creation");
     const body = await readJson<Record<string, unknown>>(request);
     const periodStart = new Date(requireString(body.periodStart, "Period start", 40));
     const periodEnd = new Date(requireString(body.periodEnd, "Period end", 40));
