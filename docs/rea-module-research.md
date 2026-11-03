@@ -112,3 +112,11 @@ preparation, courier pickup, status timeline and delivery confirmation. Sample k
 labelled and ordering will only claim what the server records.
 
 NaijaEats data model and discovery slice begin in the next round.
+
+## Journey 4 implementation note (2026-11-03)
+
+NaijaEats discovery slice landed: Restaurant and MenuItem models (status PENDING/VERIFIED/SUSPENDED),
+two labelled sample kitchens seeded with menus, GET /api/eats/restaurants returning verified kitchens
+with available items, and a kitchen discovery section on /naijaeats (delivery area, cuisine chips,
+menus with prices). Ordering, cart, payment, kitchen acceptance and courier dispatch are not built yet
+and the UI says so.

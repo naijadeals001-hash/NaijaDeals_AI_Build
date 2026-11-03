@@ -1867,14 +1867,14 @@ export function AdminOpsPage() {
   );
 }
 
-export function NaijaEatsPage() {
+function NaijaEatsLanding() {
   return (
     <ModuleLanding
       name="NaijaEats"
       icon={UtensilsCrossed}
       headline="Order food for delivery, once the kitchen is connected"
-      description="NaijaEats is the food vertical of the same account you use for shopping and rides. Ordering stays disabled until restaurant credentials, menus and dispatch partners are connected — no simulated restaurants and no fake delivery times."
-      chips={["Same NaijaDeals account", "Escrow-protected", "Honest setup state"]}
+      description="NaijaEats is the food vertical of the same account you use for shopping and rides. Verified kitchens publish their menus here; ordering opens per kitchen once dispatch is connected, and sample kitchens are labelled."
+      chips={["Verified kitchens", "Escrow-protected", "Sample data labelled"]}
       image={{
         src: "/brand-photography/eats-jollof-delivery.jpg",
         alt: "Brand illustration of a NaijaEats courier holding a delivery bag with jollof rice, grilled chicken and plantain"
@@ -1886,7 +1886,7 @@ export function NaijaEatsPage() {
       ]}
       status={{
         title: "Setup status",
-        body: "Food ordering is not configured in this environment. There are no restaurant credentials, menus or dispatch partners connected, so ordering is disabled rather than simulated."
+        body: "Menu browsing is live for verified kitchen partners. Ordering stays disabled until a kitchen is connected to dispatch; sample kitchens on this page are labelled as sample data and cannot take a real order."
       }}
       primaryCta={{ label: "Browse NaijaShop", href: "/naijashop" }}
       secondaryCta={{ label: "How setup works", href: "/help" }}
@@ -2207,6 +2207,160 @@ function FreightQuoteForm() {
             ))}
         </div>
       ) : null}
+    </section>
+  );
+}
+
+export function NaijaEatsPage() {
+  return (
+    <div className="space-y-5">
+      <NaijaEatsLanding />
+      <EatsDiscovery />
+    </div>
+  );
+}
+
+interface EatsMenuItemRow {
+  id: string;
+  name: string;
+  description: string | null;
+  priceKobo: string;
+  available: boolean;
+}
+
+interface EatsRestaurantRow {
+  id: string;
+  slug: string;
+  name: string;
+  cuisine: string;
+  market: string;
+  address: string;
+  phone: string;
+  isSample: boolean;
+  menuItems: EatsMenuItemRow[];
+}
+
+function EatsDiscovery() {
+  const [restaurants, setRestaurants] = useState<EatsRestaurantRow[]>([]);
+  const [market, setMarket] = useState("all");
+  const [cuisine, setCuisine] = useState("all");
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/eats/restaurants", { cache: "no-store" });
+        const body = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (!res.ok) throw new Error(body?.error ?? `Request failed with HTTP ${res.status}`);
+        setRestaurants(Array.isArray(body) ? (body as EatsRestaurantRow[]) : []);
+        setStatus("ready");
+      } catch (caught) {
+        if (cancelled) return;
+        setError(caught instanceof Error ? caught.message : "Could not load kitchens.");
+        setStatus("error");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const markets = Array.from(new Set(restaurants.map((row) => row.market))).sort();
+  const cuisines = Array.from(new Set(restaurants.map((row) => row.cuisine))).sort();
+  const filtered = restaurants.filter(
+    (row) => (market === "all" || row.market === market) && (cuisine === "all" || row.cuisine === cuisine)
+  );
+
+  return (
+    <section aria-label="Order food" className="rounded-3xl border border-border-soft bg-canvas p-5 sm:p-7">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide text-primary">Order food</p>
+          <h2 className="mt-1 font-display text-2xl font-extrabold">Kitchens delivering near you</h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            Choose where you are eating, then pick a kitchen. Menus are published by verified kitchen partners; ordering
+            opens only when the kitchen is connected to dispatch.
+          </p>
+        </div>
+        <label className="text-xs font-bold uppercase tracking-wide text-muted">
+          Delivery area
+          <select
+            value={market}
+            onChange={(event) => setMarket(event.target.value)}
+            className="mt-1 block min-h-11 min-w-52 rounded-xl border border-border-soft bg-surface-low px-3 text-sm font-semibold text-ink"
+          >
+            <option value="all">All Lagos areas</option>
+            {markets.map((item) => (
+              <option key={item} value={item}>{item}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setCuisine("all")}
+          className={`rounded-full px-3 py-1.5 text-xs font-bold ${cuisine === "all" ? "bg-primary text-white" : "border border-border-soft text-muted"}`}
+        >
+          All cuisines
+        </button>
+        {cuisines.map((item) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => setCuisine(item)}
+            className={`rounded-full px-3 py-1.5 text-xs font-bold ${cuisine === item ? "bg-primary text-white" : "border border-border-soft text-muted"}`}
+          >
+            {item}
+          </button>
+        ))}
+      </div>
+
+      {status === "loading" ? <p className="mt-5 text-sm text-muted">Loading kitchens…</p> : null}
+      {status === "error" ? <p role="alert" className="mt-5 text-sm font-bold text-crimson">{error}</p> : null}
+      {status === "ready" && filtered.length === 0 ? (
+        <p className="mt-5 rounded-xl border border-border-soft bg-surface-low p-4 text-sm text-muted">
+          No kitchens are live in this area yet. Restaurant partners apply through the seller onboarding flow before
+          their menu appears here.
+        </p>
+      ) : null}
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        {filtered.map((restaurant) => (
+          <article key={restaurant.id} className="overflow-hidden rounded-2xl border border-border-soft bg-canvas">
+            <div className="flex items-start justify-between gap-3 border-b border-border-soft bg-surface-low p-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-display text-lg font-extrabold">{restaurant.name}</h3>
+                  {restaurant.isSample ? (
+                    <span className="rounded bg-amber-soft px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#B45309]">Sample kitchen</span>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-xs font-semibold text-muted">{restaurant.cuisine} · {restaurant.market}</p>
+                <p className="mt-0.5 text-[11px] text-muted">{restaurant.address}</p>
+              </div>
+            </div>
+            <ul className="divide-y divide-border-soft">
+              {restaurant.menuItems.map((item) => (
+                <li key={item.id} className="flex items-start justify-between gap-3 p-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold">{item.name}</p>
+                    {item.description ? <p className="mt-0.5 text-xs text-muted">{item.description}</p> : null}
+                  </div>
+                  <span className="shrink-0 text-sm font-extrabold text-primary">{koboToNaira(item.priceKobo)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="border-t border-border-soft px-4 py-3 text-[11px] text-muted">
+              Menu preview. Ordering opens when this kitchen is connected to dispatch; no order can be placed yet.
+            </p>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }

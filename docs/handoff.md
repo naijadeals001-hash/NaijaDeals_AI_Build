@@ -586,3 +586,9 @@ history rewrite is required.
 GET/PATCH /api/seller/profile; changes are audited as vendor.profile_updated with the account number
 masked. Updated values appear in the seller overview immediately. Notifications and the full
 rejected-application verification remain.
+
+**NaijaEats discovery slice (2026-11-03):** Restaurant/MenuItem schema and migration, verified-kitchen
+API (raw SQL so the long-running preview works), two labelled sample kitchens, and a discovery section
+on /naijaeats with delivery-area filter, cuisine chips and priced menus. Verified 2 kitchens / 6 items,
+axe 0, no mobile overflow. Ordering journey (cart, fees, payment, kitchen acceptance, dispatch,
+tracking) remains to be built and is explicitly marked as not available.

@@ -239,6 +239,8 @@ async function main() {
     prisma.driverProfile.deleteMany(),
     prisma.courier.deleteMany(),
     prisma.vendor.deleteMany(),
+    prisma.menuItem.deleteMany(),
+    prisma.restaurant.deleteMany(),
     prisma.userRole.deleteMany(),
     prisma.role.deleteMany(),
     prisma.user.deleteMany()
@@ -534,6 +536,63 @@ async function main() {
       }
     }
   });
+
+
+  const restaurantSeed = [
+    {
+      slug: "mama-cass-kitchen",
+      name: "Mama Cass Kitchen",
+      cuisine: "Nigerian home cooking",
+      market: "Surulere, Lagos",
+      address: "12 Bode Thomas Road, Surulere, Lagos",
+      phone: "08022220001",
+      items: [
+        { name: "Jollof rice with grilled chicken", description: "Smoky jollof, grilled chicken, fried plantain", price: 450000n },
+        { name: "Egusi soup with pounded yam", description: "Melon-seed soup, assorted meat, pounded yam", price: 520000n },
+        { name: "Peppered goat meat", description: "Slow-braised goat in pepper sauce", price: 380000n }
+      ]
+    },
+    {
+      slug: "yaba-grill-house",
+      name: "Yaba Grill House",
+      cuisine: "Grills and suya",
+      market: "Yaba, Lagos",
+      address: "8 Herbert Macaulay Way, Yaba, Lagos",
+      phone: "08022220002",
+      items: [
+        { name: "Beef suya wrap", description: "Spiced beef, onions, tomato and yaji", price: 260000n },
+        { name: "Grilled tilapia with plantain", description: "Whole tilapia, fried plantain, pepper dip", price: 610000n },
+        { name: "Asun rice bowl", description: "Peppered goat, jollof rice, coleslaw", price: 430000n }
+      ]
+    }
+  ];
+
+  for (const restaurant of restaurantSeed) {
+    const created = await prisma.restaurant.create({
+      data: {
+        ownerId: sellerOwner2.id,
+        slug: restaurant.slug,
+        name: restaurant.name,
+        cuisine: restaurant.cuisine,
+        market: restaurant.market,
+        address: restaurant.address,
+        phone: restaurant.phone,
+        status: "VERIFIED",
+        isSample: true
+      }
+    });
+    for (const item of restaurant.items) {
+      await prisma.menuItem.create({
+        data: {
+          restaurantId: created.id,
+          name: item.name,
+          description: item.description,
+          priceKobo: item.price,
+          isSample: true
+        }
+      });
+    }
+  }
 
   console.log(
     JSON.stringify(

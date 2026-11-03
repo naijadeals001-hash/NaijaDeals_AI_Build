@@ -175,6 +175,7 @@ model User {
   savedPlaces       SavedPlace[]
   freightRequests  FreightRequest[] @relation("CustomerFreight")
   partnerNotifications PartnerNotification[] @relation("PartnerNotifications")
+  restaurants Restaurant[] @relation("RestaurantOwner")
 }
 
 model Role {
@@ -917,4 +918,45 @@ model PartnerNotification {
   user      User      @relation("PartnerNotifications", fields: [userId], references: [id])
 
   @@index([userId, createdAt])
+}
+
+
+enum RestaurantStatus {
+  PENDING
+  VERIFIED
+  SUSPENDED
+}
+
+/// A kitchen partner listing. Menus are only shown for VERIFIED restaurants.
+model Restaurant {
+  id        String           @id @default(cuid())
+  slug      String           @unique
+  ownerId   String
+  name      String
+  cuisine   String
+  market    String
+  address   String
+  phone     String
+  status    RestaurantStatus @default(PENDING)
+  isSample  Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  owner     User             @relation("RestaurantOwner", fields: [ownerId], references: [id])
+  menuItems MenuItem[]
+
+  @@index([status, market])
+}
+
+model MenuItem {
+  id           String     @id @default(cuid())
+  restaurantId String
+  name         String
+  description  String?
+  priceKobo    BigInt
+  available    Boolean    @default(true)
+  isSample     Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+
+  @@index([restaurantId, available])
 }
