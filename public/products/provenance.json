@@ -158,5 +158,85 @@
   "creator": "detzelpretzel",
   "license": "by-sa",
   "source": "https://www.flickr.com/photos/8990365@N03/2126504339"
+ },
+ {
+  "path": "/products/demo4/phone-a1.jpg",
+  "products": [
+   "demo4-phone-desk"
+  ],
+  "title": "apple-iphone-smartphone-desk-1",
+  "creator": "pixellaphoto",
+  "license": "cc0",
+  "source": "https://www.flickr.com/photos/137643065@N06/24217686692"
+ },
+ {
+  "path": "/products/demo4/phone-a3.jpg",
+  "products": [
+   "demo4-phone-hand"
+  ],
+  "title": "Garmin-Asus A10 GPS Android smartphone review",
+  "creator": "liewcf",
+  "license": "by-sa",
+  "source": "https://www.flickr.com/photos/34353636@N00/5368269021"
+ },
+ {
+  "path": "/products/demo4/home-blender2.jpg",
+  "products": [
+   "demo4-blender"
+  ],
+  "title": "retro Osterizer kitchen blender",
+  "creator": "YourCastlesDecor",
+  "license": "by",
+  "source": "https://www.flickr.com/photos/101592688@N07/12317651403"
+ },
+ {
+  "path": "/products/demo4/fashion-handbag2.jpg",
+  "products": [
+   "demo4-handbags"
+  ],
+  "title": "Leather Handbags",
+  "creator": "Mike Prince",
+  "license": "by",
+  "source": "https://www.flickr.com/photos/70804987@N00/4782040554"
+ },
+ {
+  "path": "/products/demo4/grocery-onions.jpg",
+  "products": [
+   "demo4-onions"
+  ],
+  "title": "Garbanzo Bake - Diced Onions",
+  "creator": "phil_g",
+  "license": "by-sa",
+  "source": "https://www.flickr.com/photos/68975104@N00/27978405"
+ },
+ {
+  "path": "/products/demo4/power-inverter.jpg",
+  "products": [
+   "demo4-inverter"
+  ],
+  "title": "Solar Power Inverter",
+  "creator": "gleneivey",
+  "license": "by",
+  "source": "https://www.flickr.com/photos/27766103@N07/2602184174"
+ },
+ {
+  "path": "/products/demo4/power-battery.jpg",
+  "products": [
+   "demo4-battery-station"
+  ],
+  "title": "Solar battery charging station, panels",
+  "creator": "hiyori13",
+  "license": "by-sa",
+  "source": "https://www.flickr.com/photos/36484111@N00/31689572"
+ },
+ {
+  "path": "/products/demo4/gaming-keyboard2.jpg",
+  "products": [
+   "demo4-keyboard"
+  ],
+  "title": "Razer BlackWidow Ultimate 2014 Elite Mechanical Gaming Keyboard",
+  "creator": "osman.gucel",
+  "license": "by",
+  "source": "https://www.flickr.com/photos/126089327@N04/14714880858"
  }
 ]
