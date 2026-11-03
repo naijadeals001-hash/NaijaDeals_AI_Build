@@ -13,7 +13,6 @@ export default function Page() {
     <Suspense fallback={<div className="rounded-2xl border border-border-soft bg-canvas p-5 font-bold text-muted">Loading marketplace...</div>}>
       <NaijaShopPage />
       <ShopFooter />
-      <ShopFooter />
     </Suspense>
   );
 }

@@ -167,6 +167,14 @@ export function NaijaShopPage() {
   const [addingId, setAddingId] = useState("");
   const PAGE_SIZE = 12;
 
+  // Amazon-inspired CSS grid pattern classes
+  const gridPatterns = {
+    twoPack: "grid-template-areas: \"a b\" grid-template-columns: repeat(2,1fr) grid-template-rows: repeat(2,1fr)",
+    threePack: "grid-template-areas: \"a a\" grid-template-columns: repeat(2,1fr) grid-template-rows: repeat(3,1fr) \"b c\"",
+    fourPack: "grid-template-areas: \"a b\" grid-template-columns: repeat(2,1fr) grid-template-rows: repeat(2,1fr) \"c d\"",
+    ninePack: "grid-template-columns: repeat(12,1fr) grid-template-rows: repeat(3,1fr)",
+  };
+
   useEffect(() => {
     let active = true;
     Promise.all([apiClient.getProducts(), apiClient.getCategories()])
@@ -449,7 +457,7 @@ export function NaijaShopPage() {
         </button>
       </section>
 
-      <div className="mt-4 grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="mt-4 grid gap-5 lg:grid-cols[2]">
         <div className={showFilters ? "block" : "hidden lg:block"}>
         <ShopFilters
           categories={categories}
@@ -763,11 +771,11 @@ function Stars({ average, count }: { average: number | null | undefined; count: 
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`h-3.5 w-3.5 ${value >= star - 0.25 ? "fill-[#f3b33d] text-[#f3b33d]" : "fill-transparent text-[#c9a227]"}`}
+            className={`h-3.5 w-3.5 ${value >= star - 0.25 ? "fill-[#00E676]" : "fill-transparent"}`}
           />
         ))}
       </span>
-      <span className="font-bold text-[#007185]">{count > 0 ? count.toLocaleString() : "0"}</span>
+      <span className="font-bold text-primary">{count > 0 ? count.toLocaleString() : "0"}</span>
     </span>
   );
 }
@@ -807,7 +815,7 @@ function ShopResultRow({ product, onAdd }: { product: ApiProduct; onAdd: (produc
           {discount > 0 ? (
             <>
               <span className="text-xs text-muted line-through">{koboToNaira(product.compareAtKobo as string)}</span>
-              <span className="rounded bg-[#cc0c39] px-1.5 py-0.5 text-[10px] font-bold text-white">-{discount}%</span>
+              <span className="rounded bg-[#00E676] px-1.5 py-0.5 text-[10px] font-bold text-[#04140f]">-{discount}%</span>
             </>
           ) : null}
         </div>

@@ -38,6 +38,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
   // The storefront and NaijaEats landing use the full-bleed layout; the ecosystem
   // sidebar starts on the remaining inner routes.
   const isHome = pathname === "/" || pathname === "/naijaeats" || pathname === "/naijashop";
+  const hasCustomFooter = pathname === "/naijashop";
 
   const topLinks = [
     { href: "/", label: t("nav.home") },
@@ -278,12 +279,14 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
         {children}
       </main>
 
+      {hasCustomFooter ? null : (
       <footer className={`hidden border-t border-border-soft bg-canvas py-8 lg:block ${isHome ? "" : "lg:ml-64 lg:rtl:ml-0 lg:rtl:mr-64"}`}>
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-8 text-sm text-muted">
           <span>NaijaDeals.com</span>
           <span>{t("common.footer", { currency: "NGN" })}</span>
         </div>
       </footer>
+      )}
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border-soft bg-canvas/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Mobile">
         <div className="grid grid-cols-5">

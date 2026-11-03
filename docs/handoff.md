@@ -780,3 +780,6 @@ list rows with image, title, stars/review count, price/list price and add-to-car
 populated Amazon-style result rows (image left, rating/no-ratings, price, delivery, seller, yellow Add to
 cart), a full-bleed dark header with a dark department strip, and automatically shows the labelled demo
 catalogue when no live listings exist. Screenshot qa-artifacts/preview/naijashop-after.png.
+**NaijaShop footer fix (2026-11-03):** removed the duplicate ShopFooter render (the page had two
+instances) and suppressed the global AppShell footer on /naijashop so the storefront has exactly one
+footer. Also darkened the discount badge text for contrast; axe is clean again.
