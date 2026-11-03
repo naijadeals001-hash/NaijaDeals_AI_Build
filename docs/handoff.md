@@ -132,3 +132,40 @@ Artifacts: `.qa/control-center/` (desktop and mobile screenshots plus `report.js
 - **History rewrite scope:** local-only commits on `naijashop-marketplace` above the previously published `9fe78d5`. Pre-rewrite commits are still reachable through the local branch `backup/pre-secret-redaction-ec55b41`; nothing was deleted.
 - **CI:** `.github/workflows/ci.yml` runs type-check, lint, build, test and a Docker build with `push: false`. There is no deployment job, so the push triggered CI only.
 - **Credentials:** the push used a credential supplied outside Git; no token value is stored in tracked files, logs, or reports. The leaked value in `HANDOFF.md` was already revoked and remains unusable.
+
+## Phase 01 — tooling verification (2026-11-03)
+
+Scope: tooling evidence only. No application source was changed, and Phase 01 is **not**
+claimed as passed by this work.
+
+**Verified by execution (details and hashes in `docs/reference-and-tooling-evidence.md`):**
+
+- REA 6.8.0: MCP registration `aligned` for this harness, 229 tools advertised, and the
+  `reverse-engineer-anything` skill matches the published package on all 8 files.
+- Browser: passive CDP captures against Uber Kenya, the public Uber price estimate, Bolt
+  Kenya and `http://localhost:3000`, each with a screenshot digest, through a dedicated
+  browser profile bound to loopback debugging.
+- Android: JDK 21, platform-tools 37.0.1, apktool 3.0.3, JADX 1.5.6 and REA's required
+  `jadx-headless-mcp` 0.7.1 bridge, each digest-checked against an upstream source. REA
+  ran JADX on a real APK and apktool decoded 1207 resources; adb reports no attached device.
+- ECC 2.2.3 is installed (120 skills, 68 agents, 94 commands). Soup, the local ECC skill
+  router, runs and is registered as an MCP server alongside REA.
+
+**Correction to the earlier record:** the only APK on this workstation, `taxify-driver.apk`,
+is package `cm.aptoide.pt` (Aptoide 10.0.0), not a Bolt/Taxify client. The earlier claim
+that it was a Bolt driver app was wrong.
+
+**Blocked / next:**
+
+- No genuine Uber or Bolt APK exists locally, so competitor Android behaviour is unverified.
+- No Android device or emulator is attached.
+- Phase 01 remains BLOCKED on its other gates: documented skill selection per domain,
+  a deliberately failing CI check, a coverage baseline, and the regression suite for auth,
+  purchase and ride flows.
+
+**Push status (2026-11-03):** the documentation commit is **local only**. `git push origin
+naijashop-marketplace` was rejected with `403` — `Permission to
+naijadeals001-hash/NaijaDeals_AI_Build.git denied to BetFuz` — and `gh auth status`
+reports no logged-in GitHub host. The remote branch is unchanged at `d28a6be`. Recovery:
+authenticate (`gh auth login` or an authorised token) and push the existing commit; no
+history rewrite is required.

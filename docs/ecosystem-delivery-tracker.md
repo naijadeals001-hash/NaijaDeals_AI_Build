@@ -232,9 +232,11 @@ npm run art:generate
 | Email/SMS provider | Outbound notifications and support | Not configured |
 | PWA icons/manifest review | Installable web app | Not started |
 
-Tooling: REA 6.8.0 is installed and its catalogue responds, but native analysis engines
-(Ghidra, IDA, Hopper on Windows, JADX) are unavailable and no analysis provider is bound.
-ECC and Soup are not installed. See `docs/reference-and-tooling-evidence.md`.
+Tooling (verified 2026-11-03): REA 6.8.0 is registered and connected, with Ghidra 12.1.4,
+JADX 0.7.1, apktool 3.0.3 and adb 37.0.1 available and exercised; browser CDP capture works
+against public references and the local preview. ECC 2.2.3 is installed and Soup is
+running as a registered MCP skill router. No genuine Uber/Bolt APK exists locally and no
+Android device is attached. See `docs/reference-and-tooling-evidence.md`.
 
 ---
 
