@@ -72,3 +72,9 @@ exist, which the exit gate permits to block only those provider checks. No live 
 ## Migration impact
 
 None. The payout fix is application logic only.
+
+**Evidence limitation (2026-11-03):** the partial-refund suite used completed test-provider payments
+because the isolated database had no paid wallet order at test time. The wallet-provider
+partial-refund branch is implemented with the same proportional ledger split but was not separately
+exercised; a paid wallet order should be added to the fixture set before treating that branch as
+verified.
