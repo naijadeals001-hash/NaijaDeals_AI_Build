@@ -75,7 +75,22 @@
 
 ## Phase 05 — Unified admin Control Center and permissions
 
-**Status:** NOT STARTED (depends on Phase 03, 04)
+**Status:** IN PROGRESS — core Control Center and super-admin boundary runtime-verified (2026-11-02)
+
+**Completed and verified:**
+- One `/admin` + `/super-admin` shell driven by `searchParams`, with URL-addressable modules/workspaces (`?module=…&tab=…&q=…`)
+- Real PostgreSQL data in Overview, Orders, Deliveries, Trips, Payouts, Products, Seller applications, Payments, Users, Vendors, Couriers, Drivers, Audit and Settings; no fabricated demo metrics
+- Server-enforced super-admin boundary: `requireSuperAdmin()` and `/api/super-admin/system` return **403** for a standard admin and **200** for a super admin
+- Real filters, in-table search, header search, refresh, honest empty/unavailable states, sign-out to `/login`
+- Desktop reference comparison at 1440×1000 and mobile usability at 390×844 with zero horizontal overflow; mobile sidebar closes after navigation
+- Evidence: `node scripts/control-center-visual-qa.mjs` **29/29**, `npm run test:drive` **28/28**, `npm run qa:idle-sweep` **3/3**, `npx tsc --noEmit` clean, production build successful; screenshots in `.qa/control-center/`
+
+**Still open for a Phase 05 PASS:**
+- Server-side pagination, safe bulk actions and record-detail views
+- Explicit operations/finance/support/moderation role scopes and cross-region allow/deny tests
+- Role-assignment writes and protection against self-escalation
+- Audited before/after events for sensitive finance and permission changes
+- Disputes, reconciliation, country/city activation and provider-connection controls where real services exist
 
 ## Phase 06 — Partner dashboards and onboarding
 

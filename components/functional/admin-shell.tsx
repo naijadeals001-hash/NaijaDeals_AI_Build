@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import {
   LayoutDashboard,
@@ -28,6 +28,7 @@ import {
   Store,
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { normalizeTab, TAB_LABELS, type AdminTab } from "@/lib/admin/admin-navigation";
 
 export interface AdminUser {
   name: string;
@@ -117,7 +118,6 @@ const adminNavItems: NavItem[] = [
 export function AdminShell({
   children,
   user,
-  pathname: currentPathname = "/admin",
 }: {
   children: React.ReactNode;
   user: AdminUser;
@@ -125,9 +125,18 @@ export function AdminShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isSuperAdminPath = pathname?.startsWith("/super-admin") ?? false;
+  const currentTab = normalizeTab(searchParams.get("tab"));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<string[]>(["operations", "catalog", "finance", "people"]);
+  const [expandedSections, setExpandedSections] = useState<string[]>(() => {
+    if (currentTab === "products" || currentTab === "applications") return ["catalog"];
+    if (currentTab === "payments" || currentTab === "payouts") return ["finance"];
+    if (["users", "vendors", "couriers", "drivers"].includes(currentTab)) return ["people"];
+    if (["orders", "deliveries", "rides"].includes(currentTab)) return ["operations"];
+    return ["operations"];
+  });
   const [lastFocusedElement, setLastFocusedElement] = useState<HTMLElement | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -162,8 +171,10 @@ export function AdminShell({
 
   const isActive = (href: string) => {
     if (href === "#") return false;
-    const tab = href.includes("tab=") ? href.split("tab=")[1] : "overview";
-    return pathname?.includes(`tab=${tab}`) || (tab === "overview" && pathname === "/admin");
+    if (href === "/super-admin") return isSuperAdminPath;
+    if (isSuperAdminPath) return false;
+    const tab: AdminTab = normalizeTab(href.includes("tab=") ? href.split("tab=")[1] : "overview");
+    return currentTab === tab;
   };
 
   const isSectionExpanded = (sectionId: string) => expandedSections.includes(sectionId);
@@ -174,7 +185,8 @@ export function AdminShell({
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST", headers: { "Content-Type": "application/json" } });
-    router.push("/");
+    router.push("/login");
+    router.refresh();
     router.refresh();
   }
 
@@ -184,9 +196,14 @@ export function AdminShell({
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`${pathname}?search=${encodeURIComponent(searchQuery)}`);
-    }
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return;
+    const params = new URLSearchParams();
+    const currentModule = searchParams.get("module");
+    if (currentModule) params.set("module", currentModule);
+    if (currentTab !== "overview") params.set("tab", currentTab);
+    params.set("q", trimmed);
+    router.push(`${isSuperAdminPath ? "/super-admin" : "/admin"}?${params.toString()}`);
   }
 
   const userRoles = user.roles ?? [];
@@ -224,23 +241,21 @@ export function AdminShell({
       >
         <div className="flex h-full flex-col">
           {/* Brand header */}
-          <div className={`flex h-16 items-center justify-between border-b border-[#21262D] px-4 ${sidebarCollapsed ? "justify-center" : ""}`}>
-            <Link href="/admin" className="flex items-center gap-2" aria-label="Control Center home">
+          <div className={`flex h-16 items-center justify-between border-b border-[#21262D] px-4`}>
+            <Link href={isSuperAdminPath ? "/super-admin" : "/admin"} className="flex items-center gap-2" aria-label="Control Center home">
               <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#00E676] text-sm font-black text-[#0B0E14] shadow-lift">
                 CC
               </span>
               {!sidebarCollapsed && <span className="font-display text-xl font-extrabold text-[#F0F6FC]">Control Center</span>}
             </Link>
-            {!sidebarCollapsed && (
-              <button
-                onClick={() => setSidebarCollapsed((prev) => !prev)}
-                className="rounded-lg p-1.5 text-muted hover:bg-surface-low hover:text-ink"
-                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                aria-expanded={!sidebarCollapsed}
-              >
-                {sidebarCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-              </button>
-            )}
+            <button
+              onClick={() => setSidebarCollapsed((prev) => !prev)}
+              className="rounded-lg p-1.5 text-[#8B949E] hover:bg-[#21262D] hover:text-[#F0F6FC]"
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!sidebarCollapsed}
+            >
+              {sidebarCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+            </button>
           </div>
 
           {/* Navigation */}
@@ -288,6 +303,7 @@ export function AdminShell({
                             <li key={child.id}>
                               <Link
                                 href={child.href}
+                                onClick={() => setSidebarOpen(false)}
                                 className={`flex items-center gap-3 rounded-xl px-6 py-2 text-sm font-medium transition-colors ${
                                   isActive(child.href)
                                     ? "bg-[#00E676]/15 text-[#00E676]"
@@ -311,6 +327,7 @@ export function AdminShell({
                   ) : (
                     <Link
                       href={section.href}
+                      onClick={() => setSidebarOpen(false)}
                       className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
                         isActive(section.href)
                           ? "bg-[#00E676]/15 text-[#00E676]"
@@ -329,6 +346,23 @@ export function AdminShell({
 
           {/* User section */}
           <div className={`border-t border-[#21262D] p-4 ${sidebarCollapsed ? "px-2" : ""}`}>
+            {isSuperAdmin ? (
+              <Link
+                href="/super-admin"
+                onClick={() => setSidebarOpen(false)}
+                className={`mb-3 flex items-center gap-3 rounded-xl py-2 text-sm font-semibold transition-colors ${
+                  sidebarCollapsed ? "justify-center px-0" : "px-3"
+                } ${
+                  isSuperAdminPath
+                    ? "bg-[#00E676]/15 text-[#00E676]"
+                    : "text-[#8B949E] hover:bg-[#21262D] hover:text-[#F0F6FC]"
+                }`}
+                aria-current={isSuperAdminPath ? "page" : undefined}
+              >
+                <Shield className="h-5 w-5 shrink-0" aria-hidden="true" />
+                {!sidebarCollapsed && <span className="truncate">Super admin area</span>}
+              </Link>
+            ) : null}
             {!sidebarCollapsed ? (
               <>
                 <div className="flex items-center gap-3 rounded-xl bg-[#21262D] p-3 mb-3">
@@ -385,9 +419,7 @@ export function AdminShell({
               <Menu className="h-5 w-5" />
             </button>
             <h1 className="hidden font-display text-xl font-extrabold text-[#F0F6FC] lg:block">
-              {currentPathname.includes("tab=")
-                ? currentPathname.split("tab=")[1].replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-                : "Operations dashboard"}
+              {isSuperAdminPath ? "Super admin" : TAB_LABELS[currentTab]}
             </h1>
           </div>
 
@@ -413,13 +445,12 @@ export function AdminShell({
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
               >
                 <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-crimson text-[10px] font-bold text-white flex items-center justify-center">
-                  3
-                </span>
               </button>
               {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-64 rounded-xl border border-[#21262D] bg-[#161B22] p-2 shadow-lift z-50">
-                  <p className="p-2 text-sm text-[#8B949E]">No new notifications</p>
+                <div className="absolute right-0 z-50 mt-2 w-64 rounded-xl border border-[#21262D] bg-[#161B22] p-2 shadow-lift">
+                  <p className="p-2 text-sm text-[#8B949E]">
+                    No notification service is connected. Alerts derived from real records appear on the Overview tab.
+                  </p>
                 </div>
               )}
             </div>
@@ -449,7 +480,12 @@ export function AdminShell({
                     {user.name}
                     <p className="text-xs text-[#8B949E] font-normal">{user.actorType}</p>
                   </div>
-                  <Link href="/admin?tab=settings" role="menuitem" className="block px-4 py-2 text-sm text-[#F0F6FC] hover:bg-[#21262D]">Settings</Link>
+                  {isSuperAdmin && (
+                    <>
+                      <Link href="/admin?tab=settings" role="menuitem" className="block px-4 py-2 text-sm text-[#F0F6FC] hover:bg-[#21262D]">Settings</Link>
+                      <Link href="/super-admin" role="menuitem" className="block px-4 py-2 text-sm text-[#F0F6FC] hover:bg-[#21262D]">Super admin area</Link>
+                    </>
+                  )}
                   <button
                     role="menuitem"
                     onClick={signOut}

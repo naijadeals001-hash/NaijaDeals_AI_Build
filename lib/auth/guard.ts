@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { SessionUser } from "./session";
-import { getSessionUser, isAdmin, isCourier, isDriver, isVendor } from "./session";
+import { getSessionUser, isAdmin, isCourier, isDriver, isSuperAdmin, isVendor } from "./session";
 
 export class ApiError extends Error {
   status: number;
@@ -24,6 +24,19 @@ export async function requireUser(): Promise<SessionUser> {
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireUser();
   if (!isAdmin(user)) throw new ApiError(403, "forbidden", "Administrator access is required.");
+  return user;
+}
+
+/**
+ * Super-administrator check. This is deliberately stricter than requireAdmin:
+ * it requires the `super_admin` role and cannot be satisfied by actorType alone.
+ * Use it for platform-wide settings and other privileged operations.
+ */
+export async function requireSuperAdmin(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!isSuperAdmin(user)) {
+    throw new ApiError(403, "super_admin_required", "Super-administrator access is required.");
+  }
   return user;
 }
 

@@ -120,6 +120,27 @@ function isStatus(result: { status: number; body?: unknown }, expected: number, 
 
 const results: Array<{ name: string; ok: boolean; detail?: string }> = [];
 
+/**
+ * Set once the suite has logged in. A failed assertion must not leak an active ride
+ * into later checks: the API refuses a new request while one is still active, so one
+ * failure would otherwise cascade into every following step.
+ */
+let cleanupClient: Client | null = null;
+
+async function cancelOpenRides(reason: string) {
+  if (!cleanupClient) return;
+  try {
+    const list = await cleanupClient.get("/api/drive/rides");
+    if (list.status !== 200 || !Array.isArray(list.body)) return;
+    for (const ride of list.body as Json[]) {
+      if (!["requested", "driver_assigned", "driver_arriving", "in_progress"].includes(ride.status)) continue;
+      await cleanupClient.post(`/api/drive/rides/${ride.id}/cancel`, { reason }).catch(() => undefined);
+    }
+  } catch {
+    // Best effort only. The next step should still run.
+  }
+}
+
 async function step(name: string, fn: () => Promise<void>) {
   const started = Date.now();
   try {
@@ -130,6 +151,8 @@ async function step(name: string, fn: () => Promise<void>) {
     const message = error instanceof Error ? error.message : String(error);
     results.push({ name, ok: false, detail: message });
     console.error(`FAIL  ${name}\n      ${message}`);
+    // Release anything this step left behind so the failure does not cascade.
+    await cancelOpenRides(`Automatic cleanup after a failed check (${name})`);
   }
 }
 
@@ -151,6 +174,7 @@ async function main() {
   console.log(`NaijaDrive suite against ${BASE}\n`);
 
   await customer.login("customer@naijadeals.local", "CustomerPass123!");
+  cleanupClient = customer;
   await driver1.login("driver@naijadeals.local", "DriverPass123!");
   await driver2.login("driver2@naijadeals.local", "DriverPass123!");
   await admin.login("admin@naijadeals.local", "AdminPass123!");
@@ -683,8 +707,12 @@ async function main() {
         `race ${index} arriving`
       );
 
-      // Deadline 150ms ahead, then fire the trip start and a sweeping read together.
-      await forceDeadline(ride.id, new Date(Date.now() + 150));
+      // Half the iterations race against a deadline that has already passed, so the
+      // expiry side wins deterministically and the start must be rejected. The other
+      // half race against a deadline 150ms ahead, so the start usually wins. Both
+      // orders must leave the same invariant: a started trip is never requeued.
+      const expiryFirst = index % 2 === 0;
+      await forceDeadline(ride.id, expiryFirst ? new Date(Date.now() - 1_000) : new Date(Date.now() + 150));
       const [start] = await Promise.all([
         driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "in_progress" }),
         customer.get("/api/drive/rides")
@@ -697,6 +725,14 @@ async function main() {
         !(row?.status === "requested" && row.startedAt),
         `a started trip was requeued: ${JSON.stringify(row)}`
       );
+
+      if (expiryFirst) {
+        assert(row?.status === "requested", `an expired assignment was started: ${JSON.stringify(row)}`);
+        assert(row?.driverId === null, "an expired assignment kept its driver");
+        assert(start.status === 409, `starting after expiry should be rejected, got ${start.status}`);
+        await customer.post(`/api/drive/rides/${ride.id}/cancel`, { reason: "Race test cleanup" });
+        continue;
+      }
 
       if (row?.status === "in_progress") {
         assert(row.driverId, "an in-progress trip lost its driver");

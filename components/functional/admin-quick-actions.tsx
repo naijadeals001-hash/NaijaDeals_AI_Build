@@ -1,6 +1,7 @@
 "use client";
 
-import { UserPlus, Car, Truck, DollarSign, MapPin, Tag, Settings, Plus, Zap, Shield, Package, Utensils } from "lucide-react";
+import { UserCheck, Package, CreditCard, DollarSign, Users, ClipboardList, Settings, Zap, ShieldCheck } from "lucide-react";
+import type { AdminTab } from "@/lib/admin/admin-navigation";
 
 interface QuickAction {
   id: string;
@@ -9,131 +10,119 @@ interface QuickAction {
   icon: React.ReactNode;
   color: string;
   bgColor: string;
-  href: string;
-  roles?: string[];
+  tab: AdminTab;
+  superAdminOnly?: boolean;
 }
 
 const quickActions: QuickAction[] = [
   {
-    id: "add-driver",
-    label: "Add Driver",
-    description: "Onboard new driver to fleet",
-    icon: <UserPlus className="h-5 w-5" />,
+    id: "review-applications",
+    label: "Review applications",
+    description: "Approve or reject seller applications",
+    icon: <UserCheck className="h-5 w-5" />,
     color: "text-[#00E676]",
     bgColor: "bg-[#00E676]/10",
-    href: "/admin?module=drive&tab=drivers&action=add",
-    roles: ["admin", "super_admin"],
+    tab: "applications"
   },
   {
-    id: "add-vehicle",
-    label: "Add Vehicle",
-    description: "Register new vehicle to fleet",
-    icon: <Car className="h-5 w-5" />,
+    id: "manage-products",
+    label: "Moderate products",
+    description: "Activate or suspend catalogue items",
+    icon: <Package className="h-5 w-5" />,
     color: "text-[#3B82F6]",
     bgColor: "bg-[#3B82F6]/10",
-    href: "/admin?module=drive&tab=vehicles&action=add",
-    roles: ["admin", "super_admin"],
+    tab: "products"
   },
   {
-    id: "set-fare-rule",
-    label: "Set Fare Rule",
-    description: "Configure dynamic pricing rules",
-    icon: <DollarSign className="h-5 w-5" />,
+    id: "payments",
+    label: "Payments",
+    description: "Inspect provider references and status",
+    icon: <CreditCard className="h-5 w-5" />,
     color: "text-[#F59E0B]",
     bgColor: "bg-[#F59E0B]/10",
-    href: "/admin?module=drive&tab=pricing",
-    roles: ["admin", "super_admin"],
+    tab: "payments"
   },
   {
-    id: "create-promo",
-    label: "Create Promo",
-    description: "Launch rider/driver promotion",
-    icon: <Tag className="h-5 w-5" />,
-    color: "text-[#EC4899]",
-    bgColor: "bg-[#EC4899]/10",
-    href: "/admin?module=drive&tab=promotions&action=create",
-    roles: ["admin", "super_admin"],
+    id: "payouts",
+    label: "Payouts",
+    description: "Settle vendor balances",
+    icon: <DollarSign className="h-5 w-5" />,
+    color: "text-[#F97316]",
+    bgColor: "bg-[#F97316]/10",
+    tab: "payouts"
   },
   {
-    id: "manage-zones",
-    label: "Manage Zones",
-    description: "Configure service areas & pricing",
-    icon: <MapPin className="h-5 w-5" />,
+    id: "users",
+    label: "Users & roles",
+    description: "Inspect accounts and role assignments",
+    icon: <Users className="h-5 w-5" />,
     color: "text-[#8B5CF6]",
     bgColor: "bg-[#8B5CF6]/10",
-    href: "/admin?module=drive&tab=zones",
-    roles: ["admin", "super_admin"],
+    tab: "users"
   },
   {
-    id: "system-settings",
-    label: "System Settings",
-    description: "Global configuration & features",
+    id: "audit",
+    label: "Audit log",
+    description: "Review recorded administrative actions",
+    icon: <ClipboardList className="h-5 w-5" />,
+    color: "text-[#EC4899]",
+    bgColor: "bg-[#EC4899]/10",
+    tab: "audit"
+  },
+  {
+    id: "seed-fixtures",
+    label: "Local fixtures",
+    description: "Read the documented development accounts",
+    icon: <ShieldCheck className="h-5 w-5" />,
+    color: "text-[#22C55E]",
+    bgColor: "bg-[#22C55E]/10",
+    tab: "settings",
+    superAdminOnly: true
+  },
+  {
+    id: "settings",
+    label: "Platform settings",
+    description: "Super-admin-only configuration snapshot",
     icon: <Settings className="h-5 w-5" />,
     color: "text-[#84CC16]",
     bgColor: "bg-[#84CC16]/10",
-    href: "/admin?tab=settings",
-    roles: ["super_admin"],
-  },
-  {
-    id: "add-courier",
-    label: "Add Courier",
-    description: "Onboard new courier partner",
-    icon: <Truck className="h-5 w-5" />,
-    color: "text-[#F97316]",
-    bgColor: "bg-[#F97316]/10",
-    href: "/admin?module=send&tab=couriers&action=add",
-    roles: ["admin", "super_admin"],
-  },
-  {
-    id: "add-restaurant",
-    label: "Add Restaurant",
-    description: "Onboard new restaurant partner",
-    icon: <Utensils className="h-5 w-5" />,
-    color: "text-[#EF4444]",
-    bgColor: "bg-[#EF4444]/10",
-    href: "/admin?module=eats&tab=restaurants&action=add",
-    roles: ["admin", "super_admin"],
-  },
+    tab: "settings",
+    superAdminOnly: true
+  }
 ];
 
-interface QuickActionsProps {
-  userRoles: string[];
-  userActorType?: string;
-}
-
-export function QuickActions({ userRoles, userActorType }: QuickActionsProps) {
-  const isSuperAdmin = userRoles.includes("super_admin") || userActorType === "SUPER_ADMIN";
-
-  const filteredActions = quickActions.filter((action) => {
-    if (!action.roles) return true;
-    if (isSuperAdmin) return true;
-    return action.roles.some((r) => userRoles.includes(r));
-  });
+export function QuickActions({
+  isSuperAdmin,
+  onNavigate
+}: {
+  isSuperAdmin: boolean;
+  onNavigate: (tab: AdminTab) => void;
+}) {
+  const actions = quickActions.filter((action) => !action.superAdminOnly || isSuperAdmin);
 
   return (
     <section className="rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft" aria-label="Quick actions">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Zap className="h-5 w-5 text-[#F59E0B]" />
-          <h2 className="font-display text-base font-extrabold text-[#F0F6FC]">Quick Actions</h2>
-        </div>
+      <div className="mb-4 flex items-center gap-2">
+        <Zap className="h-5 w-5 text-[#F59E0B]" aria-hidden="true" />
+        <h2 className="font-display text-base font-extrabold text-[#F0F6FC]">Quick Actions</h2>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {filteredActions.map((action) => (
-          <a
+        {actions.map((action) => (
+          <button
             key={action.id}
-            href={action.href}
-            className="group flex items-start gap-3 rounded-xl border border-[#21262D] bg-[#21262D] p-4 hover:border-[#30363D] hover:bg-[#30363D]/50 transition-all duration-200"
+            type="button"
+            onClick={() => onNavigate(action.tab)}
+            className="group flex items-start gap-3 rounded-xl border border-[#21262D] bg-[#21262D] p-4 text-left transition-all duration-200 hover:border-[#30363D] hover:bg-[#30363D]/50"
           >
-            <div className={`shrink-0 flex h-10 w-10 items-center justify-center rounded-lg ${action.bgColor} ${action.color}`}>
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${action.bgColor} ${action.color}`}>
               {action.icon}
             </div>
             <div className="min-w-0">
-              <p className="font-bold text-sm text-[#F0F6FC] group-hover:text-[#00E676] transition-colors">{action.label}</p>
-              <p className="mt-0.5 text-[11px] text-[#8B949E] truncate">{action.description}</p>
+              <p className="text-sm font-bold text-[#F0F6FC] transition-colors group-hover:text-[#00E676]">{action.label}</p>
+              <p className="mt-0.5 truncate text-[11px] text-[#8B949E]">{action.description}</p>
             </div>
-          </a>
+          </button>
         ))}
       </div>
     </section>

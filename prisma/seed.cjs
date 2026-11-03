@@ -244,6 +244,7 @@ async function main() {
   ]);
 
   const roleData = [
+    { name: "super_admin", description: "Platform super-administrator" },
     { name: "admin", description: "Control Center administrator" },
     { name: "customer", description: "Buyer account" },
     { name: "vendor", description: "Seller operator" },
@@ -256,6 +257,7 @@ async function main() {
   }
 
   const passwordHashes = {
+    superAdmin: hashPassword("SuperAdminPass123!"),
     admin: hashPassword("AdminPass123!"),
     seller: hashPassword("SellerPass123!"),
     courier: hashPassword("CourierPass123!"),
@@ -272,6 +274,18 @@ async function main() {
       passwordHash: passwordHashes.admin,
       verifiedAt: new Date(),
       roles: { create: { roleId: roles.admin.id } }
+    }
+  });
+
+  const superAdmin = await prisma.user.create({
+    data: {
+      email: "superadmin@naijadeals.local",
+      name: "Super Admin",
+      phone: "08000000009",
+      actorType: "ADMIN",
+      passwordHash: passwordHashes.superAdmin,
+      verifiedAt: new Date(),
+      roles: { create: { roleId: roles.super_admin.id } }
     }
   });
 

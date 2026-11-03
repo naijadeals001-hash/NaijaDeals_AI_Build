@@ -1,9 +1,9 @@
 # NaijaDeals ecosystem delivery tracker
 
-Last updated: 2026-10-31
+Last updated: 2026-11-02
 Branch: `naijashop-marketplace`
 Baseline commit: `d996d224` (Correct stale verification claims in Amazon behaviour record)
-Latest increment commit: `a5ae661b` (NaijaDrive rides, driver board, Control Center rides, and mobile overflow fix)
+Latest increment: Control Center runtime integration and permissions (working tree on top of `255168d`; see Increment 6)
 
 This tracker separates three states so a screen existing is never confused with a
 service working:
@@ -103,6 +103,31 @@ One real defect was found and fixed by this suite rather than shipped: a queued 
 Test evidence for this increment: `npx tsc --noEmit` clean; `NEXT_DIST_DIR=.next-prod npx next build` compiled successfully; `test:drive` **24/24**; `qa:deadline` **9/9**; `qa:drive-places` **8/8**; `qa:ecosystem` **37/37**; `qa:locale` **27/27**; `qa:drive-map` **17/17** — all against `http://localhost:3100`.
 
 This increment is runtime-verified locally only. It does not claim live dispatch, live payments or production readiness. The three mismatched photographs and the undefined cancellation fee are recorded as blocked, not faked.
+
+---
+
+## Increment 6 — unified Control Center runtime integration and server-enforced permissions
+
+The existing Control Center shell (`/admin`, `/super-admin`) was wired to real server data and real URL-driven navigation instead of static demo panels. The supplied reference `design-references/admin/naijadeals-control-center-master.png` remains the visual target.
+
+| Requirement | Implementation | Acceptance test / result | Remaining work |
+| --- | --- | --- | --- |
+| One Control Center, not two disconnected shells | `lib/admin/admin-navigation.ts` defines ecosystem modules, tabs and href builders; `app/admin/page.tsx` and `app/super-admin/page.tsx` render the same `AdminDashboard` from `searchParams`; `/super-admin` additionally requires the `super_admin` role | Browser QA: anonymous `/admin` → `/login?next=/admin`; admin sign-in lands on `/admin`; module card click → `/admin?module=shop`; Orders tab click → `tab=orders`; header search → `?tab=users&q=superadmin`; super admin settings reachable | Separate operations/finance/support role scopes are not yet modelled |
+| Real data only, with honest empty states | `lib/admin/load-page-data.ts` loads users, orders, deliveries, rides, payouts, products, applications, payments, vendors, couriers and audit records from PostgreSQL; KPIs are aggregates from those rows; unavailable modules render “not available in this build” | Browser QA asserts the previously fabricated demo strings are absent, the local PostgreSQL load timestamp is shown, `All admin endpoints responded.` is shown, Users renders 11 real rows, NaijaDrive shows 28 trips / ₦12,300 recorded value, and Orders shows “No orders exist yet.” | Pagination, bulk actions and record-detail drawers are not implemented |
+| Standard admin and super admin are distinct server-enforced roles | `requireSuperAdmin()` in `lib/auth/guard.ts`; `GET /api/super-admin/system` returns a platform snapshot without secrets; super-admin navigation is role-gated in `admin-shell.tsx` | Browser/API QA: standard admin receives **HTTP 403** from `/api/super-admin/system`; super admin receives **HTTP 200** and sees roles, provider configuration presence and `Secrets are never returned by this endpoint.` | Cross-region and privilege-escalation test matrix still required for a full Phase 05 pass |
+| Real operational tables, filters and refresh | `components/functional/admin-workspace-tabs.tsx` implements Orders, Deliveries, Trips, Payouts, Products, Seller applications, Payments, Users, Vendors, Couriers, Drivers, Audit and Settings with search, actor/status filters, refresh and explicit empty states | Browser QA: actor filter narrows 11 users to 2 admins; in-table search narrows to 1; header search drives the workspace query; Refresh preserves the selected tab and query; sign-out returns to `/login` | Server-side pagination, safe bulk actions and audit events for sensitive mutations |
+| Reference-faithful, responsive Control Center | Dark `#0B0E14` canvas, `#161B22` panels and `#00E676` accent; sidebar, ecosystem switcher, workspace header, KPI cards, service performance, revenue, driver coverage, activity/alerts and right-hand health rail; KPI cards restacked so real values are readable at 1440 px | Playwright screenshots at 1440×1000 and 390×844; desktop sidebar 256 px on-screen; mobile `scrollWidth === clientWidth === 390`; mobile menu opens, closes after navigation and the Orders workspace is usable | Not yet a pixel match for every reference component; map/geography and live-operations controls remain honestly unavailable |
+
+Test evidence for this increment (all against `http://localhost:3100`, production build served from `.next-prod`):
+
+- `npx tsc --noEmit` — clean
+- `NEXT_DIST_DIR=.next-prod npx next build` — compiled successfully
+- `node scripts/control-center-visual-qa.mjs` — **29/29 checks passed**, no console errors or failed requests
+- `npm run test:drive` — **28/28 checks passed**
+- `npm run qa:idle-sweep` — **3/3 checks passed**
+- Screenshots and machine report: `.qa/control-center/` (`01-overview-desktop.png` … `09-orders-mobile.png`, `report.json`)
+
+This increment is local runtime-verified only. No production deployment, live payment or live dispatch occurred. Phase 05 is **IN PROGRESS**, not PASS, because pagination, bulk actions, record details, cross-region scopes and sensitive-action audit events are still open.
 
 ---
 
@@ -222,7 +247,10 @@ ECC and Soup are not installed. See `docs/reference-and-tooling-evidence.md`.
 4. NaijaGigs and NaijaStay with real inventory and double-booking protection.
 5. NaijaEats and NaijaFresh with partner-supplied catalogues only.
 6. Unified Control Center expansion: geography, provider connection status, finance,
-    disputes, reconciliation, audit.
+    disputes, reconciliation, audit. **Partially delivered in Increment 6** — URL-driven
+    workspaces, real data, operational tables and the super-admin boundary are verified;
+    pagination, bulk actions, record details, cross-region scopes and sensitive-action
+    audit events remain.
 7. NaijaStream and Aura only when licensed media and a model provider exist.
 8. PWA manifest, offline states, Lighthouse/axe audits, full marketplace regression.
 

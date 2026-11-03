@@ -15,3 +15,4 @@ yarn-error.log*
 *.log
 logs/
 qa-artifacts/
+.qa/

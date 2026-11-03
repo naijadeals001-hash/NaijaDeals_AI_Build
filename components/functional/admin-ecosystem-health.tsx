@@ -1,99 +1,85 @@
 "use client";
 
-import { ShieldCheck, HeartPulse, Server, Activity, TrendingUp, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { CheckCircle, HeartPulse, AlertTriangle, XCircle, Database } from "lucide-react";
 
-interface EcosystemHealthProps {
-  loading?: boolean;
+interface PaymentProvider {
+  id: string;
+  label: string;
+  configured: boolean;
+  reason?: string;
 }
 
-export function EcosystemHealth({ loading }: EcosystemHealthProps) {
-  const services = [
-    { name: "API Gateway", status: "operational", latency: "42ms" },
-    { name: "Database (Primary)", status: "operational", latency: "12ms" },
-    { name: "Database (Replica)", status: "operational", latency: "18ms" },
-    { name: "Redis Cache", status: "operational", latency: "3ms" },
-    { name: "Message Queue", status: "operational", latency: "8ms" },
-    { name: "NaijaPay Gateway", status: "operational", latency: "156ms" },
-    { name: "Mapbox Tiles", status: "operational", latency: "89ms" },
-    { name: "Push Notifications", status: "degraded", latency: "340ms" },
-    { name: "Email Service", status: "operational", latency: "234ms" },
-    { name: "SMS Gateway", status: "operational", latency: "567ms" },
-    { name: "Storage (S3)", status: "operational", latency: "67ms" },
-    { name: "Analytics Pipeline", status: "maintenance", latency: "—" },
-  ];
-
-  const operational = services.filter((s) => s.status === "operational").length;
-  const total = services.length;
-  const uptime = ((operational / total) * 100).toFixed(2);
-
-  if (loading) {
-    return (
-      <div className="rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft animate-pulse">
-        <div className="h-6 w-1/3 bg-[#21262D] rounded mb-4" />
-        <div className="space-y-3">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-10 bg-[#21262D] rounded-xl" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case "operational":
-        return { color: "text-[#00E676]", bg: "bg-[#00E676]/10", icon: <CheckCircle className="h-3.5 w-3.5" /> };
-      case "degraded":
-        return { color: "text-[#F59E0B]", bg: "bg-[#F59E0B]/10", icon: <AlertTriangle className="h-3.5 w-3.5" /> };
-      case "maintenance":
-        return { color: "text-[#3B82F6]", bg: "bg-[#3B82F6]/10", icon: <Activity className="h-3.5 w-3.5" /> };
-      default:
-        return { color: "text-crimson", bg: "bg-crimson/10", icon: <XCircle className="h-3.5 w-3.5" /> };
-    }
-  };
+export function EcosystemHealth({
+  paymentMethods,
+  loadErrors
+}: {
+  paymentMethods: PaymentProvider[];
+  loadErrors: string[];
+}) {
+  const configured = paymentMethods.filter((method) => method.configured).length;
 
   return (
-    <section className="rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft sticky top-112 lg:top-20" aria-label="Ecosystem health">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <HeartPulse className="h-5 w-5 text-[#00E676]" />
-          <h2 className="font-display text-base font-extrabold text-[#F0F6FC]">Ecosystem Health</h2>
+    <section className="space-y-4" aria-label="Integration health">
+      <div className="rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft">
+        <div className="mb-4 flex items-center gap-2">
+          <HeartPulse className="h-5 w-5 text-[#00E676]" aria-hidden="true" />
+          <h2 className="font-display text-base font-extrabold text-[#F0F6FC]">Integration Health</h2>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="relative flex h-2 w-2" aria-hidden="true">
-            <span className="absolute inset-0 rounded-full bg-[#00E676] animate-ping opacity-75" />
-            <span className="relative rounded-full bg-[#00E676]" />
-          </span>
-          <span className="text-xs font-bold text-[#00E676]">All Systems Operational</span>
-        </div>
-      </div>
 
-      <div className="mb-4 rounded-xl bg-[#21262D] p-4 text-center">
-        <div className="flex items-center justify-center gap-2 text-[#00E676] mb-1">
-          <ShieldCheck className="h-5 w-5" />
-          <span className="font-display text-2xl font-extrabold text-[#F0F6FC]">{uptime}%</span>
+        <div className="mb-4 rounded-xl bg-[#21262D] p-4">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-[#8B949E]">Admin endpoints</span>
+            <span className={loadErrors.length === 0 ? "font-bold text-[#00E676]" : "font-bold text-crimson"}>
+              {loadErrors.length === 0 ? "All responded" : `${loadErrors.length} failed`}
+            </span>
+          </div>
+          <div className="mt-2 flex items-center justify-between text-sm">
+            <span className="text-[#8B949E]">Database</span>
+            <span className="flex items-center gap-1.5 font-bold text-[#00E676]">
+              <Database className="h-3.5 w-3.5" aria-hidden="true" /> Connected
+            </span>
+          </div>
+          <div className="mt-2 flex items-center justify-between text-sm">
+            <span className="text-[#8B949E]">Payment providers configured</span>
+            <span className="font-bold text-[#F0F6FC]">
+              {configured}/{paymentMethods.length}
+            </span>
+          </div>
         </div>
-        <p className="text-xs text-[#8B949E]">Uptime (Last 30 Days)</p>
-      </div>
 
-      <div className="space-y-2">
-        {services.map((service) => {
-          const config = getStatusConfig(service.status);
-          return (
-            <div key={service.name} className="flex items-center justify-between rounded-lg p-2.5 hover:bg-[#21262D] transition-colors">
-              <div className="flex items-center gap-2">
-                <div className={`flex h-6 w-6 items-center justify-center rounded ${config.bg} ${config.color}`}>
-                  {config.icon}
+        <ul className="space-y-2">
+          {paymentMethods.length === 0 ? (
+            <li className="rounded-lg p-2.5 text-sm text-[#8B949E]">No payment providers reported by the API.</li>
+          ) : (
+            paymentMethods.map((method) => (
+              <li key={method.id} className="flex items-start justify-between gap-3 rounded-lg p-2.5 hover:bg-[#21262D]">
+                <div className="flex min-w-0 items-start gap-2">
+                  <span className={`mt-0.5 ${method.configured ? "text-[#00E676]" : "text-[#F59E0B]"}`}>
+                    {method.configured ? (
+                      <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                    ) : (
+                      <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                    )}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[#F0F6FC]">{method.label}</p>
+                    {!method.configured && method.reason && (
+                      <p className="mt-0.5 text-[11px] text-[#8B949E]">{method.reason}</p>
+                    )}
+                  </div>
                 </div>
-                <span className="text-sm font-medium text-[#F0F6FC] truncate max-w-[140px]">{service.name}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={`text-xs font-medium ${config.color}`}>{service.status.charAt(0).toUpperCase() + service.status.slice(1)}</span>
-                {service.latency !== "—" && <span className="text-xs text-[#8B949E] font-mono">{service.latency}</span>}
-              </div>
-            </div>
-          );
-        })}
+                <span className={`shrink-0 text-xs font-medium ${method.configured ? "text-[#00E676]" : "text-[#F59E0B]"}`}>
+                  {method.configured ? "Ready" : "Setup"}
+                </span>
+              </li>
+            ))
+          )}
+        </ul>
+
+        <p className="mt-3 flex items-start gap-2 border-t border-[#21262D] pt-3 text-xs text-[#8B949E]">
+          <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#8B949E]" aria-hidden="true" />
+          Uptime, latency and queue metrics are not collected in this build, so none are displayed.
+        </p>
       </div>
     </section>
   );

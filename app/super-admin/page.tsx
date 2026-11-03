@@ -1,50 +1,41 @@
+import { Suspense } from "react";
 import { AdminDashboard } from "@/components/functional/admin-dashboard";
-import { headers } from "next/headers";
+import { getSessionUser, toPublicSessionUser } from "@/lib/auth/session";
+import { loadAdminPageData } from "@/lib/admin/load-page-data";
+import { normalizeModule, normalizeTab } from "@/lib/admin/admin-navigation";
+
+export const dynamic = "force-dynamic";
 
 export default async function Page({
-  params,
+  searchParams
 }: {
-  params: { tab?: string };
+  searchParams?: { tab?: string; module?: string; geo?: string };
 }) {
-  // Server-side data fetching - use absolute URLs via headers
-  const headersList = await headers();
-  const host = headersList.get("host") ?? "localhost:3003";
-  const protocol = host.startsWith("localhost") ? "http" : "https";
-  const baseUrl = `${protocol}://${host}`;
-
-  const fetchApi = async (path: string) => {
-    const res = await fetch(`${baseUrl}${path}`, {
-      headers: { Cookie: headersList.get("cookie") ?? "" },
-    });
-    if (!res.ok) return null;
-    return res.json();
-  };
-
-  const overview = await fetchApi("/api/admin/overview");
-  const orders = await fetchApi("/api/admin/orders");
-  const applications = await fetchApi("/api/admin/applications");
-  const products = await fetchApi("/api/admin/products");
-  const payments = await fetchApi("/api/admin/payments");
-  const users = await fetchApi("/api/admin/users");
-  const rides = await fetchApi("/api/admin/rides");
-  const audit = await fetchApi("/api/admin/audit-logs");
-  const payouts = await fetchApi("/api/admin/payouts");
-
-  // Determine initial tab from pathname
-  const initialTab = params?.tab || "overview";
+  const [data, sessionUser] = await Promise.all([loadAdminPageData(), getSessionUser()]);
+  const publicUser = sessionUser ? await toPublicSessionUser(sessionUser) : null;
 
   return (
-    <AdminDashboard
-      initialTab={initialTab as "overview" | "orders" | "applications" | "products" | "payments" | "users" | "deliveries" | "rides" | "payouts" | "audit"}
-      overview={overview}
-      orders={orders}
-      applications={applications}
-      products={products}
-      payments={payments}
-      users={users}
-      rides={rides}
-      audit={audit}
-      payouts={payouts}
-    />
+    <Suspense fallback={<p className="p-6 text-sm text-[#8B949E]">Loading Control Center…</p>}>
+      <AdminDashboard
+        initialTab={normalizeTab(searchParams?.tab)}
+        initialModule={normalizeModule(searchParams?.module)}
+        overview={data.overview}
+        orders={data.orders}
+        applications={data.applications}
+        products={data.products}
+        payments={data.payments}
+        users={data.users}
+        rides={data.rides}
+        audit={data.audit}
+        payouts={data.payouts}
+        vendors={data.vendors}
+        couriers={data.couriers}
+        loadErrors={data.loadErrors}
+        loadedAt={data.loadedAt}
+        userRoles={publicUser?.roles ?? ["super_admin"]}
+        userActorType={publicUser?.actorType ?? "ADMIN"}
+        isSuperAdmin
+      />
+    </Suspense>
   );
 }

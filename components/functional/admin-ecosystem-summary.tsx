@@ -1,85 +1,54 @@
 "use client";
 
-import { Users, ShoppingBag, DollarSign, TrendingUp, BarChart3 } from "lucide-react";
+import { Users, ShoppingBag, DollarSign, ShieldCheck, RotateCcw, BarChart3 } from "lucide-react";
 
-interface EcosystemSummaryProps {
-  data?: {
-    totalUsers?: number;
-    totalOrdersTrips?: number;
-    totalRevenue?: string;
-    platformEarnings?: string;
-  };
-  loading?: boolean;
+interface SummaryData {
+  users: number;
+  ordersAndTrips: number;
+  grossVerified: string;
+  escrowHeld: string;
+  refunded: string;
 }
 
-export function EcosystemSummary({ data, loading }: EcosystemSummaryProps) {
+export function EcosystemSummary({ data }: { data: SummaryData }) {
   const metrics = [
+    { label: "Total users", value: data.users.toLocaleString(), icon: Users, color: "text-[#3B82F6]", bg: "bg-[#3B82F6]/10" },
     {
-      label: "Total Users",
-      value: data?.totalUsers?.toLocaleString() ?? "—",
-      icon: Users,
-      color: "text-[#3B82F6]",
-      bgColor: "bg-[#3B82F6]/10",
-    },
-    {
-      label: "Total Orders/Trips",
-      value: data?.totalOrdersTrips?.toLocaleString() ?? "—",
+      label: "Orders + trips",
+      value: data.ordersAndTrips.toLocaleString(),
       icon: ShoppingBag,
       color: "text-[#00E676]",
-      bgColor: "bg-[#00E676]/10",
+      bg: "bg-[#00E676]/10"
     },
-    {
-      label: "Total Revenue",
-      value: data?.totalRevenue ?? "—",
-      icon: DollarSign,
-      color: "text-[#F59E0B]",
-      bgColor: "bg-[#F59E0B]/10",
-    },
-    {
-      label: "Platform Earnings",
-      value: data?.platformEarnings ?? "—",
-      icon: DollarSign,
-      color: "text-[#F97316]",
-      bgColor: "bg-[#F97316]/10",
-    },
+    { label: "Verified revenue", value: data.grossVerified, icon: DollarSign, color: "text-[#F59E0B]", bg: "bg-[#F59E0B]/10" },
+    { label: "Escrow held", value: data.escrowHeld, icon: ShieldCheck, color: "text-[#F97316]", bg: "bg-[#F97316]/10" },
+    { label: "Refunded", value: data.refunded, icon: RotateCcw, color: "text-[#EC4899]", bg: "bg-[#EC4899]/10" }
   ];
 
-  if (loading) {
-    return (
-      <div className="rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft animate-pulse">
-        <div className="h-6 w-1/3 bg-[#21262D] rounded mb-4" />
-        <div className="space-y-3">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-20 bg-[#21262D] rounded-xl" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <section className="rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft sticky top-112 lg:top-20" aria-label="Ecosystem summary">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-[#00E676]" />
-          <h2 className="font-display text-base font-extrabold text-[#F0F6FC]">Ecosystem Summary (All Modules)</h2>
-        </div>
+    <section className="rounded-2xl border border-[#21262D] bg-[#161B22] p-5 shadow-soft" aria-label="Ecosystem summary">
+      <div className="mb-4 flex items-center gap-2">
+        <BarChart3 className="h-5 w-5 text-[#00E676]" aria-hidden="true" />
+        <h2 className="font-display text-base font-extrabold text-[#F0F6FC]">Ecosystem Summary</h2>
       </div>
 
       <div className="space-y-3">
         {metrics.map((metric) => (
-          <div key={metric.label} className="flex items-center gap-3 rounded-xl p-3 hover:bg-[#21262D] transition-colors">
-            <div className={`shrink-0 flex h-10 w-10 items-center justify-center rounded-lg ${metric.bgColor} ${metric.color}`}>
-              <metric.icon className="h-5 w-5" />
+          <div key={metric.label} className="flex items-center gap-3 rounded-xl p-3 hover:bg-[#21262D]">
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${metric.bg} ${metric.color}`}>
+              <metric.icon className="h-5 w-5" aria-hidden="true" />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-bold uppercase tracking-wide text-[#8B949E]">{metric.label}</p>
-              <p className="font-display text-lg font-extrabold text-[#F0F6FC] truncate">{metric.value}</p>
+              <p className="truncate font-display text-lg font-extrabold text-[#F0F6FC]">{metric.value}</p>
             </div>
-            <TrendingUp className="h-5 w-5 text-[#00E676]/50" aria-hidden="true" />
           </div>
         ))}
       </div>
+
+      <p className="mt-3 border-t border-[#21262D] pt-3 text-xs text-[#8B949E]">
+        Platform commission is not shown because no commission rate is configured and no platform wallet ledger exists yet.
+      </p>
     </section>
   );
 }

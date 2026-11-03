@@ -79,3 +79,46 @@
 - **No production DNS changes** — documented for future
 - **No production deployment** — configuration prepared only
 - **No production data migration** — documented procedure only
+
+---
+
+## Handoff — Control Center runtime integration (2026-11-02)
+
+**Branch:** `naijashop-marketplace`
+
+**Base:** `255168d` “Add reference-aligned Control Center components”
+
+**Preview:** production build served at `http://localhost:3100` with `NEXT_DIST_DIR=.next-prod` (not a deployed URL)
+
+**Visual target:** `design-references/admin/naijadeals-control-center-master.png`
+
+### Delivered
+
+- `lib/admin/admin-navigation.ts` — module/tab IDs, aliases and href builder
+- `lib/admin/load-page-data.ts` — server loader and normalisation for real PostgreSQL rows
+- `app/admin/page.tsx`, `app/super-admin/page.tsx` — `searchParams`-driven rendering with session roles
+- `components/functional/admin-workspace-tabs.tsx` — real Orders, Deliveries, Trips, Payouts, Products, Applications, Payments, Users, Vendors, Couriers, Drivers, Audit and Settings tables with filters, search, refresh and honest empty states
+- `components/functional/admin-dashboard.tsx`, `admin-shell.tsx`, `admin-module-switcher.tsx`, `admin-module-workspace-header.tsx` — URL-aware active states, header search, mobile sidebar, overflow fixes
+- `lib/auth/guard.ts` — `requireSuperAdmin()`; `app/api/super-admin/system/route.ts` — super-admin-only snapshot without secrets
+- `scripts/ensure-super-admin.cjs`, `prisma/seed.cjs` — idempotent local super-admin fixture
+- `scripts/control-center-visual-qa.mjs` — real-Chrome Playwright verification and screenshots
+
+### Verification (local runtime only)
+
+| Command | Result |
+| --- | --- |
+| `npx tsc --noEmit` | clean |
+| `NEXT_DIST_DIR=.next-prod npx next build` | successful |
+| `node scripts/control-center-visual-qa.mjs` | **29/29** browser checks, no console/network errors |
+| `npm run test:drive` | **28/28** |
+| `npm run qa:idle-sweep` | **3/3** |
+
+Artifacts: `.qa/control-center/` (desktop and mobile screenshots plus `report.json`; no credentials are written).
+
+### Honest boundaries
+
+- No production deployment, live payment, live dispatch or provider-credential test occurred.
+- Unimplemented modules show “not available in this build”; they contain no sample metrics.
+- Phase 05 remains **IN PROGRESS**: pagination, bulk actions, detail views, cross-region scopes, role-assignment writes and sensitive-action audit events are not done.
+- The in-app browser screenshot API was unavailable (“Screenshot needs a visible tab”); Playwright with installed Chrome was used instead.
+- Push status must be checked separately from local verification; a GitHub rejection does not invalidate the local repair.
