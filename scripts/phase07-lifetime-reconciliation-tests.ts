@@ -20,14 +20,24 @@ const check = (name: string, ok: boolean, detail = "") => {
   const mismatches = rows.filter((r) => r.available + r.held !== r.net);
   check("known discrepancy remains contained (NOT full reconciliation)", mismatches.every((m) => QUARANTINED.has(m.id)) && mismatches.length <= 1, JSON.stringify(mismatches.map((m) => ({ id: m.id, diff: (m.available + m.held - m.net).toString() }))));
 
-  const groups = await prisma.$queryRaw<Array<{ transactionId: string; reference: string; debits: bigint; credits: bigint }>>`
-    SELECT e."transactionId", t.reference,
-      COALESCE(SUM(CASE WHEN e.direction = 'DEBIT' THEN e."amountKobo" ELSE 0 END), 0)::bigint AS debits,
-      COALESCE(SUM(CASE WHEN e.direction = 'CREDIT' THEN e."amountKobo" ELSE 0 END), 0)::bigint AS credits
-    FROM "LedgerEntry" e JOIN "WalletTransaction" t ON t.id = e."transactionId"
-    GROUP BY e."transactionId", t.reference`;
-  const unbalanced = groups.filter((g) => !g.reference.startsWith("ADJ-") && g.debits !== g.credits);
-  check("every ledger transaction group balances", unbalanced.length === 0, JSON.stringify(unbalanced.slice(0, 5).map((g) => ({ id: g.transactionId, debits: g.debits.toString(), credits: g.credits.toString() }))));
+  const adjustments = await prisma.ledgerAdjustment.findMany({ select: { adjustmentKey: true } });
+  const adjustmentKeys = new Set(adjustments.map((a) => a.adjustmentKey));
+  const transactions = await prisma.walletTransaction.findMany({ include: { ledger: true } });
+  const uncovered: string[] = [];
+  const unbalancedOrdinary: string[] = [];
+  let ordinary = 0;
+  let adjustmentLinked = 0;
+  for (const tx of transactions) {
+    if (tx.ledger.length === 0) { uncovered.push(tx.id + ":" + tx.reference + ":no-ledger-entries"); continue; }
+    const key = tx.reference.startsWith("ADJ-") ? tx.reference.slice(4) : "";
+    if (key && adjustmentKeys.has(key)) { adjustmentLinked++; continue; }
+    ordinary++;
+    const debits = tx.ledger.filter((e) => e.direction === "DEBIT").reduce((sum, e) => sum + e.amountKobo, 0n);
+    const credits = tx.ledger.filter((e) => e.direction === "CREDIT").reduce((sum, e) => sum + e.amountKobo, 0n);
+    if (debits !== credits) unbalancedOrdinary.push(tx.id + ":" + tx.reference);
+  }
+  check("every transaction is covered by ordinary or adjustment reconciliation", uncovered.length === 0 && unbalancedOrdinary.length === 0, JSON.stringify({ ordinary, adjustmentLinked, uncovered, unbalancedOrdinary }));
+  check("no adjustment-prefixed transaction is unrecognised", transactions.filter((tx) => tx.reference.startsWith("ADJ-") && !adjustmentKeys.has(tx.reference.slice(4))).length === 0, JSON.stringify(transactions.filter((tx) => tx.reference.startsWith("ADJ-") && !adjustmentKeys.has(tx.reference.slice(4))).map((tx) => tx.reference)));
 
   const journals = await reconcileAdjustmentJournals(prisma);
   check("adjustment journals balance across LedgerEntry and AccountPosting", journals.issues.length === 0, JSON.stringify(journals.rows));

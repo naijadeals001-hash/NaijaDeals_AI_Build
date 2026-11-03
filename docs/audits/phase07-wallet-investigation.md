@@ -226,3 +226,53 @@ Provider sandbox reconciliation remains **BLOCKED** on credentials/test mode, no
 `naijadeals_core` is the **shared local development database**, used by both the authoritative checkout
 and the 3010 worktree. The pending correction is a **shared-database adjustment**, not a production
 adjustment. No production environment or deployment exists for this work.
+
+
+## Transaction coverage verification (2026-11-03)
+
+Adjustment transactions are no longer excluded by reference prefix. The lifetime suite classifies every
+WalletTransaction:
+
+- linked to an existing `LedgerAdjustment` by exact `ADJ-<adjustmentKey>` and validated by the
+  cross-table reconciler -> adjustment coverage;
+- every other transaction -> ordinary wallet debit/credit balance;
+- any transaction with no ledger entries, any unbalanced ordinary transaction, and any `ADJ-`
+  reference without a matching adjustment row is a failure.
+
+Shared DB result: **27 ordinary, 0 adjustment-linked, 0 uncovered, 0 unbalanced ordinary, 0
+unrecognised ADJ- references**. A malformed or unrelated `ADJ-` transaction therefore falls into the
+ordinary check rather than escaping both.
+
+## Fixture-fund isolation and classification
+
+Choice **B (FIXTURE_EQUITY contra)** is the cleaner development-data approach, subject to sign-off.
+
+- “Fixture equity” is an **internal classification**, not evidence of external cash backing.
+- Customer wallet balances are **platform obligations**, not platform assets.
+- Synthetic funds are currently identified by the `SEED-WALLET-FIXTURE` transaction and memo text, not
+  by a dedicated schema flag. They are fungible in the wallet balance.
+- Current environment has `ENABLE_TEST_PAYMENTS=false` and no provider credentials, so fixture funds
+  cannot be charged through a live provider today. Customer wallets have no withdrawal path; vendor
+  payouts are admin-approved.
+- **Gap:** there is no hard schema guard preventing a fixture-funded vendor wallet from entering a
+  payout if an admin approves it. Isolation currently relies on test-mode configuration and operator
+  discipline. Before applying B, add/maintain an explicit synthetic-funds marker or block fixture
+  vendors from payout eligibility.
+
+Required decision: approve B with synthetic-funds isolation rules, or choose A with an explicit
+negative SYSTEM exception.
+
+## Refund-fee decision (separate)
+
+Unresolved options:
+- **A — refund the escrow fee too:** customer receives full paid total; platform absorbs provider costs.
+- **B — retain the escrow fee:** aligns with the unverified 1% policy but needs disclosure/approval.
+- **C — stage-dependent:** retain only after fulfilment starts; most complex and needs policy input.
+
+No code change until a decision is recorded.
+
+## Provider sandbox readiness limits
+
+The readiness script reports **credential/test-mode presence only**. Missing keys block execution; they
+do not prove the integration has no code defects. Sandbox delivery, webhook verification and
+reconciliation remain unexecuted until keys are securely configured.

@@ -1014,3 +1014,12 @@ account debits 2.5m, valid. Lifetime suite labels the shared result as containme
 applied. Provider readiness: Paystack/Flutterwave secrets and ENABLE_TEST_PAYMENTS missing; sandbox
 reconciliation blocked on credentials. naijadeals_core is the shared local development database; the
 pending adjustment is a shared-database adjustment, not production.
+
+
+## Phase 07 coverage and policy notes (2026-11-03)
+
+Lifetime suite now classifies every transaction (27 ordinary, 0 adjustment-linked) and fails on
+uncovered/unbalanced/unrecognised rows; adjustment transactions are excluded only when an exact
+LedgerAdjustment key exists and cross-table validation passes. Choice B (FIXTURE_EQUITY) recommended but
+not applied; synthetic-funds schema isolation gap recorded. Refund-fee options A/B/C recorded, no
+decision. Provider readiness is credential presence only; sandbox execution remains blocked.
