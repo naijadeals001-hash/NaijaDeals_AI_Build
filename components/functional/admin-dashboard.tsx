@@ -80,6 +80,23 @@ function sumMoney(rows: Row[], field: string): number {
   return rows.reduce((total, row) => total + numberOf(row[field]), 0);
 }
 
+function rowCountry(row: Row): string | undefined {
+  const candidates = [
+    row.countryCode,
+    row.scopeCountryCode,
+    row.vendor?.countryCode,
+    row.customer?.countryCode
+  ];
+  const match = candidates.find((value) => typeof value === "string" && value.trim().length > 0);
+  return match ? String(match).toUpperCase() : undefined;
+}
+
+/** Country-level filter for module tables; "ALL" keeps every row. */
+function filterRowsByGeo(rows: Row[], geo: string): Row[] {
+  if (geo === "ALL") return rows;
+  return rows.filter((row) => rowCountry(row) === geo);
+}
+
 function daysAgo(count: number): Date {
   const date = new Date();
   date.setHours(0, 0, 0, 0);
@@ -93,6 +110,7 @@ export function AdminDashboard(props: AdminDashboardProps) {
 
   const moduleId = normalizeModule(searchParams.get("module") ?? props.initialModule);
   const tabId = normalizeTab(searchParams.get("tab") ?? props.initialTab);
+  const geo = (searchParams.get("geo") ?? "all").toUpperCase();
 
   const navigate = useCallback(
     (target: { module?: string; tab?: string; geo?: string }) => {
@@ -104,10 +122,16 @@ export function AdminDashboard(props: AdminDashboardProps) {
   const refresh = useCallback(() => router.refresh(), [router]);
 
   const overview = props.overview;
-  const rides = props.rides;
-  const orders = props.orders;
-  const payments = props.payments;
-  const users = props.users;
+  const rides = filterRowsByGeo(props.rides, geo);
+  const orders = filterRowsByGeo(props.orders, geo);
+  const payments = filterRowsByGeo(props.payments, geo);
+  const users = filterRowsByGeo(props.users, geo);
+  const payouts = filterRowsByGeo(props.payouts, geo);
+  const products = filterRowsByGeo(props.products, geo);
+  const applications = filterRowsByGeo(props.applications, geo);
+  const vendors = filterRowsByGeo(props.vendors, geo);
+  const couriers = filterRowsByGeo(props.couriers, geo);
+  const audit = filterRowsByGeo(props.audit, geo);
 
   const activeRides = useMemo(() => rides.filter((ride) => ACTIVE_RIDE_STATUSES.includes(String(ride.status))), [rides]);
 
@@ -490,23 +514,30 @@ export function AdminDashboard(props: AdminDashboardProps) {
           </div>
         )
       ) : (
+        <>
+        {geo !== "all" ? (
+          <p role="status" className="mb-4 rounded-xl border border-[#21262D] bg-[#161B22] px-4 py-2 text-sm text-[#8B949E]">
+            Region filter is active for module tables. Summary cards above remain platform-wide.
+          </p>
+        ) : null}
         <WorkspaceTabContent
           tab={tabId}
           orders={orders}
           deliveries={deliveries}
           rides={rides}
-          payouts={props.payouts}
-          products={props.products}
-          applications={props.applications}
+          payouts={payouts}
+          products={products}
+          applications={applications}
           payments={payments}
           users={users}
-          vendors={props.vendors}
-          couriers={props.couriers}
-          audit={props.audit}
+          vendors={vendors}
+          couriers={couriers}
+          audit={audit}
           isSuperAdmin={superAdminOnly}
           initialQuery={searchParams.get("q") ?? ""}
           onRefresh={refresh}
         />
+        </>
       )}
     </div>
   );

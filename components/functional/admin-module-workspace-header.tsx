@@ -12,6 +12,12 @@ interface ModuleWorkspaceHeaderProps {
   onNavigate: (target: { module?: string; tab?: string; geo?: string }) => void;
 }
 
+const GEO_OPTIONS = [
+  { value: "all", label: "All regions" },
+  { value: "NG", label: "Nigeria" },
+  { value: "GH", label: "Ghana" }
+];
+
 const moduleConfigs: Record<AdminModule, {
   icon: React.ReactNode;
   title: string;
@@ -32,7 +38,7 @@ const moduleConfigs: Record<AdminModule, {
     description: "Unified administration across every module that exists in this build.",
     accentColor: "text-[#00E676]",
     bgColor: "bg-[#00E676]/10",
-    geographyOptions: [{ value: "all", label: "All regions" }, { value: "NG", label: "Nigeria" }]
+    geographyOptions: GEO_OPTIONS
   },
   drive: {
     icon: <Car className="h-6 w-6" />,
@@ -40,7 +46,7 @@ const moduleConfigs: Record<AdminModule, {
     description: "Ride-hailing operations, trips, driver accounts and settlement records.",
     accentColor: "text-[#3B82F6]",
     bgColor: "bg-[#3B82F6]/10",
-    geographyOptions: [{ value: "all", label: "All cities" }, { value: "lagos", label: "Lagos" }, { value: "abuja", label: "Abuja" }]
+    geographyOptions: GEO_OPTIONS
   },
   shop: {
     icon: <ShoppingBag className="h-6 w-6" />,
@@ -48,7 +54,7 @@ const moduleConfigs: Record<AdminModule, {
     description: "Marketplace commerce, seller management, products and orders.",
     accentColor: "text-[#F97316]",
     bgColor: "bg-[#F97316]/10",
-    geographyOptions: [{ value: "all", label: "All markets" }, { value: "lagos", label: "Lagos" }, { value: "abuja", label: "Abuja" }]
+    geographyOptions: GEO_OPTIONS
   },
   eats: {
     icon: <Utensils className="h-6 w-6" />,
@@ -56,7 +62,7 @@ const moduleConfigs: Record<AdminModule, {
     description: "Food delivery roadmap. No operational data exists in this build.",
     accentColor: "text-[#EF4444]",
     bgColor: "bg-[#EF4444]/10",
-    geographyOptions: [{ value: "all", label: "All cities" }]
+    geographyOptions: GEO_OPTIONS
   },
   send: {
     icon: <Package className="h-6 w-6" />,
@@ -64,7 +70,7 @@ const moduleConfigs: Record<AdminModule, {
     description: "Parcel logistics and last-mile delivery records attached to marketplace orders.",
     accentColor: "text-[#8B5CF6]",
     bgColor: "bg-[#8B5CF6]/10",
-    geographyOptions: [{ value: "all", label: "All routes" }]
+    geographyOptions: GEO_OPTIONS
   },
   gigs: {
     icon: <Briefcase className="h-6 w-6" />,
@@ -72,7 +78,7 @@ const moduleConfigs: Record<AdminModule, {
     description: "Services roadmap. No operational data exists in this build.",
     accentColor: "text-[#EC4899]",
     bgColor: "bg-[#EC4899]/10",
-    geographyOptions: [{ value: "all", label: "All regions" }]
+    geographyOptions: GEO_OPTIONS
   },
   stay: {
     icon: <Home className="h-6 w-6" />,
@@ -80,7 +86,7 @@ const moduleConfigs: Record<AdminModule, {
     description: "Accommodation roadmap. No operational data exists in this build.",
     accentColor: "text-[#06B6D4]",
     bgColor: "bg-[#06B6D4]/10",
-    geographyOptions: [{ value: "all", label: "All destinations" }]
+    geographyOptions: GEO_OPTIONS
   },
   stream: {
     icon: <Music className="h-6 w-6" />,
@@ -88,7 +94,7 @@ const moduleConfigs: Record<AdminModule, {
     description: "Streaming roadmap. No operational data exists in this build.",
     accentColor: "text-[#84CC16]",
     bgColor: "bg-[#84CC16]/10",
-    geographyOptions: [{ value: "all", label: "All regions" }]
+    geographyOptions: GEO_OPTIONS
   },
   pay: {
     icon: <CreditCard className="h-6 w-6" />,
@@ -96,7 +102,7 @@ const moduleConfigs: Record<AdminModule, {
     description: "Payment records, provider configuration and vendor payouts.",
     accentColor: "text-[#F59E0B]",
     bgColor: "bg-[#F59E0B]/10",
-    geographyOptions: [{ value: "all", label: "All regions" }]
+    geographyOptions: GEO_OPTIONS
   },
   fresh: {
     icon: <Apple className="h-6 w-6" />,
@@ -104,7 +110,7 @@ const moduleConfigs: Record<AdminModule, {
     description: "Quick-commerce roadmap. No operational data exists in this build.",
     accentColor: "text-[#22C55E]",
     bgColor: "bg-[#22C55E]/10",
-    geographyOptions: [{ value: "all", label: "All cities" }]
+    geographyOptions: GEO_OPTIONS
   },
   aura: {
     icon: <Sparkles className="h-6 w-6" />,
@@ -112,7 +118,7 @@ const moduleConfigs: Record<AdminModule, {
     description: "AI assistant roadmap. No model provider or workflow is configured.",
     accentColor: "text-[#A855F7]",
     bgColor: "bg-[#A855F7]/10",
-    geographyOptions: [{ value: "all", label: "All modules" }]
+    geographyOptions: GEO_OPTIONS
   }
 };
 
@@ -149,6 +155,9 @@ export function ModuleWorkspaceHeader({
               <label htmlFor="workspace-geo" className="sr-only">
                 Geographic filter
               </label>
+              <span className="sr-only" role="status" aria-live="polite">
+                {geo === "all" ? "All regions" : `Filtering module tables to ${config.geographyOptions.find((option) => option.value === geo)?.label ?? geo}`}
+              </span>
               <select
                 id="workspace-geo"
                 value={geo}

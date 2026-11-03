@@ -192,6 +192,13 @@ then `TEST_BASE_URL=http://localhost:3101 npx tsx scripts/<suite>.ts`. Suites ar
 idempotent on a shared database (marketplace rejects catalog products without images created by
 a previous run; drive needs no active ride), so reset and reseed between full runs.
 
+**Region filter (same pass):** the Control Center selector previously only rewrote the URL — a dead
+control. It now filters every module table by `countryCode`/`scopeCountryCode`, the href builder
+preserves `geo` for every region (previously `NG` was dropped, silently showing all rows), the
+unfilterable city options were replaced with the real country set, and a visible note states that
+summary cards remain platform-wide. Verified in a real browser: orders table `all` 8 rows →
+`GH` 1 row → `NG` 7 rows, note present, zero console errors (`qa-artifacts/region-filter-*.png`).
+
 **Documentation reconciliation (same pass):** `docs/architecture.md` and
 `docs/requirements-matrix.md` were rewritten from the verified code and test evidence;
 `docs/functional-gap-report.md` is now explicitly historical (it described the June 2026

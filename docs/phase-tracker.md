@@ -107,6 +107,9 @@ phases (00–20) plus 10 advisory Part M workstreams. No phase status was upgrad
 - Role-assignment writes and protection against self-escalation
 - Audited before/after events for sensitive finance and permission changes
 - Scoped staff access (2026-11-03): `requireAdmin` now admits ops/finance/support/moderator through `hasAdminConsoleAccess`; admin security suite **19/19**
+- Region filter is functional (2026-11-03): the Control Center selector now filters module tables by country
+  (`all` 8 / `NG` 7 / `GH` 1 orders in the isolated test data), shows an explicit "filter active" note, and
+  city options that matched no field were replaced by the real country set
 - Disputes, reconciliation, country/city activation and provider-connection controls where real services exist
 
 ## Phase 06 — Partner dashboards and onboarding

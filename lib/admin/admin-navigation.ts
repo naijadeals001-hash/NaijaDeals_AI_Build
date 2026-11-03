@@ -143,7 +143,7 @@ export function buildAdminHref(input: { module?: string; tab?: string; geo?: str
   const params = new URLSearchParams();
   if (input.module && input.module !== "ecosystem") params.set("module", input.module);
   if (input.tab && input.tab !== "overview") params.set("tab", input.tab);
-  if (input.geo && input.geo !== "all" && input.geo !== "NG") params.set("geo", input.geo);
+  if (input.geo && input.geo !== "all") params.set("geo", input.geo);
   const query = params.toString();
   return query ? `/admin?${query}` : "/admin";
 }
