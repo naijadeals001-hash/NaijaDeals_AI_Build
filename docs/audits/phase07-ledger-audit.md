@@ -71,6 +71,24 @@ payout status back. The concurrency and overdraw cases above fail on the old cod
   before implementation.
 - Sandbox provider checks need credentials; they block only those integration checks.
 
+## Reconciliation finding
+
+`scripts/phase07-reconciliation.ts` compares every wallet's available + held balance with the
+credited-minus-debited ledger net. On the isolated database **3 of 37 wallets do not reconcile**:
+
+| Wallet | Owner type | Balance | Ledger net | Difference |
+| --- | --- | --- | --- | --- |
+| cmw09h8cn…wsp8 | SYSTEM | 0 | 2,418,000 | −2,418,000 |
+| cmw09h8cj…oax8 | VENDOR | 1,425,474 | −25,974,526 | +27,400,000 |
+| cmw09h8cm…dkrx | VENDOR | 2,446,726 | 22,256,226 | −19,809,500 |
+
+These are historical rows: payouts previously decremented the wallet without a `WalletTransaction`,
+and early fixture/escrow flows did not always post a matching ledger entry. New payouts now post a
+balanced `payout` transaction (vendor DEBIT, SYSTEM CREDIT) and credit the SYSTEM clearing wallet, so
+new settlements reconcile. The three legacy wallets need an explicit backfill decision (amount,
+counter-account, audit note) before Phase 07 can claim full reconciliation — a database backfill was
+not performed because it changes financial history.
+
 ## Status
 
 **Phase 07 IN PROGRESS** after review. Local invariants pass (ledger, payouts, partial/concurrent

@@ -568,6 +568,26 @@ export async function markPayoutPaid(input: { adminId: string; payoutId: string 
       throw new ApiError(409, "insufficient_wallet", "Vendor available balance does not cover this payout.");
     }
 
+    const vendorWallet = await tx.wallet.findFirstOrThrow({ where: { vendorId: payout.vendorId } });
+    const systemWallet = (await tx.wallet.findFirst({ where: { ownerType: "SYSTEM" } })) ??
+      (await tx.wallet.create({ data: { ownerType: "SYSTEM", availableKobo: BigInt(0), heldKobo: BigInt(0) } }));
+    await tx.wallet.update({ where: { id: systemWallet.id }, data: { availableKobo: { increment: payout.amountKobo } } });
+    await tx.walletTransaction.create({
+      data: {
+        walletId: vendorWallet.id,
+        type: "payout",
+        amountKobo: payout.amountKobo,
+        reference: `PAYOUT-${payout.reference}`,
+        description: `Payout ${payout.reference} settled to vendor`,
+        ledger: {
+          create: [
+            { walletId: vendorWallet.id, direction: "DEBIT", amountKobo: payout.amountKobo, memo: "Vendor payout debited" },
+            { walletId: systemWallet.id, direction: "CREDIT", amountKobo: payout.amountKobo, memo: "Payout clearing credit" }
+          ]
+        }
+      }
+    });
+
     const paid = await tx.payout.findUniqueOrThrow({ where: { id: payout.id } });
     await recordAudit({
       tx,

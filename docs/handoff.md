@@ -738,3 +738,12 @@ Refund fee policy remains unresolved in docs/decisions.md (proportional vs retai
 provider processing fees separately). No fee logic was invented.
 
 Phase 07 stays IN PROGRESS: GitHub preservation and live provider sandbox evidence are outstanding.
+
+
+## Phase 07 reconciliation gap (2026-11-03)
+
+Payout settlement now writes a balanced WalletTransaction (vendor DEBIT, SYSTEM CREDIT) and credits the
+SYSTEM clearing wallet. scripts/phase07-reconciliation.ts reports 3 of 37 wallets still out of balance:
+one SYSTEM wallet (balance 0 vs ledger net 2,418,000) and two VENDOR wallets (1,425,474 vs
+-25,974,526 and 2,446,726 vs 22,256,226). These predate the payout ledger change; a reviewed backfill
+is required and was not performed. Phase 07 remains IN PROGRESS.

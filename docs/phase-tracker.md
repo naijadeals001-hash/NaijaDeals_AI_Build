@@ -293,3 +293,12 @@ Payouts are limited to explicit PENDING/APPROVED eligibility (REJECTED is termin
 Paystack/Flutterwave signature tests pass with test-only secrets. Wallet partial refunds and escrow
 release verified. Phase remains IN PROGRESS pending live provider sandbox reconciliation, the refund
 fee policy decision, and GitHub preservation.
+
+
+### Phase 07 reconciliation finding (2026-11-03)
+
+scripts/phase07-reconciliation.ts finds 3 of 37 wallets whose available+held balance differs from
+their ledger net: one SYSTEM and two VENDOR wallets. Payouts before this change wrote no ledger
+transaction, and early fixture/escrow flows left gaps. New payouts now post a balanced payout
+transaction (vendor debit, SYSTEM credit). The historical rows require an explicit, reviewed backfill
+before reconciliation can pass; no backfill was applied.
