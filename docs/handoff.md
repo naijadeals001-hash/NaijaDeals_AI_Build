@@ -163,6 +163,39 @@ that it was a Bolt driver app was wrong.
   a deliberately failing CI check, a coverage baseline, and the regression suite for auth,
   purchase and ride flows.
 
+## Implementation slice — scoped staff RBAC + baseline (2026-11-03)
+
+**Change:** `lib/auth/guard.ts` now exposes `hasAdminConsoleAccess()` and `requireAdmin()`
+admits scoped staff roles (ops, finance, support, moderator) in addition to full admins.
+Permission checks and region scope are unchanged; role administration stays super-admin only.
+
+**Why:** the admin security suite showed every scoped-staff call returning
+`403 "Administrator access is required"` before permission logic could run — ten failing checks
+rooted in one gate.
+
+**Test-fixture repairs (no assertions weakened):** the admin suite referenced a retired
+`VendorStatus.ACTIVE` value (now `VERIFIED`) in two fixtures; the drive race check accepted only
+409 for an expired start, but release clears the assignment so 403 is equally valid — it now
+accepts either while keeping the "not started / requeued" invariants.
+
+**Verified on an isolated database (`naijadeals_test`, freshly migrated and seeded):**
+
+| Suite | Result |
+| --- | --- |
+| `scripts/marketplace-tests.ts` | **13/13** |
+| `scripts/admin-security-tests.ts` | **19/19** (was 9/19 before the fix) |
+| `scripts/drive-tests.ts` | **28/28** |
+| `npx tsc --noEmit` | clean |
+
+Reproduction: `DATABASE_URL=<test db> ENABLE_TEST_PAYMENTS=true npm run dev -- --port 3101`,
+then `TEST_BASE_URL=http://localhost:3101 npx tsx scripts/<suite>.ts`. Suites are not fully
+idempotent on a shared database (marketplace rejects catalog products without images created by
+a previous run; drive needs no active ride), so reset and reseed between full runs.
+
+**Still blocked:** the deliberately failing CI check (push returns 403), and the remaining
+Phase 05 items (role-assignment writes beyond the existing endpoint, audit before/after detail,
+country activation).
+
 ## Repository audit (2026-11-03)
 
 Eight audit deliverables were produced under `docs/audits/` with two machine manifests

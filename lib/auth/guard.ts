@@ -1,19 +1,10 @@
 import { NextResponse } from "next/server";
 import type { SessionUser } from "./session";
-import { getSessionUser, isAdmin, isCourier, isDriver, isSuperAdmin, isVendor } from "./session";
+import { getSessionUser, isAdmin, isCourier, isDriver, isSuperAdmin, isVendor, roleNames } from "./session";
+import { ApiError } from "./api-error";
+import { hasPermission, isStaffRole, type Permission } from "./permissions";
 
-export class ApiError extends Error {
-  status: number;
-  code: string;
-  details?: unknown;
-
-  constructor(status: number, code: string, message: string, details?: unknown) {
-    super(message);
-    this.status = status;
-    this.code = code;
-    this.details = details;
-  }
-}
+export { ApiError } from "./api-error";
 
 export async function requireUser(): Promise<SessionUser> {
   const user = await getSessionUser();
@@ -21,9 +12,38 @@ export async function requireUser(): Promise<SessionUser> {
   return user;
 }
 
+/**
+ * Control Center console access.
+ *
+ * Full administrators keep platform-wide access; scoped staff (ops, finance,
+ * support, moderator) may enter the console but only reach what their explicit
+ * permissions and region scope allow. Role administration remains super-admin
+ * only and is not implied by this check.
+ */
+export function hasAdminConsoleAccess(user: SessionUser): boolean {
+  return isAdmin(user) || roleNames(user).some((name) => isStaffRole(name));
+}
+
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireUser();
-  if (!isAdmin(user)) throw new ApiError(403, "forbidden", "Administrator access is required.");
+  if (!hasAdminConsoleAccess(user)) {
+    throw new ApiError(403, "forbidden", "Administrator access is required.");
+  }
+  return user;
+}
+
+/**
+ * Administrator check plus an explicit permission.
+ *
+ * `admin` and `super_admin` keep their existing platform-wide capabilities,
+ * while scoped staff roles (ops, finance, support, moderator) only receive the
+ * permissions listed in `lib/auth/permissions.ts`.
+ */
+export async function requireAdminPermission(permission: Permission): Promise<SessionUser> {
+  const user = await requireAdmin();
+  if (!hasPermission(user, permission)) {
+    throw new ApiError(403, "permission_denied", `The "${permission}" permission is required for this action.`);
+  }
   return user;
 }
 

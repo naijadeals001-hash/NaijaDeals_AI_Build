@@ -729,7 +729,13 @@ async function main() {
       if (expiryFirst) {
         assert(row?.status === "requested", `an expired assignment was started: ${JSON.stringify(row)}`);
         assert(row?.driverId === null, "an expired assignment kept its driver");
-        assert(start.status === 409, `starting after expiry should be rejected, got ${start.status}`);
+        // Release clears the driver assignment, so the API may answer 403 (not your ride)
+        // instead of 409 (state conflict). Both must reject the start; the invariant
+        // assertions above still require an unstarted, requeued ride.
+        assert(
+          start.status === 409 || start.status === 403,
+          `starting after expiry should be rejected, got ${start.status}`
+        );
         await customer.post(`/api/drive/rides/${ride.id}/cancel`, { reason: "Race test cleanup" });
         continue;
       }
