@@ -1127,3 +1127,26 @@ Buy Again suspended/archived and unavailable-variant cases were not separately e
 same cart service as the stock checks. Wallet/cart ownership are self-scoped by API (no cross-customer ID
 parameter exercised). Screenshots: final-storefront-3010.png, final-account-3011.png,
 isolated-order-detail.png, isolated-order-detail-mobile.png, isolated-address.png, isolated-saved.png.
+
+
+## Customer acceptance checks — final status (2026-11-05)
+
+Previews: 3010 scheduled task with absolute npm; 3011 scheduled task running from separate worktree
+C:\Users\User\naijadeals-customer with schema customer_account_test. Both previously hung under
+concurrent Next dev compilation; restarted task processes. Browser screenshot recapture for 3011 timed
+out while /account was loading, so earlier 62821b3 captures remain valid historical evidence but were
+not freshly recaptured for every viewport.
+
+Verified:
+- wrong current password 400 invalid_current_password, session remains 200
+- successful change 200, protected API 401, old login 401, new login 200, fixture password restored
+- logout 200 -> 401
+- zero stock: B empty cart add 409 insufficient_stock, cart unchanged; A increment 409, qty unchanged 3
+- order isolation 403, address PATCH/DELETE 404
+- profile and address persistence, safe return URL, saved remove/re-add, populated order detail
+
+Not executed:
+- Buy Again suspended/archived/unavailable-variant/partial-success UI checks; the orders-page fixture
+  article did not render under the test selectors before timeout.
+- direct cart/wallet cross-customer calls (self-scoped APIs expose no other-customer id).
+- fresh full screenshot set from the running 3011 preview.
