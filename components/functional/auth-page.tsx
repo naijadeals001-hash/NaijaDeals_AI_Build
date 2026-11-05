@@ -34,7 +34,8 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
         mode === "login"
           ? await apiClient.login(email, password)
           : await apiClient.register({ name, email, password, phone: phone || undefined });
-      const next = params.get("next");
+      const nextParam = params.get("next") ?? "";
+      const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
       router.push(next || landingFor(result.user));
       router.refresh();
     } catch (err) {
