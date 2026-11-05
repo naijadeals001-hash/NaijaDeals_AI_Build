@@ -44,6 +44,7 @@ export interface AdminPageData {
   payouts: Array<Record<string, unknown>>;
   vendors: Array<Record<string, unknown>>;
   couriers: Array<Record<string, unknown>>;
+  escrow: Array<Record<string, unknown>>;
   loadErrors: string[];
   loadedAt: string;
 }
@@ -61,7 +62,8 @@ const ENDPOINTS = {
   audit: "/api/admin/audit-logs",
   payouts: "/api/admin/payouts",
   vendors: "/api/admin/vendors",
-  couriers: "/api/admin/couriers"
+  couriers: "/api/admin/couriers",
+  escrow: "/api/admin/escrow"
 } as const;
 
 type EndpointKey = keyof typeof ENDPOINTS;
@@ -127,6 +129,7 @@ export async function loadAdminPageData(region: AdminRegion = "ALL"): Promise<Ad
     payouts: filterRowsByRegion(asArray(raw.payouts), region),
     vendors: filterRowsByRegion(asArray(raw.vendors), region),
     couriers: asArray(raw.couriers),
+    escrow: asArray(raw.escrow),
     loadErrors,
     loadedAt: new Date().toISOString()
   };

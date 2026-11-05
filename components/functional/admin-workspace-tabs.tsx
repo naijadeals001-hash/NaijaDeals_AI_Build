@@ -37,6 +37,7 @@ interface WorkspaceTabProps {
   users: Row[];
   vendors: Row[];
   couriers: Row[];
+  escrow: Row[];
   audit: Row[];
   isSuperAdmin: boolean;
   initialQuery: string;
@@ -1350,6 +1351,48 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
         />
       </Panel>
       <AdminKitchenApplications />
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+      </>
+    );
+  }
+
+  if (tab === "escrow") {
+    const rows = filterRows(props.escrow).filter((row) =>
+      matches(row, ["order.orderNumber", "order.customer.name", "order.vendor.name", "status", "reason"])
+    );
+    const statuses = Array.from(new Set(props.escrow.map((row) => String(row.status)))).sort();
+    return (
+      <>
+      <Panel title="Escrow holds" description="Every escrow hold on the shared engine with its latest state transition. Releases and refunds happen through the orders and disputes flows and are audited.">
+        <Toolbar
+          query={query}
+          onQuery={setQuery}
+          placeholder="Search order, customer, vendor, reason…"
+          filters={statuses}
+          filterValue={statusFilter}
+          onFilter={setStatusFilter}
+          onRefresh={onRefresh}
+        />
+        <DataTable
+          rows={rows}
+          emptyLabel={props.escrow.length === 0 ? "No escrow holds exist yet." : "No escrow holds match this filter."}
+          onDetail={setDetail}
+          columns={[
+            { header: "Order", cell: (row) => <span className="font-bold">{text(value(row, "order.orderNumber"))}</span> },
+            { header: "Customer", cell: (row) => <span>{text(value(row, "order.customer.name"))}<br /><span className="text-xs text-[#8B949E]">{text(value(row, "order.customer.email"))}</span></span> },
+            { header: "Vendor", cell: (row) => <span>{text(value(row, "order.vendor.name"))}</span> },
+            { header: "Status", cell: (row) => <StatusBadge status={text(row.status)} /> },
+            { header: "Amount", cell: (row) => <span className="font-bold">{money(row.amountKobo)}</span>, className: "text-right" },
+            { header: "Latest event", cell: (row) => {
+              const events = Array.isArray(row.events) ? row.events : [];
+              const latest = events[0];
+              if (!latest) return <span className="text-xs text-[#8B949E]">—</span>;
+              return <span className="text-xs">{text(latest.to)}<br /><span className="text-[#8B949E]">{date(latest.createdAt)}</span></span>;
+            } },
+            { header: "Opened", cell: (row) => <span className="text-xs text-[#8B949E]">{date(row.createdAt)}</span> }
+          ]}
+        />
+      </Panel>
       {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
       </>
     );

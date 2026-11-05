@@ -65,6 +65,7 @@ interface AdminDashboardProps {
   payouts: Row[];
   vendors: Row[];
   couriers: Row[];
+  escrow: Row[];
   loadErrors: string[];
   loadedAt: string;
   userRoles: string[];
@@ -121,6 +122,7 @@ export function AdminDashboard(props: AdminDashboardProps) {
   const applications = props.applications;
   const vendors = props.vendors;
   const couriers = props.couriers;
+  const escrow = props.escrow;
   const audit = props.audit;
 
   const activeRides = useMemo(() => rides.filter((ride) => ACTIVE_RIDE_STATUSES.includes(String(ride.status))), [rides]);
@@ -527,6 +529,7 @@ export function AdminDashboard(props: AdminDashboardProps) {
           users={users}
           vendors={vendors}
           couriers={couriers}
+          escrow={props.escrow}
           audit={audit}
           isSuperAdmin={superAdminOnly}
           initialQuery={searchParams.get("q") ?? ""}

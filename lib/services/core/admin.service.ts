@@ -447,6 +447,18 @@ export async function moderateProduct(input: { adminId: string; productId: strin
   });
 }
 
+
+export async function listAdminEscrowHolds() {
+  return prisma.escrowHold.findMany({
+    include: {
+      order: { select: { orderNumber: true, status: true, customer: { select: { name: true, email: true } }, vendor: { select: { name: true } } } },
+      events: { orderBy: { createdAt: "desc" }, take: 1 }
+    },
+    orderBy: { createdAt: "desc" },
+    take: 200
+  });
+}
+
 export async function listAdminPayments() {
   return prisma.payment.findMany({
     include: { order: { select: { orderNumber: true, vendor: { select: { name: true } } } } },

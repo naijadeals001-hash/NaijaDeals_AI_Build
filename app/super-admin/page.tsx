@@ -37,6 +37,7 @@ export default async function Page({
         payouts={data.payouts}
         vendors={data.vendors}
         couriers={data.couriers}
+        escrow={data.escrow}
         loadErrors={data.loadErrors}
         loadedAt={data.loadedAt}
         userRoles={publicUser?.roles ?? ["super_admin"]}

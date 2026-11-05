@@ -20,7 +20,7 @@ export async function getWalletForUser(userId: string) {
   });
   const escrowHolds = await prisma.escrowHold.findMany({
     where: { order: { customerId: userId } },
-    include: { order: { select: { orderNumber: true, status: true } } },
+    include: { order: { select: { orderNumber: true, status: true } }, events: { orderBy: { createdAt: "asc" } } },
     orderBy: { createdAt: "desc" }
   });
   return { ...wallet, escrowHolds };

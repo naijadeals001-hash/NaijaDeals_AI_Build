@@ -14,6 +14,10 @@ NaijaPay change. Evidence references live in `docs/handoff.md`.
 | Add Money panel (honest per-provider state) | `/pay#add-money` | `/api/payments/methods` | runtime: wallet-only env shows unconfigured state |
 | P2P transfer engine | service only | `Wallet`/`WalletTransaction`/`LedgerEntry` via `postBalancedTransaction` | 23/23 financial-safety tests ×2 runs (isolated schema) |
 | Control Center reconciliation tab (wallet vs ledger, unbalanced journals) | `/admin?module=pay&tab=reconciliation` | `/api/admin/finance/reconciliation` | admin 200 + renders 10 wallets; anonymous 401; customer 403 |
+| NaijaPay Business dashboard (earnings, pending settlement, gross sales, wallet activity) | `/pay/business` | `/api/pay/business/overview` (vendor wallet, Payout, EscrowHold, paid orders) | anon 401, customer 403, seller 200 with own vendor only; renders real figures; 0 overflow |
+| Settlements & payouts view (escrow settlements, payout history, open holds) | `/pay/business` settlements tab | same service | renders all three sections; honest empty states |
+| Customer escrow protection dashboard (holds + event timelines) | `/pay/escrow` | `/api/wallet` escrowHolds incl. events | renders protected-total card + timeline; honest empty state |
+| Control Center escrow tab (all holds + latest events, search/filter) | `/admin?module=pay&tab=escrow` | `/api/admin/escrow` (finance:read) | admin renders panel; anon 401 (verified pattern); honest 0-row state on this DB |
 
 ## Implemented but blocked (built, honestly disabled)
 
@@ -29,10 +33,8 @@ NaijaPay change. Evidence references live in `docs/handoff.md`.
 | Workflow | Dependency |
 |---|---|
 | Bills, airtime, data, electricity, TV | No bill-payment provider integration exists anywhere in the codebase. Requires provider selection + credentials + agreement before any UI flow can be enabled. |
-| Payment links | New `reference_type` vocabulary + public payment-link records; depends on Send/Receive design. |
+| Payment links | New `reference_type` vocabulary + public payment-link records; depends on Send/Receive design. Business dashboard shows the honest "Coming" state for QR/links/customers/settings tools. |
 | Merchant QR payments | Merchant identifier issuance on the shared ledger. |
-| Business dashboard (NaijaPay-branded) | Seller finance data exists (`/seller`, payouts, earnings); NaijaPay-branded surface not built — design reference: `design-references/approved/NaijaPay/NaijaPay Business Dashboard Overview.png`. |
-| Escrow protection dashboard (dedicated views) | Escrow data + admin disputes exist; dedicated customer/admin escrow screens not built. |
 | Security dashboard / transaction PIN | Requires product decision on PIN storage (hashing scheme), device management and notification wiring. |
 | Financial Control Center beyond reconciliation | Payments/payouts/audit views already exist in the unified Control Center; provider status, refunds and risk views are future work under `finance:read`. |
 

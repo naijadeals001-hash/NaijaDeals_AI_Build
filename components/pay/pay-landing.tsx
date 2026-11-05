@@ -571,10 +571,10 @@ export function PayLanding() {
                 Become a seller
               </Link>
               <Link
-                href="/seller"
+                href="/pay/business"
                 className="rounded-full border border-pay-green/30 px-6 py-3 text-sm font-bold text-pay-green transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
               >
-                Seller dashboard
+                Business dashboard
               </Link>
             </div>
           </div>
