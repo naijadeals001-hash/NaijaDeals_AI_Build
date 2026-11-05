@@ -18,6 +18,7 @@
     "art:generate": "node scripts/generate-ecosystem-art.mjs && node scripts/generate-product-art.mjs",
     "prisma:seed": "prisma db seed",
     "test:marketplace": "tsx scripts/marketplace-tests.ts",
+    "test:admin-security": "tsx scripts/admin-security-tests.ts",
     "test:drive": "tsx scripts/drive-tests.ts",
     "engine:verify": "tsx scripts/marketplace-tests.ts"
   },

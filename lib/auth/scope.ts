@@ -18,6 +18,21 @@ export function assertRegion(user: SessionUser, target: RegionTarget, label = "r
   void label;
 }
 
+/**
+ * The audit trail records platform-wide activity, including metadata for
+ * records in every country. Reading it therefore requires platform-wide scope
+ * as well as the `audit:read` permission.
+ */
+export function assertPlatformWideAuditAccess(user: { scopeCountryCode?: string | null }) {
+  if (user.scopeCountryCode) {
+    throw new ApiError(
+      403,
+      "region_forbidden",
+      "The audit trail is platform-wide and cannot be read with a restricted regional scope."
+    );
+  }
+}
+
 /** Filters for list queries; an empty object means platform-wide access. */
 export function countryScopeWhere(user: SessionUser): { countryCode?: string } {
   const { countryCode } = scopeOf(user);

@@ -11,8 +11,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   try {
     assertSameOrigin(request);
     const admin = await requireAdminPermission("finance:payouts:write");
-    await assertLiveFinancialOperations("Vendor payout settlement");
     await assertPayoutRegion(admin, params.id);
+    await assertLiveFinancialOperations("Vendor payout settlement");
     const payout = await markPayoutPaid({ adminId: admin.id, payoutId: params.id });
     return NextResponse.json(jsonSafe(payout));
   } catch (error) {

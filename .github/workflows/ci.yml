@@ -175,6 +175,9 @@ jobs:
       - name: Run marketplace suite
         run: npm run test:marketplace
 
+      - name: Run admin security suite
+        run: npm run test:admin-security
+
       - name: Upload server log
         if: always()
         uses: actions/upload-artifact@v4

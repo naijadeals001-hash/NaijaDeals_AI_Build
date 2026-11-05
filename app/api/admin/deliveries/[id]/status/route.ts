@@ -3,7 +3,8 @@ import type { DeliveryStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { updateDeliveryStatus } from "@/lib/services/core/delivery.service";
 import { syncOrderForDelivery } from "@/lib/services/core/courier.service";
-import { assertSameOrigin, jsonError, readJson, requireAdmin, requireString } from "@/lib/auth/guard";
+import { assertSameOrigin, jsonError, readJson, requireAdminPermission, requireString } from "@/lib/auth/guard";
+import { assertDeliveryRegion } from "@/lib/auth/scope";
 import { jsonSafe } from "@/lib/services/core/serialize";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,8 @@ const statuses: DeliveryStatus[] = [
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
     assertSameOrigin(request);
-    const admin = await requireAdmin();
+    const admin = await requireAdminPermission("deliveries:write");
+    await assertDeliveryRegion(admin, params.id);
     const body = await readJson<Record<string, unknown>>(request);
     const status = requireString(body.status, "Status", 40) as DeliveryStatus;
     if (!statuses.includes(status)) {

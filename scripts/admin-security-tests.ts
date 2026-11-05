@@ -289,16 +289,38 @@ async function main() {
     }
   });
 
-  await step("Finance can pay a payout and the change is audited before/after", async () => {
+  await step("Finance can read payouts but live settlement is blocked on a TEST database", async () => {
+    const list = await finance.client.get("/api/admin/payouts");
+    isStatus(list, 200, "finance reads payouts");
+
     const paid = await finance.client.post(`/api/admin/payouts/${ngPayout.id}/pay`);
-    isStatus(paid, 200, "finance pays payout");
+    isStatus(paid, 403, "finance settles payout on TEST database");
+    assert(
+      paid.body.code === "test_funds_boundary",
+      `expected test_funds_boundary, got ${JSON.stringify(paid.body)}`
+    );
+    const stored = await prisma.payout.findUniqueOrThrow({ where: { id: ngPayout.id } });
+    assert(stored.status === "PENDING", `payout changed despite the boundary (status ${stored.status})`);
+
     const entries = await auditEntries(superAdmin);
-    const entry = entries.find((item) => item.action === "payout.paid" && item.entityId === ngPayout.id);
-    assert(entry, "no payout.paid audit entry");
+    const leaked = entries.find((item) => item.action === "payout.paid" && item.entityId === ngPayout.id);
+    assert(!leaked, "a blocked payout settlement still wrote an audit record");
+  });
+
+  await step("A permitted sensitive write records attributable before/after audit", async () => {
+    const entries = await auditEntries(superAdmin);
+    const entry = entries.find((item) => item.action === "admin.action_logged" && item.entityId && item.metadata?.orderId === ngOrder.id);
+    assert(entry, "no audit entry for the order status change");
     const metadata = entry.metadata as Json;
-    assert(metadata?.before?.status === "PENDING", `before.status was ${metadata?.before?.status}`);
-    assert(metadata?.after?.status === "PAID", `after.status was ${metadata?.after?.status}`);
-    assert(entry.actor?.email === finance.email, "payout audit is not attributable to the paying finance user");
+    assert(metadata?.before?.status === "created", `before.status was ${metadata?.before?.status}`);
+    assert(metadata?.after?.status === "payment_pending", `after.status was ${metadata?.after?.status}`);
+    assert(entry.actor?.email === opsNg.email, `audit is not attributable to the acting ops user (${entry.actor?.email})`);
+  });
+
+  await step("A country-scoped finance user cannot read the platform audit trail", async () => {
+    const denied = await finance.client.get("/api/admin/audit-logs");
+    isStatus(denied, 403, "scoped finance reads audit trail");
+    assert(denied.body.code === "region_forbidden", `expected region_forbidden, got ${JSON.stringify(denied.body)}`);
   });
 
   const opsPayout = await prisma.payout.create({
@@ -346,7 +368,8 @@ async function main() {
         status: "ACTIVE",
         images: { create: [{ url: "/products/tecno-spark-20.svg", alt: "Accra Security Product", sortOrder: 0 }] }
       }
-    });    const denied = await moderator.client.post(`/api/admin/products/${ghProduct.id}/moderate`, { status: "SUSPENDED" });
+    });
+    const denied = await moderator.client.post(`/api/admin/products/${ghProduct.id}/moderate`, { status: "SUSPENDED" });
     isStatus(denied, 403, "moderator suspends GH product while scoped to NG");
     assert(denied.body.code === "region_forbidden", `expected region_forbidden, got ${JSON.stringify(denied.body)}`);
     const stored = await prisma.product.findUniqueOrThrow({ where: { id: ghProduct.id } });

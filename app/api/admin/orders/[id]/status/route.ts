@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { OrderStatus } from "@prisma/client";
 import { adminUpdateOrderStatus } from "@/lib/services/core/admin.service";
-import { assertSameOrigin, jsonError, readJson, requireAdmin, requireString } from "@/lib/auth/guard";
+import { assertSameOrigin, jsonError, readJson, requireAdminPermission, requireString } from "@/lib/auth/guard";
+import { assertOrderRegion } from "@/lib/auth/scope";
 import { jsonSafe } from "@/lib/services/core/serialize";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,8 @@ const statuses: OrderStatus[] = [
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
     assertSameOrigin(request);
-    const admin = await requireAdmin();
+    const admin = await requireAdminPermission("orders:write");
+    await assertOrderRegion(admin, params.id);
     const body = await readJson<Record<string, unknown>>(request);
     const status = requireString(body.status, "Status", 40) as OrderStatus;
     if (!statuses.includes(status)) {
