@@ -18,14 +18,19 @@ NaijaPay change. Evidence references live in `docs/handoff.md`.
 | Settlements & payouts view (escrow settlements, payout history, open holds) | `/pay/business` settlements tab | same service | renders all three sections; honest empty states |
 | Customer escrow protection dashboard (holds + event timelines) | `/pay/escrow` | `/api/wallet` escrowHolds incl. events | renders protected-total card + timeline; honest empty state |
 | Control Center escrow tab (all holds + latest events, search/filter) | `/admin?module=pay&tab=escrow` | `/api/admin/escrow` (finance:read) | admin renders panel; anon 401 (verified pattern); honest 0-row state on this DB |
+| Send Money screen (form → review → confirm, idempotency key, honest disabled result) | `/pay/send` | `/api/pay/transfers` (gated) | signed-in browser flow verified; confirm returns honest "not active yet", no fake success |
+| Receive Money screen (payment handle, copy/share, coming states) | `/pay/receive` | `/api/auth/me`, `/api/wallet` | verified: handle shown, copy/share present, honest coming section |
+| Scan & Pay (camera BarcodeDetector + manual entry + merchant verification honest state) | `/pay/scan` | none yet (merchant QR not issued) | verified: manual entry → honest "issuance not live", confirm disabled |
+| Security screen (device sessions list + revoke, protection checklist, PIN pending) | `/pay/security` | `/api/account/sessions` (+`/[id]` DELETE) | scripts/sessions-api-test.mjs PASS: anon 401, one current flag, revoke-other 200, revoke-current 400, foreign 404 |
+| Wallet history date filter + transaction receipt view | `/wallet` | `/api/wallet` | verified: range filter applies, receipt modal shows reference/type/ledger note |
 
 ## Implemented but blocked (built, honestly disabled)
 
 | Workflow | Blocker (exact dependency) |
 |---|---|
-| Send money (P2P UI screen) | `ENABLE_P2P_TRANSFERS` env flag off by policy. Engine passes idempotency/concurrency/reconciliation tests on the TEST schema; activation additionally requires (a) owner authorisation, (b) a reconciliation pass over the shared development database — the SYSTEM wallet currently shows a −₦25,000 cached-vs-ledger delta that must be investigated first (visible in the admin Reconciliation tab), (c) transaction-PIN/auth requirement decision before real funds move. |
-| Receive money (QR + payment link screen) | Depends on Send activation plus server-generated payment identifiers (new table or signed tokens) and a share/collection flow — not yet designed. |
-| Scan & Pay (camera QR) | Depends on merchant QR issuance (no merchant->payment-token mapping exists) and Send activation. |
+| Send money ACTIVATION (screen is live at /pay/send; posting disabled) | `ENABLE_P2P_TRANSFERS` env flag off by policy. Engine passes idempotency/concurrency/reconciliation tests on the TEST schema; activation additionally requires (a) owner authorisation, (b) a reconciliation pass over the shared development database — the SYSTEM wallet currently shows a −₦25,000 cached-vs-ledger delta that must be investigated first (visible in the admin Reconciliation tab), (c) transaction-PIN/auth requirement decision before real funds move. |
+| Receive: personal QR + amount requests (handle/copy/share is live) | Server-generated signed payment identifiers + request tracking — designed, not yet built; activates with the transfers rollout. |
+| Scan & Pay payment confirmation (screen + manual entry live) | Merchant QR issuance (merchant→payment-token mapping on the shared ledger) — not yet built. |
 | Wallet top-up via card/bank | `PAYSTACK_SECRET_KEY` / `FLUTTERWAVE_SECRET_KEY` not present in this environment; `ENABLE_TEST_PAYMENTS` also unset. UI reports the honest unconfigured state. Note: current `Payment` model is order-scoped (`orderId` required) — standalone top-ups need a reviewed additive migration or a dedicated top-up record before provider keys alone suffice. |
 
 ## Not implemented (dependency noted)
@@ -35,7 +40,7 @@ NaijaPay change. Evidence references live in `docs/handoff.md`.
 | Bills, airtime, data, electricity, TV | No bill-payment provider integration exists anywhere in the codebase. Requires provider selection + credentials + agreement before any UI flow can be enabled. |
 | Payment links | New `reference_type` vocabulary + public payment-link records; depends on Send/Receive design. Business dashboard shows the honest "Coming" state for QR/links/customers/settings tools. |
 | Merchant QR payments | Merchant identifier issuance on the shared ledger. |
-| Security dashboard / transaction PIN | Requires product decision on PIN storage (hashing scheme), device management and notification wiring. |
+| Transaction PIN + security notifications (session/device controls are live at /pay/security) | Requires product decision on PIN storage (hashing scheme) and challenge flow; notification wiring depends on the Communication engine's outbound channel. |
 | Financial Control Center beyond reconciliation | Payments/payouts/audit views already exist in the unified Control Center; provider status, refunds and risk views are future work under `finance:read`. |
 
 ## Standing constraints

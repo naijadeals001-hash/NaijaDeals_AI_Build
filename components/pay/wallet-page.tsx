@@ -22,6 +22,8 @@ export function NaijaPayWalletPage() {
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [rangeFilter, setRangeFilter] = useState("all");
+  const [receipt, setReceipt] = useState<Tx | null>(null);
 
   function loadWallet() {
     setStatus("loading");
@@ -45,16 +47,18 @@ export function NaijaPayWalletPage() {
   const currency = wallet?.currency ?? "NGN";
   const transactions = useMemo(() => wallet?.transactions ?? [], [wallet]);
   const types = useMemo(() => ["all", ...Array.from(new Set(transactions.map((tx) => String(tx.type))))], [transactions]);
-  const filtered = useMemo(
-    () =>
-      transactions.filter((tx) => {
-        const matchesType = typeFilter === "all" || String(tx.type) === typeFilter;
-        const needle = query.trim().toLowerCase();
-        const matchesQuery = !needle || `${tx.description} ${tx.reference} ${tx.type}`.toLowerCase().includes(needle);
-        return matchesType && matchesQuery;
-      }),
-    [transactions, typeFilter, query]
-  );
+  const filtered = useMemo(() => {
+    const now = Date.now();
+    const ranges: Record<string, number> = { "7d": 7, "30d": 30, "90d": 90 };
+    const cutoff = ranges[rangeFilter] ? now - ranges[rangeFilter] * 24 * 60 * 60 * 1000 : 0;
+    return transactions.filter((tx) => {
+      const matchesType = typeFilter === "all" || String(tx.type) === typeFilter;
+      const needle = query.trim().toLowerCase();
+      const matchesQuery = !needle || `${tx.description} ${tx.reference} ${tx.type}`.toLowerCase().includes(needle);
+      const matchesRange = !cutoff || (tx.createdAt ? new Date(tx.createdAt).getTime() >= cutoff : false);
+      return matchesType && matchesQuery && matchesRange;
+    });
+  }, [transactions, typeFilter, rangeFilter, query]);
   const openHolds = (wallet?.escrowHolds ?? []).filter((hold) => hold.status === "held" || hold.status === "disputed");
   const heldKobo = openHolds.reduce((total, hold) => total + Number(hold.amountKobo ?? 0), 0);
 
@@ -130,9 +134,9 @@ export function NaijaPayWalletPage() {
         <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
             { label: "Add Money", href: "/pay#add-money", icon: Banknote },
-            { label: "Send", href: "/pay#setup", icon: Send },
-            { label: "Receive", href: "/pay#setup", icon: QrCode },
-            { label: "Scan & Pay", href: "/pay#setup", icon: Smartphone }
+            { label: "Send", href: "/pay/send", icon: Send },
+            { label: "Receive", href: "/pay/receive", icon: QrCode },
+            { label: "Scan & Pay", href: "/pay/scan", icon: Smartphone }
           ].map((action) => (
             <Link
               key={action.label}
@@ -185,6 +189,18 @@ export function NaijaPayWalletPage() {
               />
             </label>
             <label className="sr-only" htmlFor="tx-type">Filter by type</label>
+            <label className="sr-only" htmlFor="tx-range">Filter by date</label>
+            <select
+              id="tx-range"
+              value={rangeFilter}
+              onChange={(event) => setRangeFilter(event.target.value)}
+              className="rounded-xl border border-black/10 bg-pay-mint/50 px-3 py-2 text-sm font-semibold text-pay-ink focus:border-pay-green focus:outline-none"
+            >
+              <option value="all">All time</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+              <option value="90d">Last 90 days</option>
+            </select>
             <select
               id="tx-type"
               value={typeFilter}
@@ -206,23 +222,72 @@ export function NaijaPayWalletPage() {
         ) : (
           <ul className="mt-3 divide-y divide-pay-mint">
             {filtered.map((tx) => (
-              <li key={tx.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                <div className="min-w-0">
-                  <p className="truncate font-bold text-pay-ink">{tx.description}</p>
-                  <p className="text-xs text-pay-ink-muted">
-                    {String(tx.type)} · {String(tx.reference)}
-                    {tx.createdAt ? ` · ${new Date(tx.createdAt).toLocaleDateString()}` : ""}
-                  </p>
-                </div>
-                <p className={`shrink-0 font-black ${String(tx.type) === "credit" ? "text-pay-green" : "text-pay-ink"}`}>
-                  {String(tx.type) === "credit" ? "+" : "−"}
-                  {koboToNaira(String(tx.amountKobo), currency)}
-                </p>
+              <li key={tx.id}>
+                <button
+                  type="button"
+                  onClick={() => setReceipt(tx)}
+                  className="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-2.5 text-left text-sm transition hover:bg-pay-mint/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-bold text-pay-ink">{tx.description}</span>
+                    <span className="block text-xs text-pay-ink-muted">
+                      {String(tx.type)} · {String(tx.reference)}
+                      {tx.createdAt ? ` · ${new Date(tx.createdAt).toLocaleDateString()}` : ""}
+                    </span>
+                  </span>
+                  <span className={`shrink-0 font-black ${String(tx.type) === "credit" ? "text-pay-green" : "text-pay-ink"}`}>
+                    {String(tx.type) === "credit" ? "+" : "−"}
+                    {koboToNaira(String(tx.amountKobo), currency)}
+                  </span>
+                </button>
               </li>
             ))}
           </ul>
         )}
       </section>
+      {receipt && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label="Transaction receipt">
+          <div className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-soft sm:rounded-3xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-pay-ink-muted">Receipt</p>
+                <h2 className="mt-1 font-display text-xl font-extrabold text-pay-ink">{receipt.description}</h2>
+              </div>
+              <button type="button" onClick={() => setReceipt(null)} aria-label="Close receipt" className="rounded-full border border-black/10 px-3 py-1.5 text-sm font-bold text-pay-ink transition hover:bg-pay-mint">
+                &#10005;
+              </button>
+            </div>
+            <dl className="mt-4 divide-y divide-pay-mint text-sm">
+              <div className="flex justify-between py-2.5">
+                <dt className="text-pay-ink-muted">Amount</dt>
+                <dd className={`font-black ${String(receipt.type) === "credit" ? "text-pay-green" : "text-pay-ink"}`}>
+                  {String(receipt.type) === "credit" ? "+" : "−"}
+                  {koboToNaira(String(receipt.amountKobo), currency)}
+                </dd>
+              </div>
+              <div className="flex justify-between py-2.5">
+                <dt className="text-pay-ink-muted">Type</dt>
+                <dd className="font-bold text-pay-ink">{String(receipt.type)}</dd>
+              </div>
+              <div className="flex justify-between gap-3 py-2.5">
+                <dt className="text-pay-ink-muted">Reference</dt>
+                <dd className="break-all text-right font-mono text-xs font-bold text-pay-ink">{String(receipt.reference)}</dd>
+              </div>
+              {receipt.createdAt && (
+                <div className="flex justify-between py-2.5">
+                  <dt className="text-pay-ink-muted">Date</dt>
+                  <dd className="font-bold text-pay-ink">{new Date(receipt.createdAt).toLocaleString()}</dd>
+                </div>
+              )}
+              <div className="flex justify-between py-2.5">
+                <dt className="text-pay-ink-muted">Ledger</dt>
+                <dd className="font-bold text-pay-green">Balanced entry on the NaijaDeals ledger</dd>
+              </div>
+            </dl>
+            <p className="mt-3 text-[11px] text-pay-ink-muted">Keep this reference for support. NaijaPay support will never ask for your password.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

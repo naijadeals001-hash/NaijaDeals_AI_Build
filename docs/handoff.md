@@ -1284,3 +1284,31 @@ in this Prisma schema — vendor Wallet + Payout + EscrowHold + paid orders are 
 - docs/naijapay-status.md updated: Business Dashboard Overview and Escrow
   dashboards moved to implemented-and-verified. Visual QA re-passed. Type-check
   clean apart from pre-existing naijagigs WIP syntax errors (untouched).
+
+## NaijaPay slice 6 — customer payment screens and security (2026-11-05, night)
+
+Completed the customer-facing NaijaPay build per the approved mockups, all on the
+existing gated engine:
+- /pay/send: form → review → confirm with client-generated idempotency key,
+  server-authoritative validation; while ENABLE_P2P_TRANSFERS is off the confirm
+  step shows the honest "Transfers are not active yet" result (verified in
+  browser: no fake success).
+- /pay/receive: real payment handle (account email) + wallet reference with
+  copy/share; QR/amount-requests/payment-links shown as pending rollout.
+- /pay/scan: camera scanning via BarcodeDetector with graceful denied/
+  unsupported fallbacks and manual merchant-code entry; merchant verification
+  step renders the honest "issuance not live" state with confirm disabled.
+- /pay/security: active-device sessions with per-device sign-out. New ownership-
+  scoped APIs GET /api/account/sessions and DELETE /api/account/sessions/[id]
+  (current session protected, foreign sessions 404, audited).
+  scripts/sessions-api-test.mjs PASS (anon 401, one current flag, revoke-other
+  200, revoke-current 400, foreign 404). Transaction PIN documented as pending
+  a product decision.
+- /wallet: date-range filter (7/30/90 days) and a transaction receipt view
+  (reference, type, amount, ledger note).
+- /pay and /wallet action pills now route to the real Send/Receive/Scan pages.
+Verified: slice6 browser run (send flow incl. honest disabled result, receive,
+scan manual+review, security badges, wallet receipt), sessions API test, visual
+QA re-pass at 3 viewports, all /pay/* routes auth-redirect (307) when signed
+out. Screenshots: qa-artifacts/pay/{send,receive,scan,security}-mobile.png,
+wallet-receipt.png. Transfer posting remains disabled by policy.

@@ -64,9 +64,9 @@ function WalletCard() {
 
   const actions = [
     { label: "Add Money", href: "#add-money", icon: Banknote },
-    { label: "Send", href: "#setup", icon: Send },
-    { label: "Receive", href: "#setup", icon: QrCode },
-    { label: "Scan & Pay", href: "#setup", icon: Smartphone }
+    { label: "Send", href: "/pay/send", icon: Send },
+    { label: "Receive", href: "/pay/receive", icon: QrCode },
+    { label: "Scan & Pay", href: "/pay/scan", icon: Smartphone }
   ];
 
   if (status === "signed-out") {
@@ -302,7 +302,7 @@ const services: Array<{
   },
   {
     title: "Send & receive",
-    body: "Wallet-to-wallet transfers are built and pass financial-safety tests; they stay switched off here until enabled for this environment.",
+    body: "The full Send Money and Receive experience is live to review. Transfers post only when enabled for this environment.",
     icon: Send,
     image: "/brand-photography/aura-concierge-lagos.jpg",
     imageAlt: "A customer using an app on her phone in Lagos",
@@ -602,8 +602,8 @@ export function PayLanding() {
             <li className="rounded-2xl bg-white p-4">
               <p className="font-bold">Send &amp; receive money</p>
               <p className="mt-1 text-xs text-pay-ink-muted">
-                Built and covered by idempotency, concurrency and reconciliation tests; disabled until the environment
-                flag is switched on with authorisation.
+                The full Send/Receive/Scan screens are live to explore. Posting transfers stays switched off until the
+                environment flag is authorised (engine already passes idempotency, concurrency and reconciliation tests).
               </p>
             </li>
             <li className="rounded-2xl bg-white p-4">
