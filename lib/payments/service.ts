@@ -667,6 +667,9 @@ export async function refundPayment(input: {
 
     if (isFullRefund) {
       await tx.payment.update({ where: { id: completed.id }, data: { status: "REFUNDED" } });
+      // The order-level payment state must move with the payment record, or a
+      // fully refunded order keeps reporting `paymentStatus: "paid"`.
+      await tx.order.update({ where: { id: order.id }, data: { paymentStatus: "refunded" } });
       if (escrow) {
         await tx.escrowHold.update({
           where: { id: escrow.id },

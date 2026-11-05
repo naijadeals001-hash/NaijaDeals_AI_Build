@@ -204,6 +204,21 @@ const products = [
 
 async function main() {
   await prisma.$transaction([
+    // Dependent rows must go before the records they reference, otherwise a
+    // re-run against a database that still holds test-created rows fails on a
+    // foreign-key RESTRICT instead of resetting the fixtures.
+    prisma.foodOrderEvent.deleteMany(),
+    prisma.foodOrderItem.deleteMany(),
+    prisma.foodOrder.deleteMany(),
+    prisma.freightEvent.deleteMany(),
+    prisma.freightRequest.deleteMany(),
+    prisma.restaurantApplication.deleteMany(),
+    prisma.partnerNotification.deleteMany(),
+    prisma.savedPlace.deleteMany(),
+    prisma.refund.deleteMany(),
+    prisma.accountPosting.deleteMany(),
+    prisma.ledgerAdjustment.deleteMany(),
+    prisma.ledgerAccount.deleteMany(),
     prisma.ledgerEntry.deleteMany(),
     prisma.walletTransaction.deleteMany(),
     prisma.trackingEvent.deleteMany(),
@@ -418,7 +433,7 @@ async function main() {
   const vendors = { "ikeja-mobile-hub": vendor1, "yaba-home-living": vendor2 };
 
   for (const product of products) {
-    await prisma.product.create({
+    const created = await prisma.product.create({
       data: {
         vendorId: vendors[product.vendor].id,
         categoryId: categories[product.category].id,
@@ -428,7 +443,6 @@ async function main() {
         brand: product.brand,
         priceKobo: product.price,
         compareAtKobo: product.compareAt,
-        saleMode: product.saleMode ?? "escrow",
         weightGrams: 500,
         status: "ACTIVE",
         isSample: true,
@@ -446,6 +460,9 @@ async function main() {
           : undefined
       }
     });
+    // The Prisma schema predates the saleMode column, so the catalog reads it
+    // through raw SQL. Write it the same way so seeded rows stay consistent.
+    await prisma.$executeRaw`UPDATE "Product" SET "saleMode" = ${product.saleMode ?? "escrow"}::"SaleMode" WHERE id = ${created.id}`;
   }
 
   // The customer fixture balance is posted as a balanced ledger transaction so the

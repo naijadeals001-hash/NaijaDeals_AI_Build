@@ -10,7 +10,11 @@
  * in production and never claims to be a real payment.
  */
 
+import { PrismaClient } from "@prisma/client";
+
 const BASE = (process.env.TEST_BASE_URL || "http://localhost:3100").replace(/\/$/, "");
+
+const prisma = new PrismaClient();
 
 type Json = Record<string, any>;
 
@@ -165,6 +169,27 @@ async function getOrder(client: Client, id: string) {
   return response.body as Json;
 }
 
+/**
+ * Seeded catalogue rows are intentionally marked `isSample` so the storefront
+ * can show a demo catalogue without letting anyone buy demo inventory. Every
+ * purchasing test therefore creates its own real, non-sample listing through
+ * the seller API instead of buying fixture data.
+ */
+async function createPurchasableProduct(seller: Client, unique: string, label: string, quantity: number) {
+  const categories = await seller.get("/api/categories");
+  isStatus(categories, 200, `categories for ${label} fixture`);
+  const created = await seller.post("/api/seller/products", {
+    name: `Test ${label} ${unique}`,
+    description: `A real non-sample listing created for the ${label} verification run.`,
+    categoryId: categories.body[0].id,
+    priceKobo: "1800000",
+    imageUrl: "/products/anker-power-bank-20000.svg",
+    quantity
+  });
+  isStatus(created, 201, `create product for ${label}`);
+  return created.body as Json;
+}
+
 async function main() {
   const admin = new Client();
   const customer = new Client();
@@ -221,9 +246,32 @@ async function main() {
   });
 
   await step("Variant products require an option (no double stock pool)", async () => {
-    const catalog = await products(customer);
-    const variantProduct = catalog.find((product) => (product.variants?.length ?? 0) > 0);
-    assert(variantProduct, "no variant product in seed");
+    const categories = await seller.get("/api/categories");
+    isStatus(categories, 200, "categories for variant fixture");
+    const vendor = await prisma.vendor.findFirstOrThrow({ where: { status: "VERIFIED" } });
+    const variantProduct = await prisma.product.create({
+      data: {
+        vendorId: vendor.id,
+        categoryId: categories.body[0].id,
+        name: `Variant Fixture ${unique}`,
+        slug: `variant-fixture-${unique}`,
+        description: "Variant fixture used to prove that a buyer must choose an option before stock is reserved.",
+        priceKobo: 1200000n,
+        status: "ACTIVE",
+        images: { create: [{ url: "/products/anker-power-bank-20000.svg", alt: "Variant fixture", sortOrder: 0 }] },
+        stock: { create: { quantity: 0, lowStockLevel: 1 } },
+        variants: {
+          create: [
+            { name: "Small", sku: `VAR-${unique}-S`, priceKobo: 1200000n, stock: 4 },
+            { name: "Large", sku: `VAR-${unique}-L`, priceKobo: 1500000n, stock: 4 }
+          ]
+        }
+      },
+      include: { variants: true }
+    });
+    // The Prisma schema does not model saleMode; the catalogue reads it via raw SQL.
+    await prisma.$executeRaw`UPDATE "Product" SET "saleMode" = 'escrow'::"SaleMode" WHERE id = ${variantProduct.id}`;
+
     await clearCart(customer);
 
     const withoutVariant = await customer.post("/api/cart/items", { productId: variantProduct.id, quantity: 1 });
@@ -242,9 +290,7 @@ async function main() {
   });
 
   await step("Customer purchase: checkout, verified payment, idempotent duplicate callback", async () => {
-    const catalog = await products(customer);
-    const product = catalog.find((item) => (item.variants?.length ?? 0) === 0 && item.available >= 2);
-    assert(product, "no simple product with stock");
+    const product = await createPurchasableProduct(seller, unique, "checkout", 4);
     const before = await productBySlug(customer, product.slug);
 
     const paid = await checkoutAndPayTest(customer, product.id, 1, unique);
@@ -383,9 +429,7 @@ async function main() {
     const registered = await broke.post("/api/auth/register", { name: "No Wallet Buyer", email, password: "BrokePass123!" });
     isStatus(registered, 201, "register broke customer");
 
-    const catalog = await products(broke);
-    const product = catalog.find((item) => (item.variants?.length ?? 0) === 0 && item.available >= 1);
-    assert(product, "no product for failed payment test");
+    const product = await createPurchasableProduct(seller, unique, "failed-payment", 2);
     const before = await productBySlug(broke, product.slug);
 
     await clearCart(broke);
@@ -455,9 +499,7 @@ async function main() {
   });
 
   await step("Paid cancellation refunds and restocks exactly once", async () => {
-    const catalog = await products(customer);
-    const product = catalog.find((item) => (item.variants?.length ?? 0) === 0 && item.available >= 2);
-    assert(product, "no product for paid cancellation test");
+    const product = await createPurchasableProduct(seller, unique, "refund", 6);
     const before = await productBySlug(customer, product.slug);
 
     const paid = await checkoutAndPayTest(customer, product.id, 2, `${unique}-refund`);
@@ -484,9 +526,7 @@ async function main() {
   });
 
   await step("Delivery failure and retry reach delivered", async () => {
-    const catalog = await products(customer);
-    const product = catalog.find((item) => (item.variants?.length ?? 0) === 0 && item.available >= 1);
-    assert(product, "no product for delivery retry test");
+    const product = await createPurchasableProduct(seller, unique, "retry", 4);
     const paid = await checkoutAndPayTest(customer, product.id, 1, `${unique}-retry`);
 
     for (const status of ["accepted", "preparing", "ready_for_pickup"]) {
@@ -580,15 +620,20 @@ async function main() {
   if (failed.length > 0) {
     console.log("\nEvidence for persistence check:");
     console.log(JSON.stringify({ paidOrderId, createdSellerProductId }, null, 2));
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
   console.log("\nEvidence:");
   console.log(JSON.stringify({ paidOrderId, createdSellerProductId, unassignedDeliveryId }, null, 2));
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
 
 export {};
