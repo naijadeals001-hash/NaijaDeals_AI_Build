@@ -103,3 +103,7 @@ Evidence columns name the code path and the execution that proved it. Last verif
 - "PASS" here means the stated evidence was executed, not that the whole phase is accepted.
   Phase acceptance still follows the playbook's exit gates in `docs/phase-tracker.md`.
 - Older claims in this file ("no tests", "no CI") were stale and have been replaced.
+
+
+| Customer signed-in header and account menu | Implemented: real name, cart count, default address, functional account links, Escape/focus | 2026-11-05 |
+| Customer order detail | Implemented route /orders/[id] with items, totals, address, payment status, timeline; needs order-fixture browser test | 2026-11-05 |

@@ -1052,3 +1052,15 @@ Service, Sign Out), Amazon-style /orders header with search/filter and Track del
 return-status sections when orders exist, and Amazon empty-cart state (Shopping Cart, No items selected,
 Proceed to checkout (0 items), Select all items). Mobile screenshots: amazon-account-mobile.png,
 amazon-orders-mobile.png, amazon-cart-mobile.png. No fabricated orders or metrics.
+
+
+## Signed-in customer experience (2026-11-05)
+
+Signed-in storefront header uses /api/account, /api/cart and /api/account/addresses: first-name greeting,
+real cart quantity badge, selected default address destination, account menu (My account, Orders, Saved
+items, Addresses, NaijaPay, Sign out), Escape/focus handling. Account page has Amazon-style hub and
+#saved/#addresses anchors. Added /orders/[id] customer order detail with items, totals, delivery address,
+payment status, status timeline/events and deliveries via existing API. Verified login return to
+/orders, header/menu, anchors, 0 console errors. Customer test account has no orders, so order-detail
+data rendering was not browser-verified with a live order; API/ownership route remains to test with an
+order fixture. Screenshots: signed-in-header-desktop.png, signed-in-header-mobile.png, customer-account.png.
