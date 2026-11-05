@@ -388,8 +388,8 @@ export function PayLanding() {
           </div>
           <div className="relative min-h-72 sm:min-h-96 lg:min-h-full">
             <img
-              src="/real-photography/hero-ecosystem.jpg"
-              alt="Lagos skyline over the water at dusk"
+              src="/brand-photography/naijapay-hero-woman-lagos.jpg"
+              alt="A Nigerian woman in green and gold attire using her smartphone, with the Lagos skyline behind her"
               className="absolute inset-0 h-full w-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-pay-deep/70 via-transparent to-transparent lg:bg-gradient-to-r lg:from-white lg:via-white/10 lg:to-transparent" aria-hidden="true" />

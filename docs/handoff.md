@@ -1234,3 +1234,26 @@ unresolved; 3011 customer review is NOT browser-accessible with fixtures.
 Tests completed this pass: password wrong-current (400, session intact), successful change (200 -> 401,
 old login 401, new login 200, restore 200), logout (200 -> 401), stock empty/increment (409, unchanged),
 order 403 and address PATCH/DELETE 404. Buy Again UI scenarios and cart/wallet isolation not executed.
+
+## NaijaPay hero, wallet experience, Control Center reconciliation (2026-11-05, pm)
+
+- Original hero generated (authorized AI imagery): Pollinations FLUX free tier (no
+  KIE.ai credentials; DEEPSEEK_API_KEY has no image endpoint — the specific blocker
+  on the "existing pipeline"). Saved public/brand-photography/naijapay-hero-woman-lagos.jpg
+  with provenance in NAIJAPAY-IMAGE-PROVENANCE.md; wired into the /pay hero. Visual
+  acceptance pending owner review (agent cannot visually verify images this session).
+- Full wallet experience at /wallet per approved mockups: gradient balance card with
+  toggle + action pills, escrow list, searchable/type-filtered real transaction
+  history. Verified signed-in mobile (0 overflow) and desktop; screenshots
+  qa-artifacts/pay/wallet-{mobile,desktop}.png.
+- Control Center slice 4: wallet/ledger reconciliation service + permission-gated
+  /api/admin/finance/reconciliation (finance:read) + Reconciliation tab on the pay
+  module. Verified: admin 200 with 10 real wallets, anonymous 401, customer 403,
+  admin tab renders (screenshot admin-reconciliation.png). FINDING: SYSTEM wallet
+  shows a -NGN25,000 cached-vs-ledger delta — flagged for investigation in
+  docs/naijapay-status.md, not auto-corrected.
+- docs/naijapay-status.md records every unfinished workflow and its exact dependency.
+- Build note: production builds are currently broken by unrelated uncommitted
+  NaijaGigs WIP syntax errors (app/naijagigs/pro/*); verification ran on the dev
+  server. Push still blocked: stored git credential is account BetFuz (denied 403);
+  needs naijadeals001-hash credentials or gh auth login.
