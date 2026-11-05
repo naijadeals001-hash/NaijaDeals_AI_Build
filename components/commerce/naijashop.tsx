@@ -1144,8 +1144,8 @@ export function ShopCartPage() {
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-extrabold">Your cart</h1>
-          <p className="text-sm text-muted">{active.length} line item(s)</p>
+          <h1 className="font-display text-3xl font-extrabold">Shopping Cart</h1>
+          <p className="text-sm text-muted">{active.length === 0 ? "No items selected" : active.length + " line item(s)"}</p>
         </div>
         <Link href="/naijashop" className="text-sm font-bold text-primary underline">
           Continue shopping
@@ -1153,10 +1153,14 @@ export function ShopCartPage() {
       </header>
       {error ? <ErrorBox message={error} /> : null}
       {active.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border-soft bg-canvas p-8 text-center">
-          <p className="font-bold">Your cart is empty.</p>
-          <Link href="/naijashop" className="mt-3 inline-block text-sm font-bold text-primary underline">
-            Browse products
+        <div className="space-y-4 rounded-2xl border border-border-soft bg-canvas p-4">
+          <p className="border-b border-border-soft pb-3 text-lg font-bold">No items selected</p>
+          <button type="button" disabled className="min-h-12 w-full cursor-not-allowed rounded-full bg-[#FFD814] px-5 text-sm font-bold text-[#0F1111] opacity-80">
+            Proceed to checkout (0 items)
+          </button>
+          <p className="text-sm font-semibold text-[#007185]">Select all items</p>
+          <Link href="/naijashop" className="inline-block text-sm font-bold text-primary underline">
+            Continue shopping
           </Link>
         </div>
       ) : (
@@ -1571,7 +1575,13 @@ export function OrdersPageApi() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [reviewFor, setReviewFor] = useState<{ orderId: string; productId: string } | null>(null);
+  const [orderQuery, setOrderQuery] = useState("");
   const [review, setReview] = useState({ rating: 5, title: "", body: "" });
+  const visibleOrders = orders.filter((order) => {
+    const needle = orderQuery.trim().toLowerCase();
+    if (!needle) return true;
+    return order.orderNumber.toLowerCase().includes(needle) || order.items.some((item) => item.productName.toLowerCase().includes(needle));
+  });
 
   const load = useCallback(async () => {
     try {
@@ -1655,10 +1665,54 @@ export function OrdersPageApi() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="font-display text-3xl font-extrabold">Your orders</h1>
-        <p className="text-sm text-muted">Payment, fulfilment and delivery status are recorded server-side.</p>
+      <header className="space-y-3">
+        <h1 className="font-display text-3xl font-extrabold sm:text-4xl">Your Orders</h1>
+        <div className="flex items-center gap-2 rounded-xl border border-border-soft bg-canvas px-3">
+          <Search className="h-5 w-5 shrink-0 text-[#007185]" aria-hidden="true" />
+          <input value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search all orders" aria-label="Search all orders" className="min-h-12 flex-1 bg-transparent text-sm outline-none" />
+          <button type="button" className="flex min-h-11 items-center gap-1 border-l border-border-soft pl-3 text-sm font-bold" onClick={() => setOrderQuery("")}>Filter <ChevronRight className="h-4 w-4" /></button>
+        </div>
       </header>
+
+      {orders.length > 0 ? (
+        <section aria-label="Track deliveries" className="space-y-2">
+          <h2 className="font-display text-xl font-extrabold">Track deliveries</h2>
+          <div className="flex snap-x gap-3 overflow-x-auto pb-2">
+            {orders.slice(0, 6).map((order) => (
+              <article key={order.id} className="w-64 shrink-0 snap-start rounded-xl border border-border-soft bg-canvas p-3">
+                <p className="text-sm font-bold">Delivered today</p>
+                <p className="mt-1 truncate text-xs text-muted">{order.orderNumber}</p>
+                <div className="mt-2 flex gap-2">
+                  {order.items.slice(0, 2).map((item) => item.imageUrl ? <img key={item.id} src={item.imageUrl} alt={item.productName} className="h-20 w-20 rounded object-contain" /> : null)}
+                </div>
+                <Link href={`/orders`} className="mt-2 inline-block text-xs font-bold text-[#007185] hover:underline">View order details</Link>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {orders.length > 0 ? (
+        <section className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-border-soft bg-canvas p-4">
+            <h2 className="font-display text-lg font-extrabold">Buy again</h2>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {Array.from(new Map(orders.flatMap((order) => order.items).map((item) => [item.productId, item])).values()).slice(0, 6).map((item) => (
+                <Link key={item.id} href={`/product/${item.productId}`} className="group">
+                  {item.imageUrl ? <img src={item.imageUrl} alt={item.productName} className="h-20 w-full rounded object-contain" /> : null}
+                  <span className="line-clamp-2 text-[11px] font-semibold group-hover:underline">{item.productName}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl border border-border-soft bg-canvas p-4">
+            <h2 className="font-display text-lg font-extrabold">View your return status</h2>
+            <p className="mt-1 text-xs text-muted">Track returns and refunds for delivered items.</p>
+            <p className="mt-3 text-sm font-bold">{orders.filter((order) => (order.returnRequests?.length ?? 0) > 0).length} return request(s)</p>
+            <Link href="/orders" className="mt-2 inline-block text-xs font-bold text-[#007185] hover:underline">See returns</Link>
+          </div>
+        </section>
+      ) : null}
       {notice ? <div role="status" className="rounded-xl bg-primary-soft p-4 text-sm font-bold text-primary">{notice}</div> : null}
       {error ? <ErrorBox message={error} /> : null}
       {orders.length === 0 ? (
