@@ -479,7 +479,7 @@ function DisputeResolveDialog({
             <span>
               <span className="block text-sm font-bold">Release escrow to the seller</span>
               <span className="mt-0.5 block text-[11px] leading-snug text-[#8B949E]">
-                Credits the seller's payable, retains commission and completes the order. Available while escrow is held or disputed.
+                Credits the seller&apos;s payable, retains commission and completes the order. Available while escrow is held or disputed.
               </span>
             </span>
           </label>
@@ -2165,7 +2165,7 @@ function CountryActivation({ isSuperAdmin }: { isSuperAdmin: boolean }) {
         <h3 className="text-sm font-extrabold text-[#F0F6FC]">City availability</h3>
         <p className="mt-1 text-xs leading-relaxed text-[#8B949E]">
           Controls whether a city can be selected for onboarding or staff scope. Cities without a saved override follow
-          the country's delivery readiness.
+          the country&apos;s delivery readiness.
         </p>
         <div className="mt-3 max-h-64 overflow-y-auto rounded-xl border border-[#21262D]">
           <table className="w-full min-w-[480px] text-left text-sm">
