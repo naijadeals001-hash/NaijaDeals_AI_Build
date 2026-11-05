@@ -172,6 +172,7 @@ export function NaijaShopPage() {
   const PAGE_SIZE = 12;
   const collectionRef = useRef<HTMLDivElement>(null);
   const [allMenuOpen, setAllMenuOpen] = useState(false);
+  const [session, setSession] = useState<{ name: string; cartCount: number; destination: string }>({ name: "", cartCount: 0, destination: "Lagos, Nigeria" });
   const [storefront, setStorefront] = useState({
     announcement: "",
     heroTitle: "Shop verified sellers across Africa",
@@ -217,6 +218,23 @@ export function NaijaShopPage() {
         try { window.localStorage.setItem("naijashop.storefront", JSON.stringify(cacheable)); } catch { /* storage may be unavailable */ }
       })
       .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    Promise.allSettled([apiClient.getAccount(), apiClient.getCart(), apiClient.getAddresses()]).then(([account, cart, addresses]) => {
+      if (!active) return;
+      const profile = account.status === "fulfilled" ? (account.value as { name?: string }) : null;
+      const cartValue = cart.status === "fulfilled" ? cart.value : null;
+      const addressList = addresses.status === "fulfilled" ? (addresses.value as Array<{ city?: string; state?: string; isDefault?: boolean }>) : [];
+      const chosen = addressList.find((address) => address.isDefault) ?? addressList[0];
+      setSession({
+        name: profile?.name?.split(" ")[0] ?? "",
+        cartCount: cartValue?.items?.filter((item) => !item.savedForLater).reduce((sum, item) => sum + item.quantity, 0) ?? 0,
+        destination: chosen ? [chosen.city, chosen.state].filter(Boolean).join(", ") : "Lagos, Nigeria"
+      });
+    });
+    return () => { active = false; };
   }, []);
 
   const visibleCategories = categories
@@ -367,7 +385,7 @@ export function NaijaShopPage() {
 
   return (
     <div className="space-y-0">
-      <MarketplaceBar categories={categories} />
+      <MarketplaceBar categories={categories} session={session} />
 
       <nav aria-label="Shop departments" className="-mx-3 mt-0 flex items-center gap-0.5 overflow-x-auto bg-[#232f3e] px-2 py-1.5 text-white sm:-mx-5 sm:px-4 lg:-mx-8 lg:px-6">
         <button ref={allButtonRef} type="button" onClick={() => setAllMenuOpen(true)} aria-expanded={allMenuOpen} className="whitespace-nowrap rounded px-2.5 py-1 text-xs font-bold hover:bg-white/10">All departments</button>
@@ -571,9 +589,18 @@ function chipClass(active: boolean) {
   ].join(" ");
 }
 
-function MarketplaceBar({ categories }: { categories: ApiCategory[] }) {
+function MarketplaceBar({ categories, session }: { categories: ApiCategory[]; session: { name: string; cartCount: number; destination: string } }) {
   const [scope, setScope] = useState("all");
   const [accountOpen, setAccountOpen] = useState(false);
+  const accountButtonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setAccountOpen(false); accountButtonRef.current?.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [accountOpen]);
   return (
     <div className="-mx-3 bg-[#131921] px-3 py-2.5 text-white sm:-mx-5 sm:px-5 lg:-mx-8 lg:px-8">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-4">
@@ -585,7 +612,7 @@ function MarketplaceBar({ categories }: { categories: ApiCategory[] }) {
         <Link href="/account" className="hidden items-start gap-1.5 px-2 text-xs leading-tight text-white/80 hover:text-white sm:flex">
           <MapPin className="mt-0.5 h-4 w-4 text-primary-live" aria-hidden="true" />
           <span>
-            Deliver to <span className="font-extrabold text-white">Lagos, Nigeria</span>
+            Deliver to <span className="font-extrabold text-white">{session.destination}</span>
           </span>
         </Link>
 
@@ -623,35 +650,44 @@ function MarketplaceBar({ categories }: { categories: ApiCategory[] }) {
         </form>
 
         <div className="flex items-center gap-4 text-xs font-bold">
-          <div className="relative hidden sm:block">
+          <div className="relative">
             <button
+              ref={accountButtonRef}
               type="button"
               onClick={() => setAccountOpen((value) => !value)}
               aria-expanded={accountOpen}
               aria-haspopup="menu"
               className="text-left leading-tight hover:text-primary-live"
             >
-              <span className="block text-white/70">Hello, sign in</span>
-              <span className="text-sm">Account &amp; lists</span>
+              <span className="hidden text-white/70 sm:block">{session.name ? "Hello, " + session.name : "Hello, sign in"}</span>
+              <UserCircle className="h-5 w-5 sm:hidden" aria-hidden="true" />
+              <span className="hidden text-sm sm:block">Account &amp; lists</span>
             </button>
             {accountOpen ? (
-              <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-72 rounded bg-white p-3 text-left text-ink shadow-2xl">
-                <Link href="/login" className="block rounded bg-[#ffd814] px-3 py-2 text-center text-sm font-bold text-[#0f1111] hover:bg-[#f7ca00]">Sign in</Link>
-                <p className="mt-1 text-center text-[10px] text-muted">New customer? <Link href="/register" className="text-[#007185] underline">Start here.</Link></p>
-                <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border-soft pt-3 text-xs">
-                  <div>
-                    <p className="font-extrabold">Your Lists</p>
-                    <Link href="/account" className="mt-1 block text-[#007185] hover:underline">Account</Link>
-                    <Link href="/orders" className="block text-[#007185] hover:underline">Orders</Link>
-                    <Link href="/cart" className="block text-[#007185] hover:underline">Cart</Link>
-                  </div>
-                  <div>
-                    <p className="font-extrabold">Your Account</p>
-                    <Link href="/naijapay" className="mt-1 block text-[#007185] hover:underline">NaijaPay</Link>
-                    <Link href="/seller" className="block text-[#007185] hover:underline">Seller dashboard</Link>
-                    <Link href="/courier" className="block text-[#007185] hover:underline">Courier hub</Link>
-                  </div>
-                </div>
+              <div role="menu" aria-label="Account menu" className="absolute right-0 top-full z-50 mt-2 w-64 rounded bg-white p-3 text-left text-ink shadow-2xl">
+                {session.name ? (
+                  <>
+                    <p className="rounded bg-[#232f3e] px-3 py-2 text-sm font-bold text-white">Hello, {session.name}</p>
+                    <div className="mt-2 divide-y divide-border-soft text-sm">
+                      <Link href="/account" onClick={() => setAccountOpen(false)} className="block py-2 font-semibold text-[#007185] hover:underline">My account</Link>
+                      <Link href="/orders" onClick={() => setAccountOpen(false)} className="block py-2 font-semibold text-[#007185] hover:underline">Orders</Link>
+                      <Link href="/account#saved" onClick={() => setAccountOpen(false)} className="block py-2 font-semibold text-[#007185] hover:underline">Saved items</Link>
+                      <Link href="/account#addresses" onClick={() => setAccountOpen(false)} className="block py-2 font-semibold text-[#007185] hover:underline">Addresses</Link>
+                      <Link href="/wallet" onClick={() => setAccountOpen(false)} className="block py-2 font-semibold text-[#007185] hover:underline">NaijaPay</Link>
+                      <button type="button" onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined); window.location.href = "/naijashop"; }} className="block w-full py-2 text-left font-semibold text-[#B12704]">Sign out</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" className="block rounded bg-[#ffd814] px-3 py-2 text-center text-sm font-bold text-[#0f1111] hover:bg-[#f7ca00]">Sign in</Link>
+                    <p className="mt-1 text-center text-[10px] text-muted">New customer? <Link href="/register" className="text-[#007185] underline">Start here.</Link></p>
+                    <div className="mt-3 border-t border-border-soft pt-2 text-xs">
+                      <Link href="/account" className="block py-1 text-[#007185] hover:underline">Account</Link>
+                      <Link href="/orders" className="block py-1 text-[#007185] hover:underline">Orders</Link>
+                      <Link href="/cart" className="block py-1 text-[#007185] hover:underline">Cart</Link>
+                    </div>
+                  </>
+                )}
               </div>
             ) : null}
           </div>
@@ -660,8 +696,8 @@ function MarketplaceBar({ categories }: { categories: ApiCategory[] }) {
             <span className="text-sm">&amp; Orders</span>
           </Link>
           <Link href="/cart" className="flex items-center gap-1.5 rounded px-1 py-1 hover:text-primary-live">
-            <ShoppingCart className="h-5 w-5" aria-hidden="true" />
-            <span className="text-sm">Cart</span>
+            <span className="relative"><ShoppingCart className="h-5 w-5" aria-hidden="true" />{session.cartCount > 0 ? <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-[#f3b33d] px-1 text-[10px] font-black text-[#0f1111]">{session.cartCount}</span> : null}</span>
+            <span className="hidden text-sm sm:inline">Cart</span>
           </Link>
         </div>
       </div>

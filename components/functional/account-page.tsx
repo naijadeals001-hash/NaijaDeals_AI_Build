@@ -203,7 +203,7 @@ export function AccountPage() {
         )}
       </section>
 
-      <section className="rounded-2xl border border-border-soft bg-canvas p-5">
+      <section id="addresses" className="rounded-2xl border border-border-soft bg-canvas p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-xl font-extrabold">Delivery addresses</h2>
           <button onClick={() => setShowAddress((open) => !open)} className="min-h-10 rounded-lg border border-border-soft px-3 text-sm font-bold">
@@ -258,7 +258,7 @@ export function AccountPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border-soft bg-canvas p-5">
+      <section id="saved" className="rounded-2xl border border-border-soft bg-canvas p-5">
         <h2 className="font-display text-xl font-extrabold">Saved items</h2>
         {saved.length === 0 ? (
           <p className="mt-2 text-sm text-muted">Nothing saved yet.</p>
