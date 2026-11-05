@@ -1088,3 +1088,42 @@ Out-of-stock cart rejection was not conclusively verified: a zero-stock fixture 
 existing cart item, so stock fixtures/target need review before claiming that check.
 Screenshots: isolated-account.png, isolated-address.png, isolated-saved.png, isolated-order-detail.png,
 and *-mobile variants. Shared naijadeals_core was not populated for fixtures.
+
+
+## Preview restoration and customer checks (2026-11-05)
+
+### Root cause and repair
+Both previews were launched as child processes of the agent shell job; when the launching command/session
+ended the children were terminated. Port 3011 additionally shared the same worktree `.next` directory as
+3010, so two Next dev servers competed for client chunks; the login page SSR contained the form but the
+hydrated page could show the marketing shell with no inputs.
+
+Repair: 3010 runs from C:\Users\User\naijadeals-live and 3011 from a separate worktree
+C:\Users\User\naijadeals-customer (both detached at 62821b3). Both are started by Windows Scheduled Tasks
+that outlive the shell:
+- NaijaDealsPreview3010 -> scripts\preview-3010.cmd -> worktree npm dev --port 3010
+- NaijaDealsPreview3011 -> scripts\preview-3011.cmd -> scripts\preview-start.ps1 -Port 3011 -Schema customer_account_test
+Start/stop: schtasks /Run /TN NaijaDealsPreview3010|3011 ; schtasks /End /TN ...
+Logs: qa-artifacts\preview-3010.log, qa-artifacts\preview-runtime-3011.log.
+Verified browser: 3010 /naijashop 200, 8 shelves, 56 images; 3011 login form rendered, customer signed in,
+/account "Your Account", mobile overflow 0.
+
+### Account verification (isolated schema customer_account_test)
+- Profile edit persisted ("Ada Updated").
+- Address edit persisted ("Enugu") and rendered after reload; header destination updated.
+- Unsafe next=https://example.com/steal -> final /account (internal only).
+- Isolation: B GET A order -> 403; B PATCH/DELETE A address -> 404.
+- Saved remove 1->0, re-add 0->1; add-to-cart -> 1 cart item.
+- Populated order FIXTURE-ORDER-A detail rendered title/timeline/totals.
+- Password: wrong current -> 400 invalid_current_password with session still valid; correct change ->
+  200, session then 401, old password login 401, new password login 200; fixture password restored.
+- Logout: /api/orders 200 before, 401 after.
+- Stock: with fixture stock 0, B empty cart add -> 409 insufficient_stock (cart still 0); A existing
+  line increment -> 409 (quantity unchanged 3); stock restored to 12.
+- Existing shop suite remains separate 13/13.
+
+### Remaining gaps
+Buy Again suspended/archived and unavailable-variant cases were not separately exercised; it uses the
+same cart service as the stock checks. Wallet/cart ownership are self-scoped by API (no cross-customer ID
+parameter exercised). Screenshots: final-storefront-3010.png, final-account-3011.png,
+isolated-order-detail.png, isolated-order-detail-mobile.png, isolated-address.png, isolated-saved.png.
