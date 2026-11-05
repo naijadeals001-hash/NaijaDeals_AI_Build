@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
+import { recordAudit } from "./audit.service";
 
 export async function listAddresses(userId: string) {
   return prisma.address.findMany({ where: { userId }, orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }] });
@@ -161,4 +162,47 @@ export async function getAccountSummary(userId: string) {
     orderCount: orders,
     sellerApplication: application
   };
+}
+
+
+export async function updateProfile(userId: string, input: { name?: string; phone?: string }) {
+  const name = typeof input.name === "string" ? input.name.trim() : "";
+  if (name.length < 2 || name.length > 80) throw new ApiError(400, "validation_error", "Name must be between 2 and 80 characters.");
+  const phone = typeof input.phone === "string" ? input.phone.trim() : "";
+  if (phone && (phone.length < 7 || phone.length > 20)) throw new ApiError(400, "validation_error", "Phone must be between 7 and 20 characters.");
+  const user = await prisma.user.update({ where: { id: userId }, data: { name, phone: phone || null }, select: { id: true, name: true, email: true, phone: true } });
+  await recordAudit({ actorId: userId, action: "account.profile_updated", entity: "User", entityId: userId, metadata: { name, phoneChanged: Boolean(phone) } });
+  return user;
+}
+
+export async function updateAddress(userId: string, addressId: string, input: {
+  label?: string; countryCode?: string; state?: string; city?: string; line1?: string; line2?: string | null;
+  phone?: string; postalCode?: string | null; isDefault?: boolean;
+}) {
+  const existing = await prisma.address.findFirst({ where: { id: addressId, userId } });
+  if (!existing) throw new ApiError(404, "address_not_found", "Address not found.");
+  const label = (input.label ?? existing.label).trim();
+  const city = (input.city ?? existing.city).trim();
+  const state = (input.state ?? existing.state).trim();
+  const line1 = (input.line1 ?? existing.line1).trim();
+  const phone = (input.phone ?? existing.phone).trim();
+  if (!label || !city || !state || !line1) throw new ApiError(400, "validation_error", "Label, city, state and street address are required.");
+  if (label.length > 40 || city.length > 80 || state.length > 80 || line1.length > 160) throw new ApiError(400, "validation_error", "Address fields are too long.");
+  if (phone.length < 7 || phone.length > 20) throw new ApiError(400, "validation_error", "Phone must be between 7 and 20 characters.");
+  return prisma.$transaction(async (tx) => {
+    if (input.isDefault === true) await tx.address.updateMany({ where: { userId }, data: { isDefault: false } });
+    const address = await tx.address.update({
+      where: { id: addressId },
+      data: {
+        label, city, state, line1,
+        line2: input.line2 === undefined ? existing.line2 : input.line2 || null,
+        phone,
+        postalCode: input.postalCode === undefined ? existing.postalCode : input.postalCode || null,
+        countryCode: input.countryCode ?? existing.countryCode,
+        isDefault: input.isDefault === undefined ? existing.isDefault : input.isDefault
+      }
+    });
+    await recordAudit({ actorId: userId, action: "account.address_updated", entity: "Address", entityId: addressId, metadata: { isDefault: address.isDefault } });
+    return address;
+  });
 }

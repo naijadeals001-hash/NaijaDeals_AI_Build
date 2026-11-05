@@ -53,6 +53,12 @@ export function AccountPage() {
   });
   const [appBusy, setAppBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [profileForm, setProfileForm] = useState({ name: "", phone: "" });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+  const [addressBusy, setAddressBusy] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -62,6 +68,7 @@ export function AccountPage() {
         apiClient.getSaved()
       ]);
       setAccount(summary);
+      setProfileForm({ name: (summary as Account).name, phone: (summary as Account).phone ?? "" });
       setAddresses(addressList);
       setSaved(savedList);
       setStatus("ready");
@@ -77,6 +84,73 @@ export function AccountPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function saveProfile(event: React.FormEvent) {
+    event.preventDefault();
+    setError(""); setNotice(""); setProfileBusy(true);
+    try {
+      const updated = await apiClient.updateAccount(profileForm);
+      setAccount((current) => current ? { ...current, name: updated.name, phone: updated.phone ?? null } : current);
+      setNotice("Profile saved.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save profile.");
+    } finally { setProfileBusy(false); }
+  }
+
+  async function savePassword(event: React.FormEvent) {
+    event.preventDefault();
+    setError(""); setNotice("");
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) { setError("New password and confirmation do not match."); return; }
+    setPasswordBusy(true);
+    try {
+      await apiClient.changePassword({ currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword });
+      setNotice("Password changed. Signing you out…");
+      await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
+      router.push("/login?next=/account");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not change password.");
+    } finally { setPasswordBusy(false); }
+  }
+
+  async function saveAddress(event: React.FormEvent) {
+    event.preventDefault();
+    if (!editingAddress) return;
+    setError(""); setNotice(""); setAddressBusy(editingAddress.id);
+    try {
+      await apiClient.updateAddress(editingAddress.id, { label: editingAddress.label, city: editingAddress.city, state: editingAddress.state, line1: editingAddress.line1, line2: editingAddress.line2, phone: editingAddress.phone, isDefault: editingAddress.isDefault });
+      setEditingAddress(null);
+      setNotice("Address updated.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update address.");
+    } finally { setAddressBusy(""); }
+  }
+
+  async function makeDefault(address: Address) {
+    setError(""); setAddressBusy(address.id);
+    try {
+      await apiClient.updateAddress(address.id, { isDefault: true });
+      setNotice("Default delivery address updated.");
+      await load();
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not set default address."); }
+    finally { setAddressBusy(""); }
+  }
+
+  async function removeSaved(productId: string) {
+    setError(""); setAddressBusy(productId);
+    try { await apiClient.toggleSaved(productId); setNotice("Removed from saved items."); await load(); }
+    catch (err) { setError(err instanceof Error ? err.message : "Could not remove saved item."); }
+    finally { setAddressBusy(""); }
+  }
+
+  async function moveSavedToCart(product: ApiProduct) {
+    setError(""); setAddressBusy(product.id);
+    try {
+      await apiClient.addCartItem(product.id, 1, product.variants?.[0]?.id ?? null);
+      setNotice("Added to cart.");
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not add saved item to cart."); }
+    finally { setAddressBusy(""); }
+  }
 
   async function addAddress(event: React.FormEvent) {
     event.preventDefault();
@@ -170,6 +244,31 @@ export function AccountPage() {
           {account.name} · {account.email} · {account.roles.join(", ")}
         </p>
       </header>
+      <section className="grid gap-3 lg:grid-cols-2">
+        <form onSubmit={saveProfile} className="rounded-2xl border border-border-soft bg-canvas p-4">
+          <h2 className="font-display text-lg font-extrabold">Profile</h2>
+          <label className="mt-2 block text-xs font-bold">Name
+            <input required minLength={2} maxLength={80} value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm" />
+          </label>
+          <label className="mt-2 block text-xs font-bold">Phone
+            <input value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} inputMode="tel" className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm" />
+          </label>
+          <button type="submit" disabled={profileBusy} className="mt-3 min-h-10 rounded-lg bg-primary px-4 text-sm font-bold text-white disabled:opacity-60">{profileBusy ? "Saving…" : "Save profile"}</button>
+        </form>
+        <form onSubmit={savePassword} className="rounded-2xl border border-border-soft bg-canvas p-4">
+          <h2 className="font-display text-lg font-extrabold">Password &amp; security</h2>
+          <label className="mt-2 block text-xs font-bold">Current password
+            <input required type="password" autoComplete="current-password" value={passwordForm.currentPassword} onChange={(event) => setPasswordForm({ ...passwordForm, currentPassword: event.target.value })} className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm" />
+          </label>
+          <label className="mt-2 block text-xs font-bold">New password
+            <input required minLength={8} type="password" autoComplete="new-password" value={passwordForm.newPassword} onChange={(event) => setPasswordForm({ ...passwordForm, newPassword: event.target.value })} className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm" />
+          </label>
+          <label className="mt-2 block text-xs font-bold">Confirm new password
+            <input required minLength={8} type="password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={(event) => setPasswordForm({ ...passwordForm, confirmPassword: event.target.value })} className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm" />
+          </label>
+          <button type="submit" disabled={passwordBusy} className="mt-3 min-h-10 rounded-lg border border-border-soft px-4 text-sm font-bold disabled:opacity-60">{passwordBusy ? "Changing…" : "Change password"}</button>
+        </form>
+      </section>
       {notice ? <div role="status" className="rounded-xl bg-primary-soft p-3 text-sm font-bold text-primary">{notice}</div> : null}
       {error ? (
         <div role="alert" className="rounded-xl border border-crimson/30 bg-crimson-soft p-3 text-sm font-bold text-crimson">
@@ -250,12 +349,28 @@ export function AccountPage() {
                 </p>
                 <p className="text-xs text-muted">{address.phone}</p>
               </div>
-              <button onClick={() => void removeAddress(address.id)} className="text-xs font-bold text-crimson underline">
-                Delete
-              </button>
+              <div className="flex flex-wrap gap-2 text-xs font-bold">
+                {!address.isDefault ? <button type="button" disabled={addressBusy === address.id} onClick={() => void makeDefault(address)} className="text-primary underline">Set default</button> : <span className="text-muted">Default</span>}
+                <button type="button" onClick={() => setEditingAddress(address)} className="text-primary underline">Edit</button>
+                <button type="button" onClick={() => void removeAddress(address.id)} className="text-crimson underline">Delete</button>
+              </div>
             </div>
           ))}
         </div>
+        {editingAddress ? (
+          <form onSubmit={saveAddress} className="mt-3 grid gap-2 rounded-xl border border-primary/30 bg-primary-soft/30 p-3 sm:grid-cols-2">
+            {([["label","Label"],["phone","Phone"],["line1","Street address"],["line2","Apartment / landmark"],["city","City"],["state","State"]] as Array<[keyof Address,string]>).map(([field,label]) => (
+              <label key={field} className="text-xs font-bold">{label}
+                <input value={(editingAddress[field] as string | null) ?? ""} onChange={(event) => setEditingAddress({ ...editingAddress, [field]: event.target.value })} className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-white px-3 text-sm" />
+              </label>
+            ))}
+            <label className="flex items-center gap-2 text-xs font-bold"><input type="checkbox" checked={editingAddress.isDefault} onChange={(event) => setEditingAddress({ ...editingAddress, isDefault: event.target.checked })} /> Make default</label>
+            <div className="flex gap-2 self-end">
+              <button type="submit" disabled={addressBusy === editingAddress.id} className="min-h-10 rounded-lg bg-primary px-4 text-sm font-bold text-white disabled:opacity-60">Save address</button>
+              <button type="button" onClick={() => setEditingAddress(null)} className="min-h-10 rounded-lg border border-border-soft px-4 text-sm font-bold">Cancel</button>
+            </div>
+          </form>
+        ) : null}
       </section>
 
       <section id="saved" className="rounded-2xl border border-border-soft bg-canvas p-5">
@@ -265,13 +380,20 @@ export function AccountPage() {
         ) : (
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {saved.map((item) => (
-              <Link key={item.id} href={`/product/${item.product.slug}`} className="flex gap-3 rounded-xl bg-surface-low p-3">
-                <img src={item.product.images[0]?.url} alt="" className="h-16 w-16 rounded-lg object-cover" />
-                <div>
-                  <p className="line-clamp-2 text-sm font-bold">{item.product.name}</p>
-                  <p className="text-sm font-black text-primary">{koboToNaira(item.product.priceKobo)}</p>
+              <div key={item.id} className="rounded-xl bg-surface-low p-3">
+                <Link href={`/product/${item.product.slug}`} className="flex gap-3">
+                  <img src={item.product.images[0]?.url} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                  <div>
+                    <p className="line-clamp-2 text-sm font-bold">{item.product.name}</p>
+                    <p className="text-sm font-black text-primary">{koboToNaira(item.product.priceKobo)}</p>
+                    <p className="text-[11px] text-muted">{(item.product.stock?.quantity ?? 0) > 0 ? "In stock" : "Out of stock"}</p>
+                  </div>
+                </Link>
+                <div className="mt-2 flex gap-3 text-xs font-bold">
+                  <button type="button" disabled={addressBusy === item.product.id || (item.product.stock?.quantity ?? 0) <= 0} onClick={() => void moveSavedToCart(item.product)} className="text-primary underline disabled:opacity-50">Add to cart</button>
+                  <button type="button" disabled={addressBusy === item.product.id} onClick={() => void removeSaved(item.product.id)} className="text-crimson underline disabled:opacity-50">Remove</button>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}

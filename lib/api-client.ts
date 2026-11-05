@@ -398,12 +398,15 @@ export const apiClient = {
     }),
 
   getAccount: () => requestJson<Record<string, unknown>>("/api/account"),
+  updateAccount: (body: { name: string; phone?: string }) => requestJson<{ id: string; name: string; phone?: string | null }>("/api/account", { method: "PATCH", body: JSON.stringify(body) }),
+  changePassword: (body: { currentPassword: string; newPassword: string }) => requestJson<{ changed: boolean; reauthenticate: boolean }>("/api/account/password", { method: "POST", body: JSON.stringify(body) }),
+  updateAddress: (id: string, body: Record<string, unknown>) => requestJson<Record<string, unknown>>("/api/account/addresses/" + id, { method: "PATCH", body: JSON.stringify(body) }),
+  toggleSaved: (productId: string) => requestJson<{ saved: boolean }>("/api/account/saved", { method: "POST", body: JSON.stringify({ productId }) }),
   getAddresses: () => requestJson<Array<Record<string, unknown>>>("/api/account/addresses"),
   createAddress: (input: Record<string, unknown>) =>
     requestJson<Record<string, unknown>>("/api/account/addresses", { method: "POST", body: JSON.stringify(input) }),
   deleteAddress: (id: string) => requestJson<{ deleted: boolean }>(`/api/account/addresses/${id}`, { method: "DELETE" }),
   getSaved: () => requestJson<Array<{ id: string; product: ApiProduct }>>("/api/account/saved"),
-  toggleSaved: (productId: string) => requestJson<{ saved: boolean }>("/api/account/saved", { method: "POST", body: JSON.stringify({ productId }) }),
   getSellerApplication: () => requestJson<Record<string, unknown> | null>("/api/account/seller-application"),
   submitSellerApplication: (input: Record<string, unknown>) =>
     requestJson<Record<string, unknown>>("/api/account/seller-application", { method: "POST", body: JSON.stringify(input) }),
