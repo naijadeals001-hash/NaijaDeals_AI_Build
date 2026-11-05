@@ -1782,6 +1782,7 @@ export function OrdersPageApi() {
                     <p className="mt-1 text-xs font-bold text-muted">Payment: {statusLabel(order.paymentStatus)}</p>
                   </div>
                 </div>
+                <Link href={`/orders/${order.id}`} className="mt-3 inline-block text-xs font-bold text-[#007185] hover:underline">View order details</Link>
                 <div className="mt-3 grid gap-2 text-sm">
                   {order.items.map((item) => (
                     <div key={item.id} className="flex justify-between gap-3 rounded-lg bg-surface-low p-2">
