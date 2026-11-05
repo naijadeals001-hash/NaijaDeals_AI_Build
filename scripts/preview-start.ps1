@@ -11,4 +11,4 @@ if ($Schema) {
   $env:PRISMA_SCHEMA = $Schema
 }
 "START port=$Port schema=$Schema at $(Get-Date -Format o)" | Out-File -FilePath $log -Append -Encoding utf8
-& 'C:\Program Files\nodejs\npm.cmd' run dev -- --port $Port *>> $log
+& 'C:\Program Files\nodejs\npm.cmd' run start -- --port $Port *>> $log

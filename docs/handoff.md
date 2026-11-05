@@ -1216,3 +1216,21 @@ rounded business band. No fabricated balances or payment states. pay-visual-qa
 assertions updated to the new copy; PASS at 390/768/1440 (11/11 images, 0
 overflow). Signed-in verification: gradient card, 4 action pills, quick services
 and real ₦ balance all present. Preview http://localhost:3015/pay.
+
+
+## Preview stability and build (2026-11-05)
+
+Diagnosis: Next dev servers were the cause; simultaneous dev compilation plus shared .next caused hangs.
+3010 now runs a production build from worktree naijadeals-live at 2edcf88 via scheduled task
+NaijaDealsPreview3010 (npm run start --port 3010), HTTP/browser verified. Production build required fixing
+two unescaped apostrophes in admin-workspace-tabs.tsx and a Prisma model typo in customer-stock-boundary.ts.
+
+3010: http://localhost:3010/naijashop, browser 200, 8 shelves, 56 images.
+3011: production build from naijadeals-customer at 2edcf88, HTTP 200 login page, but /api/products returns
+0 rows and cust-a login fails. Its explicit DATABASE_URL is set to schema customer_account_test, yet the
+server is not reading the fixture data; fixture-stock script confirms rows exist in that schema. This is
+unresolved; 3011 customer review is NOT browser-accessible with fixtures.
+
+Tests completed this pass: password wrong-current (400, session intact), successful change (200 -> 401,
+old login 401, new login 200, restore 200), logout (200 -> 401), stock empty/increment (409, unchanged),
+order 403 and address PATCH/DELETE 404. Buy Again UI scenarios and cart/wallet isolation not executed.
