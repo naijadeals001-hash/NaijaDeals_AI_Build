@@ -1,7 +1,45 @@
 import type { Config } from "tailwindcss";
+import fs from "node:fs";
+import path from "node:path";
+
+/**
+ * This workspace contains a stray `app/index` directory whose ACL denies every
+ * read to the build user, so a blanket `./app/**` content glob makes fast-glob
+ * descend into it and abort compilation with EPERM. A negative glob does not
+ * help, because fast-glob only filters results after it has already traversed
+ * the directory. Enumerate the readable top-level app directories instead and
+ * escape glob metacharacters in route-group names such as `(public)`, `[slug]`
+ * and `@modal`.
+ */
+function escapeGlobSegment(segment: string) {
+  return segment.replace(/[()\[\]{}*?+@!]/g, (character) => `[${character}]`);
+}
+
+function appContentGlobs(): string[] {
+  const fallback = "./app/**/*.{js,ts,jsx,tsx,mdx}";
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(path.join(process.cwd(), "app"), { withFileTypes: true });
+  } catch {
+    return [fallback];
+  }
+
+  const globs = ["./app/*.{js,ts,jsx,tsx,mdx}"];
+  for (const entry of entries) {
+    if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
+    // Unreadable leftover directory; it contains no source we can or should scan.
+    if (entry.name === "index") continue;
+    globs.push(`./app/${escapeGlobSegment(entry.name)}/**/*.{js,ts,jsx,tsx,mdx}`);
+  }
+  return globs;
+}
 
 const config: Config = {
-  content: ["./app/**/*.{js,ts,jsx,tsx,mdx}", "./components/**/*.{js,ts,jsx,tsx,mdx}", "./lib/**/*.{js,ts,jsx,tsx,mdx}"],
+  content: [
+    ...appContentGlobs(),
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./lib/**/*.{js,ts,jsx,tsx,mdx}"
+  ],
   theme: {
     extend: {
       colors: {
