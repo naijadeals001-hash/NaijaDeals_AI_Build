@@ -14,6 +14,177 @@ DeepSeek ApI AND KIE API is in the .env of the C:\\Users\\User\\Documents\\naija
 
 **All project work must be saved at github in: naijadeals001-hash/NaijaDeals\_AI\_Build**
 
+**Read the complete original NaijaDeals phased implementation playbook and all linked documentation under C:\\Users\\User\\Documents\\naijadeals.com. Enumerate every existing phase and subphase without renumbering or deleting anything. Inspect design-references\\admin\\naijadeals-control-center-master.png. Reconcile the NaijaDeals Master Implementation Playbook \& Architecture V3 directive in this conversation with the actual repository. Preserve existing implementations, phase statuses, decisions, and Git recovery state. Update architecture, requirements traceability, design standards, asset policy, mobile/web plan, REA/ECC/Soup inventory, Control Center standards, testing gates, phase tracker and handoff. Validate, commit and push verified documentation changes. Report exact original and revised phase counts and evidence. Do not deploy.**
+
+# NAIJADEALS — NON-NEGOTIABLE PRODUCT, DESIGN AND FUNCTIONALITY STANDARDS
+
+## 1. Product vision
+
+Build NaijaDeals as a fully integrated African super-app, combining the strongest observable usability patterns of Uber and Bolt with the capabilities of the entire NaijaDeals ecosystem.
+
+The final product must be original, premium, highly responsive, accessible, secure, and fully functional.
+
+Do not produce a generic clone or a collection of disconnected websites.
+
+## 2. Homepage requirements
+
+- Combine the best Uber/Bolt homepage and super-app navigation patterns.
+- Use original NaijaDeals branding and visual identity.
+- Provide a premium responsive homepage for desktop, tablet, and mobile.
+- Display all active ecosystem modules through professionally designed cards.
+- Use original, module-specific photography and artwork.
+- Implement working search, navigation, authentication, service selection, and relevant booking or ordering entry points.
+- Make the mobile experience feel like a cohesive native super-app.
+- Do not display unfinished services as operational.
+
+## 3. Original image policy
+
+All production imagery must be original or specifically authorized for its intended use.
+
+For marketing, hero banners, module cards, promotional graphics, and editorial assets, prioritize purpose-generated original imagery.
+
+Use available DeepSeek and KIE integrations where suitable, with approved free/open-source generation alternatives.
+
+For actual products, properties, restaurants, vehicles, and other real-world listings, use genuine authorized images of the advertised item. Never substitute AI-generated representations that mislead customers.
+
+Requirements:
+
+- No placeholders.
+- No generic stock photography.
+- No unrelated images.
+- No copied competitor artwork.
+- No broken image cards.
+- No fake product or property photographs.
+- Maintain asset provenance, licensing, and usage rights.
+- Optimize image formats, resolution, loading, and mobile performance.
+- Verify every image in the rendered interface.
+
+## 4. Unified Admin Control Center
+
+Mandatory design reference:
+
+C:\\Users\\User\\Documents\\naijadeals.com\\design-references\\admin\\naijadeals-control-center-master.png
+
+Inspect the image and reproduce its approved visual direction using functional components.
+
+The Control Center must be a premium, enterprise-grade operational platform.
+
+Requirements:
+
+- One unified administration system for all ecosystem modules.
+- Super-admin and delegated RBAC permissions.
+- Real operational data and analytics.
+- Interactive maps and dispatch management.
+- Merchant, driver, courier, supplier, and property-owner management.
+- Payments, escrow, reconciliation, commissions, refunds, and disputes.
+- Country and city activation.
+- Fraud prevention and trust management.
+- Workflow automation and job monitoring.
+- Audit logs and security controls.
+- Responsive layouts.
+- Excellent performance and accessibility.
+
+No mock dashboards presented as production functionality.
+
+## 5. Web and mobile applications
+
+Deliver all of the following:
+
+- Full responsive web application.
+- Installable Progressive Web App.
+- Android customer super-app.
+- iOS customer super-app.
+- Driver/courier mobile experience.
+- Appropriate merchant and partner experiences.
+
+Share authentication, user accounts, backend services, permissions, wallet integrations, notifications, and business logic.
+
+Support app deep links, appropriate push notifications, native device features, and app installation invitations.
+
+Do not force mobile visitors to install an app.
+
+## 6. Ecosystem module standard
+
+Every active module must:
+
+- Be accessible from the super-app home.
+- Have a distinct original visual identity within the NaijaDeals design system.
+- Integrate with shared platform services.
+- Provide complete approved workflows.
+- Have appropriate mobile and web experiences.
+- Be administered from the unified Control Center.
+- Be tested independently and across module boundaries.
+
+## 7. Reference reconstruction standard
+
+Use REA to inspect authorized reference applications.
+
+Target close visual and functional parity with the approved reference workflows, or better.
+
+Improve where appropriate:
+
+- Speed
+- Accessibility
+- Security
+- Reliability
+- African-market localization
+- Low-bandwidth usability
+- Customer support
+- Cross-module integration
+
+Do not copy proprietary code, protected assets, or private APIs.
+
+## 8. Quality gates
+
+No phase or feature can be marked PASS without:
+
+- Real functional implementation.
+- Verified backend behavior.
+- Successful browser and mobile testing.
+- Screenshot comparison against approved references.
+- Working navigation and interactive elements.
+- Verified original or authorized imagery.
+- Security and permission checks.
+- Regression testing.
+- Evidence recorded in project documentation.
+
+Any incomplete feature must be marked PARTIAL or BLOCKED.
+
+## 9. Preserve the existing phased playbook
+
+Do not replace the existing 22-plus phases with a simplified roadmap.
+
+Read the entire original playbook.
+
+Map these standards into every relevant existing phase and subphase.
+
+Add new phases only when necessary.
+
+Update:
+
+- AGENTS.md
+- Master phased implementation playbook
+- Requirements traceability matrix
+- Architecture documentation
+- UI/UX design standards
+- Phase tracker
+- Test evidence register
+- Handoff documentation
+
+## 10. Development rules
+
+REA, ECC, and Soup remain mandatory development tools.
+
+Preserve existing working code and user changes.
+
+Commit and push verified changes to the authorized GitHub repository.
+
+Do not use paid services without authorization.
+
+Do not deploy to staging or production without explicit authorization.
+
+**Acceptance principle: NaijaDeals must not merely resemble leading super-apps. Its approved features must work at a comparable or higher standard, with original design, original implementations, and fully integrated platform services.**
+
 ## How to use this document
 
 1. Open the existing NaijaDeals folder in the coding agent.
@@ -93,7 +264,87 @@ D. Run targeted tests, inspect the actual UI/API, then relevant regression/build
 E. Review diff, data/migration implications, secrets and unintended behavior.
 F. Commit verified work, update evidence and handoff, push only under the above gate.
 G. Stop at this phase boundary and report the exact next phase. Do not ask permission for routine reversible work already in scope. Ask only when a genuine missing business decision or explicit external-action gate blocks progress.
+
+additional capabilities worth considering
 ```
+
+| **Priority** | **Capability** | **Why NaijaDeals needs it** |
+| --- | --- | --- |
+| Critical | NaijaID — Unified Identity and Trust | One identity, seller verification, driver approval, property-owner verification and fraud controls |
+| Critical | NaijaSearch — Universal Search | Search products, properties, services, accommodation and other modules from one place |
+| Critical | NaijaNotify — Communication Hub | Push, SMS, email, in-app notifications and operational alerts |
+| Critical | NaijaTrust — Fraud and Risk Engine | Detect fake properties, suspicious merchants, payment abuse and fraudulent listings |
+| High | NaijaPartner — Partner Onboarding | Convert external suppliers, wholesalers, agents and accommodation hosts into registered partners |
+| High | NaijaBusiness — Business Portal | Unified merchant, fleet-owner, property-agent and supplier management |
+| High | NaijaAds — Advertising Platform | Sponsored listings, promotions and business advertising |
+| High | NaijaRewards — Loyalty Program | Cross-module rewards, referrals and retention |
+| High | NaijaConnect — Messaging | Buyer–seller, rider–driver and guest–host communication |
+| High | NaijaInsights — Analytics | Business intelligence across all modules and African markets |
+| High | NaijaAPI — Developer Platform | Secure partner APIs, webhooks and third-party integrations |
+| High | NaijaSupport — Customer Support | Unified tickets, disputes, refunds, safety incidents and customer service |
+
+# MANDATORY RULE — NAIJADEALS RECONSTRUCTION FIDELITY
+
+All NaijaDeals reference-based application reconstructions must reproduce the original application's observable design, functionality, workflows, interactions, responsiveness, and user experience as closely as technically and legally possible.
+
+## Required standards
+
+1. **Visual fidelity:** Target at least 95% similarity to approved reference screenshots, using documented screenshot comparison and human review.
+2. **Functional parity:** Implement 100% of the approved, observable features within the agreed scope. A visually similar interface without equivalent functionality is unacceptable.
+3. **Workflow parity:** Reproduce complete user journeys, including registration, navigation, searching, booking, purchasing, payments, tracking, cancellations, notifications, and administration where applicable.
+4. **Interaction parity:** Buttons, menus, filters, forms, maps, animations, loading states, errors, and responsive behavior must function correctly.
+5. **Backend parity:** Implement real APIs, database persistence, authentication, authorization, transactions, background jobs, and integrations necessary to support the approved functionality.
+6. **Mobile parity:** Reproduce relevant mobile experiences, including touch interactions, responsive layouts, deep links, notifications, and device capabilities.
+7. **Better-than-reference improvements:** Where feasible, improve performance, accessibility, security, localization, reliability, and African-market compatibility without compromising essential workflows.
+8. **REA-first inspection:** Use REA to inspect authorized reference experiences and document the observed behavior before implementation. Use Playwright for browser verification and ECC/Soup for the applicable development workflow.
+9. **Evidence-based acceptance:** Compare reference and reconstructed screenshots at matching viewport sizes and test corresponding workflows end to end.
+10. **No false completion:** Never report a clone as complete because its homepage looks similar. Every required feature must be implemented and verified.
+
+## Prohibited shortcuts
+
+- Static screenshots masquerading as functional applications
+- Nonfunctional buttons or navigation
+- Dummy APIs presented as real
+- Fabricated payments or bookings
+- Fake GPS or operational metrics
+- Generic templates substituted for the reference
+- Incomplete workflows described as complete
+- Unlicensed assets or copied proprietary source code
+- Bypassing authentication, access controls, or technical protections
+
+## Completion gate
+
+A reconstruction is marked PASS only when:
+
+- Visual comparison has been completed.
+- All approved workflows pass functional tests.
+- Backend and database operations are verified.
+- Mobile and desktop experiences are tested.
+- Security and regression tests pass.
+- Outstanding differences are documented.
+- No critical approved functionality is missing.
+
+If a reference capability is inaccessible, proprietary, or requires unavailable external authorization, document the limitation. Do not invent its behavior or claim parity.
+
+Integrate the verified implementation into the existing NaijaDeals ecosystem, preserving shared identity, NaijaPay, RBAC, and the unified Control Center.
+
+No production deployment without explicit authorization.
+
+## Examples of what this means
+
+| **Reference** | **NaijaDeals equivalent** | **Required result** |
+| --- | --- | --- |
+| Uber / Bolt | NaijaDrive | Comparable ride requests, dispatch, live tracking, driver workflows, fare calculations |
+| Airbnb | NaijaStay | Comparable property discovery, availability, bookings, host management and reviews |
+| Amazon / Jumia | NaijaShop | Comparable catalog, search, carts, checkout, orders and seller operations |
+| Spotify / Audiomack | NaijaStream | Comparable music discovery, playback, playlists and artist workflows |
+| Delivery platforms | NaijaEats / NaijaSend | Comparable ordering, dispatch, tracking, notifications and fulfillment |
+
+One important distinction: A 95% visual target is a quality objective, not an automatic guarantee or permission to reproduce protected branding and assets. Functional parity must be demonstrated against an agreed feature inventory, using an original implementation.
+
+From now on, the OpenCode prompts I prepare for your NaijaDeals reconstruction work will enforce this standard.
+
+The goal is simple: when a customer uses a NaijaDeals module, they should experience the same level of functionality and polish as the leading reference platform, with improvements designed for African markets.
 
 ## Copy-and-paste phase prompts
 
@@ -1336,3 +1587,876 @@ Provide:
 - Recommended next implementation task
 
 **The ultimate objective is one integrated, scalable, secure, fully functional NaijaDeals super-platform serving Africa through web, mobile, commerce, mobility, accommodation, payments, media, AI, and future ecosystem services.**
+
+##  How the original phases should be updated
+
+Instead of assigning new phase numbers prematurely, the new requirements should be cross-referenced to the original phases.
+
+| **New requirement group** | **Where it belongs** |
+| --- | --- |
+| Uber/Bolt-inspired homepage | Existing frontend and UI/UX phases |
+| Original imagery pipeline | Design system and asset management |
+| Premium unified admin | Existing Control Center phase |
+| Android, iOS, PWA | Mobile and platform phases |
+| REA cloning fidelity | Tooling, research and QA phases |
+| Pan-African Discovery Engine | Marketplace integration and ingestion |
+| NaijaProperty | Property/accommodation expansion |
+| NaijaID, Trust, Search, Messaging | Shared platform architecture |
+| NaijaAds, Rewards, Partner | Growth and commercial operations |
+| Aura administrative intelligence | AI and automation |
+| Security, compliance and monitoring | Cross-cutting requirements in every phase |
+| Country activation | Localization and regional expansion |
+
+# NAIJADEALS SUPER ECOSYSTEM
+
+# MASTER PHASED IMPLEMENTATION PLAYBOOK V3
+
+## Architecture, Product Standards, Development Rules and Execution Directive
+
+**Status:** Master consolidation directive — requires reconciliation with the existing project documentation.
+
+**Project root:** `C:\Users\User\Documents\naijadeals.com`
+
+**Master admin design reference:** `C:\Users\User\Documents\naijadeals.com\design-references\admin\naijadeals-control-center-master.png`
+
+---
+
+# 1. EXECUTIVE VISION
+
+Build NaijaDeals into a premium, unified, Africa-first super-app ecosystem combining the best observable user experiences and operational capabilities of Uber, Bolt, and other leading platforms.
+
+NaijaDeals must operate as one connected platform rather than disconnected applications.
+
+Its primary experiences are:
+
+1. Responsive customer website
+2. Installable Progressive Web App
+3. Native Android customer super-app
+4. Native iOS customer super-app
+5. Driver and courier mobile experience
+6. Merchant and supplier portal
+7. Fleet and logistics operator portal
+8. Property owner and accommodation host portal
+9. Unified NaijaDeals Control Center
+10. Shared APIs and ecosystem infrastructure
+
+All existing work must be preserved.
+
+The existing phased implementation playbook remains authoritative until fully audited and reconciled.
+
+No project reset is authorized.
+
+---
+
+# 2. NON-NEGOTIABLE PRODUCT STANDARDS
+
+## 2.1 Original visual identity
+
+Every NaijaDeals experience must be professionally designed, distinctive, consistent, and premium.
+
+Do not use generic templates as the final product.
+
+Do not copy competitor logos, trademarks, protected assets, or proprietary code.
+
+Use reference platforms to understand observable design patterns and workflows, then implement an original NaijaDeals experience.
+
+## 2.2 Original images
+
+All marketing imagery, module artwork, hero banners, promotional graphics, and custom illustrations must be purpose-created original assets or expressly authorized assets.
+
+Use suitable existing DeepSeek and KIE integrations where available and authorized, alongside free/open-source alternatives.
+
+For real product, restaurant, vehicle, and property listings, use genuine authorized photographs of the actual listing.
+
+Never present AI-generated images as evidence of a real product or property.
+
+No placeholders.
+
+No broken images.
+
+No irrelevant stock photographs.
+
+No duplicated generic images across unrelated modules.
+
+Maintain image provenance, licensing, optimization, and quality checks.
+
+## 2.3 Functionality
+
+No fake functionality.
+
+No decorative buttons masquerading as working controls.
+
+No fabricated operational data.
+
+No simulated successful transactions presented as real.
+
+No mock GPS, payments, bookings, or dispatch operations presented as live.
+
+A feature is complete only when its approved workflows work end to end and have supporting evidence.
+
+## 2.4 Reconstruction fidelity
+
+Use REA to inspect authorized reference experiences.
+
+Target near-identical quality and behavior for approved reference workflows, with original implementations and lawful assets.
+
+Aim for at least 95% visual similarity to approved design references where measurable and appropriate.
+
+Implement all approved observable functionality within the agreed scope.
+
+Improve performance, accessibility, localization, reliability, and security wherever feasible.
+
+Do not claim parity with inaccessible or unverified functionality.
+
+---
+
+# 3. COMPLETE ECOSYSTEM MODULE REGISTRY
+
+## Existing ecosystem
+
+### NaijaShop
+
+Retail, wholesale, catalog, merchants, carts, checkout, orders, fulfillment, marketplace discovery, and seller tools.
+
+### NaijaDrive
+
+Ride-hailing, private rides, premium rides, accessible rides, scheduled rides, airport rides, pooling, driver dispatch, fleet management, micromobility, car-sharing, and other approved mobility services.
+
+### NaijaEats
+
+Restaurant discovery, menus, food ordering, payments, delivery dispatch, order tracking, merchant operations, and refunds.
+
+### NaijaSend
+
+Parcel delivery, courier dispatch, tracking, proof of delivery, shipping operations, and approved logistics workflows.
+
+### NaijaStay
+
+Accommodation discovery, hosts, property galleries, calendars, bookings, cancellation policies, reviews, and payouts.
+
+### NaijaPay
+
+Wallet, payment orchestration, provider integrations, escrow where supported, commissions, settlement, refunds, reconciliation, and transaction history.
+
+### NaijaFresh
+
+Groceries, produce, vendor catalogs, availability, fulfillment, delivery, and merchant management.
+
+### NaijaGigs
+
+Services discovery, provider profiles, requests, quotations, acceptance, work orders, payment, and reviews.
+
+### NaijaStream
+
+Music discovery, playback, artist management, playlists, catalogs, licensing, and regional content experiences.
+
+### Aura AI
+
+Customer assistance, discovery assistance, personalized experiences, support assistance, and approved administrative AI operations.
+
+## Proposed dedicated module
+
+### NaijaProperty
+
+Residential sales, rentals, commercial property, land, agents, developers, inquiries, viewings, document verification, and fraud prevention.
+
+## Future ecosystem candidates
+
+- NaijaHealth
+- NaijaLearn
+- NaijaTravel
+- NaijaEvents
+- NaijaFinance
+- NaijaAgri
+
+Future modules must remain planned until separately approved, implemented, and verified.
+
+---
+
+# 4. HOMEPAGE — UBER + BOLT EXPERIENCE
+
+The NaijaDeals homepage must combine the strongest usable interaction patterns of Uber and Bolt into an original super-app design.
+
+## Desktop experience
+
+- Premium branded header
+- Clear navigation
+- Prominent search or service selection
+- Original cinematic hero imagery
+- Fast entry to available services
+- High-quality module cards
+- Relevant account and location controls
+- Responsive layouts
+- Appropriate footer and support navigation
+
+## Mobile experience
+
+- Native-quality super-app home
+- Clear service grid
+- Quick access to frequently used modules
+- Location-aware services where permission is granted
+- Unified search
+- Saved addresses
+- Wallet entry
+- Orders, trips, bookings, and notifications
+- Fast transitions between modules
+- Accessible touch targets
+- Low-bandwidth performance
+
+## Module cards
+
+Every active module card must:
+
+- Use an original purpose-created visual asset
+- Have a recognizable icon
+- Have a concise description
+- Open the correct functional module
+- Support keyboard and touch interaction
+- Render properly across devices
+- Reflect actual availability
+
+Planned modules must not be presented as live.
+
+---
+
+# 5. WEB AND MOBILE ARCHITECTURE
+
+Maintain a full responsive website.
+
+Provide an installable PWA.
+
+Develop native Android and iOS customer apps.
+
+Use a shared backend and common design system.
+
+Evaluate React Native with Expo or another compatible open-source framework based on the existing repository and required native capabilities.
+
+Do not duplicate core business rules between web and mobile.
+
+Use platform-appropriate interfaces rather than forcing a desktop layout into a mobile wrapper.
+
+Implement:
+
+- Shared authentication
+- Session management
+- Secure token handling
+- Deep links
+- Universal/app links
+- Push notifications
+- Saved locations
+- Shared wallet
+- Order and trip histories
+- User preferences
+- Offline-safe workflows
+- Native device permissions
+- App installation invitations
+
+Mobile visitors must be able to continue on the website.
+
+Do not require app installation.
+
+The driver/courier experience must support genuine operational location and notification requirements.
+
+---
+
+# 6. UNIFIED ADMIN CONTROL CENTER
+
+The Control Center is one of the highest-priority deliverables.
+
+Use the supplied local dashboard image as the master visual reference.
+
+Inspect the actual image and compare it against the implemented interface.
+
+Do not simply display the reference image inside the page.
+
+## Required operational areas
+
+- Executive overview
+- NaijaShop operations
+- NaijaDrive dispatch and fleet
+- NaijaEats operations
+- NaijaSend logistics
+- NaijaStay accommodation
+- NaijaPay finance
+- NaijaFresh groceries
+- NaijaGigs services
+- NaijaStream content
+- Aura AI operations
+- NaijaProperty management when approved
+- Seller and partner onboarding
+- User and identity administration
+- Country and city activation
+- Fraud and risk monitoring
+- Payment reconciliation
+- Refunds and disputes
+- Customer support
+- Marketing and advertising
+- Loyalty and rewards
+- Analytics and reporting
+- Workflow automation
+- Security and audit logs
+- Infrastructure monitoring
+- Feature flags and module registry
+
+## Admin experience standards
+
+- Enterprise-grade visual design
+- Excellent desktop usability
+- Tablet responsiveness
+- Fast navigation
+- Searchable tables
+- Advanced filtering
+- Operational charts
+- Map-based workflows
+- Appropriate drill-down views
+- Real data freshness indicators
+- Accessible interaction
+- Server-side authorization
+- Audit trails for sensitive actions
+
+## Security
+
+All privileged operations require explicit authorization.
+
+Use role-based permissions, least privilege, session security, and audit logging.
+
+Sensitive AI-generated recommendations must not automatically execute financial, account suspension, or destructive actions.
+
+Preserve existing admin routes and working integrations.
+
+---
+
+# 7. SHARED PLATFORM ARCHITECTURE
+
+The platform must use clearly defined boundaries.
+
+## Experience layer
+
+Customer web, PWA, Android, iOS, driver/courier apps, merchant portal, partner portal, and admin.
+
+## API and security layer
+
+Authentication, API gateway, RBAC, rate limiting, request validation, audit logging, country context, and service authorization.
+
+## Domain layer
+
+Independent domain modules for commerce, mobility, delivery, accommodation, payments, services, media, AI, and future products.
+
+## Shared service layer
+
+- NaijaID identity and trust
+- NaijaSearch universal search
+- NaijaNotify communications
+- NaijaConnect messaging
+- NaijaPartner onboarding
+- NaijaBusiness partner workspace
+- NaijaTrust fraud prevention
+- NaijaRewards loyalty
+- NaijaAds advertising
+- NaijaInsights analytics
+- NaijaAPI developer integrations
+- NaijaSupport customer support
+
+These are shared capabilities, not automatically separate customer-facing apps.
+
+## Infrastructure layer
+
+Reuse existing databases and infrastructure where appropriate.
+
+Add capabilities only when justified by verified requirements:
+
+- Relational data storage
+- Object storage
+- Search indexing
+- Caching
+- Background queues
+- Event processing
+- Monitoring
+- Logging
+- Backup and recovery
+
+Preserve existing production data and migration history.
+
+---
+
+# 8. CROSS-MODULE INTEROPERABILITY
+
+Define shared data contracts for:
+
+- User identity
+- Merchant identity
+- Addresses
+- Countries and cities
+- Currency and money
+- Payments
+- Refunds
+- Orders
+- Trips
+- Deliveries
+- Reservations
+- Notifications
+- Reviews
+- Disputes
+- Audit events
+
+Avoid duplicate implementations of core shared services.
+
+Use idempotent operations and reliable event handling for payment, booking, and dispatch transitions.
+
+Maintain explicit transaction ownership and lifecycle boundaries.
+
+---
+
+# 9. PAN-AFRICAN DISCOVERY ENGINE
+
+Build an authorized discovery and ingestion platform for:
+
+- Retail products
+- Wholesale products
+- Manufacturers
+- Distributors
+- Property sales
+- Rentals
+- Land
+- Commercial properties
+- Accommodation
+- Hotels
+- Holiday rentals
+
+Prioritize official APIs, licensed feeds, partner submissions, and permitted public data.
+
+Evaluate Crawl4AI, Scrapy, Scrapy Playwright, and compatible open-source tools.
+
+Respect terms, robots policies, licensing, privacy, and rate limits.
+
+Do not bypass access controls.
+
+## External listing policy
+
+External sellers and providers remain responsible for their own transactions.
+
+Show clear source attribution.
+
+Redirect customers to the original provider.
+
+Do not create internal escrow, checkout, or booking transactions for unregistered external listings.
+
+## Listing integrity
+
+Implement provenance, deduplication, freshness checks, image rights, broken-link detection, seller claim workflows, moderation, and takedown handling.
+
+Never fabricate availability, ownership verification, or prices.
+
+---
+
+# 10. PAYMENTS AND FINANCIAL ARCHITECTURE
+
+Preserve NaijaPay and all verified existing payment integrations.
+
+Support multiple approved African payment providers through a configurable orchestration layer.
+
+Separate:
+
+- Payment initiation
+- Provider authorization
+- Webhook verification
+- Ledger posting
+- Escrow holds
+- Settlement
+- Refunds
+- Disputes
+- Reconciliation
+- Provider payouts
+
+Use integer minor units and currency-specific precision.
+
+Ensure idempotency and transactional integrity.
+
+No financial operation may be considered successful solely because the UI reports success.
+
+Do not mix external seller redirects with internal payment processing.
+
+---
+
+# 11. TRUST, SAFETY AND COMPLIANCE
+
+Implement:
+
+- Customer account protection
+- Merchant verification
+- Driver and vehicle approval
+- Courier approval
+- Property-owner verification
+- Suspicious listing detection
+- Fraud and abuse reporting
+- Payment risk monitoring
+- Content moderation
+- Privacy controls
+- Data retention
+- Account deletion
+- Incident response
+- Country-specific legal review
+- Regulatory and licensing readiness
+
+Do not claim legal compliance without appropriate review and evidence.
+
+---
+
+# 12. AI AND AUTOMATION
+
+Extend Aura AI as a controlled ecosystem intelligence layer.
+
+Customer functions may include discovery, assistance, support, and personalized navigation.
+
+Administrative functions may include:
+
+- Incident summarization
+- Payment exception analysis
+- Fraud alert prioritization
+- Operational reporting
+- Listing quality checks
+- Customer support triage
+- Workflow recommendations
+
+Use appropriate permissions, audit trails, human approval gates, and data access restrictions.
+
+Evaluate n8n and suitable open-source orchestration tools for recurring operational workflows.
+
+All background jobs require retry limits, idempotency, logs, monitoring, and recovery behavior.
+
+---
+
+# 13. REA, ECC, SOUP AND DEVELOPMENT SKILLS
+
+REA, ECC, and Soup remain mandatory development-tooling requirements unless explicitly changed by the project owner.
+
+Audit installed versions and actual runtime functionality.
+
+Verify:
+
+- REA provider connection
+- Browser inspection
+- Chrome DevTools Protocol
+- Screenshots
+- Network inspection
+- Android inspection
+- JADX/JDK
+- ADB
+- Apktool
+- Supported native formats
+- Playwright testing
+- ECC development workflow
+- Soup skill/context selection
+
+Do not claim that all REA skills are installed without checking the actual inventory.
+
+Create or maintain project-specific skills for:
+
+- Reference inspection
+- Website reconstruction
+- Mobile workflow inspection
+- Screenshot fidelity
+- Backend integration
+- Discovery ingestion
+- Image quality assurance
+- Admin design validation
+- Security testing
+- Regression testing
+- Documentation reconciliation
+- Release readiness
+
+Treat third-party skill packages as untrusted until reviewed.
+
+REA performs reference research; the connected coding agent implements, tests, documents, and commits the work.
+
+---
+
+# 14. ORIGINAL ASSET PIPELINE
+
+Create a reusable NaijaDeals asset pipeline.
+
+Required stages:
+
+1. Asset requirement specification
+2. Original image generation or authorized photography
+3. Quality review
+4. Brand consistency review
+5. Authenticity and licensing review
+6. Image optimization
+7. Asset registration
+8. Application integration
+9. Screenshot verification
+10. Regression monitoring
+
+Every module must have a consistent visual language without repeating the same generic imagery.
+
+For actual marketplace listings, preserve authenticity over visual decoration.
+
+---
+
+# 15. DESIGN SYSTEM
+
+Build a reusable premium design system covering:
+
+- Typography
+- Spacing
+- Colors
+- Light and dark themes
+- Icons
+- Buttons
+- Forms
+- Navigation
+- Cards
+- Tables
+- Charts
+- Maps
+- Dialogs
+- Loading states
+- Error states
+- Empty states
+- Accessibility
+- Motion and transitions
+
+Use existing compatible components where possible.
+
+Avoid introducing multiple competing UI libraries without architectural justification.
+
+The Control Center and customer super-app may use different presentation styles while sharing design tokens and accessibility standards.
+
+---
+
+# 16. PERFORMANCE AND AFRICAN MARKET READINESS
+
+Support:
+
+- All 54 African countries through configurable architecture
+- Phased country activation
+- Local currencies
+- Country-specific payment providers
+- Regional language support
+- Low-data operation
+- Slow network recovery
+- Image optimization
+- Accessible mobile interfaces
+- Country-specific addresses
+- Tax and regulatory configuration
+- Regional service availability
+- Appropriate search localization
+
+Do not claim operational coverage in countries where services have not been activated and verified.
+
+---
+
+# 17. TESTING AND ACCEPTANCE
+
+Every approved module requires:
+
+- Unit tests
+- Integration tests
+- API tests
+- End-to-end tests
+- Authorization tests
+- Browser tests
+- Mobile tests where applicable
+- Responsive screenshot comparisons
+- Accessibility checks
+- Performance checks
+- Data integrity verification
+- Error and recovery testing
+
+Maintain a reference-to-implementation feature matrix.
+
+Each requirement must have a status, owner, implementation location, and verification evidence.
+
+Statuses:
+
+PASS / PARTIAL / BLOCKED / NOT STARTED
+
+No unsupported PASS declarations.
+
+---
+
+# 18. DEPLOYMENT AND OPERATIONS
+
+Preserve existing hosting, staging, production, DNS, and server configurations.
+
+Maintain:
+
+- Environment separation
+- Secrets management
+- CI checks
+- Safe migrations
+- Rollback procedures
+- Backup restoration tests
+- Monitoring and alerts
+- Incident response
+- Dependency inventories
+- Software licensing records
+- Operational runbooks
+
+Hosting and deployment operations may remain a separate OPS workstream where the existing playbook requires it.
+
+No staging or production deployment without explicit authorization.
+
+---
+
+# 19. ORIGINAL PLAYBOOK PRESERVATION
+
+Before editing phase numbers or statuses:
+
+1. Locate the original phased implementation playbook.
+2. Read the entire document, including appendices.
+3. Enumerate every existing phase and subphase.
+4. Record the exact numbering and titles.
+5. Preserve verified completion evidence.
+6. Compare all new requirements against existing phases.
+7. Integrate requirements into appropriate existing phases.
+8. Add new phases only where necessary.
+9. Preserve existing decisions and recovery procedures.
+10. Produce a complete change log.
+
+Do not replace the original 22-plus-phase structure with a simplified 11-phase roadmap.
+
+If the original playbook has more phases, preserve them all.
+
+---
+
+# 20. DOCUMENTATION DELIVERABLES
+
+Update or create, after inspecting the repository:
+
+- Master phased implementation playbook
+- Architecture specification
+- Architecture decision records
+- Requirements traceability matrix
+- Module capability matrix
+- Shared service inventory
+- API integration register
+- Database migration register
+- Country rollout matrix
+- Design system specification
+- Original asset registry
+- REA and skills inventory
+- Admin acceptance checklist
+- Web and mobile acceptance checklist
+- Security and compliance matrix
+- Test evidence register
+- Phase tracker
+- Deployment and rollback documentation
+- Operational runbook
+- Handoff document
+
+Recommended consolidated document:
+
+`docs/naijadeals-master-implementation-playbook-v3.md`
+
+Do not assume this file already exists.
+
+---
+
+# 21. IMPLEMENTATION GOVERNANCE
+
+Use a strict preserve → inspect → plan → implement → test → document → commit workflow.
+
+Before making changes, establish the repository state and a recoverable baseline.
+
+Do not overwrite unrelated user changes.
+
+Do not discard stashes or modify protected production resources.
+
+Use the authorized GitHub remote and verify pushes.
+
+If push permissions fail, report the exact blocker without claiming the push succeeded.
+
+Use free/open-source solutions first.
+
+No paid integrations without authorization.
+
+No deployment without authorization.
+
+---
+
+# 22. REQUIRED EXECUTION SEQUENCE
+
+## Step 1 — Repository audit
+
+Inspect Git state, branches, remotes, working tree, and recovery documentation.
+
+## Step 2 — Complete document reading
+
+Read the original phased playbook and all linked project requirements in full.
+
+## Step 3 — Architecture reconciliation
+
+Compare the proposed architecture with the actual codebase.
+
+Preserve existing technology choices unless a justified migration is approved.
+
+## Step 4 — Admin image inspection
+
+Inspect:
+
+`C:\Users\User\Documents\naijadeals.com\design-references\admin\naijadeals-control-center-master.png`
+
+Extract visual requirements and compare them against the existing Control Center.
+
+## Step 5 — Requirements reconciliation
+
+Map every requirement in this directive to an existing phase, subphase, or proposed new phase.
+
+## Step 6 — Skills and tools verification
+
+Audit REA, ECC, Soup, MCP providers, and relevant development skills.
+
+## Step 7 — Documentation update
+
+Update the master playbook, architecture, requirements matrix, decisions, phase tracker, and handoff.
+
+## Step 8 — Validation
+
+Check for missing modules, duplicated requirements, contradictory statuses, broken references, and undocumented dependencies.
+
+## Step 9 — Git preservation
+
+Commit and push verified documentation changes to the authorized remote.
+
+## Step 10 — Report
+
+Provide:
+
+- Exact original phase count
+- Exact revised phase count
+- Complete phase and subphase inventory
+- Newly added requirements
+- Architecture decisions
+- Existing work preserved
+- Remaining gaps
+- REA/ECC/Soup verification
+- Admin design inspection results
+- Documentation changes
+- Git commit and remote verification
+- Next recommended implementation phase
+
+**Do not deploy.**
+
+---
+
+# FINAL ACCEPTANCE PRINCIPLE
+
+NaijaDeals must be one premium, original, fully integrated African super-app.
+
+Every active module must work.
+
+Every production image must be appropriate and authentic to its purpose.
+
+The homepage must meet the usability and polish standards established by leading mobility super-apps.
+
+The unified Admin Control Center must be enterprise-grade.
+
+Web, PWA, Android, and iOS must share a consistent, functional ecosystem.
+
+Reference-based reconstructions must demonstrate visual and functional parity against approved requirements, using lawful original implementations.
+
+Existing verified work must be preserved.
+
+No shortcuts, fake functionality, unsupported completion claims, or unauthorized deployments.
