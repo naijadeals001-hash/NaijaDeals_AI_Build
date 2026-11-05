@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Banknote,
+  Check,
   Eye,
   EyeOff,
   Landmark,
@@ -15,7 +16,9 @@ import {
   ShieldCheck,
   Smartphone,
   Sparkles,
+  Tv,
   Wallet,
+  Wifi,
   Zap
 } from "lucide-react";
 import { apiClient, ApiRequestError, koboToNaira } from "@/lib/api-client";
@@ -29,10 +32,10 @@ type WalletData = {
 };
 
 /**
- * Live wallet summary fed by /api/wallet. Signed-out visitors see a sign-in
- * card; signed-in visitors see their real ledger-backed balance, held escrow
- * and latest transactions. Nothing is fabricated: empty wallets show empty
- * states, and API failures show an honest error with a retry.
+ * Live wallet card fed by /api/wallet, styled after the approved NaijaPay home
+ * screen: dark-green gradient balance card with visibility toggle and action
+ * pills. Signed-out visitors get a sign-in card; empty wallets and API
+ * failures show honest states — nothing is fabricated.
  */
 function WalletCard() {
   const [wallet, setWallet] = useState<WalletData | null>(null);
@@ -59,25 +62,32 @@ function WalletCard() {
 
   useEffect(loadWallet, []);
 
+  const actions = [
+    { label: "Add Money", href: "#add-money", icon: Banknote },
+    { label: "Send", href: "#setup", icon: Send },
+    { label: "Receive", href: "#setup", icon: QrCode },
+    { label: "Scan & Pay", href: "#setup", icon: Smartphone }
+  ];
+
   if (status === "signed-out") {
     return (
-      <div className="rounded-3xl bg-pay-deep p-6 text-white sm:p-8">
+      <div className="rounded-3xl bg-gradient-to-br from-pay-deep to-pay-green p-6 text-white sm:p-8">
         <p className="text-xs font-bold uppercase tracking-widest text-pay-gold">Your wallet</p>
         <h2 className="mt-2 font-display text-2xl font-extrabold sm:text-3xl">One balance across NaijaDeals</h2>
-        <p className="mt-2 max-w-md text-sm text-white/70">
+        <p className="mt-2 max-w-md text-sm text-white/75">
           Sign in to see your real NaijaPay balance, escrow holds and transaction history. Shop checkout, ride payments
           and refunds all settle into this same wallet.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Link
             href="/login?next=/pay"
-            className="rounded-xl bg-pay-gold px-5 py-3 text-sm font-bold text-pay-ink transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-gold"
+            className="rounded-full bg-pay-gold px-6 py-3 text-sm font-bold text-pay-ink transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-gold"
           >
-            Sign in to NaijaPay
+            Open NaijaPay →
           </Link>
           <Link
             href="/register?next=/pay"
-            className="rounded-xl border border-white/30 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-gold"
+            className="rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-gold"
           >
             Create a free account
           </Link>
@@ -94,7 +104,7 @@ function WalletCard() {
         <button
           type="button"
           onClick={loadWallet}
-          className="mt-4 rounded-xl bg-pay-green px-4 py-2 text-sm font-bold text-white"
+          className="mt-4 rounded-full bg-pay-green px-5 py-2.5 text-sm font-bold text-white"
         >
           Try again
         </button>
@@ -104,11 +114,15 @@ function WalletCard() {
 
   if (status === "loading") {
     return (
-      <div className="animate-pulse rounded-3xl bg-pay-deep p-6 sm:p-8" aria-busy="true" aria-label="Loading wallet">
+      <div className="animate-pulse rounded-3xl bg-gradient-to-br from-pay-deep to-pay-green p-6 sm:p-8" aria-busy="true" aria-label="Loading wallet">
         <div className="h-3 w-24 rounded bg-white/20" />
-        <div className="mt-4 h-8 w-48 rounded bg-white/20" />
-        <div className="mt-3 h-4 w-64 max-w-full rounded bg-white/10" />
-        <div className="mt-5 h-11 w-40 rounded-xl bg-white/20" />
+        <div className="mt-4 h-9 w-48 rounded bg-white/20" />
+        <div className="mt-3 h-4 w-56 max-w-full rounded bg-white/10" />
+        <div className="mt-6 grid grid-cols-4 gap-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-14 rounded-xl bg-white/15" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -119,7 +133,7 @@ function WalletCard() {
   const currency = wallet.currency ?? "NGN";
 
   return (
-    <div className="rounded-3xl bg-pay-deep p-6 text-white sm:p-8">
+    <div className="rounded-3xl bg-gradient-to-br from-pay-deep to-pay-green p-6 text-white shadow-lift sm:p-8">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-pay-gold">Available balance</p>
@@ -141,23 +155,26 @@ function WalletCard() {
         <Wallet className="h-8 w-8 shrink-0 text-pay-gold" aria-hidden="true" />
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-3">
-        <Link
-          href="/wallet"
-          className="rounded-xl bg-pay-gold px-5 py-3 text-sm font-bold text-pay-ink transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-gold"
-        >
-          Open full wallet
-        </Link>
-        <Link
-          href="/wallet"
-          className="rounded-xl border border-white/30 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-gold"
-        >
-          Add money
-        </Link>
+      <div className="mt-6 grid grid-cols-4 gap-2">
+        {actions.map((action) => (
+          <Link
+            key={action.label}
+            href={action.href}
+            className="group flex flex-col items-center gap-1.5 rounded-xl bg-white/10 px-1 py-3 text-center transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-gold"
+          >
+            <action.icon className="h-5 w-5 text-pay-gold" aria-hidden="true" />
+            <span className="text-[11px] font-semibold leading-tight">{action.label}</span>
+          </Link>
+        ))}
       </div>
 
       <div className="mt-6 border-t border-white/10 pt-4">
-        <p className="text-xs font-bold uppercase tracking-widest text-white/50">Recent activity</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold uppercase tracking-widest text-white/50">Recent activity</p>
+          <Link href="/wallet" className="text-xs font-bold text-pay-gold hover:underline">
+            See all
+          </Link>
+        </div>
         {recent.length === 0 ? (
           <p className="mt-2 text-sm text-white/60">No wallet transactions yet. Your first top-up or purchase will appear here.</p>
         ) : (
@@ -200,7 +217,7 @@ function AddMoneyPanel() {
   const fundingMethods = (methods ?? []).filter((m) => m.id !== "wallet");
 
   return (
-    <div className="rounded-3xl border border-black/5 bg-white p-6 shadow-soft sm:p-8">
+    <div id="add-money" className="rounded-3xl border border-black/5 bg-white p-6 shadow-soft sm:p-8">
       <div className="flex items-center gap-2">
         <Banknote className="h-5 w-5 text-pay-green" aria-hidden="true" />
         <h3 className="font-display text-xl font-extrabold">Add money</h3>
@@ -312,133 +329,233 @@ const services: Array<{
   }
 ];
 
+const quickServices = [
+  { label: "Airtime", icon: Smartphone },
+  { label: "Data", icon: Wifi },
+  { label: "Electricity", icon: Zap },
+  { label: "TV", icon: Tv }
+];
+
 export function PayLanding() {
   return (
     <div className="bg-white text-pay-ink">
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-pay-deep">
-        <img
-          src="/real-photography/hero-ecosystem.jpg"
-          alt="Lagos skyline over the water at dusk"
-          className="absolute inset-0 h-full w-full object-cover opacity-40"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-pay-deep via-pay-deep/80 to-pay-deep/30" aria-hidden="true" />
-        <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:py-28">
-          <p className="inline-flex items-center gap-2 rounded-full border border-pay-gold/40 bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-pay-gold">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> NaijaPay by NaijaDeals
-          </p>
-          <h1 className="mt-5 max-w-2xl font-display text-4xl font-extrabold leading-tight text-white sm:text-5xl lg:text-6xl">
-            Your Money. A Brighter Nigeria.
-          </h1>
-          <p className="mt-3 text-lg font-semibold text-pay-gold sm:text-xl">Pay. Send. Receive. Do More.</p>
-          <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/75 sm:text-base">
-            NaijaPay is the wallet at the centre of the NaijaDeals ecosystem. One balance for shopping, rides, refunds
-            and escrow — every naira backed by a balanced ledger entry.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link
-              href="/login?next=/pay"
-              className="rounded-xl bg-pay-gold px-6 py-3.5 text-sm font-bold text-pay-ink shadow-lift transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-gold"
-            >
-              Get started with NaijaPay
-            </Link>
-            <a
-              href="#services"
-              className="rounded-xl border border-white/30 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-gold"
-            >
-              Explore services
-            </a>
+      {/* Hero — split layout after the approved mockup: text left, photography right */}
+      <section className="relative overflow-hidden">
+        <div className="mx-auto grid max-w-7xl items-stretch lg:grid-cols-2">
+          <div className="px-4 py-14 sm:px-8 sm:py-16 lg:py-24">
+            <p className="inline-flex items-center gap-2 rounded-full bg-pay-mint px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-pay-green">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> NaijaPay by NaijaDeals
+            </p>
+            <h1 className="mt-5 font-display text-4xl font-extrabold leading-tight text-pay-ink sm:text-5xl">
+              Pay. Send. Receive. Do More with NaijaPay.
+            </h1>
+            <p className="mt-4 text-sm font-semibold text-pay-green sm:text-base">Your Money. A Brighter Nigeria.</p>
+            <p className="mt-2 max-w-lg text-sm leading-relaxed text-pay-ink-muted sm:text-base">
+              Bills. Airtime. Data. TV. Shopping. Business. Everywhere. One ledger-backed wallet at the centre of the
+              NaijaDeals ecosystem.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link
+                href="/login?next=/pay"
+                className="rounded-full bg-pay-green px-7 py-3.5 text-sm font-bold text-white shadow-lift transition hover:bg-pay-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
+              >
+                Open NaijaPay →
+              </Link>
+              <a
+                href="#services"
+                className="rounded-full border border-pay-green/30 px-7 py-3.5 text-sm font-bold text-pay-green transition hover:bg-pay-mint focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
+              >
+                Explore services
+              </a>
+            </div>
+            <ul className="mt-8 grid gap-3 sm:grid-cols-3">
+              {[
+                { icon: Lock, title: "Secure", body: "Your money is safe" },
+                { icon: Zap, title: "Fast", body: "Payments in seconds" },
+                { icon: ShieldCheck, title: "For Nigerians", body: "Built for you" }
+              ].map((badge) => (
+                <li key={badge.title} className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-pay-mint">
+                    <badge.icon className="h-4 w-4 text-pay-green" aria-hidden="true" />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-bold">{badge.title}</span>
+                    <span className="block text-xs text-pay-ink-muted">{badge.body}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="relative min-h-72 sm:min-h-96 lg:min-h-full">
+            <img
+              src="/real-photography/hero-ecosystem.jpg"
+              alt="Lagos skyline over the water at dusk"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-pay-deep/70 via-transparent to-transparent lg:bg-gradient-to-r lg:from-white lg:via-white/10 lg:to-transparent" aria-hidden="true" />
+            <div className="absolute bottom-5 left-5 right-5 rounded-2xl bg-white/95 p-4 shadow-soft backdrop-blur lg:left-auto lg:right-8 lg:bottom-8 lg:max-w-64">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-pay-green">
+                <Check className="h-4 w-4 text-white" aria-hidden="true" />
+              </span>
+              <p className="mt-2 text-sm font-extrabold">One connected ecosystem</p>
+              <p className="text-xs text-pay-ink-muted">Shop, rides, deliveries and refunds settle into the same wallet.</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Trust strip */}
-      <section aria-label="Why NaijaPay" className="border-b border-pay-mint bg-pay-mint">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-6 sm:px-6 lg:grid-cols-4">
-          {[
-            { icon: Lock, label: "Secure payments", body: "Signature-verified provider webhooks" },
-            { icon: Zap, label: "Fast checkout", body: "One wallet across every vertical" },
-            { icon: ShieldCheck, label: "Escrow protected", body: "Funds held until delivery is confirmed" },
-            { icon: Banknote, label: "Balanced ledger", body: "Every entry reconciles debit for credit" }
-          ].map((item) => (
-            <div key={item.label} className="flex items-start gap-3">
-              <item.icon className="mt-0.5 h-5 w-5 shrink-0 text-pay-green" aria-hidden="true" />
-              <div>
-                <p className="text-sm font-bold">{item.label}</p>
-                <p className="text-xs text-pay-ink-muted">{item.body}</p>
+      {/* Wallet + Add Money + Quick Services */}
+      <section className="bg-pay-mint">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-8 lg:py-16">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+            <div className="min-w-0" aria-label="Your NaijaPay wallet">
+              <h2 className="font-display text-2xl font-extrabold sm:text-3xl">Your wallet, live</h2>
+              <p className="mt-1 text-sm text-pay-ink-muted">Real figures from your account — nothing simulated.</p>
+              <div className="mt-4">
+                <WalletCard />
+              </div>
+              <div className="mt-4">
+                <AddMoneyPanel />
               </div>
             </div>
-          ))}
+
+            <div id="services" className="min-w-0">
+              <h2 className="font-display text-2xl font-extrabold sm:text-3xl">Services</h2>
+              <p className="mt-1 text-sm text-pay-ink-muted">
+                Live services connect to the shared NaijaDeals payment engine today. Others stay honestly labelled until
+                their providers and safety gates are in place.
+              </p>
+
+              <div className="mt-5 rounded-3xl border border-black/5 bg-white p-5 shadow-soft">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display text-base font-extrabold">Quick services</h3>
+                  <span className="rounded-full bg-pay-mint px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-pay-ink-muted">
+                    Awaiting providers
+                  </span>
+                </div>
+                <div className="mt-4 grid grid-cols-4 gap-3">
+                  {quickServices.map((service) => (
+                    <a
+                      key={service.label}
+                      href="#setup"
+                      className="group flex flex-col items-center gap-2 rounded-2xl border border-black/5 bg-pay-mint/60 px-1 py-4 text-center transition hover:border-pay-green/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
+                    >
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-soft">
+                        <service.icon className="h-5 w-5 text-pay-green" aria-hidden="true" />
+                      </span>
+                      <span className="text-xs font-bold">{service.label}</span>
+                    </a>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-pay-ink-muted">
+                  Bill categories stay inactive until a real bill-payment provider is connected in this environment.
+                </p>
+              </div>
+
+              <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+                {services.map((service) => {
+                  const Icon = service.icon;
+                  return (
+                    <li key={service.title}>
+                      <Link
+                        href={service.href}
+                        className="group block h-full overflow-hidden rounded-2xl border border-black/5 bg-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
+                      >
+                        <div className="relative h-32 overflow-hidden sm:h-36">
+                          <img
+                            src={service.image}
+                            alt={service.imageAlt}
+                            loading="lazy"
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                          />
+                          <span
+                            className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${
+                              service.live ? "bg-pay-green text-white" : "bg-white/90 text-pay-ink-muted"
+                            }`}
+                          >
+                            {service.live ? "Live" : "In preparation"}
+                          </span>
+                        </div>
+                        <div className="p-4">
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-4 w-4 text-pay-green" aria-hidden="true" />
+                            <h3 className="font-display text-base font-extrabold">{service.title}</h3>
+                            <ArrowRight
+                              className="ml-auto h-4 w-4 text-pay-ink-muted transition group-hover:translate-x-0.5 group-hover:text-pay-green"
+                              aria-hidden="true"
+                            />
+                          </div>
+                          <p className="mt-1.5 text-xs leading-relaxed text-pay-ink-muted">{service.body}</p>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Live wallet + services */}
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
-        <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-          <div className="min-w-0" aria-label="Your NaijaPay wallet">
-            <h2 className="font-display text-2xl font-extrabold sm:text-3xl">Your wallet, live</h2>
-            <p className="mt-1 text-sm text-pay-ink-muted">Real figures from your account — nothing simulated.</p>
-            <div className="mt-4">
-              <WalletCard />
-            </div>
-            <div className="mt-4">
-              <AddMoneyPanel />
+      {/* Marketing cards — after the approved mockup bottom row */}
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-8 lg:py-16">
+        <div className="grid gap-5 md:grid-cols-3">
+          <div className="overflow-hidden rounded-3xl border border-black/5 bg-white shadow-soft">
+            <img
+              src="/brand-photography/aura-concierge-lagos.jpg"
+              alt="A customer reviewing a payment on her phone in Lagos"
+              loading="lazy"
+              className="h-44 w-full object-cover"
+            />
+            <div className="p-5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-pay-mint">
+                <Lock className="h-4 w-4 text-pay-green" aria-hidden="true" />
+              </span>
+              <h3 className="mt-3 font-display text-lg font-extrabold">Your security comes first</h3>
+              <ul className="mt-3 space-y-1.5 text-sm text-pay-ink-muted">
+                {["Verified provider webhooks", "Session-protected payments", "Audited money movements", "Escrow-held order funds"].map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <Check className="h-4 w-4 shrink-0 text-pay-green" aria-hidden="true" /> {item}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
-
-          <div id="services" className="min-w-0">
-            <h2 className="font-display text-2xl font-extrabold sm:text-3xl">Services</h2>
-            <p className="mt-1 text-sm text-pay-ink-muted">
-              Live services connect to the shared NaijaDeals payment engine today. Others stay honestly labelled until
-              their providers and safety gates are in place.
-            </p>
-            <ul className="mt-4 grid gap-4 sm:grid-cols-2">
-              {services.map((service) => {
-                const Icon = service.icon;
-                return (
-                  <li key={service.title}>
-                    <Link
-                      href={service.href}
-                      className="group block h-full overflow-hidden rounded-2xl border border-black/5 bg-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
-                    >
-                      <div className="relative h-32 overflow-hidden sm:h-36">
-                        <img
-                          src={service.image}
-                          alt={service.imageAlt}
-                          loading="lazy"
-                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                        />
-                        <span
-                          className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${
-                            service.live ? "bg-pay-green text-white" : "bg-white/90 text-pay-ink-muted"
-                          }`}
-                        >
-                          {service.live ? "Live" : "In preparation"}
-                        </span>
-                      </div>
-                      <div className="p-4">
-                        <div className="flex items-center gap-2">
-                          <Icon className="h-4 w-4 text-pay-green" aria-hidden="true" />
-                          <h3 className="font-display text-base font-extrabold">{service.title}</h3>
-                          <ArrowRight
-                            className="ml-auto h-4 w-4 text-pay-ink-muted transition group-hover:translate-x-0.5 group-hover:text-pay-green"
-                            aria-hidden="true"
-                          />
-                        </div>
-                        <p className="mt-1.5 text-xs leading-relaxed text-pay-ink-muted">{service.body}</p>
-                      </div>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+          <div className="relative overflow-hidden rounded-3xl bg-pay-deep p-6 text-white shadow-soft">
+            <img
+              src="/real-photography/NaijaFresh Nigerian Market Stall.jpg"
+              alt="A Nigerian market vendor's stall stocked with produce"
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover opacity-30"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-pay-deep via-pay-deep/70 to-pay-deep/30" aria-hidden="true" />
+            <div className="relative flex h-full min-h-64 flex-col justify-end">
+              <p className="text-xs font-bold uppercase tracking-widest text-pay-gold">People. Payments. Progress.</p>
+              <h3 className="mt-2 font-display text-2xl font-extrabold leading-snug">
+                From Market to Mainland — NaijaPay works for every Nigerian.
+              </h3>
+              <p className="mt-2 text-sm text-white/70">Individuals. Businesses. Communities. A Brighter Nigeria.</p>
+            </div>
+          </div>
+          <div className="relative overflow-hidden rounded-3xl shadow-soft">
+            <img
+              src="/brand-photography/stay-waterfront-apartment.jpg"
+              alt="Lagos waterfront buildings at golden hour"
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-pay-deep/80 to-transparent" aria-hidden="true" />
+            <div className="relative flex h-full min-h-64 flex-col justify-end p-6 text-white">
+              <h3 className="font-display text-2xl font-extrabold leading-snug">Same People. Bigger Possibilities.</h3>
+              <p className="mt-2 text-sm text-white/75">One wallet across every NaijaDeals vertical.</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Business band */}
       <section className="bg-pay-mint">
-        <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:py-16">
+        <div className="mx-auto grid max-w-7xl items-center gap-8 px-4 py-12 sm:px-8 lg:grid-cols-2 lg:py-16">
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-pay-green">NaijaPay for business</p>
             <h2 className="mt-2 font-display text-2xl font-extrabold sm:text-3xl">Grow your business with NaijaPay</h2>
@@ -449,13 +566,13 @@ export function PayLanding() {
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
                 href="/sell"
-                className="rounded-xl bg-pay-green px-5 py-3 text-sm font-bold text-white transition hover:bg-pay-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
+                className="rounded-full bg-pay-green px-6 py-3 text-sm font-bold text-white transition hover:bg-pay-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
               >
                 Become a seller
               </Link>
               <Link
                 href="/seller"
-                className="rounded-xl border border-pay-green/30 px-5 py-3 text-sm font-bold text-pay-green transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
+                className="rounded-full border border-pay-green/30 px-6 py-3 text-sm font-bold text-pay-green transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
               >
                 Seller dashboard
               </Link>
@@ -463,8 +580,8 @@ export function PayLanding() {
           </div>
           <div className="overflow-hidden rounded-3xl shadow-soft">
             <img
-              src="/real-photography/NaijaFresh Nigerian Market Stall.jpg"
-              alt="A Nigerian market vendor's stall stocked with produce"
+              src="/brand-photography/fresh-market-groceries.jpg"
+              alt="A Nigerian business owner's stocked grocery shelves"
               loading="lazy"
               className="h-56 w-full object-cover sm:h-72"
             />
@@ -473,7 +590,7 @@ export function PayLanding() {
       </section>
 
       {/* Setup honesty section */}
-      <section id="setup" className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
+      <section id="setup" className="mx-auto max-w-7xl px-4 py-12 sm:px-8 lg:py-16">
         <div className="rounded-3xl border border-pay-gold/30 bg-pay-gold-soft/40 p-6 sm:p-8">
           <h2 className="font-display text-xl font-extrabold sm:text-2xl">What is not switched on yet — and why</h2>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-pay-ink-muted">

@@ -1200,3 +1200,19 @@ at 390/768/1440 after fixing a 5px mobile overflow (min-w-0 on the grid columns)
 Transfers remain DISABLED: enable only after authorisation plus an
 environment reconciliation pass. Preview: http://localhost:3015/pay
 (NEXT_DIST_DIR=.next-pay production build).
+
+## NaijaPay /pay redesign to the approved mockup series (2026-11-05)
+
+Applied the design language of design-references/approved/NaijaPay/ (18 mockups;
+hero sheet analysed via image model): split hero (text left, real Lagos photography
+right with white gradient blend and non-transactional ecosystem card), "Pay. Send.
+Receive. Do More with NaijaPay." headline with Secure/Fast/For Nigerians badges,
+round CTAs, dark-green gradient wallet card with balance toggle and four action
+pills (Add Money/Send/Receive/Scan & Pay — Send, Receive, Scan anchor to the
+honest setup section), Quick Services tiles (Airtime/Data/Electricity/TV, badge
+"Awaiting providers"), three marketing cards (security checklist, From Market to
+Mainland, Same People. Bigger Possibilities.) using real project photography, and
+rounded business band. No fabricated balances or payment states. pay-visual-qa
+assertions updated to the new copy; PASS at 390/768/1440 (11/11 images, 0
+overflow). Signed-in verification: gradient card, 4 action pills, quick services
+and real ₦ balance all present. Preview http://localhost:3015/pay.

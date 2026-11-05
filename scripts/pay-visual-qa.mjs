@@ -30,8 +30,8 @@ try {
       window.scrollTo(0, 0);
     });
     await page.waitForLoadState("networkidle").catch(() => {});
-    const heading = await page.getByRole("heading", { name: "Your Money. A Brighter Nigeria." }).count();
-    const sub = await page.getByText("Pay. Send. Receive. Do More.").count();
+    const heading = await page.getByRole("heading", { name: "Pay. Send. Receive. Do More with NaijaPay." }).count();
+    const sub = await page.getByText("Your Money. A Brighter Nigeria.").count();
     const images = await page.evaluate(() =>
       Array.from(document.querySelectorAll("img")).map((img) => ({
         src: img.getAttribute("src"),
@@ -43,7 +43,7 @@ try {
     const horizontalOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth
     );
-    const walletCard = await page.getByText("Sign in to NaijaPay").count();
+    const walletCard = await page.getByRole("link", { name: "Open NaijaPay →" }).count();
     await page.screenshot({ path: path.join(outDir, `pay-${viewport.name}.png`), fullPage: true });
     results.push({
       viewport: viewport.name,
