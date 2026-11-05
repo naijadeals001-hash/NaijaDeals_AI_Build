@@ -1312,3 +1312,13 @@ scan manual+review, security badges, wallet receipt), sessions API test, visual
 QA re-pass at 3 viewports, all /pay/* routes auth-redirect (307) when signed
 out. Screenshots: qa-artifacts/pay/{send,receive,scan,security}-mobile.png,
 wallet-receipt.png. Transfer posting remains disabled by policy.
+
+## GitHub preservation restored (2026-11-05, night)
+
+Pushed naijashop-marketplace to github-preservation (NaijaDeals_AI_Build) using
+the owner token stored in .env.txt (value never printed; one-shot askpass helper,
+removed after use). Verified: git ls-remote refs/heads/naijashop-marketplace =
+9a7379a9c909e1e9b097402c0c8fa42bc93e5e62 = local HEAD. All six NaijaPay commits
+(6171897, 0ea263f, 6ce74ee, c9ae73e, f702528, 9a7379a) plus the two preview-agent
+commits (2edcf88, 42b46ed) are preserved remotely. The uncommitted NaijaGigs WIP
+was NOT pushed (never committed).
