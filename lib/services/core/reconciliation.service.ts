@@ -55,11 +55,24 @@ export async function walletReconciliation() {
   const unbalancedTransactions = await prisma.walletTransaction.findMany({
     include: { ledger: { select: { direction: true, amountKobo: true } } }
   });
+  // Adjustments balance across two books: wallet LedgerEntry lines plus
+  // AccountPosting lines against non-wallet accounts (e.g. FIXTURE_EQUITY).
+  const accountPostings = await prisma.accountPosting.groupBy({
+    by: ["transactionId", "direction"],
+    _sum: { amountKobo: true }
+  });
+  const postingsByTx = new Map<string, { CREDIT: bigint; DEBIT: bigint }>();
+  for (const row of accountPostings) {
+    const entry = postingsByTx.get(row.transactionId) ?? { CREDIT: 0n, DEBIT: 0n };
+    entry[row.direction as "CREDIT" | "DEBIT"] += row._sum.amountKobo ?? 0n;
+    postingsByTx.set(row.transactionId, entry);
+  }
   const unbalanced = unbalancedTransactions
     .filter((tx) => {
       const credits = tx.ledger.filter((e) => e.direction === "CREDIT").reduce((sum, e) => sum + e.amountKobo, 0n);
       const debits = tx.ledger.filter((e) => e.direction === "DEBIT").reduce((sum, e) => sum + e.amountKobo, 0n);
-      return credits !== debits;
+      const account = postingsByTx.get(tx.id) ?? { CREDIT: 0n, DEBIT: 0n };
+      return credits + account.CREDIT !== debits + account.DEBIT;
     })
     .map((tx) => ({ transactionId: tx.id, reference: tx.reference, amountKobo: tx.amountKobo }));
 

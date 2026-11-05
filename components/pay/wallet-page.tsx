@@ -89,7 +89,7 @@ export function NaijaPayWalletPage() {
     );
   }
 
-  if (status === "loading") {
+  if (status === "loading" || !wallet) {
     return (
       <div className="mx-auto max-w-5xl space-y-4" aria-busy="true" aria-label="Loading wallet">
         <div className="h-56 animate-pulse rounded-3xl bg-pay-mint" />

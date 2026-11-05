@@ -87,3 +87,27 @@ not be implemented by assumption:
 
 Current implementation reverses the platform commission proportionally with each refunded kobo; this
 is ledger mechanics, not an approved fee policy. A business decision is required before changing it.
+
+## NaijaPay production-readiness decisions (2026-11-05, owner-directed)
+
+- **SYSTEM-wallet −₦25,000 delta — RESOLVED with audited correction.** Forensics
+  (scripts/system-wallet-forensics.cjs): the seed posted the fixture-funding
+  DEBIT (SEED-WALLET-FIXTURE, ₦25,000) to the SYSTEM wallet ledger but stored a
+  cached balance that never reflected it; every subsequent entry balances. The
+  PREPARED Phase-07 adjustment PHASE07-FIXTURE-FUNDING-20261103 was applied
+  under the owner's explicit authorization via the audited, idempotent
+  ledger-adjustment service (wallet CREDIT ₦25,000 + FIXTURE_EQUITY contra
+  DEBIT; scripts/phase07-apply-adjustment.ts). Reconciliation now reports 0
+  mismatched wallets, 0 unbalanced transactions (the check now balances wallet
+  LedgerEntry lines together with AccountPosting lines across the two books).
+- **Transaction PIN — decision:** PIN is NOT required while transfers run on a
+  TEST-classified database. A PIN challenge becomes REQUIRED before any
+  LIVE money movement (LIVE database classification + live flags), with
+  hashed-at-rest storage and rate-limited verification. Rationale: the
+  test-funds boundary already makes live money impossible; adding a PIN to
+  test-only flows adds friction without safety until live activation.
+- **NaijaGigs WIP — ISOLATED, not finished:** all uncommitted gigs work
+  (tracked modifications + untracked directories) moved to
+  stash@{0} ("naijagigs WIP isolated for clean production build"); restore with
+  `git stash pop stash@{0}`. Verified after isolation: full `tsc --noEmit`
+  clean and `npm run build` clean (qa-artifacts/pay-build-clean.log).
