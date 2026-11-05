@@ -1043,3 +1043,12 @@ services and HTTP routes are guarded; TEST allows provider sandbox only with tes
 Boundary tests pass, including payout creation, settlement endpoint rejection with a temporary fixture
 (payout PENDING, wallet/ledger unchanged), and Paystack init rejection. The settlement fixture ran on
 the shared TEST DB and was deleted; a fully isolated settlement-endpoint test remains outstanding.
+
+
+## Amazon-style mobile account, orders and cart (2026-11-05)
+
+Added mobile account hub on /account (Hello name, Your Orders, Your Returns, Buy Again, Customer
+Service, Sign Out), Amazon-style /orders header with search/filter and Track deliveries/Buy again/
+return-status sections when orders exist, and Amazon empty-cart state (Shopping Cart, No items selected,
+Proceed to checkout (0 items), Select all items). Mobile screenshots: amazon-account-mobile.png,
+amazon-orders-mobile.png, amazon-cart-mobile.png. No fabricated orders or metrics.
