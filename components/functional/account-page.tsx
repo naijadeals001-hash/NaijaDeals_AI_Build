@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Loader2, MapPin, PackageCheck, Store, Wallet } from "lucide-react";
+import { AlertCircle, Headphones, Loader2, LogOut, MapPin, PackageCheck, RotateCcw, Store, UserCircle, Wallet } from "lucide-react";
 import { ApiRequestError, apiClient, koboToNaira, type ApiProduct } from "@/lib/api-client";
 
 type Address = {
@@ -140,6 +140,30 @@ export function AccountPage() {
 
   return (
     <div className="space-y-6">
+      <section aria-label="Account menu" className="overflow-hidden rounded-2xl border border-[#D5D9D9] bg-white">
+        <div className="bg-[#232F3E] px-5 py-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-white/80">Hello, {account.name.split(" ")[0]}</p>
+              <h1 className="font-display text-2xl font-extrabold">Your Account</h1>
+            </div>
+            <UserCircle className="h-10 w-10 text-white/80" aria-hidden="true" />
+          </div>
+        </div>
+        <div className="divide-y divide-[#D5D9D9] px-5 py-2 text-sm">
+          <Link href="/orders" className="flex items-center gap-2 py-3 font-semibold"><PackageCheck className="h-4 w-4" /> Your Orders</Link>
+          <Link href="/orders" className="flex items-center gap-2 py-3 font-semibold"><RotateCcw className="h-4 w-4" /> Your Returns</Link>
+          <Link href="/naijashop" className="flex items-center gap-2 py-3 font-semibold"><PackageCheck className="h-4 w-4" /> Buy Again</Link>
+          <Link href="/support" className="flex items-center gap-2 py-3 font-semibold"><Headphones className="h-4 w-4" /> Customer Service</Link>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 py-3 text-left font-semibold"
+            onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined); router.push("/login"); }}
+          >
+            <LogOut className="h-4 w-4" /> Sign Out
+          </button>
+        </div>
+      </section>
       <header>
         <h1 className="font-display text-3xl font-extrabold">Your account</h1>
         <p className="text-sm text-muted">
