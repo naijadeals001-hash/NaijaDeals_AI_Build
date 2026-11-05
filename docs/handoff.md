@@ -1175,3 +1175,28 @@ Blockers: no authorized photorealistic image-generation pipeline (KIE.ai absent,
 DEEPSEEK_API_KEY has no image endpoint), so the mandated woman-with-smartphone Lagos hero
 is not yet available; the owner's real Lagos skyline photo is used instead. Existing
 uncommitted NaijaGigs work was left untouched and uncommitted.
+
+## NaijaPay slice 3 — Add Money panel and gated P2P transfer engine (2026-11-05)
+
+Added lib/services/core/transfer.service.ts (sendP2PTransfer): wallet-to-wallet
+transfer on the existing Wallet/LedgerEntry engine via postBalancedTransaction.
+Idempotency = unique reference P2P-<idempotencyKey> checked inside a Serializable
+transaction; concurrency = conditional UPDATE ... WHERE availableKobo >= amount;
+balanced double-entry lines on both wallets; validation (min/max, self-send,
+unknown recipient, bad key). Route /api/pay/transfers (GET status, POST transfer)
+requires a session and is gated by ENABLE_P2P_TRANSFERS (default off): signed-in
+POST returns 503 transfers_disabled and writes nothing. /pay gained an Add Money
+panel driven by /api/payments/methods (honest per-provider configured state; in
+this environment no card/transfer provider is configured, and it says so).
+
+Financial-safety tests: scripts/pay-transfer-tests.ts against isolated schema
+naijapay_transfer_test — 23/23 passed, twice consecutively: atomic move, balanced
+ledger, debit/credit placement, idempotent retry, insufficient funds without side
+effects, 4-way concurrent overspend (exactly 2 succeed), validation guards, and
+end-of-run ledger/wallet reconciliation. Fixture resets orphaned wallets and
+P2P ledger rows (Wallet.userId is SetNull on user delete). Visual QA re-passed
+at 390/768/1440 after fixing a 5px mobile overflow (min-w-0 on the grid columns).
+
+Transfers remain DISABLED: enable only after authorisation plus an
+environment reconciliation pass. Preview: http://localhost:3015/pay
+(NEXT_DIST_DIR=.next-pay production build).
