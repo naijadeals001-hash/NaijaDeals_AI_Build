@@ -1064,3 +1064,27 @@ payment status, status timeline/events and deliveries via existing API. Verified
 /orders, header/menu, anchors, 0 console errors. Customer test account has no orders, so order-detail
 data rendering was not browser-verified with a live order; API/ownership route remains to test with an
 order fixture. Screenshots: signed-in-header-desktop.png, signed-in-header-mobile.png, customer-account.png.
+
+
+## Customer account completion (2026-11-05)
+
+Implemented PATCH /api/account (name/phone validation + audit), PATCH /api/account/addresses/[id]
+(edit/default with ownership), POST /api/account/password (current-password verification, scrypt rehash,
+session revocation, audit), saved-item add-to-cart/remove UI, Amazon buy-again cart action, and
+internal-only login return URLs.
+
+Isolated TEST schema customer_account_test with customers A/B and orders. Verified on port 3011:
+- profile edit persisted after reload ("Ada Updated")
+- address edit persisted ("Enugu") and shown after reload; header destination updated
+- saved item remove 1->0 and re-add 0->1; add-to-cart produced 1 cart item
+- populated order detail FIXTURE-ORDER-A rendered title, timeline, totals
+- isolation: B requesting A order -> 403; B PATCH/DELETE A address -> 404
+- unsafe next=https://example.com/steal -> final /account (not external)
+- 0 console errors; mobile overflow 0
+
+Password change: endpoint implemented with current-password check and session revocation; wrong-current
+response was not asserted in a browser test (result output was truncated) -> remaining verification gap.
+Out-of-stock cart rejection was not conclusively verified: a zero-stock fixture attempt still added to an
+existing cart item, so stock fixtures/target need review before claiming that check.
+Screenshots: isolated-account.png, isolated-address.png, isolated-saved.png, isolated-order-detail.png,
+and *-mobile variants. Shared naijadeals_core was not populated for fixtures.

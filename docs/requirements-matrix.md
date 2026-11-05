@@ -107,3 +107,6 @@ Evidence columns name the code path and the execution that proved it. Last verif
 
 | Customer signed-in header and account menu | Implemented: real name, cart count, default address, functional account links, Escape/focus | 2026-11-05 |
 | Customer order detail | Implemented route /orders/[id] with items, totals, address, payment status, timeline; needs order-fixture browser test | 2026-11-05 |
+
+
+| Customer profile/password/address/saved actions | Implemented with audit and ownership; profile/address persistence and cross-customer isolation tested in isolated TEST schema; password error path and stock rejection remain gaps | 2026-11-05 |
