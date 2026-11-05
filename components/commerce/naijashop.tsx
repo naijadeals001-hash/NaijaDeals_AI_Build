@@ -1636,6 +1636,16 @@ export function OrdersPageApi() {
     void load();
   }, [load]);
 
+  async function buyAgain(item: ApiOrder["items"][number]) {
+    setError(""); setNotice("");
+    try {
+      await apiClient.addCartItem(item.productId, 1, item.variantId ?? null);
+      setNotice("Added to cart at the current price and availability.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not add this item to your cart.");
+    }
+  }
+
   async function cancel(order: ApiOrder) {
     if (!window.confirm(`Cancel order ${order.orderNumber}? Reserved stock will be released.`)) return;
     setError("");
@@ -1734,10 +1744,13 @@ export function OrdersPageApi() {
             <h2 className="font-display text-lg font-extrabold">Buy again</h2>
             <div className="mt-3 grid grid-cols-3 gap-2">
               {Array.from(new Map(orders.flatMap((order) => order.items).map((item) => [item.productId, item])).values()).slice(0, 6).map((item) => (
-                <Link key={item.id} href={`/product/${item.productId}`} className="group">
-                  {item.imageUrl ? <img src={item.imageUrl} alt={item.productName} className="h-20 w-full rounded object-contain" /> : null}
-                  <span className="line-clamp-2 text-[11px] font-semibold group-hover:underline">{item.productName}</span>
-                </Link>
+                <div key={item.id} className="group">
+                  <Link href={`/product/${item.productId}`}>
+                    {item.imageUrl ? <img src={item.imageUrl} alt={item.productName} className="h-20 w-full rounded object-contain" /> : null}
+                    <span className="line-clamp-2 block text-[11px] font-semibold group-hover:underline">{item.productName}</span>
+                  </Link>
+                  <button type="button" onClick={() => void buyAgain(item)} className="mt-1 text-[11px] font-bold text-[#007185] underline">Buy again</button>
+                </div>
               ))}
             </div>
           </div>
