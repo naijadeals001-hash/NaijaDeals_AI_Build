@@ -1150,3 +1150,28 @@ Not executed:
   article did not render under the test selectors before timeout.
 - direct cart/wallet cross-customer calls (self-scoped APIs expose no other-customer id).
 - fresh full screenshot set from the running 3011 preview.
+
+## NaijaPay slice 1+2 — /pay landing and live wallet card (2026-11-05)
+
+Built /pay (app/pay/page.tsx + components/pay/pay-landing.tsx): approved green-and-gold
+NaijaPay palette added to tailwind.config.ts (pay.green #008A4B, pay.deep #005B36,
+pay.gold #C99520), hero over the owner's real Lagos photography, image-backed service
+tiles with honest Live/In-preparation labels, business band, and a setup-honesty section.
+The wallet card consumes the existing /api/wallet engine (ledger-backed balance, escrow
+sum, recent transactions, signed-out/error/loading states). Ecosystem wallet module now
+links /pay. /wallet and /naijapay unchanged and still working. No schema, ledger, wallet
+or payment-engine changes.
+
+Verified against a production build served on port 3016 (NEXT_DIST_DIR=.next-pay;
+dev-server chunk 404s made dev-mode verification unreliable):
+- scripts/pay-visual-qa.mjs PASS at 390/768/1440: 200, hero present, 8/8 images loaded,
+  0 horizontal overflow, signed-out card shown.
+- Signed-in (customer@naijadeals.local): hero bg rgb(0,91,54), gold CTA rgb(201,149,32),
+  wallet card shows real balance (API 200, availableKobo 200000) and Recent activity.
+- Regression: /, /naijashop, /naijadrive, /naijaeats, /login 200; /wallet 307 to login.
+- Screenshots: qa-artifacts/pay/pay-{mobile,tablet,desktop}.png (+ signed-in variants).
+
+Blockers: no authorized photorealistic image-generation pipeline (KIE.ai absent,
+DEEPSEEK_API_KEY has no image endpoint), so the mandated woman-with-smartphone Lagos hero
+is not yet available; the owner's real Lagos skyline photo is used instead. Existing
+uncommitted NaijaGigs work was left untouched and uncommitted.

@@ -58,7 +58,18 @@ const config: Config = {
         "amber-soft": "#FEF3C7",
         crimson: "#EF4444",
         "crimson-soft": "#FEE2E2",
-        night: "#101418"
+        night: "#101418",
+        // NaijaPay vertical palette (approved green-and-gold direction).
+        // Scoped to /pay surfaces; the global tokens above stay unchanged.
+        pay: {
+          green: "#008A4B",
+          deep: "#005B36",
+          gold: "#C99520",
+          "gold-soft": "#F5E6B8",
+          mint: "#F5F8F6",
+          ink: "#13231C",
+          "ink-muted": "#64736A"
+        }
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

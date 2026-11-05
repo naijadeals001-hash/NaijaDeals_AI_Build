@@ -181,7 +181,7 @@ export const verticals: Vertical[] = [
   {
     key: "wallet",
     name: "NaijaPay",
-    href: "/naijapay",
+    href: "/pay",
     icon: Wallet,
     label: "Wallet, escrow, payouts",
     description: "One balance for payments, escrow and payouts.",
