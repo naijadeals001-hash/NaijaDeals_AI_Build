@@ -1322,3 +1322,24 @@ removed after use). Verified: git ls-remote refs/heads/naijashop-marketplace =
 (6171897, 0ea263f, 6ce74ee, c9ae73e, f702528, 9a7379a) plus the two preview-agent
 commits (2edcf88, 42b46ed) are preserved remotely. The uncommitted NaijaGigs WIP
 was NOT pushed (never committed).
+
+## Production-readiness gates cleared (2026-11-05/06)
+
+- SYSTEM-wallet −₦25,000 delta RESOLVED: forensics traced it to the seed's
+  fixture-funding DEBIT never being reflected in the cached balance; the PREPARED
+  Phase-07 adjustment was applied under explicit owner authorization via the
+  audited ledger-adjustment service (FIXTURE_EQUITY contra). Reconciliation API
+  now reports 0 mismatched wallets / 0 unbalanced transactions; the unbalance
+  check now balances wallet ledger lines together with account postings.
+- NaijaGigs WIP ISOLATED in stash@{0} (restore: git stash pop stash@{0}).
+  After isolation: full tsc clean (which also surfaced and fixed masked
+  null-guard errors in wallet-page.tsx), clean production build
+  (qa-artifacts/pay-build-clean.log), transfer tests 23/23, sessions API test
+  PASS, visual QA PASS. Port 3015 now serves the clean production build.
+- CI VERIFIED GREEN on pushed commit 399f1d1: Lint, Type Check, Tests, Build,
+  Docker Build all success (run 42094689405). Remote head 399f1d1 = local HEAD.
+- Transaction-PIN decision recorded in docs/decisions.md (no PIN on TEST
+  classification; mandatory before LIVE money movement).
+- Remaining before transfer activation/deployment: bill + QR provider
+  integrations (external), owner visual acceptance of the generated hero, and
+  explicit deployment authorization. Transfer flag stays off.
