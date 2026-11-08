@@ -53,11 +53,17 @@ export function StreamPlayerBar() {
             aria-expanded={expanded}
             className="flex min-w-0 flex-1 items-center gap-3 text-left lg:pointer-events-none lg:cursor-default"
           >
-            {current?.artworkUrl ? (
-              <img src={current.artworkUrl} alt="" className="h-11 w-11 shrink-0 rounded-md object-cover" />
-            ) : (
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white/10 text-xs text-white/50">♪</div>
-            )}
+            {current ? (
+              <img
+                data-player-artwork
+                src={current.artistImageUrl ?? current.artworkUrl ?? ""}
+                alt={current.artistImageUrl ? `${current.artistName} portrait` : ""}
+                className="h-11 w-11 shrink-0 rounded-md object-cover"
+              />
+            ) : null}
+            {!current ? (
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white/10 text-xs text-white/50">♪</span>
+            ) : null}
             <div className="min-w-0">
               <p className="truncate text-[12.5px] font-bold text-white">{current?.title ?? "Nothing playing"}</p>
               <p className="truncate text-[11px] text-white/50">{current?.artistName ?? "Choose a track to start"}</p>
@@ -164,8 +170,12 @@ export function StreamPlayerBar() {
             <span className="w-14" aria-hidden />
           </div>
           <div className="flex flex-1 flex-col justify-center gap-5 px-6">
-            {current?.artworkUrl ? (
-              <img src={current.artworkUrl} alt="" className="mx-auto aspect-square w-full max-w-xs rounded-2xl object-cover shadow-2xl" />
+            {current ? (
+              <img
+                src={current.artistImageUrl ?? current.artworkUrl ?? ""}
+                alt={current.artistImageUrl ? `${current.artistName} portrait` : ""}
+                className="mx-auto aspect-square w-full max-w-xs rounded-2xl object-cover shadow-2xl"
+              />
             ) : (
               <div className="mx-auto flex aspect-square w-full max-w-xs items-center justify-center rounded-2xl bg-white/10 text-4xl text-white/30">♪</div>
             )}

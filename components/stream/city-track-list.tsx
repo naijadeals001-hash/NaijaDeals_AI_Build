@@ -29,7 +29,9 @@ export function CityTrackList({ tracks }: { tracks: CityTrack[] }) {
     slug: track.slug,
     title: track.title,
     durationSec: track.durationSec,
-    artworkUrl: track.artworkUrl,
+    artworkUrl: track.artist.avatarUrl ?? track.artworkUrl,
+    artistImageUrl: track.artist.avatarUrl ?? null,
+    artistSlug: track.artist.slug,
     audioUrl: track.audioUrl,
     artistName: track.artist.name
   }));
@@ -47,7 +49,11 @@ export function CityTrackList({ tracks }: { tracks: CityTrack[] }) {
               aria-label={playingThis ? `Pause ${track.title}` : `Play ${track.title}`}
               className="relative shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C99520]"
             >
-              <CoverArt src={track.artworkUrl} title={track.title} className="h-11 w-11" />
+              {track.artist.avatarUrl ? (
+                <img src={track.artist.avatarUrl} alt={`${track.artist.name} portrait`} className="h-11 w-11 rounded-lg object-cover" loading="lazy" />
+              ) : (
+                <CoverArt src={track.artworkUrl} title={track.title} className="h-11 w-11" />
+              )}
               <span className="absolute inset-0 grid place-items-center rounded-lg bg-black/40">
                 {playingThis ? <Pause className="h-4 w-4 fill-white text-white" aria-hidden /> : <Play className="h-4 w-4 translate-x-[1px] fill-white text-white" aria-hidden />}
               </span>

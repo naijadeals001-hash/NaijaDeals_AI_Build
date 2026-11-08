@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Pause, Play, Plus } from "lucide-react";
 import { useStreamPlayer } from "./player-context";
 import { STREAM_CATEGORIES } from "@/lib/stream/categories";
+import { CityCard } from "./city-card";
 
 type TrendArtist = { id: string; name: string; slug: string; avatarUrl: string | null; trackCount: number; genre: string | null; firstTrack: { id: string; title: string; slug: string; durationSec: number; artworkUrl: string | null; audioUrl: string | null } | null };
 
@@ -40,7 +41,8 @@ export function TrendingArtists({ artists }: { artists: TrendArtist[] }) {
                           slug: artist.firstTrack!.slug,
                           title: artist.firstTrack!.title,
                           durationSec: artist.firstTrack!.durationSec,
-                          artworkUrl: artist.firstTrack!.artworkUrl,
+                          artworkUrl: artist.avatarUrl ?? artist.firstTrack!.artworkUrl,
+                          artistImageUrl: artist.avatarUrl,
                           audioUrl: artist.firstTrack!.audioUrl,
                           artistName: artist.name
                         }
@@ -180,6 +182,8 @@ export function FeaturedSongs({ tracks }: { tracks: FeaturedTrack[] }) {
     title: track.title,
     durationSec: track.durationSec,
     artworkUrl: track.artworkUrl,
+    artistImageUrl: track.artist.avatarUrl ?? null,
+    artistSlug: track.artist.slug,
     audioUrl: track.audioUrl,
     artistName: track.artist.name
   }));
@@ -190,7 +194,8 @@ export function FeaturedSongs({ tracks }: { tracks: FeaturedTrack[] }) {
       {tracks.slice(0, 8).map((track, index) => {
         const isCurrent = player.current?.id === track.id;
         const playingThis = isCurrent && player.playing;
-        const image = track.artworkUrl ?? track.artist.avatarUrl ?? null;
+        // The artist's canonical portrait identifies the song everywhere.
+        const image = track.artist.avatarUrl ?? track.artworkUrl ?? null;
         return (
           <li key={track.id} className="flex items-center gap-3 rounded-xl bg-[#111815] p-2 transition hover:bg-[#172019]">
             <button
@@ -200,7 +205,7 @@ export function FeaturedSongs({ tracks }: { tracks: FeaturedTrack[] }) {
               className="relative shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C99520]"
             >
               {image ? (
-                <img src={image} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" loading="lazy" />
+                <img src={image} alt={`${track.artist.name} portrait`} className="h-14 w-14 shrink-0 rounded-lg object-cover" loading="lazy" />
               ) : (
                 <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-white/10 font-display text-lg font-black text-white/30">
                   {track.title.charAt(0)}
@@ -257,7 +262,7 @@ export function CategoryStrip() {
 
 type ExploreCityCard = { slug: string; name: string; countryCode: string; countryName: string; region: string; imageUrl: string | null; artists: number; tracks: number };
 
-/** Explore Africa rail — the same approved-imagery rules as the Explore page. */
+/** Explore Africa rail — same card as the Explore page. */
 export function CityRail({ cities }: { cities: ExploreCityCard[] }) {
   const featured = [...cities].sort((a, b) => b.artists - a.artists || b.tracks - a.tracks).slice(0, 8);
   if (featured.length === 0) return null;
@@ -265,25 +270,7 @@ export function CityRail({ cities }: { cities: ExploreCityCard[] }) {
     <ul className="grid grid-cols-4 gap-3 xl:grid-cols-8">
       {featured.map((city) => (
         <li key={city.slug}>
-          <Link
-            href={`/naijastream/cities/${city.slug}`}
-            data-city={city.slug}
-            className="group relative flex h-[124px] flex-col justify-end overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-emerald-900 to-[#0b0f0d] p-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C99520]"
-          >
-            {city.imageUrl ? (
-              <>
-                <img src={city.imageUrl} alt={`${city.name}, ${city.countryName}`} className="absolute inset-0 h-full w-full object-cover transition group-hover:scale-105" loading="lazy" />
-                <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" aria-hidden />
-              </>
-            ) : (
-              <span className="relative mb-1 text-[8.5px] font-bold uppercase tracking-wide text-white/40">Photo pending</span>
-            )}
-            <span className="relative block truncate font-display text-[13.5px] font-extrabold leading-tight text-white">{city.name}</span>
-            <span className="relative block truncate text-[10px] text-white/60">
-              {city.countryName}
-              {city.artists > 0 ? ` · ${city.artists} artist${city.artists === 1 ? "" : "s"}` : ""}
-            </span>
-          </Link>
+          <CityCard city={city} className="h-[148px]" sizes="(min-width: 1280px) 12vw, 24vw" />
         </li>
       ))}
     </ul>

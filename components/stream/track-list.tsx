@@ -13,7 +13,7 @@ export type ListTrack = {
   audioUrl: string | null;
   genre?: string | null;
   playCount?: string;
-  artist: { name: string; slug: string };
+  artist: { name: string; slug: string; avatarUrl?: string | null };
 };
 
 function fmt(seconds: number) {
@@ -29,7 +29,9 @@ export function TrackList({ tracks, emptyMessage }: { tracks: ListTrack[]; empty
     slug: track.slug,
     title: track.title,
     durationSec: track.durationSec,
-    artworkUrl: track.artworkUrl,
+    artworkUrl: track.artist.avatarUrl ?? track.artworkUrl,
+    artistImageUrl: track.artist.avatarUrl ?? null,
+    artistSlug: track.artist.slug,
     audioUrl: track.audioUrl,
     artistName: track.artist.name
   }));

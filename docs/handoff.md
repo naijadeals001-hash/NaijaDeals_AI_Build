@@ -1774,3 +1774,32 @@ task `NaijaDealsPreview3015`)**
 
 **Open blocker**: 35 city photographs and the six new artist portraits have not
 been generated (Kie.ai spend not approved). Estimated 41 images × $0.03 = $1.23.
+
+## NaijaStream — city photography and artist portrait completion (2026-11-08)
+
+Owner approved uncapped imagery spend ("NO CAP"). Total spent: **$1.29**
+(43 images × $0.03, GPT Image 2 1K, 6 credits each; balance 3166 → 2908 credits).
+
+- **35/35 city illustrations**, each researched to a real landmark before
+  prompting (Lekki-Ikoyi bridge, National Mosque + Aso Rock, Jamestown
+  lighthouse, Kejetia Market, African Renaissance Monument, Tables Mountain over
+  Bo-Kaap, Ponte City, KICC, Fort Jesus, Kigali Convention Centre dome,
+  St George's Cathedral, Union Buildings, Eastgate Centre, Three Dikgosi,
+  Maputo station, Qaitbay + Bibliotheca, Hassan II Mosque, Koutoubia, Hassan
+  Tower, Zitouna, Casbah + Maqamat Echahid, …). Recorded as AI-generated
+  illustrations, never as documentary photographs.
+- **14/14 artist portraits** (8 canonical portraits generated, 6 existing
+  approved files mapped by slug). Song cards, featured rows, city track lists,
+  playlists, queue and the player bar all resolve to the artist's own portrait
+  (`lib/stream/artwork.ts` rule + `PlayerTrack.artistImageUrl`).
+- **Weights**: originals 108.8 MB → delivered WebP 5.5 MB (−95%),
+  `scripts/optimize-stream-cities.mjs`; PNGs kept locally as provenance only.
+- **Design**: new `components/stream/city-card.tsx` — full-bleed image, dark
+  gradient, flag derived from the ISO code, country, real artist/track counts,
+  hover zoom; used by the mobile rail, desktop rail and Explore grid.
+- **Verification**: `scripts/stream-asset-audit.cjs` 147/147 (every image
+  decoded and pixel-sampled, registry provenance, card↔record match, city page
+  match, no wrong-city or wrong-artist image, no broken image at 320/390/768/
+  1440). Discovery QA 34/34, platform audit 52/52, audio (play/seek/next) and
+  video/podcast 10/10 regression all pass.
+- Also fixed mobile content scrolling under the player dock (bottom padding).

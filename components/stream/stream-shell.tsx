@@ -212,7 +212,7 @@ export function StreamShell({
         </div>
       </header>
 
-      <div className="pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-28 lg:pl-[240px]">{children}</div>
+      <div className="pb-[calc(14rem+env(safe-area-inset-bottom))] lg:pb-28 lg:pl-[240px]">{children}</div>
 
       <StreamPlayerBar />
 

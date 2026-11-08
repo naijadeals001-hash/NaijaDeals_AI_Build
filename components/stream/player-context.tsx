@@ -8,6 +8,9 @@ export type PlayerTrack = {
   title: string;
   durationSec: number;
   artworkUrl: string | null;
+  /** Canonical portrait of the artist, used for every surface showing this song. */
+  artistImageUrl?: string | null;
+  artistSlug?: string | null;
   audioUrl: string | null;
   artistName: string;
   isSample?: boolean;

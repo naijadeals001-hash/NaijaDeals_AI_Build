@@ -78,7 +78,9 @@ export function StreamHome({
     slug: track.slug,
     title: track.title,
     durationSec: track.durationSec,
-    artworkUrl: track.artworkUrl,
+    artworkUrl: track.artist.avatarUrl ?? track.artworkUrl,
+    artistImageUrl: track.artist.avatarUrl ?? null,
+    artistSlug: track.artist.slug,
     audioUrl: track.audioUrl,
     artistName: track.artist.name,
     isSample: track.isSample

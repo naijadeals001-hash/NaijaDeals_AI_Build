@@ -102,10 +102,10 @@ const WIDTHS = [320, 360, 390, 430, 768, 1024, 1440];
   const lagos = await page.evaluate(() => ({
     artists: document.querySelectorAll('section[aria-labelledby="city-artists"] li').length,
     tracks: document.querySelectorAll('section[aria-labelledby="city-music"] li').length,
-    pending: /City photo pending approval/.test(document.body.innerText)
+    hero: document.querySelector("header img")?.getAttribute("src") ?? null
   }));
   check("Lagos page lists real artists and tracks", lagos.artists > 0 && lagos.tracks > 0, JSON.stringify(lagos));
-  check("Lagos page states its photo status honestly", lagos.pending === true, JSON.stringify(lagos));
+  check("Lagos page shows its own city image", Boolean(lagos.hero) && /lagos\./.test(lagos.hero), JSON.stringify(lagos.hero));
 
   await page.goto(`${BASE}/naijastream/cities/kumasi`, { waitUntil: "load", timeout: 120000 });
   const empty = await page.evaluate(() => /No published Kumasi content yet/.test(document.body.innerText));

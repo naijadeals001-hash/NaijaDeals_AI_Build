@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { CameraOff, ChevronRight, Crown, Heart, ListPlus, Mic2, MoreHorizontal, Music2, Pause, Play, Podcast, Radio, Search, Video } from "lucide-react";
+import { ChevronRight, Crown, Heart, ListPlus, Mic2, MoreHorizontal, Music2, Pause, Play, Podcast, Radio, Search, Video } from "lucide-react";
 import { useStreamPlayer } from "./player-context";
 import { CoverArt } from "./cover-art";
 import { HeroCarousel, type HeroSlide } from "./hero-carousel";
+import { CityCard } from "./city-card";
 import { CATEGORY_BY_KEY, type StreamCategoryKey } from "@/lib/stream/categories";
 
 type Track = {
@@ -15,7 +16,7 @@ type Track = {
   artworkUrl: string | null;
   audioUrl: string | null;
   genre?: string | null;
-  artist: { name: string; slug: string };
+  artist: { name: string; slug: string; avatarUrl?: string | null };
 };
 type City = {
   slug: string;
@@ -74,7 +75,9 @@ export function MobileSections({
     slug: track.slug,
     title: track.title,
     durationSec: track.durationSec,
-    artworkUrl: track.artworkUrl,
+    artworkUrl: track.artist.avatarUrl ?? track.artworkUrl,
+    artistImageUrl: track.artist.avatarUrl ?? null,
+    artistSlug: track.artist.slug,
     audioUrl: track.audioUrl,
     artistName: track.artist.name
   }));
@@ -112,33 +115,9 @@ export function MobileSections({
             <Link href="/naijastream/explore" className="text-[11.5px] font-bold text-emerald-400">View All</Link>
           </div>
           <ul className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none]">
-            {cities.map((city) => (
-              <li key={city.slug} className="w-[136px] shrink-0">
-                <Link
-                  href={`/naijastream/cities/${city.slug}`}
-                  data-city={city.slug}
-                  className="isolate relative flex h-[104px] flex-col justify-end overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-emerald-900 to-[#0d1a14] p-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C99520]"
-                >
-                  {city.imageUrl ? (
-                    <>
-                      <img src={city.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                      <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/15" aria-hidden />
-                    </>
-                  ) : (
-                    <span className="relative mb-1 flex items-center gap-1 text-[8.5px] font-bold uppercase tracking-wide text-white/45">
-                      <CameraOff className="h-3 w-3" aria-hidden /> Photo soon
-                    </span>
-                  )}
-                  <span className="relative block font-display text-[14px] font-extrabold leading-tight text-white">{city.name}</span>
-                  <span className="relative mt-0.5 flex items-center gap-1 text-[10px] text-white/70">
-                    <span aria-hidden className="inline-block h-2.5 w-3.5 rounded-[1px] bg-white/70" />
-                    {city.countryName}
-                  </span>
-                  <span className="relative mt-1 block text-[10px] text-white/60">
-                    {city.artists > 0 ? `${city.artists} artist${city.artists === 1 ? "" : "s"} · ${city.tracks} track${city.tracks === 1 ? "" : "s"}` : "Awaiting local creators"}
-                  </span>
-
-                </Link>
+            {cities.slice(0, 12).map((city) => (
+              <li key={city.slug} className="w-[168px] shrink-0">
+                <CityCard city={city} className="h-[184px]" sizes="168px" />
               </li>
             ))}
           </ul>
@@ -163,7 +142,11 @@ export function MobileSections({
                     aria-label={playingThis ? `Pause ${track.title}` : `Play ${track.title}`}
                     className="relative shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C99520]"
                   >
-                    <CoverArt src={track.artworkUrl} title={track.title} className="h-12 w-12" />
+                    {track.artist.avatarUrl ? (
+                      <img src={track.artist.avatarUrl} alt={`${track.artist.name} portrait`} className="h-12 w-12 rounded-lg object-cover" loading="lazy" />
+                    ) : (
+                      <CoverArt src={track.artworkUrl} title={track.title} className="h-12 w-12" />
+                    )}
                     <span className="absolute inset-0 grid place-items-center rounded-lg bg-black/45">
                       {playingThis ? <Pause className="h-4 w-4 fill-white text-white" aria-hidden /> : <Play className="h-4 w-4 translate-x-[1px] fill-white text-white" aria-hidden />}
                     </span>
