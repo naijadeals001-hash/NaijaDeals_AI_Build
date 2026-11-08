@@ -165,6 +165,7 @@ model User {
   streamFollows     StreamFollow[]        @relation("StreamFollows")
   streamLikes       StreamLike[]          @relation("StreamLikes")
   streamMedia       StreamMediaAsset[]     @relation("StreamMediaOwner")
+  streamSubscriptions StreamSubscription[] @relation("StreamSubscriptions")
   streamArtist      StreamArtist?
   disputes          Dispute[]          @relation("CustomerDisputes")
   adminActions      AdminAction[]
@@ -1945,4 +1946,62 @@ model StreamMediaAsset {
 
   @@index([ownerId, status])
   @@index([kind, status])
+}
+
+// --- NaijaStream Premium subscriptions (shared NaijaPay ledger) -------------
+
+enum StreamSubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PAST_DUE
+}
+
+model StreamPlan {
+  id           String   @id @default(cuid())
+  code         String   @unique          // FREE | BASIC | STANDARD | PREMIUM
+  name         String
+  description  String?
+  priceKobo    BigInt   @default(0)
+  interval     String   @default("MONTH") // MONTH | YEAR
+  currency     String   @default("NGN")
+  features     String[] @default([])
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  subscriptions StreamSubscription[]
+}
+
+model StreamSubscription {
+  id             String                    @id @default(cuid())
+  userId         String
+  planId         String
+  status         StreamSubscriptionStatus @default(ACTIVE)
+  startsAt       DateTime                  @default(now())
+  currentPeriodEnd DateTime
+  cancelAtPeriodEnd Boolean                @default(false)
+  cancelledAt    DateTime?
+  provider       String                    @default("wallet") // wallet | test | paystack | flutterwave
+  ledgerReference String?                  @unique
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  user           User                      @relation("StreamSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  plan           StreamPlan                @relation(fields: [planId], references: [id])
+
+  @@index([userId, status])
+}
+
+model StreamBillingRecord {
+  id             String   @id @default(cuid())
+  subscriptionId String
+  userId         String
+  amountKobo     BigInt
+  currency       String   @default("NGN")
+  ledgerReference String
+  periodStart    DateTime
+  periodEnd      DateTime
+  status         String   @default("PAID")
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
 }

@@ -46,9 +46,12 @@ export default async function LivePage() {
       <h1 className="font-display text-[26px] font-extrabold">Live events</h1>
       <p className="mt-1 text-[12px] text-white/50">Concerts, listening sessions and creator broadcasts.</p>
 
-      <div className="mt-4 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] p-4 text-[12px] leading-6 text-amber-100/80">
-        <p className="font-extrabold">Live streaming is not enabled</p>
-        <p className="mt-1">Broadcast ingestion (RTMP/HLS) requires media infrastructure that is not configured here. Scheduled events are real; an event only shows as LIVE once an organiser publishes a working stream.</p>
+      <div className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-500/[0.07] p-4 text-[12px] leading-6 text-emerald-100/80">
+        <p className="font-extrabold">Live streaming is enabled</p>
+        <p className="mt-1">
+          Organisers broadcast from the creator studio. An event shows LIVE only while the encoder is running and the
+          stream is playable; when broadcasting stops the event moves to Ended.
+        </p>
       </div>
 
       {events.length === 0 ? (

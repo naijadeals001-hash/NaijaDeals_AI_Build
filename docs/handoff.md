@@ -1628,3 +1628,21 @@ Verification (all against the running preview):
 - Regression: full QA 19 routes, API 23/23, features 9/9, royalty 8/8.
 Still blocked by design: ticketed events (needs entitlements/payment) and
 premium/Aura providers.
+
+## NaijaStream — Premium subscriptions + live copy fix (2026-11-08)
+
+- Premium is now a complete workflow on the shared NaijaPay ledger: StreamPlan
+  catalogue (admin-managed via DB), StreamSubscription + StreamBillingRecord,
+  wallet-paid checkout (balanced ledger transaction, unique reference), repeat
+  subscribe no-ops, entitlement check isPremium(), cancellation (idempotent,
+  access until period end), period expiry, and billing history.
+- Removed the unique (userId, planId, status) index that blocked resubscribing
+  after cancellation (migration stream_subscription_resubscribe).
+- Live page copy corrected — streaming is enabled; it previously still claimed
+  it was not.
+- Plan prices in prisma/stream-plans-seed.cjs are PLACEHOLDERS requiring owner
+  approval; card/bank billing stays gated (no provider credentials, TEST DB).
+Verified: scripts/stream-premium-verify.cjs 11/11 (wallet debit, no double
+charge, ledger reconciles, cancel, resubscribe, guest sign-in prompt).
+Regression: full QA 19 routes, API 23/23, features 9/9, upload 11/11,
+video+podcast 10/10, livestream 7/7, audio verify pass, royalty 8/8.
