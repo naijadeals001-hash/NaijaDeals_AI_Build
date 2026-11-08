@@ -41,6 +41,13 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
     return <>{children}</>;
   }
 
+  // NaijaShop owns its full storefront chrome (header, department nav, bottom
+  // navigation and footer) on every one of its routes, matching the approved
+  // mockup, so the ecosystem shell is skipped entirely.
+  if (pathname?.startsWith("/naijashop")) {
+    return <>{children}</>;
+  }
+
   // The storefront and NaijaEats landing use the full-bleed layout; the ecosystem
   // sidebar starts on the remaining inner routes.
   const isHome = pathname === "/" || pathname === "/naijaeats" || pathname === "/naijashop";

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { NaijaShopPage } from "@/components/commerce/naijashop";
+import { NaijaShopStorefront } from "@/components/shop/storefront";
 import { ShopFooter } from "@/components/commerce/shop-footer";
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <Suspense fallback={<div className="rounded-2xl border border-border-soft bg-canvas p-5 font-bold text-muted">Loading marketplace...</div>}>
-      <NaijaShopPage />
+      <NaijaShopStorefront />
       <ShopFooter />
     </Suspense>
   );

@@ -1,0 +1,513 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowRight,
+  ChevronDown,
+  ChevronRight,
+  Gamepad2,
+  Grid2x2,
+  Heart,
+  Home as HomeIcon,
+  Laptop,
+  MapPin,
+  Menu,
+  Package,
+  Search,
+  Shirt,
+  ShoppingBasket,
+  ShoppingCart,
+  Sparkles,
+  Smartphone,
+  Store,
+  Tag,
+  Truck,
+  User,
+  Wallet,
+  Zap
+} from "lucide-react";
+import { apiClient, type ApiCategory, type ApiProduct } from "@/lib/api-client";
+import type { ShopProduct } from "./product-card";
+import { ShopHeroCarousel, type ShopHeroSlide } from "./hero-carousel";
+import { ShopProductCard } from "./product-card";
+
+/** Approved launch campaign, used until an operator publishes slides. */
+const LAUNCH_SLIDES: ShopHeroSlide[] = [
+  {
+    id: "african-brands",
+    eyebrow: "NaijaShop",
+    headline: "Big deals on African brands",
+    body: "Electronics, fashion, home and groceries from verified Nigerian sellers — escrow-protected, with tracked delivery nationwide.",
+    ctaLabel: "Shop the deals",
+    ctaHref: "/naijashop/deals",
+    imageUrl: "/generated/shop/hero-desktop.webp",
+    sideTitle: "NaijaShop Prime",
+    sideBody: "Faster delivery, Prime-only deals and early access to sales.",
+    sideCtaLabel: "See Prime plans",
+    sideCtaHref: "/naijashop/prime"
+  },
+  {
+    id: "electronics",
+    eyebrow: "Electronics hub",
+    headline: "Phones, laptops and power that last",
+    body: "Compare verified sellers side by side. Every checkout is protected until your order arrives.",
+    ctaLabel: "Shop electronics",
+    ctaHref: "/naijashop/c/phones-tablets",
+    imageUrl: "/generated/shop/hero-electronics.webp",
+    sideTitle: "Solar and power",
+    sideBody: "Inverters, panels and power banks built for Nigerian power realities.",
+    sideCtaLabel: "Shop power",
+    sideCtaHref: "/naijashop/c/power-solar"
+  },
+  {
+    id: "fashion",
+    eyebrow: "Fashion",
+    headline: "Fashion for every style",
+    body: "Trendy, authentic and affordable — from Nigerian makers to your door.",
+    ctaLabel: "Shop fashion",
+    ctaHref: "/naijashop/c/fashion",
+    imageUrl: "/generated/shop/hero-fashion.webp",
+    sideTitle: "Support Nigerian sellers",
+    sideBody: "Local businesses, verified before they list.",
+    sideCtaLabel: "Meet our sellers",
+    sideCtaHref: "/naijashop/sellers"
+  }
+];
+
+const SERVICE_TILES = [
+  { label: "Today's Deals", href: "/naijashop/deals", icon: Tag },
+  { label: "Flash Sales", href: "/naijashop/deals", icon: Zap },
+  { label: "Bestsellers", href: "/naijashop/bestsellers", icon: Sparkles },
+  { label: "NaijaShop Prime", href: "/naijashop/prime", icon: Package },
+  { label: "Local Sellers", href: "/naijashop/sellers", icon: Store },
+  { label: "Electronics", href: "/naijashop/c/phones-tablets", icon: Smartphone },
+  { label: "Fashion", href: "/naijashop/c/fashion", icon: Shirt },
+  { label: "Home & Kitchen", href: "/naijashop/c/home-kitchen", icon: HomeIcon }
+];
+
+const BOTTOM_NAV = [
+  { label: "Home", href: "/naijashop", icon: HomeIcon },
+  { label: "Categories", href: "/naijashop/categories", icon: Grid2x2 },
+  { label: "Cart", href: "/cart", icon: ShoppingCart },
+  { label: "Account", href: "/account", icon: User }
+];
+
+type StorefrontConfig = {
+  announcement?: string;
+  showHero?: boolean;
+  showShelves?: boolean;
+  shelfLimit?: number;
+  heroSlides?: ShopHeroSlide[];
+};
+
+export function NaijaShopStorefront() {
+  const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [error, setError] = useState("");
+  const [cartCount, setCartCount] = useState(0);
+  const [addingId, setAddingId] = useState("");
+  const [destination, setDestination] = useState("Lagos, Nigeria");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [config, setConfig] = useState<StorefrontConfig>({});
+  const [missingArt, setMissingArt] = useState<Record<string, boolean>>({});
+  const markMissing = (key: string) => setMissingArt((current) => (current[key] ? current : { ...current, [key]: true }));
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([apiClient.getProducts(), apiClient.getCategories()])
+      .then(([items, cats]) => {
+        if (!active) return;
+        setProducts(items);
+        setCategories(cats);
+        setStatus("ready");
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Unable to load the marketplace.");
+        setStatus("error");
+      });
+    Promise.allSettled([apiClient.getCart(), apiClient.getAddresses()]).then(([cart, addresses]) => {
+      if (!active) return;
+      if (cart.status === "fulfilled") {
+        const value = cart.value as { items?: Array<{ quantity: number; savedForLater?: boolean }> };
+        setCartCount(value?.items?.filter((item) => !item.savedForLater).reduce((sum, item) => sum + item.quantity, 0) ?? 0);
+      }
+      if (addresses.status === "fulfilled") {
+        const list = addresses.value as Array<{ city?: string; state?: string; isDefault?: boolean }>;
+        const chosen = list.find((address) => address.isDefault) ?? list[0];
+        if (chosen) setDestination([chosen.city, chosen.state].filter(Boolean).join(", "));
+      }
+    });
+    fetch("/api/storefront")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((value) => active && value && setConfig(value as StorefrontConfig))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
+  const slides = config.heroSlides && config.heroSlides.length > 0 ? config.heroSlides : LAUNCH_SLIDES;
+  const shelfLimit = config.shelfLimit && config.shelfLimit > 0 ? config.shelfLimit : 4;
+  const byCategory = useMemo(() => {
+    const map = new Map<string, ApiProduct[]>();
+    for (const product of products) {
+      const key = product.category?.slug ?? "other";
+      map.set(key, [...(map.get(key) ?? []), product]);
+    }
+    return map;
+  }, [products]);
+
+  const deals = useMemo(
+    () =>
+      [...products]
+        .filter((product) => product.priceKobo)
+        .sort((a, b) => Number(a.priceKobo) - Number(b.priceKobo))
+        .slice(0, 6),
+    [products]
+  );
+
+  async function addToCart(product: ShopProduct) {
+    setAddingId(product.id);
+    setNotice("");
+    try {
+      await apiClient.addCartItem(product.id, 1);
+      setCartCount((count) => count + 1);
+      setNotice(`${product.name} added to cart.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not add to cart.";
+      setNotice(/sign in|unauthor|401/i.test(message) ? "Sign in to add items to your cart." : message);
+    } finally {
+      setAddingId("");
+    }
+  }
+
+  return (
+    <div className="bg-white text-[#0f1111]">
+      {/* ---------- Header ---------- */}
+      <header className="bg-[#0f1b2d] text-white">
+        <div className="mx-auto flex max-w-[1600px] items-center gap-2 px-3 py-2 sm:gap-4 sm:px-4">
+          <button
+            ref={menuButtonRef}
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            aria-expanded={menuOpen}
+            className="grid h-9 w-9 place-items-center rounded hover:bg-white/10 lg:hidden"
+          >
+            <Menu className="h-5 w-5" aria-hidden />
+          </button>
+
+          <Link href="/naijashop" className="flex shrink-0 items-center gap-1.5" aria-label="NaijaShop home">
+            <span className="text-[22px] font-extrabold tracking-tight sm:text-[26px]">
+              Naija<span className="text-[#f7b733]">Shop</span>
+            </span>
+            <span className="hidden text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50 sm:block">Africa&apos;s marketplace</span>
+          </Link>
+
+          <Link href="/account#addresses" className="hidden items-start gap-1.5 rounded px-2 text-[11px] leading-tight text-white/80 hover:text-white lg:flex">
+            <MapPin className="mt-0.5 h-4 w-4 text-[#f7b733]" aria-hidden />
+            <span>
+              <span className="block text-white/60">Deliver to</span>
+              <span className="block text-[13px] font-bold text-white">{destination}</span>
+            </span>
+          </Link>
+
+          <form action="/naijashop/search" method="get" className="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-md bg-white">
+            <label htmlFor="shop-q" className="sr-only">
+              Search NaijaShop products, brands and categories
+            </label>
+            <input
+              id="shop-q"
+              name="q"
+              type="search"
+              placeholder="Search NaijaShop (products, brands, categories)…"
+              className="min-h-10 min-w-0 flex-1 bg-white px-3 text-[13px] text-[#0f1111] outline-none placeholder:text-[#6b7280]"
+            />
+            <button type="submit" aria-label="Search" className="grid w-11 place-items-center bg-[#ffb020] text-[#12100a] transition hover:bg-[#f59e0b]">
+              <Search className="h-4 w-4" aria-hidden />
+            </button>
+          </form>
+
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Link href="/account" className="hidden flex-col px-2 text-[11px] leading-tight hover:text-[#f7b733] sm:flex">
+              <span className="text-white/60">Hello, sign in</span>
+              <span className="text-[13px] font-bold">Account &amp; Lists</span>
+            </Link>
+            <Link href="/orders" className="hidden flex-col px-2 text-[11px] leading-tight hover:text-[#f7b733] md:flex">
+              <span className="text-white/60">Returns</span>
+              <span className="text-[13px] font-bold">&amp; Orders</span>
+            </Link>
+            <Link href="/account" aria-label="Account" className="grid h-9 w-9 place-items-center rounded hover:bg-white/10 sm:hidden">
+              <User className="h-5 w-5" aria-hidden />
+            </Link>
+            <Link href="/cart" className="relative flex items-center gap-1.5 rounded px-2 py-1 hover:text-[#f7b733]" aria-label={`Cart, ${cartCount} items`}>
+              <ShoppingCart className="h-6 w-6" aria-hidden />
+              <span className="absolute -top-0.5 left-4 grid h-4 min-w-4 place-items-center rounded-full bg-[#f7b733] px-1 text-[10px] font-black text-[#12100a]">
+                {cartCount}
+              </span>
+              <span className="hidden text-[13px] font-bold sm:inline">Cart</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Department strip */}
+        <nav aria-label="Departments" className="border-t border-white/10 bg-[#132339]">
+          <div className="mx-auto flex max-w-[1600px] items-center gap-1 overflow-x-auto px-2 text-[12.5px] [scrollbar-width:none] sm:px-4">
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              className="flex shrink-0 items-center gap-1.5 px-2 py-2 font-bold hover:text-[#f7b733]"
+            >
+              <Menu className="h-4 w-4" aria-hidden /> All
+            </button>
+            <Link href="/naijashop/deals" className="shrink-0 px-2 py-2 hover:text-[#f7b733]">Deals</Link>
+            {categories.map((category) => (
+              <Link key={category.id} href={`/naijashop/c/${category.slug}`} className="shrink-0 px-2 py-2 hover:text-[#f7b733]">
+                {category.name}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      </header>
+
+      {menuOpen ? (
+        <div className="fixed inset-0 z-[60] flex" role="dialog" aria-modal="true" aria-label="Browse departments">
+          <button type="button" aria-label="Close menu" onClick={() => setMenuOpen(false)} className="absolute inset-0 bg-black/55" />
+          <div className="relative flex h-full w-[86%] max-w-sm flex-col overflow-y-auto bg-white text-[#0f1111] shadow-2xl">
+            <p className="flex items-center gap-2 bg-[#0f1b2d] px-4 py-3 text-[15px] font-bold text-white">
+              <User className="h-5 w-5" aria-hidden /> Hello
+            </p>
+            <p className="border-b border-[#e3e6e6] px-4 py-2 text-[12px] font-bold text-[#565959]">Shop by department</p>
+            <ul>
+              {categories.map((category) => (
+                <li key={category.id}>
+                  <Link href={`/naijashop/c/${category.slug}`} onClick={() => setMenuOpen(false)} className="flex items-center justify-between px-4 py-2.5 text-[13.5px] hover:bg-[#f3f4f6]">
+                    {category.name}
+                    <ChevronRight className="h-4 w-4 text-[#565959]" aria-hidden />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <p className="border-y border-[#e3e6e6] px-4 py-2 text-[12px] font-bold text-[#565959]">Help &amp; settings</p>
+            <ul className="pb-8">
+              {[
+                { label: "Your account", href: "/account" },
+                { label: "Your orders", href: "/orders" },
+                { label: "Your cart", href: "/cart" },
+                { label: "NaijaPay wallet", href: "/wallet" },
+                { label: "Sell on NaijaShop", href: "/sell" },
+                { label: "Customer service", href: "/naijashop/help" }
+              ].map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 text-[13.5px] hover:bg-[#f3f4f6]">
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
+
+      <main className="mx-auto max-w-[1600px] px-2 pb-24 sm:px-4 lg:pb-10">
+        {config.announcement ? (
+          <p role="status" className="mb-2 rounded bg-[#fff3cd] px-3 py-1.5 text-[11.5px] font-semibold text-[#5c4400]">
+            {config.announcement}
+          </p>
+        ) : null}
+        {notice ? (
+          <p role="status" className="mb-2 flex items-center justify-between gap-3 rounded bg-[#e7f6ec] px-3 py-2 text-[12px] font-semibold text-[#0b5c2e]">
+            {notice}
+            <button type="button" onClick={() => setNotice("")} className="text-[11px] font-bold underline">
+              Dismiss
+            </button>
+          </p>
+        ) : null}
+
+        {/* Hero */}
+        {config.showHero === false ? null : (
+          <div className="pt-2">
+            <ShopHeroCarousel slides={slides} />
+          </div>
+        )}
+
+        {/* Service tiles */}
+        <section aria-label="Quick links" className="mt-3 rounded-lg bg-white p-2 ring-1 ring-[#e3e6e6]">
+          <ul className="grid grid-cols-4 gap-1 sm:grid-cols-4 lg:grid-cols-8">
+            {SERVICE_TILES.map((tile) => (
+              <li key={tile.label}>
+                <Link href={tile.href} className="flex flex-col items-center gap-1 rounded p-1.5 text-center hover:bg-[#f7f8f8] sm:p-2">
+                  <tile.icon className="h-5 w-5 text-[#005f4b] sm:h-6 sm:w-6" aria-hidden />
+                  <span className="text-[10px] font-semibold leading-tight sm:text-[11.5px]">{tile.label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {status === "error" ? (
+          <p role="alert" className="mt-3 rounded border border-[#f5c2c0] bg-[#fdf2f2] p-3 text-[12.5px] text-[#8a1c14]">
+            {error}
+          </p>
+        ) : null}
+        {status === "loading" ? (
+          <p className="mt-6 text-center text-[12.5px] text-[#565959]">Loading the marketplace…</p>
+        ) : null}
+
+        {/* Deals of the day */}
+        {deals.length > 0 ? (
+          <section aria-labelledby="deals-heading" className="mt-4 rounded-lg bg-white p-3 ring-1 ring-[#e3e6e6]">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 id="deals-heading" className="flex items-center gap-2 font-display text-[19px] font-extrabold">
+                Deals of the day
+                <span className="rounded bg-[#cc0c39] px-1.5 py-0.5 text-[10px] font-bold text-white">Limited time</span>
+              </h2>
+              <Link href="/naijashop/deals" className="text-[12px] font-semibold text-[#007185] hover:underline">
+                See all deals
+              </Link>
+            </div>
+            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              {deals.map((product) => (
+                <li key={product.id}>
+                  <ShopProductCard product={product} onAdd={addToCart} adding={addingId === product.id} variant="deal" />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {/* Category tiles */}
+        <section aria-labelledby="category-heading" className="mt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 id="category-heading" className="font-display text-[19px] font-extrabold">Shop by category</h2>
+            <Link href="/naijashop/categories" className="text-[12px] font-semibold text-[#007185] hover:underline">
+              See all categories
+            </Link>
+          </div>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
+            {categories.map((category) => (
+              <li key={category.id}>
+                <Link href={`/naijashop/c/${category.slug}`} data-category={category.slug} className="group block overflow-hidden rounded-lg bg-white ring-1 ring-[#e3e6e6] transition hover:shadow-md">
+                  <div className="aspect-[4/3] w-full overflow-hidden bg-[#f7f8f8]">
+                    {(() => {
+                      // Prefer operator artwork; otherwise use the first product photo in the department.
+                      const url = (category as ApiCategory & { imageUrl?: string | null }).imageUrl ?? byCategory.get(category.slug)?.[0]?.images?.[0]?.url ?? null;
+                      return url && !missingArt[url] ? (
+                        <img src={url} alt={category.name} loading="lazy" onError={() => markMissing(url)} className="h-full w-full object-contain p-2 transition duration-300 group-hover:scale-105" />
+                      ) : (
+                        <div className="grid h-full w-full place-items-center bg-[#f0f2f2] text-[11px] font-semibold text-[#565959]">{category.name}</div>
+                      );
+                    })()}
+                  </div>
+                  <p className="px-2 py-2 text-center text-[12px] font-bold">{category.name}</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* Product shelves */}
+        {config.showShelves === false
+          ? null
+          : categories.map((category) => {
+              const items = (byCategory.get(category.slug) ?? []).slice(0, shelfLimit);
+              if (items.length === 0) return null;
+              return (
+                <section key={category.id} aria-labelledby={`shelf-${category.slug}`} className="mt-4 rounded-lg bg-white p-3 ring-1 ring-[#e3e6e6]">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h2 id={`shelf-${category.slug}`} className="font-display text-[18px] font-extrabold">
+                      {category.name}
+                    </h2>
+                    <Link href={`/naijashop/c/${category.slug}`} className="text-[12px] font-semibold text-[#007185] hover:underline">
+                      See more
+                    </Link>
+                  </div>
+                  <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                    {items.map((product) => (
+                      <li key={product.id}>
+                        <ShopProductCard product={product} onAdd={addToCart} adding={addingId === product.id} />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+
+        {/* Lower promotional banners */}
+        <section aria-label="Promotions" className="mt-4 grid gap-3 lg:grid-cols-3">
+          {[
+            { title: "Electronics hub", body: "Top gadgets and fast delivery.", cta: "Shop electronics", href: "/naijashop/c/phones-tablets", image: "/generated/shop/banner-electronics.webp", tint: "from-[#3b2f7a]" },
+            { title: "Fast, reliable delivery", body: "Tracked to all 36 states + FCT.", cta: "How delivery works", href: "/naijashop/help", image: "/generated/shop/banner-delivery.webp", tint: "from-[#0b5c3b]" },
+            { title: "Support Nigerian sellers", body: "Shop verified local businesses.", cta: "Shop local sellers", href: "/naijashop/sellers", image: "/generated/shop/banner-sellers.webp", tint: "from-[#7a3b12]" }
+          ].map((banner) => (
+            <Link key={banner.title} href={banner.href} className={`relative block min-h-[132px] overflow-hidden rounded-lg bg-gradient-to-r ${banner.tint} to-[#0f1111]`}>
+              {!missingArt[banner.image] ? (
+                <img src={banner.image} alt="" loading="lazy" onError={() => markMissing(banner.image)} className="absolute inset-0 h-full w-full object-cover opacity-60" />
+              ) : null}
+              <span className="relative flex h-full flex-col justify-center gap-1 p-4 text-white">
+                <span className="font-display text-[17px] font-extrabold">{banner.title}</span>
+                <span className="text-[11.5px] text-white/85">{banner.body}</span>
+                <span className="mt-1 w-fit rounded-full bg-white px-3 py-1 text-[11px] font-bold text-[#0f1111]">{banner.cta}</span>
+              </span>
+            </Link>
+          ))}
+        </section>
+
+        {/* Trust strip */}
+        <section aria-label="Why shop with NaijaShop" className="mt-4 grid gap-2 rounded-lg bg-white p-3 ring-1 ring-[#e3e6e6] sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: Truck, title: "Nationwide delivery", body: "To all 36 states and the FCT." },
+            { icon: Wallet, title: "Secure payments", body: "Escrow-protected with NaijaPay." },
+            { icon: Package, title: "Tracked orders", body: "Follow every order to your door." },
+            { icon: Heart, title: "Support local", body: "Empowering Nigerian businesses." }
+          ].map((item) => (
+            <div key={item.title} className="flex items-start gap-2">
+              <item.icon className="mt-0.5 h-5 w-5 text-[#005f4b]" aria-hidden />
+              <div>
+                <p className="text-[12.5px] font-bold">{item.title}</p>
+                <p className="text-[11.5px] text-[#565959]">{item.body}</p>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <p className="mt-4 text-center">
+          <a href="#top" className="rounded bg-[#37475a] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#485769]">
+            Back to top
+          </a>
+        </p>
+      </main>
+
+      {/* Mobile bottom navigation */}
+      <nav aria-label="Shop navigation" className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e3e6e6] bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
+        <ul className="grid grid-cols-4">
+          {BOTTOM_NAV.map((item) => (
+            <li key={item.label}>
+              <Link href={item.href} className="flex flex-col items-center gap-0.5 py-2 text-[10.5px] font-semibold text-[#565959] hover:text-[#0f1111]">
+                <item.icon className="h-5 w-5" aria-hidden />
+                {item.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+  );
+}
