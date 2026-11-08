@@ -1569,3 +1569,24 @@ works (→18.5s), next switches track; podcast plays (3.89s/95s); video plays
 (2.4s, 960x640). Preview: http://localhost:3015/naijastream.
 Remaining stubs: premium (needs provider), aura (needs model), notifications
 (needs event wiring) — each explains its dependency.
+
+## NaijaStream — notifications, panels, settings, Explore Africa (2026-11-08)
+
+Phase 0 audit found: three stub pages, no right-panel data, non-editable
+profile. Delivered:
+- Notifications: real API over the shared PartnerNotification store (stream.*
+  kinds), unread count, mark-all-read, page. New publish endpoint
+  /api/stream/studio/tracks/[slug]/publish enforces ownership + audio + rights
+  declaration and notifies followers.
+- Right panel per the reference: "Recommended for you" (real artists) and
+  "On repeat" (live queue with click-to-play).
+- Creator profile settings: editable name/bio/avatar/cover/genres, persisted
+  via /api/stream/profile with audit logging.
+- Explore Africa: country grouping and genre chips from live catalogue data,
+  with an explicit note that nothing is ranked by invented statistics.
+Verified with scripts/stream-features-verify.cjs (9/9): sign-in, follow,
+profile persists after reload, panels render, queue populates, notifications
+render, Explore shows countries+genres. Regression: full QA 19/19 routes,
+audio verify pass, API 23/23, royalty 8/8, NaijaPay QA pass.
+Still blocked (documented on-page): premium billing, Aura, live ingestion,
+upload publishing (object storage).

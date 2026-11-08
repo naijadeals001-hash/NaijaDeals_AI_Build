@@ -19,6 +19,7 @@ import {
   Search,
   Sparkles,
   Compass,
+  Globe2,
   Upload,
   User,
   Video
@@ -28,6 +29,7 @@ import { StreamPlayerBar } from "./player-bar";
 const primaryNav = [
   { label: "Home", href: "/naijastream", icon: Home },
   { label: "Discover", href: "/naijastream/discover", icon: Compass },
+  { label: "Explore Africa", href: "/naijastream/explore", icon: Globe2 },
   { label: "Music", href: "/naijastream/music", icon: Music2 },
   { label: "Podcasts", href: "/naijastream/podcasts", icon: Podcast },
   { label: "Live Events", href: "/naijastream/live", icon: Radio },

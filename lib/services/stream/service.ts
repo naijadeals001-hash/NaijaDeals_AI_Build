@@ -397,3 +397,52 @@ export async function settleRoyalties(artistId: string, period: string, actorId:
 }
 
 export type { StreamTrackStatus };
+
+/** Create a NaijaStream notification (shared notification store). */
+export async function notifyListener(input: { userId: string; kind: string; title: string; body?: string; href?: string }) {
+  return prisma.partnerNotification.create({
+    data: { userId: input.userId, kind: `stream.${input.kind}`, title: input.title, body: input.body ?? null, href: input.href ?? null }
+  });
+}
+
+/** Notify followers of an artist about a new release. */
+export async function notifyFollowersOfRelease(artistId: string, trackTitle: string, trackSlug: string) {
+  const followers = await prisma.streamFollow.findMany({ where: { artistId }, select: { userId: true } });
+  if (followers.length === 0) return 0;
+  await prisma.partnerNotification.createMany({
+    data: followers.map((f) => ({
+      userId: f.userId,
+      kind: "stream.new_release",
+      title: `New release: ${trackTitle}`,
+      body: "An artist you follow just published a new track.",
+      href: `/naijastream/tracks/${trackSlug}`
+    }))
+  });
+  return followers.length;
+}
+
+/** Explore Africa: real catalogue grouped by the artist's country. */
+export async function exploreAfrica() {
+  const artists = await prisma.streamArtist.findMany({
+    where: { verified: true, ...(showSamples ? {} : { isSample: false }) },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      avatarUrl: true,
+      genres: true,
+      countryCode: true,
+      tracks: { where: publicTrackWhere, select: { id: true } }
+    }
+  });
+
+  const byCountry = new Map<string, Array<{ id: string; name: string; slug: string; avatarUrl: string | null; genres: string[]; tracks: number }>>();
+  for (const artist of artists) {
+    const list = byCountry.get(artist.countryCode) ?? [];
+    list.push({ id: artist.id, name: artist.name, slug: artist.slug, avatarUrl: artist.avatarUrl, genres: artist.genres, tracks: artist.tracks.length });
+    byCountry.set(artist.countryCode, list);
+  }
+  return [...byCountry.entries()]
+    .map(([countryCode, list]) => ({ countryCode, artists: list.sort((a, b) => b.tracks - a.tracks) }))
+    .sort((a, b) => b.artists.length - a.artists.length);
+}

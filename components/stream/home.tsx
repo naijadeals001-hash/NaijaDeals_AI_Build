@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BadgeCheck, Pause, Play, Plus } from "lucide-react";
 import { useStreamPlayer } from "./player-context";
 import { CoverArt } from "./cover-art";
+import { StreamRightPanel } from "./right-panel";
 
 export type StreamCardTrack = {
   id: string;
@@ -246,32 +247,8 @@ export function StreamHome({ data, signedIn }: { data: StreamHomeData; signedIn:
         </Rail>
       </main>
 
-      {/* Right panel */}
-      <aside className="space-y-4 lg:sticky lg:top-20 lg:h-fit">
-        <NowPlayingPanel />
-        <section className="rounded-xl border border-white/10 bg-[#101613] p-4">
-          <h2 className="text-[12px] font-extrabold uppercase tracking-widest text-white/45">Live now</h2>
-          {data.live.length === 0 ? (
-            <p className="mt-2 text-[11.5px] leading-5 text-white/55">
-              No live sessions are streaming. Live audio requires verified ingest and transcoding, which are not configured yet.
-            </p>
-          ) : (
-            <ul className="mt-2 space-y-2">
-              {data.live.map((item) => (
-                <li key={item.id} className="text-[12px] font-semibold text-white/80">{item.title}</li>
-              ))}
-            </ul>
-          )}
-        </section>
-        <section className="rounded-xl border border-white/10 bg-[#101613] p-4">
-          <h2 className="text-[12px] font-extrabold uppercase tracking-widest text-white/45">Creator tools</h2>
-          <ul className="mt-2 space-y-1.5 text-[12px] font-semibold text-white/70">
-            <li><Link href="/naijastream/studio" className="hover:text-emerald-300">Creator studio →</Link></li>
-            <li><Link href="/naijastream/studio/upload" className="hover:text-emerald-300">Upload a release →</Link></li>
-            <li><Link href="/naijastream/studio/royalties" className="hover:text-emerald-300">Royalties &amp; payouts →</Link></li>
-          </ul>
-        </section>
-      </aside>
+      {/* Right panel — Recommended for You + On Repeat (real data) */}
+      <StreamRightPanel artists={data.artists} />
     </div>
   );
 }

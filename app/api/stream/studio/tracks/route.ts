@@ -3,6 +3,7 @@ import { assertSameOrigin, jsonError, readJson, requireString, requireUser } fro
 import { prisma } from "@/lib/prisma";
 import { jsonSafe } from "@/lib/services/core/serialize";
 import { ApiError } from "@/lib/auth/api-error";
+import { notifyFollowersOfRelease } from "@/lib/services/stream/service";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
       },
       select: { id: true, title: true, slug: true, status: true }
     });
+    // Drafts do not notify; publishing does (see the publish endpoint).
     return NextResponse.json(jsonSafe(track), { status: 201 });
   } catch (error) {
     return jsonError(error);
