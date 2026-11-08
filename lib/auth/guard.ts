@@ -24,6 +24,16 @@ export function hasAdminConsoleAccess(user: SessionUser): boolean {
   return isAdmin(user) || roleNames(user).some((name) => isStaffRole(name));
 }
 
+/** Session user id if signed in, otherwise null — for public pages that personalise. */
+export async function getOptionalUserId(): Promise<string | null> {
+  try {
+    const user = await requireUser();
+    return user.id;
+  } catch {
+    return null;
+  }
+}
+
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireUser();
   if (!hasAdminConsoleAccess(user)) {

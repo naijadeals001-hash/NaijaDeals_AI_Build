@@ -160,6 +160,11 @@ model User {
   carts             Cart[]
   orders            Order[]            @relation("CustomerOrders")
   wallets           Wallet[]
+  streamPlaylists   StreamPlaylist[]      @relation("StreamPlaylistOwner")
+  streamPlaylistFollows StreamPlaylistFollow[] @relation("StreamPlaylistFollows")
+  streamFollows     StreamFollow[]        @relation("StreamFollows")
+  streamLikes       StreamLike[]          @relation("StreamLikes")
+  streamArtist      StreamArtist?
   disputes          Dispute[]          @relation("CustomerDisputes")
   adminActions      AdminAction[]
   auditLogs         AuditLog[]
@@ -1599,4 +1604,226 @@ model GigSiteConfig {
   announcement  String?
   updatedBy     String?
   updatedAt     DateTime @updatedAt
+}
+
+// ===========================================================================
+// NaijaStream — music & audio streaming vertical
+// Reuses shared users, wallets and the double-entry ledger. Money appears only
+// as rows in the existing WalletTransaction/LedgerEntry tables; NaijaStream
+// tables hold catalog, social graph, play telemetry and royalty accruals.
+// ===========================================================================
+
+enum StreamTrackStatus {
+  DRAFT
+  PROCESSING
+  PUBLISHED
+  UNPUBLISHED
+  TAKEDOWN
+}
+
+enum StreamReleaseType {
+  SINGLE
+  EP
+  ALBUM
+  PODCAST
+  MIX
+  LIVE
+}
+
+enum StreamRoyaltyStatus {
+  ACCRUED
+  STATEMENTED
+  PAID
+  VOID
+}
+
+model StreamArtist {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  name          String
+  slug          String   @unique
+  bio           String?
+  avatarUrl     String?
+  coverUrl      String?
+  verified      Boolean  @default(false)
+  verifiedAt    DateTime?
+  countryCode   String   @default("NG")
+  genres        String[] @default([])
+  isSample      Boolean  @default(false)
+  commissionBps Int      @default(1200)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  releases      StreamRelease[]
+  tracks        StreamTrack[]
+  playlists     StreamPlaylist[]
+  follows       StreamFollow[]
+
+  @@index([verified, isSample])
+}
+
+model StreamRelease {
+  id          String            @id @default(cuid())
+  artistId    String
+  title       String
+  slug        String            @unique
+  type        StreamReleaseType @default(SINGLE)
+  artworkUrl  String?
+  description String?
+  releasedAt  DateTime?
+  isPublished Boolean           @default(false)
+  isSample    Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  artist      StreamArtist      @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  tracks      StreamTrack[]
+
+  @@index([artistId, isPublished])
+}
+
+model StreamTrack {
+  id           String            @id @default(cuid())
+  artistId     String
+  releaseId    String?
+  title        String
+  slug         String            @unique
+  durationSec  Int
+  audioUrl     String?
+  artworkUrl   String?
+  genre        String?
+  language     String?
+  explicit     Boolean           @default(false)
+  status       StreamTrackStatus @default(DRAFT)
+  rightsDeclared Boolean         @default(false)
+  publishedAt  DateTime?
+  playCount    BigInt            @default(0)
+  isSample     Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  artist       StreamArtist      @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  release      StreamRelease?    @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+  plays        StreamPlay[]
+  playlistItems StreamPlaylistItem[]
+  likes        StreamLike[]
+  royalties    StreamRoyaltyAccrual[]
+
+  @@index([status, publishedAt])
+  @@index([artistId, status])
+  @@index([genre])
+}
+
+model StreamPlaylist {
+  id          String   @id @default(cuid())
+  ownerId     String?          // null = editorial playlist
+  artistId    String?          // artist-curated playlist
+  title       String
+  slug        String   @unique
+  description String?
+  coverUrl    String?
+  isPublic    Boolean  @default(true)
+  isEditorial Boolean  @default(false)
+  isSample    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  owner       User?          @relation("StreamPlaylistOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  artist      StreamArtist?  @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  items       StreamPlaylistItem[]
+  follows     StreamPlaylistFollow[]
+
+  @@index([isEditorial, isPublic])
+}
+
+model StreamPlaylistItem {
+  id         String   @id @default(cuid())
+  playlistId String
+  trackId    String
+  position   Int
+  addedAt    DateTime @default(now())
+  playlist   StreamPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  track      StreamTrack    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, trackId])
+  @@index([playlistId, position])
+}
+
+model StreamPlaylistFollow {
+  id         String   @id @default(cuid())
+  playlistId String
+  userId     String
+  createdAt  DateTime @default(now())
+  playlist   StreamPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  user       User           @relation("StreamPlaylistFollows", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, userId])
+}
+
+model StreamFollow {
+  id        String   @id @default(cuid())
+  artistId  String
+  userId    String
+  createdAt DateTime @default(now())
+  artist    StreamArtist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  user      User         @relation("StreamFollows", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([artistId, userId])
+}
+
+model StreamLike {
+  id        String   @id @default(cuid())
+  trackId   String
+  userId    String
+  createdAt DateTime @default(now())
+  user      User         @relation("StreamLikes", fields: [userId], references: [id], onDelete: Cascade)
+  track     StreamTrack  @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([trackId, userId])
+}
+
+/// One row per play. Deduplicated per (track, user, 30s bucket) so a client
+/// replay or duplicate report cannot inflate counts or royalties.
+model StreamPlay {
+  id         String   @id @default(cuid())
+  trackId    String
+  userId     String?
+  bucket     String   // e.g. "2026-11-08T10:30" — unique per track/user/bucket
+  secondsPlayed Int   @default(0)
+  eligible   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  track      StreamTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([trackId, userId, bucket])
+  @@index([trackId, createdAt])
+}
+
+/// Royalty accrual per track per period. Pending accruals are NOT cash; only
+/// settled transfers to the artist wallet move money on the shared ledger.
+model StreamRoyaltyAccrual {
+  id           String              @id @default(cuid())
+  trackId      String
+  artistId     String
+  period       String              // YYYY-MM
+  eligiblePlays BigInt             @default(0)
+  rateKoboPerPlay BigInt           @default(0)
+  grossKobo    BigInt              @default(0)
+  platformKobo BigInt              @default(0)
+  artistKobo   BigInt              @default(0)
+  currency     String              @default("NGN")
+  status       StreamRoyaltyStatus @default(ACCRUED)
+  ledgerReference String?          // WalletTransaction.reference once settled
+  calculatedAt DateTime            @default(now())
+  track        StreamTrack         @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([trackId, period])
+  @@index([artistId, period])
+}
+
+/// Admin-configurable royalty pool rate per period (never hard-coded per play).
+model StreamRevenuePool {
+  id            String   @id @default(cuid())
+  period        String   @unique
+  poolKobo      BigInt
+  eligiblePlays BigInt   @default(0)
+  rateKoboPerPlay BigInt @default(0)
+  currency      String   @default("NGN")
+  notes         String?
+  createdBy     String?
+  createdAt     DateTime @default(now())
 }

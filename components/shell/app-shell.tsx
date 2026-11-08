@@ -35,6 +35,12 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
     return <>{children}</>;
   }
 
+  // NaijaStream is a full-bleed music app with its own sidebar, player and
+  // mobile navigation (components/stream/stream-shell.tsx).
+  if (pathname?.startsWith("/naijastream")) {
+    return <>{children}</>;
+  }
+
   // The storefront and NaijaEats landing use the full-bleed layout; the ecosystem
   // sidebar starts on the remaining inner routes.
   const isHome = pathname === "/" || pathname === "/naijaeats" || pathname === "/naijashop";

@@ -75,7 +75,6 @@ export function GenericPage({ slug }: { slug: string }) {
   if (slug === "naijaeats") return <NaijaEatsPage />;
   if (slug === "naijafresh") return <NaijaFreshPage />;
   if (slug === "naijastay") return <NaijaStayLanding />;
-  if (slug === "naijastream") return <NaijaStreamLanding />;
   if (slug === "aura-ai") return <AuraAiLanding />;
   if (slug === "naijagigs") return <NaijaGigsLanding />;
   if (slug === "naijapay") return <NaijaPayLanding />;

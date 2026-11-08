@@ -1489,3 +1489,32 @@ backups/rollback host); GitHub preservation BLOCKED (only credential is
 read-only account BetFuz; tokens previously stored in .env.txt were removed
 and the remaining KIE.AI_API_KEY in .env.txt was malformed and not used).
 No deployment performed.
+
+## NaijaStream — music platform foundation (2026-11-08)
+
+Built the NaijaStream vertical as a real, integrated music product:
+- Schema (2 migrations): StreamArtist/Release/Track/Playlist/PlaylistItem/
+  Follow/Like/Play/RoyaltyAccrual/RevenuePool. Money stays on the shared
+  Wallet/LedgerEntry tables — no second wallet.
+- Services + APIs: catalog (published + verified only), genre/query search,
+  artists, playlists (create/add/remove, ownership enforced), likes, follows,
+  library, play recording (30s buckets, unique-constraint dedupe), creator
+  studio, admin royalty pool config + accrual, and settlement that posts a
+  balanced ledger transaction to the artist's NaijaPay wallet.
+- Royalty engine: rate = configured period pool / eligible plays (never a fixed
+  per-stream amount); integer truncation with tracked remainder; 8/8 unit tests.
+- UI: Spotify-style dark three-column shell with persistent real <audio> player
+  (queue, shuffle, repeat, seek, volume, error states, sessionStorage restore),
+  mobile bottom nav, home rails, music/search/charts/artists/playlists/library/
+  track pages, artist profiles, creator studio and royalties screens. Honest
+  "not available" states for live/video/podcast/premium/Aura/notifications.
+- Artwork: 14 original Kie.ai GPT-Image-2 images ($0.42), provenance in
+  scripts/image-registry.json, optimised 35 MB PNG -> 1.3 MB JPEG.
+- Demo catalogue (6 fictional artists, 10 tracks, 6 playlists) is isSample and
+  hidden unless NAIJA_STREAM_SHOW_SAMPLES=true; no audio attached, so the
+  player reports "audio not published" rather than faking playback.
+- Verified: API 23/23 (samples on) and 14/14 (production mode), royalty flow
+  7/7, royalty unit 8/8, visual QA PASS at 390/768/1440.
+- BLOCKED: audio upload/publishing (needs object storage + ffmpeg worker),
+  live streaming, video, premium billing, Aura (providers not configured).
+Docs: stage-A discovery report at C:\Users\User\Documents\naijadeals-audit\.
