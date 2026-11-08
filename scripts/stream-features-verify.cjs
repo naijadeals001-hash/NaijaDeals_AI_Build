@@ -77,7 +77,7 @@ const check = (name, ok, detail) => {
   await page.screenshot({ path: path.join(OUT, "home-rightpanel.png") });
 
   // Queue populates after playing.
-  await page.getByRole("button", { name: /play now/i }).click();
+  await page.locator('button[aria-label^="Play "]').first().click();
   await page.waitForTimeout(2500);
   const queueRows = await page.evaluate(() => {
     const rail = Array.from(document.querySelectorAll("aside")).find((a) => /on repeat/i.test(a.innerText));

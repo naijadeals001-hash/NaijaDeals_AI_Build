@@ -42,7 +42,8 @@ fs.mkdirSync(OUT, { recursive: true });
   await page.waitForTimeout(2000);
 
   // 3) Play through the UI and confirm the media clock advances.
-  await page.getByRole("button", { name: /play now/i }).click();
+  // Hero is now a carousel; play from the first trending card's play button.
+  await page.locator('button[aria-label^="Play "]').first().click();
   await page.waitForTimeout(1200);
   results.playingState = await page.evaluate(() => {
     const el = document.querySelector("audio");

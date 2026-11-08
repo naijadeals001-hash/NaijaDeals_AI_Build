@@ -21,6 +21,7 @@ export function StreamPlayerBar() {
   const { current } = player;
   const [showQueue, setShowQueue] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   async function toggleLike() {
     if (!current) return;
@@ -37,7 +38,7 @@ export function StreamPlayerBar() {
   }
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 lg:pl-[240px] lg:pr-[300px]">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 lg:bottom-0 lg:pl-[240px] lg:pr-[300px]">
       <div className="pointer-events-auto border-t border-white/10 bg-[#0b0f0d]/95 backdrop-blur">
         {player.error ? (
           <p role="status" className="bg-amber-500/15 px-4 py-1 text-center text-[11px] font-semibold text-amber-300">
@@ -45,7 +46,13 @@ export function StreamPlayerBar() {
           </p>
         ) : null}
         <div className="flex items-center gap-3 px-3 py-2 sm:px-4">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            aria-label="Open full player"
+            aria-expanded={expanded}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left lg:pointer-events-none lg:cursor-default"
+          >
             {current?.artworkUrl ? (
               <img src={current.artworkUrl} alt="" className="h-11 w-11 shrink-0 rounded-md object-cover" />
             ) : (
@@ -55,17 +62,17 @@ export function StreamPlayerBar() {
               <p className="truncate text-[12.5px] font-bold text-white">{current?.title ?? "Nothing playing"}</p>
               <p className="truncate text-[11px] text-white/50">{current?.artistName ?? "Choose a track to start"}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => void toggleLike()}
-              disabled={!current}
-              aria-label={liked ? "Unlike track" : "Like track"}
-              aria-pressed={liked}
-              className={`hidden shrink-0 rounded-full p-2 transition sm:block ${liked ? "text-emerald-400" : "text-white/60 hover:text-white"} disabled:opacity-30`}
-            >
-              <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} aria-hidden />
-            </button>
-          </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => void toggleLike()}
+            disabled={!current}
+            aria-label={liked ? "Unlike track" : "Like track"}
+            aria-pressed={liked}
+            className={`shrink-0 rounded-full p-2 transition ${liked ? "text-emerald-400" : "text-white/60 hover:text-white"} disabled:opacity-30`}
+          >
+            <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} aria-hidden />
+          </button>
 
           <div className="flex flex-1 flex-col items-center gap-1">
             <div className="flex items-center gap-3 sm:gap-4">
@@ -148,6 +155,67 @@ export function StreamPlayerBar() {
           </div>
         ) : null}
       </div>
+
+      {expanded ? (
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#08120c] lg:hidden" role="dialog" aria-modal="true" aria-label="Player">
+          <div className="flex items-center justify-between p-4">
+            <button type="button" onClick={() => setExpanded(false)} aria-label="Close full player" className="rounded-full border border-white/15 px-3 py-1.5 text-[12px] font-bold text-white/80">Close</button>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Now playing</p>
+            <span className="w-14" aria-hidden />
+          </div>
+          <div className="flex flex-1 flex-col justify-center gap-5 px-6">
+            {current?.artworkUrl ? (
+              <img src={current.artworkUrl} alt="" className="mx-auto aspect-square w-full max-w-xs rounded-2xl object-cover shadow-2xl" />
+            ) : (
+              <div className="mx-auto flex aspect-square w-full max-w-xs items-center justify-center rounded-2xl bg-white/10 text-4xl text-white/30">♪</div>
+            )}
+            <div>
+              <p className="truncate font-display text-xl font-extrabold">{current?.title ?? "Nothing playing"}</p>
+              <p className="truncate text-[13px] text-white/55">{current?.artistName ?? "Choose a track"}</p>
+            </div>
+            <div>
+              <input
+                type="range"
+                min={0}
+                max={Math.max(Math.round(player.duration || current?.durationSec || 1), 1)}
+                step={1}
+                value={Math.min(Math.round(player.time), Math.max(Math.round(player.duration || current?.durationSec || 1), 1))}
+                onChange={(event) => player.seek(Number(event.target.value))}
+                aria-label="Seek"
+                className="h-1.5 w-full accent-emerald-500"
+              />
+              <div className="flex justify-between text-[10px] tabular-nums text-white/45">
+                <span>{fmt(player.time)}</span>
+                <span>{fmt(player.duration || current?.durationSec || 0)}</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-6">
+              <button type="button" onClick={player.toggleShuffle} aria-label="Shuffle" aria-pressed={player.shuffle} className={player.shuffle ? "text-emerald-400" : "text-white/70"}>
+                <Shuffle className="h-5 w-5" aria-hidden />
+              </button>
+              <button type="button" onClick={player.prev} aria-label="Previous track" className="text-white/85"><SkipBack className="h-7 w-7 fill-current" aria-hidden /></button>
+              <button type="button" onClick={player.toggle} aria-label={player.playing ? "Pause" : "Play"} className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-black">
+                {player.playing ? <Pause className="h-7 w-7 fill-current" aria-hidden /> : <Play className="h-7 w-7 translate-x-[1px] fill-current" aria-hidden />}
+              </button>
+              <button type="button" onClick={player.next} aria-label="Next track" className="text-white/85"><SkipForward className="h-7 w-7 fill-current" aria-hidden /></button>
+              <button type="button" onClick={player.cycleRepeat} aria-label={`Repeat: ${player.repeat}`} className={player.repeat !== "off" ? "text-emerald-400" : "text-white/70"}>
+                <Repeat className="h-5 w-5" aria-hidden />
+              </button>
+            </div>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={player.toggleMute} aria-label={player.muted ? "Unmute" : "Mute"} className="text-white/60">
+                {player.muted ? <VolumeX className="h-4 w-4" aria-hidden /> : <Volume2 className="h-4 w-4" aria-hidden />}
+              </button>
+              <input type="range" min={0} max={1} step={0.01} value={player.volume} onChange={(e) => player.setVolume(Number(e.target.value))} aria-label="Volume" className="h-1 flex-1 accent-emerald-500" />
+            </div>
+          </div>
+          <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <button type="button" onClick={() => { setExpanded(false); setShowQueue(true); }} className="w-full rounded-full border border-white/15 py-2.5 text-[12px] font-bold text-white/80">
+              View queue ({player.queue.length})
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

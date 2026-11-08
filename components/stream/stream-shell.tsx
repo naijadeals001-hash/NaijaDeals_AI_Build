@@ -14,6 +14,7 @@ import {
   ListMusic,
   Mic2,
   Music2,
+  Menu,
   Podcast,
   Radio,
   Search,
@@ -25,6 +26,7 @@ import {
   Video
 } from "lucide-react";
 import { StreamPlayerBar } from "./player-bar";
+import { MobileMenu } from "./mobile-menu";
 
 const primaryNav = [
   { label: "Home", href: "/naijastream", icon: Home },
@@ -46,10 +48,10 @@ const libraryNav = [
 
 const mobileNav = [
   { label: "Home", href: "/naijastream", icon: Home },
+  { label: "Discover", href: "/naijastream/discover", icon: Compass },
   { label: "Search", href: "/naijastream/search", icon: Search },
   { label: "Library", href: "/naijastream/library", icon: Library },
-  { label: "Live", href: "/naijastream/live", icon: Radio },
-  { label: "Profile", href: "/naijastream/studio", icon: User }
+  { label: "More", href: "__menu__", icon: Menu }
 ];
 
 export function StreamShell({
@@ -61,6 +63,11 @@ export function StreamShell({
 }) {
   const pathname = usePathname();
   const [query, setQuery] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -140,14 +147,36 @@ export function StreamShell({
         </div>
       </aside>
 
-      {/* Top header */}
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0a0d0b]/95 backdrop-blur lg:pl-[240px]">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <Link href="/naijastream" className="flex items-center gap-2 lg:hidden">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-black">
-              <Music2 className="h-4 w-4" aria-hidden />
-            </span>
+      {/* Mobile app bar — matches the approved mobile reference */}
+      <header className="sticky top-0 z-20 border-b border-white/5 bg-[#0a0d0b]/95 px-4 pb-2 pt-3 backdrop-blur lg:hidden">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-emerald-500 text-black">
+            <Music2 className="h-4.5 w-4.5" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-display text-[17px] font-extrabold leading-tight">NaijaStream</p>
+            <p className="truncate text-[10px] text-white/45">Africa&apos;s sounds. Your world.</p>
+          </div>
+          <Link href="/naijastream/search" aria-label="Search" className="rounded-full p-2 text-white/75">
+            <Search className="h-5 w-5" aria-hidden />
           </Link>
+          <Link href="/naijastream/notifications" aria-label="Notifications" className="relative rounded-full p-2 text-white/75">
+            <Bell className="h-5 w-5" aria-hidden />
+            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
+          </Link>
+          {user ? (
+            <Link href="/naijastream/account" aria-label="Account" className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-[12px] font-extrabold">
+              {user.name.charAt(0).toUpperCase()}
+            </Link>
+          ) : (
+            <Link href="/login?next=/naijastream" className="rounded-full border border-white/20 px-3 py-1.5 text-[11px] font-bold">Sign in</Link>
+          )}
+        </div>
+      </header>
+
+      {/* Desktop header with search and actions */}
+      <header className="sticky top-0 z-20 hidden border-b border-white/10 bg-[#0a0d0b]/95 backdrop-blur lg:block lg:pl-[240px]">
+        <div className="flex items-center gap-3 px-4 py-3">
           <form action="/naijastream/search" className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4">
             <Search className="h-4 w-4 shrink-0 text-white/40" aria-hidden />
             <input
@@ -161,64 +190,72 @@ export function StreamShell({
             />
             <kbd className="hidden rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/40 sm:block">⌘K</kbd>
           </form>
-          <Link href="/naijastream/live" aria-label="Live now" className="hidden rounded-full p-2 text-white/60 hover:text-white sm:block">
+          <Link href="/naijastream/live" aria-label="Live now" className="rounded-full p-2 text-white/60 hover:text-white">
             <Radio className="h-4 w-4" aria-hidden />
           </Link>
-          <Link href="/naijastream/notifications" aria-label="Notifications" className="hidden rounded-full p-2 text-white/60 hover:text-white sm:block">
+          <Link href="/naijastream/notifications" aria-label="Notifications" className="rounded-full p-2 text-white/60 hover:text-white">
             <Bell className="h-4 w-4" aria-hidden />
           </Link>
-          {user ? (
-            <Link href="/naijastream/studio/upload" className="hidden items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-[12px] font-bold text-white hover:bg-emerald-500 sm:flex">
-              <Upload className="h-3.5 w-3.5" aria-hidden /> Upload
-            </Link>
-          ) : (
-            <Link href="/login?next=/naijastream/studio/upload" className="hidden items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-[12px] font-bold text-white hover:bg-emerald-500 sm:flex">
-              <Upload className="h-3.5 w-3.5" aria-hidden /> Upload
-            </Link>
-          )}
-          <Link href="/naijastream/aura" aria-label="Ask Aura" className="flex items-center gap-1.5 rounded-full border border-emerald-400/30 px-3 py-2 text-[11px] font-bold text-emerald-300">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden /> <span className="hidden md:inline">Ask Aura</span>
+          <Link href={user ? "/naijastream/studio/upload" : "/login?next=/naijastream/studio/upload"} className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-[12px] font-bold text-white hover:bg-emerald-500">
+            <Upload className="h-3.5 w-3.5" aria-hidden /> Upload
+          </Link>
+          <Link href="/naijastream/aura" className="flex items-center gap-1.5 rounded-full border border-emerald-400/30 px-3 py-2 text-[11px] font-bold text-emerald-300">
+            <Sparkles className="h-3.5 w-3.5" aria-hidden /> Ask Aura
           </Link>
           {user ? (
             <Link href="/naijastream/account" className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-[12px] font-extrabold" aria-label="Account menu">
               {user.name.charAt(0).toUpperCase()}
             </Link>
           ) : (
-            <Link href="/login?next=/naijastream" className="rounded-lg border border-white/20 px-3 py-2 text-[11px] font-bold text-white">
-              Sign in
-            </Link>
+            <Link href="/login?next=/naijastream" className="rounded-lg border border-white/20 px-3 py-2 text-[11px] font-bold text-white">Sign in</Link>
           )}
         </div>
       </header>
 
-      <div className="pb-28 lg:pl-[240px]">{children}</div>
+      <div className="pb-[calc(11rem+env(safe-area-inset-bottom))] lg:pb-28 lg:pl-[240px]">{children}</div>
 
       <StreamPlayerBar />
 
-      {/* Mobile bottom navigation */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0b0f0d]/98 backdrop-blur lg:hidden" aria-label="Mobile">
+      {/* Mobile bottom navigation — five destinations; More opens the full menu */}
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0b0f0d]/98 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Mobile">
         <ul className="grid grid-cols-5">
-          {mobileNav.map((item) => (
-            <li key={item.label}>
-              <Link
-                href={item.href}
-                aria-current={isActive(item.href) && item.href !== "/naijastream" ? "page" : pathname === item.href ? "page" : undefined}
-                className={`flex flex-col items-center gap-1 py-2 text-[10px] font-semibold ${isActive(item.href) ? "text-emerald-400" : "text-white/55"}`}
-              >
+          {mobileNav.map((item) => {
+            const isMenu = item.href === "__menu__";
+            const active = isMenu ? menuOpen : item.href === "/naijastream" ? pathname === "/naijastream" : pathname.startsWith(item.href);
+            const content = (
+              <>
                 <item.icon className="h-5 w-5" aria-hidden />
                 {item.label}
-              </Link>
-            </li>
-          ))}
+              </>
+            );
+            return (
+              <li key={item.label}>
+                {isMenu ? (
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen(true)}
+                    aria-label="Open all navigation"
+                    aria-expanded={menuOpen}
+                    className={`flex w-full flex-col items-center gap-1 py-2 text-[10px] font-semibold ${active ? "text-emerald-400" : "text-white/55"}`}
+                  >
+                    {content}
+                  </button>
+                ) : (
+                  <Link
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex flex-col items-center gap-1 py-2 text-[10px] font-semibold ${active ? "text-emerald-400" : "text-white/55"}`}
+                  >
+                    {content}
+                  </Link>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </nav>
-      <Link
-        href="/naijastream/studio"
-        aria-label="Creator studio"
-        className="fixed bottom-24 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-black shadow-lg lg:hidden"
-      >
-        <LayoutGrid className="h-5 w-5" aria-hidden />
-      </Link>
+
+      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} user={user} />
     </div>
   );
 }

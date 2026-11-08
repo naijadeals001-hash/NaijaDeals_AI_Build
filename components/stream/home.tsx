@@ -5,6 +5,7 @@ import { BadgeCheck, Pause, Play, Plus } from "lucide-react";
 import { useStreamPlayer } from "./player-context";
 import { CoverArt } from "./cover-art";
 import { StreamRightPanel } from "./right-panel";
+import { HeroCarousel, type HeroSlide } from "./hero-carousel";
 
 export type StreamCardTrack = {
   id: string;
@@ -26,6 +27,7 @@ export type StreamHomeData = {
     track: StreamCardTrack | null;
     playlist: StreamCardPlaylist | null;
   } | null;
+  heroSlides: HeroSlide[];
   trending: StreamCardTrack[];
   playlists: StreamCardPlaylist[];
   artists: StreamCardArtist[];
@@ -78,75 +80,8 @@ export function StreamHome({ data, signedIn }: { data: StreamHomeData; signedIn:
   return (
     <div className="grid gap-6 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:px-6">
       <main className="min-w-0">
-        {/* Hero — left-negative-space composition per the approved reference */}
-        {data.hero ? (
-          <section className="relative isolate overflow-hidden rounded-2xl bg-[#0b1410]">
-            <img
-              src="/generated/stream/opt-v2/stream-v2-hero.jpg"
-              alt=""
-              aria-hidden
-              className="absolute inset-0 h-full w-full object-cover object-[70%_center]"
-            />
-            <div
-              className="absolute inset-0 bg-[linear-gradient(95deg,#050d09_0%,#050d09f2_32%,#050d09a8_52%,transparent_78%)]"
-              aria-hidden
-            />
-            <div className="relative flex min-h-[330px] flex-col justify-between p-6 sm:min-h-[400px] sm:p-8 lg:min-h-[430px]">
-              <div className="max-w-[560px]">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-300">Featured artist</p>
-                <h1 className="mt-2 font-display text-[40px] font-black uppercase leading-[0.9] tracking-[-0.02em] sm:text-[62px] lg:text-[70px]">
-                  Africa
-                  <br />
-                  to the <span className="text-emerald-400">world</span>
-                </h1>
-                <p className="mt-3 font-display text-[17px] font-extrabold sm:text-[19px]">{data.hero.artist.name}</p>
-                <p className="text-[12.5px] text-white/60">
-                  {data.hero.track ? `Latest release · ${data.hero.track.title}` : "Live on NaijaStream"}
-                  {data.hero.artist.isSample ? " · Demonstration catalogue" : ""}
-                </p>
-                <div className="mt-5 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // Queue the whole trending rail starting at the featured
-                      // track so Next/Previous actually have somewhere to go.
-                      const list = data.trending.length ? data.trending : data.hero?.track ? [data.hero.track] : [];
-                      if (!list.length) return;
-                      const start = data.hero?.track ? Math.max(0, list.findIndex((t) => t.id === data.hero!.track!.id)) : 0;
-                      player.play(list.map(toPlayer), start);
-                    }}
-                    className="flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-[13px] font-extrabold text-black transition hover:bg-emerald-400"
-                  >
-                    <Play className="h-4 w-4 fill-current" aria-hidden /> Play now
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void follow(data.hero!.artist.id)}
-                    className="flex items-center gap-2 rounded-full border border-white/25 px-5 py-3 text-[13px] font-bold text-white transition hover:bg-white/10"
-                  >
-                    <Plus className="h-4 w-4" aria-hidden /> Follow
-                  </button>
-                  <Link
-                    href={`/naijastream/artists/${data.hero.artist.slug}`}
-                    className="rounded-full border border-white/25 px-5 py-3 text-[13px] font-bold text-white transition hover:bg-white/10"
-                  >
-                    View artist
-                  </Link>
-                </div>
-              </div>
-              <div className="mt-6 flex items-end justify-between gap-4">
-                <p className="hidden max-w-xs text-[11px] uppercase tracking-[0.2em] text-white/45 sm:block">
-                  Listen. Discover. Create. Earn.
-                </p>
-                <div className="flex gap-1.5" aria-hidden>
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <span key={i} className={`h-1.5 rounded-full ${i === 0 ? "w-5 bg-white" : "w-1.5 bg-white/35"}`} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
-        ) : null}
+        {/* Hero — rotating cinematic carousel of African entertainment */}
+        {data.heroSlides && data.heroSlides.length > 0 ? <HeroCarousel slides={data.heroSlides} intervalMs={6000} /> : null}
 
         {/* Genre chips */}
         {data.genres.length > 0 ? (

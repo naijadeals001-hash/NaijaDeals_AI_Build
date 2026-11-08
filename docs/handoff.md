@@ -1646,3 +1646,34 @@ Verified: scripts/stream-premium-verify.cjs 11/11 (wallet debit, no double
 charge, ledger reconciles, cancel, resubscribe, guest sign-in prompt).
 Regression: full QA 19 routes, API 23/23, features 9/9, upload 11/11,
 video+podcast 10/10, livestream 7/7, audio verify pass, royalty 8/8.
+
+## NaijaStream — mobile-first redesign + hero carousel (2026-11-08)
+
+- Hero is now an admin-managed rotating carousel (StreamHeroSlide model,
+  prisma/stream-hero-seed.cjs using EXISTING artwork, $0 cost): 6 slides
+  (Africa to the World, Every Beat Has a Story, Voices Worth Hearing,
+  Experience It Live, Watch Africa Create, Discover the Next Big Sound), each
+  with CTAs to real routes. Auto-rotate (6s, configurable), prev/next, dots,
+  swipe, keyboard arrows/Home/End, pause control, pauses on hover/focus and
+  when the tab is hidden, respects prefers-reduced-motion. CTA hrefs are
+  server-sanitised to /naijastream.
+- Mobile navigation parity: 5-tab bar (Home, Discover, Search, Library, More)
+  with a full-screen drawer containing every desktop destination (Music,
+  Podcasts, Live Events, Videos, Creators, Charts, Playlists, Explore Africa,
+  Library, Liked Songs, Your Playlists, Premium, Creator Studio, Settings,
+  Account) with focus trap, Escape, scroll lock and active marking. Verified:
+  0 missing items.
+- Mobile home composition per the approved mobile reference: app bar,
+  full-bleed carousel, 5 service tiles, Explore Africa city cards (real city
+  data only — currently Lagos/Abuja/Port Harcourt), ranked Trending songs with
+  inline play, Featured podcasts, creator CTA.
+- Expandable full-screen mobile player sharing the single playback state.
+- Single-tree rendering (MobileHomeSwitch) so hidden desktop markup no longer
+  duplicates carousel controls or diverts clicks.
+- Defects found by browser testing and fixed: mini-player overlapped the bottom
+  nav ("More" unclickable); carousel timer restarted on every render (never
+  advanced); mobile had no hero at all; heavy scrim added for mobile crops.
+Verified: scripts/stream-mobile-qa.cjs across 320/360/390/430/768/1440 (no
+overflow, carousel next/prev/rotate ok, drawer opens/closes with 0 missing
+items, player expands, audio advances). Regression: full QA, API 23/23,
+features 9/9, premium 11/11, audio verify, upload/video/live suites.

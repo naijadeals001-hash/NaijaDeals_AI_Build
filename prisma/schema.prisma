@@ -1650,6 +1650,7 @@ model StreamArtist {
   verified      Boolean  @default(false)
   verifiedAt    DateTime?
   countryCode   String   @default("NG")
+  city          String?
   genres        String[] @default([])
   isSample      Boolean  @default(false)
   commissionBps Int      @default(1200)
@@ -2004,4 +2005,28 @@ model StreamBillingRecord {
   createdAt      DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+/// Admin-managed homepage carousel slides (Control Center editable).
+model StreamHeroSlide {
+  id           String   @id @default(cuid())
+  eyebrow      String   @default("Featured")
+  headline     String
+  accent       String   @default("")
+  body         String   @default("")
+  imageUrl     String
+  mobileImageUrl String?
+  primaryLabel String
+  primaryHref  String
+  secondaryLabel String
+  secondaryHref  String
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+  startsAt     DateTime?
+  endsAt       DateTime?
+  updatedBy    String?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  @@index([isActive, sortOrder])
 }
