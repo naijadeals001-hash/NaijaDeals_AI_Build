@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ListMusic, Plus } from "lucide-react";
 import { useStreamPlayer } from "./player-context";
-import { CoverArt } from "./cover-art";
 
 type Recommendation = { id: string; name: string; slug: string; avatarUrl: string | null; isSample?: boolean };
 
@@ -37,7 +36,19 @@ export function StreamRightPanel({ artists }: { artists?: Recommendation[] } = {
                   onClick={() => player.play(player.queue, index)}
                   className={`flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left hover:bg-white/5 ${index === player.index ? "bg-white/5" : ""}`}
                 >
-                  <CoverArt src={track.artworkUrl} title={track.title} className="h-9 w-9 shrink-0" />
+                  {track.artistImageUrl || track.artworkUrl ? (
+                    <img
+                      data-repeat-artwork
+                      src={track.artistImageUrl ?? track.artworkUrl ?? ""}
+                      alt={`${track.artistName} — ${track.title}`}
+                      loading="lazy"
+                      className="h-9 w-9 shrink-0 rounded-md object-cover"
+                    />
+                  ) : (
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-white/10 text-[11px] text-white/40" aria-hidden>
+                      ♪
+                    </span>
+                  )}
                   <span className="min-w-0">
                     <span className="block truncate text-[12px] font-bold">{track.title}</span>
                     <span className="block truncate text-[10.5px] text-white/45">{track.artistName}</span>

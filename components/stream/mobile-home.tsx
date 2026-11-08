@@ -6,6 +6,7 @@ import { useStreamPlayer } from "./player-context";
 import { CoverArt } from "./cover-art";
 import { HeroCarousel, type HeroSlide } from "./hero-carousel";
 import { CityCard } from "./city-card";
+import { ScrollRail } from "./scroll-rail";
 import { CATEGORY_BY_KEY, type StreamCategoryKey } from "@/lib/stream/categories";
 
 type Track = {
@@ -114,13 +115,13 @@ export function MobileSections({
             <h2 id="explore-africa" className="font-display text-[17px] font-extrabold">Explore Africa</h2>
             <Link href="/naijastream/explore" className="text-[11.5px] font-bold text-emerald-400">View All</Link>
           </div>
-          <ul className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none]">
+          <ScrollRail label="Explore Africa cities" className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none]">
             {cities.slice(0, 12).map((city) => (
-              <li key={city.slug} className="w-[168px] shrink-0">
+              <li key={city.slug} className="w-[168px] shrink-0 snap-start">
                 <CityCard city={city} className="h-[184px]" sizes="168px" />
               </li>
             ))}
-          </ul>
+          </ScrollRail>
         </section>
       ) : null}
 
@@ -181,12 +182,16 @@ export function MobileSections({
             <h2 id="featured-podcasts" className="font-display text-[17px] font-extrabold">Featured podcasts</h2>
             <Link href="/naijastream/podcasts" className="text-[11.5px] font-bold text-emerald-400">View All</Link>
           </div>
-          <ul className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none]">
+          <ScrollRail label="Featured podcasts" className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none]">
             {shows.map((show) => (
-              <li key={show.slug} className="w-[156px] shrink-0">
+              <li key={show.slug} className="w-[156px] shrink-0 snap-start">
                 <Link href={`/naijastream/podcasts/${show.slug}`} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C99520]">
-                  <div className="overflow-hidden rounded-xl border border-[#8B5CF6]/40">
-                    <CoverArt src={show.coverUrl} title={show.title} subtitle={show.category} className="aspect-square w-full" />
+                  <div className="overflow-hidden rounded-xl border border-[#8B5CF6]/40 bg-[#1a1426]">
+                    {show.coverUrl ? (
+                      <img src={show.coverUrl} alt={`${show.title} cover`} loading="lazy" className="aspect-square w-full object-cover" />
+                    ) : (
+                      <CoverArt src={null} title={show.title} subtitle={show.category} className="aspect-square w-full" />
+                    )}
                   </div>
                   <span className="mt-1.5 block truncate text-[12.5px] font-bold">{show.title}</span>
                   <span className="block truncate text-[10.5px] text-[#8B5CF6]">{show.category}</span>
@@ -196,7 +201,7 @@ export function MobileSections({
                 </Link>
               </li>
             ))}
-          </ul>
+          </ScrollRail>
         </section>
       ) : null}
 

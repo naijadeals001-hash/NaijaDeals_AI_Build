@@ -1803,3 +1803,18 @@ Owner approved uncapped imagery spend ("NO CAP"). Total spent: **$1.29**
   1440). Discovery QA 34/34, platform audit 52/52, audio (play/seek/next) and
   video/podcast 10/10 regression all pass.
 - Also fixed mobile content scrolling under the player dock (bottom padding).
+
+## NaijaStream — On Repeat imagery and mobile rail controls (2026-11-08)
+
+- **On Repeat** (right panel) rendered the cover-art lettering panel instead of
+  a picture; it now shows the track's real image (artist portrait carried in
+  the queue, falling back to release artwork) with a text alternative.
+- **Mobile rails** (Featured podcasts, Explore Africa cities) gained prev/next
+  arrow buttons matching the hero carousel: keyboard-reachable, disabled at
+  each end, padding-aware start detection, card-aligned scroll snapping.
+  Podcast cards now render their real cover image instead of the generated
+  lettering tile when a cover exists.
+Verified in browser: On Repeat shows Port Harcourt/Kunle Ave portraits; podcast
+rail scrolls 12 → 348 → end, left disabled at start and right at end.
+Regression: asset audit 147/147, discovery QA 34/34, platform audit 52/52,
+audio play/seek/next pass.
