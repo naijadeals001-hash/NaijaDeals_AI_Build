@@ -136,7 +136,8 @@ export async function searchGigServices(input: ServiceSearchInput) {
             state: true,
             countryCode: true,
             avatarUrl: true,
-            responseMinutes: true
+            responseMinutes: true,
+            isSample: true
           }
         }
       }
@@ -761,6 +762,7 @@ export async function requestBooking(userId: string, input: {
         priceKobo: true,
         pricingType: true,
         professionalId: true,
+        isSample: true,
         categoryId: true,
         countryCode: true,
         state: true,
@@ -768,6 +770,9 @@ export async function requestBooking(userId: string, input: {
       }
     });
     if (!listing) throw new ApiError(404, "listing_not_found", "This service is not available.");
+    if ((listing as { isSample?: boolean }).isSample) {
+      throw new ApiError(409, "sample_listing", "This is a demonstration listing and cannot be booked. Choose a verified professional.");
+    }
     profileId = listing.professionalId;
   }
 
@@ -775,6 +780,9 @@ export async function requestBooking(userId: string, input: {
     where: { id: profileId, ...professionalPublic }
   });
   if (!profile) throw new ApiError(404, "professional_not_found", "This professional is not available.");
+  if (profile.isSample) {
+    throw new ApiError(409, "sample_professional", "This is a demonstration profile and cannot receive bookings.");
+  }
   if (profile.userId === userId) throw new ApiError(400, "self_booking", "You cannot book your own service.");
 
   const amount =

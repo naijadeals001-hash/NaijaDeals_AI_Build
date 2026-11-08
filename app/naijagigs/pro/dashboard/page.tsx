@@ -134,6 +134,24 @@ function ProfessionalDashboard() {
     }
   }
 
+  async function bookingAction(bookingId: string, action: "accept" | "decline" | "start" | "submit") {
+    setNotice("");
+    try {
+      const res = await fetch(`/api/gigs/bookings/${bookingId}/action`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? `Failed (HTTP ${res.status}).`);
+      setNotice(`Booking ${action}ed.`);
+      load();
+    } catch (caught) {
+      setNotice(caught instanceof Error ? caught.message : "Could not update the booking.");
+    }
+  }
+
   if (status === "signed-out") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F5F7F6]">
@@ -217,6 +235,9 @@ function ProfessionalDashboard() {
       </nav>
 
       <main className="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-10">
+        {notice ? (
+          <p role="status" className="mb-4 rounded-xl bg-[#EAF4EE] p-3 text-[12px] font-bold text-[#0F7A4A]">{notice}</p>
+        ) : null}
         {!verified && (
           <section className="mb-8 rounded-2xl border border-[#FECACA] bg-[#FEF2F2] p-6 sm:p-8">
             <div className="flex items-start gap-3">
@@ -381,14 +402,44 @@ function ProfessionalDashboard() {
             ) : (
               <ul className="divide-y divide-[#E5DFD2]">
                 {(overview?.bookings ?? []).slice(0, 6).map((booking) => (
-                  <li key={booking.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                    <div>
-                      <p className="font-semibold text-[#0B1F16]">{booking.listing.title}</p>
-                      <p className="text-[11px] text-[#6B7A72]">
-                        {booking.customer.name} · {booking.status} · payment {booking.paymentStatus}
-                      </p>
+                  <li key={booking.id} className="py-3 text-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-[#0B1F16]">{booking.listing.title}</p>
+                        <p className="text-[11px] text-[#6B7A72]">
+                          {booking.customer.name} · {booking.status.replace("_", " ")} · payment {booking.paymentStatus.toLowerCase()}
+                        </p>
+                      </div>
+                      <p className="font-bold text-[#0B1F16]">{koboToNaira(booking.amountKobo)}</p>
                     </div>
-                    <p className="font-bold text-[#0B1F16]">{koboToNaira(booking.amountKobo)}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {booking.status === "REQUESTED" ? (
+                        <>
+                          <button type="button" onClick={() => void bookingAction(booking.id, "accept")} className="rounded-lg bg-[#0F7A4A] px-3 py-1.5 text-[11px] font-bold text-white hover:bg-[#0B6540]">
+                            Accept
+                          </button>
+                          <button type="button" onClick={() => void bookingAction(booking.id, "decline")} className="rounded-lg border border-[#E5DFD2] px-3 py-1.5 text-[11px] font-bold text-[#B91C1C] hover:bg-[#FEF2F2]">
+                            Decline
+                          </button>
+                        </>
+                      ) : null}
+                      {booking.status === "ACCEPTED" && booking.paymentStatus === "HELD" ? (
+                        <button type="button" onClick={() => void bookingAction(booking.id, "start")} className="rounded-lg bg-[#0F7A4A] px-3 py-1.5 text-[11px] font-bold text-white hover:bg-[#0B6540]">
+                          Start work
+                        </button>
+                      ) : null}
+                      {booking.status === "ACCEPTED" && booking.paymentStatus !== "HELD" ? (
+                        <span className="rounded-lg bg-[#FFF3D6] px-3 py-1.5 text-[11px] font-bold text-[#7A5B12]">Awaiting customer payment</span>
+                      ) : null}
+                      {booking.status === "IN_PROGRESS" ? (
+                        <button type="button" onClick={() => void bookingAction(booking.id, "submit")} className="rounded-lg bg-[#0F7A4A] px-3 py-1.5 text-[11px] font-bold text-white hover:bg-[#0B6540]">
+                          Mark work complete
+                        </button>
+                      ) : null}
+                      {booking.status === "SUBMITTED" ? (
+                        <span className="rounded-lg bg-[#EDE9FE] px-3 py-1.5 text-[11px] font-bold text-[#5B21B6]">Awaiting customer confirmation</span>
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>

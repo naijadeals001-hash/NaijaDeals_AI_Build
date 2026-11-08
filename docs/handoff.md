@@ -1430,3 +1430,42 @@ build, transfer tests 23/23, sessions test pass, ledger reconciliation 0/0,
 clean production build. Note for future builds: after adding a new component
 tree, rebuild with a clean distDir (Postcss/Tailwind loader caches do not
 track glob-scan changes — see earlier note).
+
+## NaijaGigs module repair — routes, journeys, demo directory (2026-11-08)
+
+Phase 1 crawl (scripts/gigs-route-crawl.cjs) of every reported URL: all returned
+HTTP 200 but every discovery page was EMPTY — zero published services/professionals
+existed, so filters, cards and profiles had nothing to render. Repairs:
+- Services + professionals pages rebuilt as real URL-driven discovery
+  (components/gigs/discovery-shared.tsx): GET search form, category chips with
+  aria-current, city filter, shareable/refresh-safe state, honest empty states,
+  sample labels. Verified: category filters return only matching records
+  (electrical 2, design 1, cleaning 1, others empty by data).
+- NEW /naijagigs/services/[slug]: full service detail with professional card,
+  reviews, pricing and a booking panel (fixed price or budget offer) creating
+  real bookings.
+- NEW /naijagigs/professionals/[id]: public profile with services, categories,
+  availability and safety notes.
+- NEW /naijagigs/bookings: customer tracker with Pay-from-wallet, Confirm
+  completion, Leave review, Report a problem and Cancel — all calling the real
+  state machine.
+- Pro dashboard: booking actions (Accept / Decline / Start / Mark complete).
+- Fixed a production-only crash on the detail page (client-only formatter used in
+  a server component → TypeError).
+- CLEARLY LABELLED demonstration directory (prisma/gigs-demo-seed.cjs): 3 sample
+  professionals + 4 sample services with isSample=true (new additive migration),
+  shown behind a "Demonstration directory" banner; server rejects bookings on
+  samples (409) and reviews/bookings cannot succeed. Real data path unchanged.
+
+Verification (all on the production build):
+- scripts/gigs-journey-browser.cjs: 20/20 real-browser steps — apply → admin
+  verify → publish → search → detail → book → accept → pay from UI → escrow →
+  start → submit → approve → review → earnings (₦500 gross, ₦440 net at 12%) →
+  demo listing rejected.
+- scripts/gigs-e2e-tests.mjs: 42/42. Reference QA, pay QA, transfer 23/23,
+  sessions test pass; ledger reconciliation 0 mismatched / 0 unbalanced after
+  fixture cleanup (balanced reversals).
+Docs read: AGENTS.md (incl. the owner's new Kie.ai directive, preserved
+uncommitted), master architecture spec (from naijadeals002), architecture.md,
+phase-tracker.md, decisions.md, handoff.md. Kie.ai MCP is not connected in this
+session; the verified REST integration was used instead (16 assets, $0.48).
