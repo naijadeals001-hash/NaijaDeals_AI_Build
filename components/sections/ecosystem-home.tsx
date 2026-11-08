@@ -191,7 +191,8 @@ function ModuleRail() {
 function EcosystemPulse() {
   const { t } = useLocale();
   const live = verticals.filter((vertical) => vertical.status === "live").length;
-  const setup = verticals.length - live;
+  const preview = verticals.filter((vertical) => vertical.status === "preview").length;
+  const pending = verticals.length - live - preview;
 
   return (
     <section aria-label={t("home.quickActions")} className="rounded-2xl border border-border-soft bg-canvas px-4 py-3">
@@ -201,9 +202,15 @@ function EcosystemPulse() {
             <span className="h-2 w-2 rounded-full bg-primary-live" aria-hidden="true" />
             {live} {t("status.live")}
           </span>
+          {preview > 0 ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-[#2563EB]" aria-hidden="true" />
+              {preview} {t("status.preview")}
+            </span>
+          ) : null}
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-[#B45309]" aria-hidden="true" />
-            {setup} {t("status.setup")}
+            {pending} {t("status.setup")}
           </span>
         </div>
         <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:pb-0" role="list" aria-label={t("home.quickActions")}>
@@ -260,10 +267,18 @@ function ServiceBento() {
   );
 }
 
+const STATUS_LABEL_KEY: Record<Vertical["status"], "status.live" | "status.preview" | "status.setup" | "status.coming"> = {
+  live: "status.live",
+  preview: "status.preview",
+  setup: "status.setup",
+  coming: "status.coming"
+};
+
 function StatusPill({ vertical, onImage = false }: { vertical: Vertical; onImage?: boolean }) {
   const { t } = useLocale();
-  const live = vertical.status === "live";
-  const label = t(live ? "status.live" : "status.setup");
+  const status = vertical.status;
+  const label = t(STATUS_LABEL_KEY[status]);
+  const dot = status === "live" ? "bg-primary-live" : status === "preview" ? "bg-[#2563EB]" : onImage ? "bg-amber" : "bg-[#B45309]";
 
   return (
     <span
@@ -273,7 +288,7 @@ function StatusPill({ vertical, onImage = false }: { vertical: Vertical; onImage
         onImage ? "bg-[#04140f]/80 text-white backdrop-blur" : "border border-border-soft bg-canvas text-ink"
       ].join(" ")}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${live ? "bg-primary-live" : onImage ? "bg-amber" : "bg-[#B45309]"}`} aria-hidden="true" />
+      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden="true" />
       {label}
     </span>
   );

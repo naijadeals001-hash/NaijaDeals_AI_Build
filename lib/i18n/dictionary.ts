@@ -83,7 +83,9 @@ const en = {
   "trust.partnersBody": "Sellers, couriers and providers pass onboarding before they can take work.",
 
   "status.live": "Live",
+  "status.preview": "Preview",
   "status.setup": "Setup required",
+  "status.coming": "Coming soon",
 
   "products.title": "The NaijaDeals ecosystem",
   "products.intro":
@@ -187,7 +189,9 @@ const sw: Record<DictionaryKey, string> = {
   "trust.partnersBody": "Wauzaji, wasafirishaji na watoa huduma hupitia usajili kabla ya kufanya kazi.",
 
   "status.live": "Hai",
+  "status.preview": "Onyesho",
   "status.setup": "Usanidi unahitajika",
+  "status.coming": "Inakuja hivi karibuni",
 
   "products.title": "Mfumo wa NaijaDeals",
   "products.intro":
@@ -288,7 +292,9 @@ const ar: Record<DictionaryKey, string> = {
   "trust.partnersBody": "يمر البائعون والمندوبون والمزوّدون بالتسجيل قبل قبول العمل.",
 
   "status.live": "مباشر",
+  "status.preview": "معاينة",
   "status.setup": "الإعداد مطلوب",
+  "status.coming": "قريباً",
 
   "products.title": "منظومة NaijaDeals",
   "products.intro":

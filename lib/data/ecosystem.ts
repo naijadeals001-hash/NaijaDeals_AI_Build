@@ -21,7 +21,15 @@ import {
 
 export type VerticalKey = "shop" | "eats" | "fresh" | "gigs" | "stay" | "drive" | "send" | "stream" | "wallet" | "aura";
 
-export type VerticalStatus = "live" | "setup";
+/**
+ * Status is either verified or declared, never inferred:
+ * - live:    deployed to the public production host, enabled and reachable
+ *            (verified by an owner-approved production check).
+ * - preview: functional in this environment but NOT verified in production.
+ * - setup:   a genuine configuration dependency prevents the module operating.
+ * - coming:  the vertical is not yet available at all.
+ */
+export type VerticalStatus = "live" | "preview" | "setup" | "coming";
 
 export type Vertical = {
   key: VerticalKey;
@@ -145,8 +153,12 @@ export const verticals: Vertical[] = [
     description: "Verified pros for repairs, solar and design.",
     image: "/real-photography/module-gigs.jpg",
     accent: "#38bdf8",
-    status: "setup",
-    statusLabel: "Setup required",
+    // Repaired and verified end-to-end in this environment, but the public
+    // production host (naijadeals.com) currently serves a different
+    // application without this route — so it is NOT live. Promote to "live"
+    // only after a verified production deployment.
+    status: "preview",
+    statusLabel: "Preview",
     color: "bg-blue-600",
     source: "naijagigs_marketplace"
   },
