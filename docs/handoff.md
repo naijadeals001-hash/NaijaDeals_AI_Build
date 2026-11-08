@@ -1590,3 +1590,41 @@ render, Explore shows countries+genres. Regression: full QA 19/19 routes,
 audio verify pass, API 23/23, royalty 8/8, NaijaPay QA pass.
 Still blocked (documented on-page): premium billing, Aura, live ingestion,
 upload publishing (object storage).
+
+## NaijaStream — real media infrastructure (2026-11-08)
+
+Phase A audit: no storage library, FFmpeg 9.0.2 present, Next 14 Route
+Handlers support formData.
+
+Phase B/C — private storage + processing:
+- lib/services/stream/storage.ts: files stored OUTSIDE public/ under
+  .media-store (git-ignored), server-generated names (no path traversal),
+  MIME allowlist per kind, magic-byte sniffing, size limits (audio 60 MB,
+  video 300 MB, image 8 MB), HTTP Range streaming (206).
+- StreamMediaAsset model with PENDING/PROCESSING/READY/FAILED states, attempts,
+  errors; lib/services/stream/processing.ts runs FFprobe metadata extraction
+  as a background job with bounded retries, duplicate-job prevention and
+  recoverPendingJobs() for restarts.
+- /api/stream/media (authenticated multipart upload + list), /[id] (status,
+  retry, delete), /[id]/stream (owner or published-only access).
+- Track creation now REQUIRES a READY uploaded audio asset; publishing flips
+  media publicVisible. Fix: MP4 magic-byte detection (ftyp at offset 4).
+
+Phase F — livestreaming on FFmpeg HLS (no privileged service needed):
+- lib/services/stream/live-stream.ts encodes a looping source into HLS
+  segments; event flips LIVE only once the playlist exists and ENDED when the
+  encoder exits. Organiser ownership is enforced and a per-event publish token
+  is required; tokens are returned only to the organiser. HLS delivery route
+  serves playlist/segments for free events.
+- Live player reports real connection state (unsupported/error/playing) instead
+  of pretending.
+
+Verification (all against the running preview):
+- Upload → process → draft → publish → anonymous listener plays: 11/11.
+- Video + podcast upload → publish → anonymous viewer decodes frames / plays
+  episode; cross-creator delete denied: 10/10.
+- Livestream start → separate viewer receives playlist + segments, foreign
+  creator rejected, stop → ENDED: 7/7.
+- Regression: full QA 19 routes, API 23/23, features 9/9, royalty 8/8.
+Still blocked by design: ticketed events (needs entitlements/payment) and
+premium/Aura providers.

@@ -26,6 +26,11 @@ export async function POST(request: Request, { params }: { params: { slug: strin
       if (!track.audioUrl) throw new ApiError(409, "audio_required", "Upload audio before publishing.");
       if (!track.rightsDeclared) throw new ApiError(409, "rights_required", "Declare rights before publishing.");
     }
+    // Make the audio publicly streamable only at publish time.
+    if (track.audioUrl?.startsWith("/api/stream/media/")) {
+      const assetId = track.audioUrl.split("/")[4];
+      await prisma.streamMediaAsset.updateMany({ where: { id: assetId, ownerId: user.id }, data: { publicVisible: publish } });
+    }
     const updated = await prisma.streamTrack.update({
       where: { id: track.id },
       data: { status: publish ? "PUBLISHED" : "UNPUBLISHED", publishedAt: publish ? new Date() : null },

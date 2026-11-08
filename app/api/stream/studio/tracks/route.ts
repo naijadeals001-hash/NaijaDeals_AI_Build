@@ -20,10 +20,18 @@ export async function POST(request: Request) {
     if (!artist) throw new ApiError(403, "artist_required", "Create your artist profile first.");
     const body = await readJson<Record<string, unknown>>(request);
     const title = requireString(body.title, "Title", 140);
-    const durationSec = Number(body.durationSec ?? 0);
-    if (!Number.isInteger(durationSec) || durationSec <= 0 || durationSec > 4 * 60 * 60) {
-      throw new ApiError(400, "invalid_duration", "Duration must be between 1 second and 4 hours.");
-    }
+    // An uploaded, processed audio asset is required — this is what makes the
+    // track playable. Duration comes from the media asset, not the client.
+    const mediaId = body.mediaId ? requireString(body.mediaId, "Media", 60) : "";
+    if (!mediaId) throw new ApiError(400, "media_required", "Upload an audio file first.");
+    const media = await prisma.streamMediaAsset.findFirst({
+      where: { id: mediaId, ownerId: user.id, kind: "AUDIO" },
+      select: { id: true, status: true, durationSec: true }
+    });
+    if (!media) throw new ApiError(404, "media_not_found", "Audio upload not found on your account.");
+    if (media.status !== "READY") throw new ApiError(409, "media_not_ready", "Audio is still processing — try again shortly.");
+    const durationSec = media.durationSec ?? 0;
+    if (!Number.isInteger(durationSec) || durationSec <= 0) throw new ApiError(400, "invalid_duration", "Audio duration could not be read.");
     const base = title.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50) || "track";
     let slug = `${base}-${Date.now().toString(36)}`;
     const track = await prisma.streamTrack.create({
@@ -32,11 +40,13 @@ export async function POST(request: Request) {
         title,
         slug,
         durationSec,
+        audioUrl: `/api/stream/media/${media.id}/stream`,
         genre: body.genre ? requireString(body.genre, "Genre", 40) : null,
         language: body.language ? requireString(body.language, "Language", 40) : null,
         explicit: Boolean(body.explicit),
         artworkUrl: body.artworkUrl ? requireString(body.artworkUrl, "Artwork", 500) : null,
         rightsDeclared: Boolean(body.rightsDeclared),
+        isSample: false,
         status: "DRAFT"
       },
       select: { id: true, title: true, slug: true, status: true }

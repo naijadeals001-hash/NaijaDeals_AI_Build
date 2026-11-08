@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarClock, Info } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { LivePlayer } from "@/components/stream/live-player";
+import { readLiveFile } from "@/lib/services/stream/live-stream";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,9 @@ export default async function LiveEventPage({ params }: { params: { slug: string
   const event = rows[0];
   if (!event) notFound();
 
-  const isLive = event.status === "LIVE" && Boolean(event.streamUrl);
+  // LIVE is only shown when the engine reports a running encode with a playlist.
+  const handle = await readLiveFile(event.id, "index.m3u8").catch(() => null);
+  const isLive = event.status === "LIVE" && Boolean(event.streamUrl) && Boolean(handle);
   const ended = event.status === "ENDED";
   const cancelled = event.status === "CANCELLED";
 
@@ -33,8 +37,7 @@ export default async function LiveEventPage({ params }: { params: { slug: string
     <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
       <div className="overflow-hidden rounded-2xl bg-black">
         {isLive && event.streamUrl ? (
-          // eslint-disable-next-line jsx-a11y/media-has-caption
-          <video src={event.streamUrl} controls autoPlay muted playsInline className="aspect-video w-full" />
+          <LivePlayer src={event.streamUrl} poster={event.artworkUrl} />
         ) : (
           <div className="relative aspect-video w-full">
             {event.artworkUrl ? <img src={event.artworkUrl} alt="" className="h-full w-full object-cover opacity-60" /> : null}

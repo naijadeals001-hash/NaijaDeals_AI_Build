@@ -20,3 +20,6 @@ qa-artifacts/
 .qa/
 test-results/
 /rea-evidence
+
+# NaijaStream private media store (never commit user uploads)
+.media-store/

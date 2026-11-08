@@ -116,12 +116,13 @@ const VIDEOS = [
     { slug: "afrovibes-live-lagos", title: "AfroVibes Live Lagos", status: "UPCOMING", days: 7, art: "/generated/stream/opt-v2/stream-v2-hero.jpg", description: "An evening of Afrobeats with the NaijaStream community." },
     { slug: "amapiano-sessions-replay", title: "Amapiano Sessions — replay", status: "ENDED", days: -3, art: "/generated/stream/opt-v2/stream-v2-cover-amapiano.jpg", description: "A late-night Amapiano session. Recording pending." }
   ];
+  const organizer = await prisma.streamArtist.findUnique({ where: { slug: "adaeze-moon" }, select: { userId: true } });
   for (const event of events) {
     const startsAt = new Date(Date.now() + event.days * 86400000);
     await prisma.streamLiveEvent.upsert({
       where: { slug: event.slug },
-      update: { title: event.title, status: event.status, startsAt, artworkUrl: event.art, description: event.description, isSample: true },
-      create: { title: event.title, slug: event.slug, status: event.status, startsAt, artworkUrl: event.art, description: event.description, isFree: true, isSample: true }
+      update: { title: event.title, startsAt, artworkUrl: event.art, description: event.description, organizerId: organizer?.userId ?? null },
+      create: { title: event.title, slug: event.slug, status: "UPCOMING", startsAt, artworkUrl: event.art, description: event.description, isFree: true, organizerId: organizer?.userId ?? null, isSample: true }
     });
   }
 

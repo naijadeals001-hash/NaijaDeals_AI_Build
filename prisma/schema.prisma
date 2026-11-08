@@ -164,6 +164,7 @@ model User {
   streamPlaylistFollows StreamPlaylistFollow[] @relation("StreamPlaylistFollows")
   streamFollows     StreamFollow[]        @relation("StreamFollows")
   streamLikes       StreamLike[]          @relation("StreamLikes")
+  streamMedia       StreamMediaAsset[]     @relation("StreamMediaOwner")
   streamArtist      StreamArtist?
   disputes          Dispute[]          @relation("CustomerDisputes")
   adminActions      AdminAction[]
@@ -1899,10 +1900,49 @@ model StreamLiveEvent {
   endsAt      DateTime?
   status      String   @default("UPCOMING") // UPCOMING | LIVE | ENDED | CANCELLED
   streamUrl   String?
+  startedAt   DateTime?
+  endedAt     DateTime?
+  organizerId String?
   isFree      Boolean  @default(true)
   priceKobo   BigInt?
   isSample    Boolean  @default(false)
   createdAt   DateTime @default(now())
 
   @@index([status, startsAt])
+}
+
+/// Private uploaded media. Files live outside public/ and are streamed only
+/// after an ownership/entitlement check (lib/services/stream/storage.ts).
+enum StreamMediaStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+  CANCELLED
+}
+
+model StreamMediaAsset {
+  id            String            @id @default(cuid())
+  ownerId       String
+  kind          String            // AUDIO | VIDEO | IMAGE
+  storageKey    String            @unique
+  mimeType      String
+  sizeBytes     Int
+  originalName  String?
+  durationSec   Int?
+  width         Int?
+  height        Int?
+  bitrate       Int?
+  status        StreamMediaStatus @default(PENDING)
+  error         String?
+  processedKey  String?           // optional normalised output
+  attempts      Int               @default(0)
+  purpose       String            @default("TRACK") // TRACK | EPISODE | VIDEO | ARTWORK
+  publicVisible Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  owner         User              @relation("StreamMediaOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, status])
+  @@index([kind, status])
 }
