@@ -1469,3 +1469,23 @@ Docs read: AGENTS.md (incl. the owner's new Kie.ai directive, preserved
 uncommitted), master architecture spec (from naijadeals002), architecture.md,
 phase-tracker.md, decisions.md, handoff.md. Kie.ai MCP is not connected in this
 session; the verified REST integration was used instead (16 assets, $0.48).
+
+## Production-readiness audit — demo isolation gate (2026-11-08)
+
+Independent re-run of every claimed suite on the production build: tsc clean,
+eslint 0 errors (11 img warnings), API 42/42, browser journey 20/20, transfers
+23/23, sessions test pass, ledger 0 mismatched / 0 unbalanced, reference/visual/
+pay QA all pass.
+
+Hardened demonstration-data isolation: public discovery, profiles and service
+detail now exclude isSample records unless NAIJA_GIGS_SHOW_SAMPLES=true
+(production default: hidden). Verified both modes — flag off: 1 real service,
+demo detail 404; flag on: 5 services with 4 labelled samples. Booking/review
+guards against samples remain unconditional (409).
+
+Release gates: production infrastructure BLOCKED (no deployment target, no
+PAYSTACK/FLUTTERWAVE credentials, DB classified TEST, no health endpoint, no
+backups/rollback host); GitHub preservation BLOCKED (only credential is
+read-only account BetFuz; tokens previously stored in .env.txt were removed
+and the remaining KIE.AI_API_KEY in .env.txt was malformed and not used).
+No deployment performed.

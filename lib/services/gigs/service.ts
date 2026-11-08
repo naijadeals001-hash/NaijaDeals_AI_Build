@@ -10,7 +10,14 @@ import { ensureWallet } from "@/lib/payments/service";
 
 type Db = Prisma.TransactionClient;
 
-const professionalPublic = { status: "VERIFIED" as const, published: true };
+/**
+ * Public visibility filter. Demonstration records (isSample) are excluded from
+ * discovery, profiles and booking whenever NAIJA_GIGS_SHOW_SAMPLES is not
+ * "true" — the default in production, where only real approved professionals
+ * and published services may appear.
+ */
+const showSamples = process.env.NAIJA_GIGS_SHOW_SAMPLES === "true";
+const professionalPublic = { status: "VERIFIED" as const, published: true, ...(showSamples ? {} : { isSample: false }) };
 
 function slugify(value: string) {
   return value
@@ -88,7 +95,8 @@ export async function searchGigServices(input: ServiceSearchInput) {
   const where: Prisma.ServiceListingWhereInput = {
     status: "ACTIVE",
     professional: professionalPublic,
-    category: { isActive: true }
+    category: { isActive: true },
+    ...(showSamples ? {} : { isSample: false })
   };
 
   if (input.q) {
@@ -150,7 +158,7 @@ export async function searchGigServices(input: ServiceSearchInput) {
 
 export async function getGigServiceBySlug(slug: string) {
   const listing = await prisma.serviceListing.findFirst({
-    where: { slug, status: "ACTIVE", professional: professionalPublic },
+    where: { slug, status: "ACTIVE", professional: professionalPublic, ...(showSamples ? {} : { isSample: false }) },
     include: {
       category: true,
       images: { orderBy: { sortOrder: "asc" } },
