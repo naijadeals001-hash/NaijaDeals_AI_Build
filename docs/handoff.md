@@ -1394,3 +1394,39 @@ rebuild; the fresh CSS contains all gigs utilities. Verified in the live browser
 and via gigs/pay visual QA on the restarted preview (port 3015). Lesson: after
 adding a new component tree, build with a clean distDir (or touch a Tailwind
 input) — Postcss loader caches do not track glob-scan dependency changes.
+
+## NaijaGigs imagery — Kie.ai pipeline live, 16 original assets (2026-11-08)
+
+Owner supplied the Kie.ai key (stored in .env.txt; appended to .env as
+KIE_API_KEY; never printed or committed). Verified the live API: create
+POST /api/v1/jobs/createTask with model gpt-image-2-text-to-image + input.size
+"1K" (the mandated "GPT Image 2 1K"); poll GET /api/v1/jobs/recordInfo;
+observed cost 6 credits (~$0.03) per image, matching the quoted price.
+scripts/generate-gigs-images.mjs implements the reusable pipeline (retry,
+resume-by-taskId to avoid double billing, status mode, cost tracking,
+scripts/image-registry.json holds prompt/model/date/taskId/credits/USD/review
+status/usage per asset). 16 original images generated into
+public/generated/gigs/ — actual spend $0.48 (72 credits; an early path bug
+lost 4 downloaded files, fixed with resume logic; the same run then produced
+all assets cleanly). All imagery is service-accurate original campaign art;
+generated people are illustrative and never presented as real platform
+professionals.
+
+Wired into the homepage per the approved reference: photographic hero collage
+(electrician/hairdresser/AC/photographer), Post a Job panel portrait,
+provider-band tradesman, and all six spotlight cards now use generated
+service-accurate photography (seed updated idempotently). Homepage
+restructured to the reference: "Find the right person. Get the job done."
+hero with service/location search, category rail, featured-professional
+cards (honest onboarding empty state until real listings exist), Post a Job
+panel, How NaijaGigs Works 4 steps + Hire With Confidence, Turn Your Skills
+Into Income band, footer proposition band. New /naijagigs/post-job page
+creates real CustomerJob records (verified: 201, appears in overview,
+anonymous 401).
+
+Verified: reference QA + gigs visual QA + pay visual QA PASS (390/768/1440,
+hidden-image false positive fixed in QA scripts), E2E 42/42 on the production
+build, transfer tests 23/23, sessions test pass, ledger reconciliation 0/0,
+clean production build. Note for future builds: after adding a new component
+tree, rebuild with a clean distDir (Postcss/Tailwind loader caches do not
+track glob-scan changes — see earlier note).

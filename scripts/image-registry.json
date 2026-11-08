@@ -1,0 +1,328 @@
+{
+  "currency": "USD",
+  "model": "gpt-image-2-text-to-image",
+  "creditsPerImage": 6,
+  "usdPerCredit": 0.005,
+  "assets": [
+    {
+      "id": "gigs-hero-electrician",
+      "vertical": "gigs",
+      "component": "homepage hero collage (centre)",
+      "prompt": "Photorealistic editorial portrait of a confident Nigerian electrician in a yellow hard hat and green work overalls, arms folded, smiling warmly, standing in a bright modern interior with soft daylight, natural skin texture, premium services-marketplace campaign photography, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "57f5eb81404c013ea4a4221a953e4464",
+      "storagePath": "generated\\gigs\\gigs-hero-electrician.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_0000000030bc81fbba8793d3164bc388.png",
+      "generatedAt": "2026-11-08T04:17:48.832Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (homepage hero collage (centre))"
+      ]
+    },
+    {
+      "id": "gigs-hero-hairdresser",
+      "vertical": "gigs",
+      "component": "homepage hero collage (hair salon)",
+      "prompt": "Photorealistic image of a Nigerian hairdresser styling a client's braids in a warm modern Lagos salon, natural lighting, authentic salon details, premium editorial quality, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "5784ba51dd1fe1b275ffccc55f0d8d58",
+      "storagePath": "generated\\gigs\\gigs-hero-hairdresser.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000a8308230831d88403622d97d.png",
+      "generatedAt": "2026-11-08T04:18:04.302Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (homepage hero collage (hair salon))"
+      ]
+    },
+    {
+      "id": "gigs-hero-ac-technician",
+      "vertical": "gigs",
+      "component": "homepage hero collage (AC install)",
+      "prompt": "Photorealistic image of a Nigerian technician in blue overalls installing a white wall-mounted split air conditioner in a clean living room, holding tools, natural light, premium editorial quality, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "9e4edbe7b746d1e7745d2ee6a4a4336c",
+      "storagePath": "generated\\gigs\\gigs-hero-ac-technician.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/a2/9e4edbe7b746d1e7745d2ee6a4a4336c_1794110739387.png",
+      "generatedAt": "2026-11-08T04:18:19.684Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (homepage hero collage (AC install))"
+      ]
+    },
+    {
+      "id": "gigs-hero-photographer",
+      "vertical": "gigs",
+      "component": "homepage hero collage (photographer)",
+      "prompt": "Photorealistic image of a Nigerian photographer holding a professional DSLR camera at an indoor celebration, warm bokeh lights in the background, premium editorial quality, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "d4a6d9a34eefdfc7d27c41bfa83f9260",
+      "storagePath": "generated\\gigs\\gigs-hero-photographer.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000d75481f587950c0407122857.png",
+      "generatedAt": "2026-11-08T04:18:35.179Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (homepage hero collage (photographer))"
+      ]
+    },
+    {
+      "id": "gigs-card-ac-installation",
+      "vertical": "gigs",
+      "component": "popular service card (AC installation)",
+      "prompt": "Photorealistic image of a Nigerian technician on a small ladder installing a white wall-mounted split air conditioner in a clean bright living room, toolbag on the floor, natural light, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "5687c2f14e0243357b9a23c0f2dc5f5e",
+      "storagePath": "generated\\gigs\\gigs-card-ac-installation.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_000000009e1881f5bc3ff39c31b8fc65.png",
+      "generatedAt": "2026-11-08T04:18:50.681Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (popular service card (AC installation))"
+      ]
+    },
+    {
+      "id": "gigs-card-deep-cleaning",
+      "vertical": "gigs",
+      "component": "popular service card (home cleaning)",
+      "prompt": "Photorealistic image of a Nigerian professional cleaner in a green uniform actively mopping a bright modern home floor with a cleaning caddy nearby, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "eeda87c39f747cd15d749e711d8a68e6",
+      "storagePath": "generated\\gigs\\gigs-card-deep-cleaning.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_0000000082b081fd87737d263f62332f.png",
+      "generatedAt": "2026-11-08T04:19:06.150Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (popular service card (home cleaning))"
+      ]
+    },
+    {
+      "id": "gigs-card-generator-repair",
+      "vertical": "gigs",
+      "component": "popular service card (generator repair)",
+      "prompt": "Photorealistic image of a Nigerian generator technician servicing an outdoor petrol generator with a toolbox open beside him, realistic Nigerian compound setting, golden light, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "28e1a5b544303ad7a874fc09258d70b8",
+      "storagePath": "generated\\gigs\\gigs-card-generator-repair.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_0000000052a481f59d1ec35f0d76e512.png",
+      "generatedAt": "2026-11-08T04:19:21.779Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (popular service card (generator repair))"
+      ]
+    },
+    {
+      "id": "gigs-card-web-development",
+      "vertical": "gigs",
+      "component": "popular service card (web development)",
+      "prompt": "Photorealistic image of a Nigerian software developer writing code for a website on a laptop at a tidy modern desk, code editor visible on the laptop screen, soft window light, no text overlays, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "a050a3813a2d965edc08b204ec0b17a2",
+      "storagePath": "generated\\gigs\\gigs-card-web-development.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000b99c81fd86a3a1d2c49dcd30.png",
+      "generatedAt": "2026-11-08T04:19:37.354Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (popular service card (web development))"
+      ]
+    },
+    {
+      "id": "gigs-card-wedding-photography",
+      "vertical": "gigs",
+      "component": "popular service card (wedding photography)",
+      "prompt": "Photorealistic image of a Nigerian wedding photographer with a professional camera photographing a joyful Nigerian couple in traditional aso-ebi wedding attire, soft celebration lighting, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "d0587cbf8447303b4c34b7131481ed45",
+      "storagePath": "generated\\gigs\\gigs-card-wedding-photography.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000b4d881f595824a68fac74237.png",
+      "generatedAt": "2026-11-08T04:19:52.867Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (popular service card (wedding photography))"
+      ]
+    },
+    {
+      "id": "gigs-card-interior-painting",
+      "vertical": "gigs",
+      "component": "popular service card (interior painting)",
+      "prompt": "Photorealistic image of a Nigerian painter on a step ladder painting an interior wall white with a roller and drop cloth on the floor, natural window light, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "12a1c4a75aa6e36bd43c16eae7c0084f",
+      "storagePath": "generated\\gigs\\gigs-card-interior-painting.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/a2/12a1c4a75aa6e36bd43c16eae7c0084f_1794111190327.png",
+      "generatedAt": "2026-11-08T04:20:08.255Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (popular service card (interior painting))"
+      ]
+    },
+    {
+      "id": "gigs-band-post-a-job",
+      "vertical": "gigs",
+      "component": "Post a Job panel",
+      "prompt": "Photorealistic portrait of a smiling young Nigerian woman holding a smartphone, seated in a bright modern space with green plants, premium marketplace campaign quality, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "e5dfbc690d815ecced01c676d2b8c61e",
+      "storagePath": "generated\\gigs\\gigs-band-post-a-job.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000a81881fdaab119c62e263178.png",
+      "generatedAt": "2026-11-08T04:20:23.722Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (Post a Job panel)"
+      ]
+    },
+    {
+      "id": "gigs-band-become-provider",
+      "vertical": "gigs",
+      "component": "Become a Provider band",
+      "prompt": "Photorealistic image of a proud Nigerian tradesman in a work apron smiling with arms crossed against a deep green studio background, premium campaign photography, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "bd81d853f6be278a758f0dc4e59cd61f",
+      "storagePath": "generated\\gigs\\gigs-band-become-provider.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_0000000093688212b622d5a4e17edd4e.png",
+      "generatedAt": "2026-11-08T04:20:39.219Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (Become a Provider band)"
+      ]
+    },
+    {
+      "id": "gigs-spot-solar",
+      "vertical": "gigs",
+      "component": "spotlight (solar installation)",
+      "prompt": "Photorealistic image of a Nigerian solar technician in a hard hat installing rooftop solar panels on a residential house, bright blue sky, realistic equipment, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "ab19d2a79fd3af7bd9135b595c9455ce",
+      "storagePath": "generated\\gigs\\gigs-spot-solar.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000485081fd9712637d137b70aa.png",
+      "generatedAt": "2026-11-08T04:21:55.571Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (spotlight (solar installation))"
+      ]
+    },
+    {
+      "id": "gigs-spot-wiring",
+      "vertical": "gigs",
+      "component": "spotlight (electrical wiring)",
+      "prompt": "Photorealistic image of a Nigerian electrician wiring a distribution board with colour-coded cables, using insulated screwdrivers, focused work, realistic interior, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "baa610bf9f7e0f641e47a2a026cf689e",
+      "storagePath": "generated\\gigs\\gigs-spot-wiring.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000cbc481fd9da7f11e1482dbce.png",
+      "generatedAt": "2026-11-08T04:23:11.834Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (spotlight (electrical wiring))"
+      ]
+    },
+    {
+      "id": "gigs-spot-video",
+      "vertical": "gigs",
+      "component": "spotlight (video production)",
+      "prompt": "Photorealistic image of a Nigerian videographer operating a professional cinema camera on a gimbal during an indoor production, soft studio lighting, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "96f6a3e5a1e9e7b33b825ef6f2ba6484",
+      "storagePath": "generated\\gigs\\gigs-spot-video.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_000000002e6c81f89e7465a7317b6337.png",
+      "generatedAt": "2026-11-08T04:24:28.042Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (spotlight (video production))"
+      ]
+    },
+    {
+      "id": "gigs-spot-catering",
+      "vertical": "gigs",
+      "component": "spotlight (catering)",
+      "prompt": "Photorealistic image of a Nigerian caterer in apron arranging jollof rice, grilled chicken and salads on a buffet table for an event, warm appetising lighting, no text, no watermark",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "ed618f7c67f7d33fd13b09863875fd3f",
+      "storagePath": "generated\\gigs\\gigs-spot-catering.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000664481f5bdcefd2632bd2950.png",
+      "generatedAt": "2026-11-08T04:25:29.195Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/gigs/landing.tsx (spotlight (catering))"
+      ]
+    }
+  ]
+}

@@ -20,12 +20,12 @@ const gigCategories = [
 ];
 
 const spotlights = [
-  { category: "electrical-solar", title: "Solar System Installation & Maintenance", blurb: "Design, installation and servicing for homes and small businesses.", imageUrl: "/gigs/services/solar.svg", locationLabel: "Abuja, Nigeria" },
-  { category: "electrical-solar", title: "Electrical Wiring & Lighting Setup", blurb: "Safe wiring, distribution boards and interior lighting.", imageUrl: "/gigs/services/electrical.svg", locationLabel: "Abuja, Nigeria" },
-  { category: "building-renovation", title: "Home Painting (Interior & Exterior)", blurb: "Surface preparation, priming and a durable finish.", imageUrl: "/gigs/services/painting.svg", locationLabel: "Abuja, Nigeria" },
-  { category: "tech-digital", title: "Website Design & Development", blurb: "Responsive business sites, storefronts and landing pages.", imageUrl: "/gigs/services/website.svg", locationLabel: "Remote / Nigeria" },
-  { category: "design-creative", title: "Video Production & Editing", blurb: "Product films, event coverage and social edits.", imageUrl: "/gigs/services/video.svg", locationLabel: "Abuja, Nigeria" },
-  { category: "events-catering", title: "Catering Services (Events & Meetings)", blurb: "Menus and service teams for meetings and celebrations.", imageUrl: "/gigs/services/catering.svg", locationLabel: "Abuja, Nigeria" }
+  { category: "electrical-solar", title: "Solar System Installation & Maintenance", blurb: "Design, installation and servicing for homes and small businesses.", imageUrl: "/generated/gigs/gigs-spot-solar.png", locationLabel: "Abuja, Nigeria" },
+  { category: "electrical-solar", title: "Electrical Wiring & Lighting Setup", blurb: "Safe wiring, distribution boards and interior lighting.", imageUrl: "/generated/gigs/gigs-spot-wiring.png", locationLabel: "Abuja, Nigeria" },
+  { category: "building-renovation", title: "Home Painting (Interior & Exterior)", blurb: "Surface preparation, priming and a durable finish.", imageUrl: "/generated/gigs/gigs-card-interior-painting.png", locationLabel: "Abuja, Nigeria" },
+  { category: "tech-digital", title: "Website Design & Development", blurb: "Responsive business sites, storefronts and landing pages.", imageUrl: "/generated/gigs/gigs-card-web-development.png", locationLabel: "Remote / Nigeria" },
+  { category: "design-creative", title: "Video Production & Editing", blurb: "Product films, event coverage and social edits.", imageUrl: "/generated/gigs/gigs-spot-video.png", locationLabel: "Abuja, Nigeria" },
+  { category: "events-catering", title: "Catering Services (Events & Meetings)", blurb: "Menus and service teams for meetings and celebrations.", imageUrl: "/generated/gigs/gigs-spot-catering.png", locationLabel: "Abuja, Nigeria" }
 ];
 
 (async () => {

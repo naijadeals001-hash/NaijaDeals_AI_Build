@@ -33,7 +33,7 @@ try {
     const heading = await page.getByRole("heading", { name: "Pay. Send. Receive. Do More with NaijaPay." }).count();
     const sub = await page.getByText("Your Money. A Brighter Nigeria.").count();
     const images = await page.evaluate(() =>
-      Array.from(document.querySelectorAll("img")).map((img) => ({
+      Array.from(document.querySelectorAll("img")).filter((img) => Boolean(img.offsetParent) || img.style.position === "fixed").map((img) => ({
         src: img.getAttribute("src"),
         complete: img.complete,
         naturalWidth: img.naturalWidth

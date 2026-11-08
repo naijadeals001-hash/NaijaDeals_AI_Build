@@ -39,7 +39,7 @@ const pages = [
       });
       await page.waitForTimeout(1500);
       const data = await page.evaluate(() => {
-        const images = Array.from(document.querySelectorAll("img")).map((img) => ({ src: img.getAttribute("src"), complete: img.complete, naturalWidth: img.naturalWidth }));
+        const images = Array.from(document.querySelectorAll("img")).filter((img) => Boolean(img.offsetParent) || img.style.position === "fixed").map((img) => ({ src: img.getAttribute("src"), complete: img.complete, naturalWidth: img.naturalWidth }));
         return {
           title: document.title,
           h1: document.querySelector("h1")?.textContent ?? null,
