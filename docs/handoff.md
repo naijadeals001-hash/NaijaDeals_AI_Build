@@ -1381,3 +1381,16 @@ gigs visual QA passed at 390/1440 across landing, services, professionals,
 apply, pro-dashboard (qa-artifacts/gigs/*); regressions green: pay transfer
 tests 23/23, sessions API test, NaijaShop/Drive/Eats/Pay route checks.
 Ecosystem module links to /naijagigs (existing entry).
+
+## Preview CSS defect found and fixed (2026-11-08)
+
+The production preview rendered NaijaGigs unstyled: .next-pay reused a Postcss/
+Tailwind loader cache from the stash-era build (when gigs sources were absent),
+so every gigs-only utility (arbitrary values, lg:grid-cols-12, etc.) was missing
+from the emitted CSS while the committed source was correct. Diagnosis: computed
+styles in the live browser showed no matching grid-template-columns rule and the
+served CSS contained none of landing.tsx's classes. Fix: delete .next-pay and
+rebuild; the fresh CSS contains all gigs utilities. Verified in the live browser
+and via gigs/pay visual QA on the restarted preview (port 3015). Lesson: after
+adding a new component tree, build with a clean distDir (or touch a Tailwind
+input) — Postcss loader caches do not track glob-scan dependency changes.
