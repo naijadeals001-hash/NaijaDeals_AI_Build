@@ -62,15 +62,28 @@ export function StreamPlayerProvider({ children }: { children: React.ReactNode }
   const restored = useRef(false);
 
   const current = queue[index] ?? null;
+  const reportedRef = useRef<string | null>(null);
+
+  // Report a qualifying listen once per track load (server dedupes by 30s bucket).
+  useEffect(() => {
+    if (!current) return;
+    if (!playing) return;
+    if (time < 30) return;
+    if (reportedRef.current === current.id) return;
+    reportedRef.current = current.id;
+    void fetch("/api/stream/plays", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ trackId: current.id, secondsPlayed: time })
+    }).catch(() => undefined);
+  }, [current, playing, time]);
 
   // Ensure the <audio> element exists exactly once.
   useEffect(() => {
-    if (!audioRef.current) {
-      const audio = new Audio();
-      audio.preload = "metadata";
-      audioRef.current = audio;
-    }
     const audio = audioRef.current;
+    if (!audio) return;
+    audio.preload = "metadata";
     const onTime = () => setTime(audio.currentTime);
     const onMeta = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
     const onEnd = () => setPlaying(false);
@@ -176,21 +189,17 @@ export function StreamPlayerProvider({ children }: { children: React.ReactNode }
 
   const advance = useCallback(
     (direction: 1 | -1) => {
-      setQueue((currentQueue) => {
-        setIndex((currentIndex) => {
-          if (currentQueue.length === 0) return 0;
-          if (shuffle && direction === 1) {
-            return Math.floor(Math.random() * currentQueue.length);
-          }
-          const next = currentIndex + direction;
-          if (next < 0) return repeat === "all" ? currentQueue.length - 1 : 0;
-          if (next >= currentQueue.length) return repeat === "all" ? 0 : currentQueue.length - 1;
-          return next;
-        });
-        return currentQueue;
+      setIndex((currentIndex) => {
+        if (queue.length === 0) return 0;
+        if (shuffle && direction === 1) return Math.floor(Math.random() * queue.length);
+        const next = currentIndex + direction;
+        if (next < 0) return repeat === "all" ? queue.length - 1 : 0;
+        if (next >= queue.length) return repeat === "all" ? 0 : queue.length - 1;
+        return next;
       });
+      setPlaying(true);
     },
-    [repeat, shuffle]
+    [queue.length, repeat, shuffle]
   );
 
   // Auto-advance on end according to repeat mode.
@@ -212,8 +221,13 @@ export function StreamPlayerProvider({ children }: { children: React.ReactNode }
   const seek = useCallback((seconds: number) => {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.currentTime = seconds;
-    setTime(seconds);
+    const target = Math.max(0, Math.min(seconds, Number.isFinite(audio.duration) ? audio.duration : seconds));
+    try {
+      audio.currentTime = target;
+    } catch {
+      /* seeking before metadata is ready is ignored by the browser */
+    }
+    setTime(target);
   }, []);
 
   const setVolume = useCallback((value: number) => {
@@ -253,7 +267,14 @@ export function StreamPlayerProvider({ children }: { children: React.ReactNode }
     [queue, index, current, playing, time, duration, volume, muted, shuffle, repeat, error, play, toggle, advance, seek, setVolume]
   );
 
-  return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
+  // The <audio> element is kept in the DOM (hidden) so assistive tech and
+  // browser automation can observe real playback state.
+  return (
+    <PlayerContext.Provider value={value}>
+      {children}
+      <audio ref={audioRef} data-stream-audio aria-hidden="true" className="sr-only" />
+    </PlayerContext.Provider>
+  );
 }
 
 export function useStreamPlayer() {

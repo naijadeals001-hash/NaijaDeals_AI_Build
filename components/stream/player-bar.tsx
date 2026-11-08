@@ -96,9 +96,9 @@ export function StreamPlayerBar() {
               <input
                 type="range"
                 min={0}
-                max={Math.max(player.duration, 1)}
+                max={Math.max(Math.round(player.duration || current?.durationSec || 1), 1)}
                 step={1}
-                value={Math.min(player.time, Math.max(player.duration, 1))}
+                value={Math.min(Math.round(player.time), Math.max(Math.round(player.duration || current?.durationSec || 1), 1))}
                 onChange={(event) => player.seek(Number(event.target.value))}
                 aria-label="Seek"
                 className="h-1 w-full accent-emerald-500"

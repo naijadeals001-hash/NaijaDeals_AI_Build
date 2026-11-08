@@ -1658,6 +1658,8 @@ model StreamArtist {
   tracks        StreamTrack[]
   playlists     StreamPlaylist[]
   follows       StreamFollow[]
+  shows         StreamShow[]
+  videos        StreamVideo[]
 
   @@index([verified, isSample])
 }
@@ -1826,4 +1828,81 @@ model StreamRevenuePool {
   notes         String?
   createdBy     String?
   createdAt     DateTime @default(now())
+}
+
+// --- NaijaStream podcasts & video -------------------------------------------
+
+model StreamShow {
+  id          String   @id @default(cuid())
+  artistId    String
+  title       String
+  slug        String   @unique
+  description String?
+  coverUrl    String?
+  category    String   @default("Culture")
+  language    String   @default("English")
+  isSample    Boolean  @default(false)
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  artist      StreamArtist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  episodes    StreamEpisode[]
+
+  @@index([published, category])
+}
+
+model StreamEpisode {
+  id          String   @id @default(cuid())
+  showId      String
+  title       String
+  slug        String   @unique
+  description String?
+  audioUrl    String?
+  durationSec Int
+  season      Int      @default(1)
+  episodeNo   Int
+  publishedAt DateTime?
+  status      StreamTrackStatus @default(DRAFT)
+  isSample    Boolean  @default(false)
+  show        StreamShow @relation(fields: [showId], references: [id], onDelete: Cascade)
+
+  @@unique([showId, season, episodeNo])
+  @@index([status, publishedAt])
+}
+
+model StreamVideo {
+  id          String   @id @default(cuid())
+  artistId    String?
+  title       String
+  slug        String   @unique
+  description String?
+  videoUrl    String
+  posterUrl   String?
+  durationSec Int
+  kind        String   @default("MUSIC_VIDEO")
+  status      StreamTrackStatus @default(DRAFT)
+  isSample    Boolean  @default(false)
+  publishedAt DateTime?
+  views       BigInt   @default(0)
+  createdAt   DateTime @default(now())
+  artist      StreamArtist? @relation(fields: [artistId], references: [id], onDelete: SetNull)
+
+  @@index([status, publishedAt])
+}
+
+model StreamLiveEvent {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String?
+  artworkUrl  String?
+  startsAt    DateTime
+  endsAt      DateTime?
+  status      String   @default("UPCOMING") // UPCOMING | LIVE | ENDED | CANCELLED
+  streamUrl   String?
+  isFree      Boolean  @default(true)
+  priceKobo   BigInt?
+  isSample    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([status, startsAt])
 }

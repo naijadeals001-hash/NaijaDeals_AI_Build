@@ -83,17 +83,31 @@ const PLAYLISTS = [
   }
 
   const trackIds = {};
+  const AUDIO_BY_SLUG = {
+    "lagos-nights-demo": "track-lagos-nights",
+    "brighter-demo": "track-brighter",
+    "mainland-flow-demo": "track-mainland-flow",
+    "concrete-dreams-demo": "track-concrete-dreams",
+    "grateful-heart-demo": "track-grateful-heart",
+    "morning-light-demo": "track-morning-light",
+    "night-shift-demo": "track-night-shift",
+    "amapiano-sunset-demo": "track-amapiano-sunset",
+    "deep-groove-demo": "track-deep-groove",
+    "highlife-soul-demo": "track-highlife-soul"
+  };
   for (const track of TRACKS) {
     const slug = `${slugify(track.title)}-demo`;
+    const audioUrl = `/generated/stream/audio/${AUDIO_BY_SLUG[slug]}.mp3`;
     const row = await prisma.streamTrack.upsert({
       where: { slug },
-      update: { title: track.title, genre: track.genre, durationSec: track.duration, artworkUrl: track.art, status: "PUBLISHED", isSample: true, rightsDeclared: true },
+      update: { title: track.title, genre: track.genre, durationSec: track.duration, artworkUrl: track.art, audioUrl, status: "PUBLISHED", isSample: true, rightsDeclared: true },
       create: {
         artistId: artistIds[track.artist],
         title: track.title,
         slug,
         durationSec: track.duration,
         artworkUrl: track.art,
+        audioUrl,
         genre: track.genre,
         status: "PUBLISHED",
         publishedAt: new Date(),

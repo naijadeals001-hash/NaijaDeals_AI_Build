@@ -268,6 +268,25 @@ export async function recordPlay(input: { trackId: string; userId?: string; seco
   return result;
 }
 
+/** Recently played for a listener, most recent first, de-duplicated by track. */
+export async function recentlyPlayed(userId: string, take = 12) {
+  const rows = await prisma.streamPlay.findMany({
+    where: { userId, eligible: true, track: publicTrackWhere },
+    orderBy: { createdAt: "desc" },
+    take: take * 3,
+    select: { track: { select: trackCard }, createdAt: true }
+  });
+  const seen = new Set<string>();
+  const items: Array<{ track: TrackCard; playedAt: string }> = [];
+  for (const row of rows) {
+    if (seen.has(row.track.id)) continue;
+    seen.add(row.track.id);
+    items.push({ track: row.track, playedAt: row.createdAt.toISOString() });
+    if (items.length >= take) break;
+  }
+  return items;
+}
+
 // --- Royalty engine ---------------------------------------------------------
 
 /** Pure split of a period pool across eligible plays; exported for tests. */

@@ -107,8 +107,12 @@ export function StreamHome({ data, signedIn }: { data: StreamHomeData; signedIn:
                   <button
                     type="button"
                     onClick={() => {
-                      const tracks = data.hero?.track ? [data.hero.track] : data.trending;
-                      if (tracks.length) player.play(tracks.map(toPlayer), 0);
+                      // Queue the whole trending rail starting at the featured
+                      // track so Next/Previous actually have somewhere to go.
+                      const list = data.trending.length ? data.trending : data.hero?.track ? [data.hero.track] : [];
+                      if (!list.length) return;
+                      const start = data.hero?.track ? Math.max(0, list.findIndex((t) => t.id === data.hero!.track!.id)) : 0;
+                      player.play(list.map(toPlayer), start);
                     }}
                     className="flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-[13px] font-extrabold text-black transition hover:bg-emerald-400"
                   >

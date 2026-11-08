@@ -1541,3 +1541,31 @@ Docs: stage-A discovery report at C:\Users\User\Documents\naijadeals-audit\.
   artist name + release line, Play/Follow/View, tagline and slide dots.
 - Verified: build clean, tsc clean, stream API 23/23, royalty flow 7/7, royalty
   unit 8/8, stream visual QA PASS, NaijaPay regression PASS.
+
+## NaijaStream — real media + podcasts/video/live (2026-11-08)
+
+Root cause of "nothing plays": the catalogue had NO audio. Fixed with genuine
+platform-owned media (scripts/make-test-audio.mjs, FFmpeg synthesis — no
+third-party rights): 10 tracks, 1 podcast episode, 1 MP4 (12 files, 12.8 MB).
+All 10 tracks now carry audioUrl; Range requests return 206.
+
+Player fixes: audio element mounted in the DOM (observable/testable), Next/Prev
+reordering bug (setState inside setState) fixed, seek verified via real keyboard
+interaction, hero now queues the full trending rail so Next has a target,
+qualifying listens (≥30s) post to /api/stream/plays → Recently Played API
+(/api/stream/history) and listening history.
+
+New modules replacing stub pages:
+- Podcasts: StreamShow/StreamEpisode models, list + show pages, real episode
+  player (play/pause/seek/prev/next, honest missing-audio state).
+- Videos: StreamVideo model, list + watch pages with native <video> playback.
+- Live: StreamLiveEvent model with truthful UPCOMING/LIVE/ENDED/CANCELLED state;
+  an event shows LIVE only when a streamUrl exists. Live ingestion (RTMP/HLS)
+  remains BLOCKED — stated on the page.
+
+Verified with scripts/stream-audio-verify.cjs and scripts/stream-full-qa.cjs:
+19/19 routes render with zero console errors; audio advances (5.11s), seek
+works (→18.5s), next switches track; podcast plays (3.89s/95s); video plays
+(2.4s, 960x640). Preview: http://localhost:3015/naijastream.
+Remaining stubs: premium (needs provider), aura (needs model), notifications
+(needs event wiring) — each explains its dependency.
