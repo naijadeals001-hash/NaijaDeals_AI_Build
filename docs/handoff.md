@@ -1518,3 +1518,26 @@ Built the NaijaStream vertical as a real, integrated music product:
 - BLOCKED: audio upload/publishing (needs object storage + ffmpeg worker),
   live streaming, video, premium billing, Aura (providers not configured).
 Docs: stage-A discovery report at C:\Users\User\Documents\naijadeals-audit\.
+
+## NaijaStream design fidelity pass (2026-11-08)
+
+- REA registered for ZCode (config backed up first; kie-ai/deepseek servers, env
+  and plugins verified unchanged). Agent-level tools are still not exposed in the
+  session, so real calls were executed over MCP stdio with the same server:
+  `binary_session` OK, `list_browser_targets` OK (Evidence ev_235f9956…,
+  Chrome 156 via CDP), `capture_browser_scenario` on https://open.spotify.com OK
+  (Evidence ev_3eb991b8…, service_workers allow). REA is operational via that
+  path; in-session tool exposure still requires a ZCode restart.
+- Canonical reference copied to design-references/approved/NaijaStream/ with a
+  matching SHA-256 (af33235a…) against the owner's original.
+- Kie.ai regeneration (Option B): exactly 6 images, $0.18, model
+  gpt-image-2-text-to-image 1K — afrobeats, amapiano, gospel, hiphop, chill
+  covers + cinematic green-stage hero with left negative space. $0.03 reserve
+  untouched; stream imagery total now $0.60. Provenance in image-registry.json.
+- Cover titles are now typeset in code (components/stream/cover-art.tsx): artwork
+  supplies colour/composition, real text supplies typography. Podcast cover and
+  the six artist portraits preserved.
+- Hero recomposed to the reference: display headline with green accent word,
+  artist name + release line, Play/Follow/View, tagline and slide dots.
+- Verified: build clean, tsc clean, stream API 23/23, royalty flow 7/7, royalty
+  unit 8/8, stream visual QA PASS, NaijaPay regression PASS.

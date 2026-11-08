@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { BadgeCheck, Pause, Play, Plus } from "lucide-react";
 import { useStreamPlayer } from "./player-context";
+import { CoverArt } from "./cover-art";
 
 export type StreamCardTrack = {
   id: string;
@@ -76,58 +77,68 @@ export function StreamHome({ data, signedIn }: { data: StreamHomeData; signedIn:
   return (
     <div className="grid gap-6 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:px-6">
       <main className="min-w-0">
-        {/* Hero */}
+        {/* Hero — left-negative-space composition per the approved reference */}
         {data.hero ? (
-          <section className="relative overflow-hidden rounded-2xl bg-[#0d1210]">
+          <section className="relative isolate overflow-hidden rounded-2xl bg-[#0b1410]">
+            <img
+              src="/generated/stream/opt-v2/stream-v2-hero.jpg"
+              alt=""
+              aria-hidden
+              className="absolute inset-0 h-full w-full object-cover object-[70%_center]"
+            />
             <div
-              className="absolute inset-0 bg-cover bg-center opacity-45"
-              style={{ backgroundImage: `url(/generated/stream/opt/stream-hero.jpg)` }}
+              className="absolute inset-0 bg-[linear-gradient(95deg,#050d09_0%,#050d09f2_32%,#050d09a8_52%,transparent_78%)]"
               aria-hidden
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#06110c] via-[#06110c]/85 to-transparent" aria-hidden />
-            <div className="relative flex flex-col gap-4 p-6 sm:p-8 lg:flex-row lg:items-end">
-              <div className="flex-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-300">Featured artist</p>
-                <h1 className="mt-2 font-display text-[38px] font-black uppercase leading-[0.95] tracking-tight sm:text-[54px]">
+            <div className="relative flex min-h-[330px] flex-col justify-between p-6 sm:min-h-[400px] sm:p-8 lg:min-h-[430px]">
+              <div className="max-w-[560px]">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-300">Featured artist</p>
+                <h1 className="mt-2 font-display text-[40px] font-black uppercase leading-[0.9] tracking-[-0.02em] sm:text-[62px] lg:text-[70px]">
                   Africa
                   <br />
                   to the <span className="text-emerald-400">world</span>
                 </h1>
-                <p className="mt-3 text-[15px] font-extrabold">{data.hero.artist.name}</p>
-                <p className="text-[12px] text-white/60">
-                  {data.hero.track ? `Latest: ${data.hero.track.title}` : "Live on NaijaStream"}
+                <p className="mt-3 font-display text-[17px] font-extrabold sm:text-[19px]">{data.hero.artist.name}</p>
+                <p className="text-[12.5px] text-white/60">
+                  {data.hero.track ? `Latest release · ${data.hero.track.title}` : "Live on NaijaStream"}
                   {data.hero.artist.isSample ? " · Demonstration catalogue" : ""}
                 </p>
-                <div className="mt-5 flex flex-wrap gap-2">
+                <div className="mt-5 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => {
                       const tracks = data.hero?.track ? [data.hero.track] : data.trending;
                       if (tracks.length) player.play(tracks.map(toPlayer), 0);
                     }}
-                    className="flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-[13px] font-extrabold text-black hover:bg-emerald-400"
+                    className="flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-[13px] font-extrabold text-black transition hover:bg-emerald-400"
                   >
                     <Play className="h-4 w-4 fill-current" aria-hidden /> Play now
                   </button>
                   <button
                     type="button"
                     onClick={() => void follow(data.hero!.artist.id)}
-                    className="flex items-center gap-2 rounded-full border border-white/25 px-5 py-3 text-[13px] font-bold text-white hover:bg-white/10"
+                    className="flex items-center gap-2 rounded-full border border-white/25 px-5 py-3 text-[13px] font-bold text-white transition hover:bg-white/10"
                   >
                     <Plus className="h-4 w-4" aria-hidden /> Follow
                   </button>
-                  <Link href={`/naijastream/artists/${data.hero.artist.slug}`} className="rounded-full border border-white/25 px-5 py-3 text-[13px] font-bold text-white hover:bg-white/10">
+                  <Link
+                    href={`/naijastream/artists/${data.hero.artist.slug}`}
+                    className="rounded-full border border-white/25 px-5 py-3 text-[13px] font-bold text-white transition hover:bg-white/10"
+                  >
                     View artist
                   </Link>
                 </div>
               </div>
-              {data.hero.track?.artworkUrl ? (
-                <img
-                  src={data.hero.track.artworkUrl}
-                  alt={data.hero.track.title}
-                  className="hidden h-44 w-44 shrink-0 rounded-xl object-cover shadow-2xl sm:block"
-                />
-              ) : null}
+              <div className="mt-6 flex items-end justify-between gap-4">
+                <p className="hidden max-w-xs text-[11px] uppercase tracking-[0.2em] text-white/45 sm:block">
+                  Listen. Discover. Create. Earn.
+                </p>
+                <div className="flex gap-1.5" aria-hidden>
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <span key={i} className={`h-1.5 rounded-full ${i === 0 ? "w-5 bg-white" : "w-1.5 bg-white/35"}`} />
+                  ))}
+                </div>
+              </div>
             </div>
           </section>
         ) : null}
@@ -191,13 +202,12 @@ export function StreamHome({ data, signedIn }: { data: StreamHomeData; signedIn:
               {data.playlists.map((playlist) => (
                 <li key={playlist.id}>
                   <Link href={`/naijastream/playlists/${playlist.slug}`} className="group block rounded-xl bg-[#131a16] p-3 transition hover:bg-[#18201b]">
-                    <div className="aspect-square overflow-hidden rounded-lg bg-black/40">
-                      {playlist.coverUrl ? (
-                        <img src={playlist.coverUrl} alt="" className="h-full w-full object-cover transition group-hover:scale-105" loading="lazy" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-2xl text-white/30">♫</div>
-                      )}
-                    </div>
+                    <CoverArt
+                      src={playlist.coverUrl}
+                      title={playlist.title}
+                      subtitle={playlist.isEditorial ? "NaijaStream" : undefined}
+                      className="aspect-square w-full"
+                    />
                     <p className="mt-2 truncate text-[12.5px] font-bold">{playlist.title}</p>
                     <p className="truncate text-[10.5px] text-white/50">{playlist.isEditorial ? "NaijaStream" : "Community playlist"}</p>
                   </Link>

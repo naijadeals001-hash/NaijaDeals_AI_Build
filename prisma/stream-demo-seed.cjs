@@ -24,11 +24,11 @@ const ART = {
   tobi: "/generated/stream/opt/stream-artist-tobi.jpg",
   zainab: "/generated/stream/opt/stream-artist-zainab.jpg",
   kojo: "/generated/stream/opt/stream-artist-kojo.jpg",
-  afrobeats: "/generated/stream/opt/stream-cover-afrobeats.jpg",
-  amapiano: "/generated/stream/opt/stream-cover-amapiano.jpg",
-  gospel: "/generated/stream/opt/stream-cover-gospel.jpg",
-  hiphop: "/generated/stream/opt/stream-cover-hiphop.jpg",
-  chill: "/generated/stream/opt/stream-cover-chill.jpg",
+  afrobeats: "/generated/stream/opt-v2/stream-v2-cover-afrobeats.jpg",
+  amapiano: "/generated/stream/opt-v2/stream-v2-cover-amapiano.jpg",
+  gospel: "/generated/stream/opt-v2/stream-v2-cover-gospel.jpg",
+  hiphop: "/generated/stream/opt-v2/stream-v2-cover-hiphop.jpg",
+  chill: "/generated/stream/opt-v2/stream-v2-cover-chill.jpg",
   podcast: "/generated/stream/opt/stream-cover-podcast.jpg"
 };
 
