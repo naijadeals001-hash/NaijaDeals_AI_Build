@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="A video camera on a tripod in a studio">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F3F0F7"/>
+      <stop offset="1" stop-color="#DAD2E6"/>
+    </linearGradient>
+    <linearGradient id="lens" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8FA6C4"/>
+      <stop offset="0.5" stop-color="#31435C"/>
+      <stop offset="1" stop-color="#161F2C"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="420" fill="url(#bg)"/>
+  <circle cx="516" cy="86" r="96" fill="#E6DCF2" opacity="0.9"/>
+  <rect x="0" y="350" width="640" height="70" fill="#2B2436"/>
+  <rect x="0" y="342" width="640" height="12" fill="#3E354C"/>
+  <g fill="#4A3E5C" opacity="0.35">
+    <rect x="40" y="236" width="96" height="106" rx="6"/>
+    <rect x="56" y="200" width="64" height="36" rx="4"/>
+  </g>
+  <path d="M320 350l-52 50h104z" fill="#2B2436"/>
+  <path d="M320 210v140" stroke="#4E5A66" stroke-width="12"/>
+  <path d="M320 350l-46 54M320 350l46 54" stroke="#4E5A66" stroke-width="10"/>
+  <g transform="translate(196 128)">
+    <rect x="0" y="0" width="212" height="126" rx="18" fill="#20293A"/>
+    <rect x="14" y="14" width="184" height="98" rx="10" fill="#2C384D"/>
+    <circle cx="106" cy="63" r="46" fill="#111827"/>
+    <circle cx="106" cy="63" r="34" fill="url(#lens)"/>
+    <circle cx="106" cy="63" r="18" fill="#0B1220"/>
+    <circle cx="118" cy="51" r="7" fill="#DCE9F5" opacity="0.7"/>
+    <rect x="196" y="34" width="54" height="58" rx="10" fill="#39485F"/>
+    <circle cx="250" cy="63" r="22" fill="#2C384D"/>
+    <rect x="206" y="12" width="26" height="16" rx="4" fill="#E86A33"/>
+    <circle cx="30" cy="30" r="7" fill="#E86A33"/>
+  </g>
+  <path d="M196 246h212" stroke="#4E5A66" stroke-width="10" stroke-linecap="round"/>
+  <rect x="430" y="236" width="120" height="90" rx="10" fill="#F4EFF9" stroke="#C9BEDA" stroke-width="4"/>
+  <path d="M470 258h60v20h-60z" fill="#2B2436"/>
+  <path d="M436 248l108 16-6 18-108-16z" fill="#E86A33"/>
+  <g fill="#6F5F86" opacity="0.6">
+    <path d="M76 82h70v8H76z"/>
+    <path d="M92 100h38v8H92z"/>
+  </g>
+  <rect x="60" y="118" width="96" height="64" rx="8" fill="#F4EFF9" stroke="#C9BEDA" stroke-width="4"/>
+  <path d="M78 138h60M78 152h44M78 166h52" stroke="#B9A9CF" stroke-width="5" stroke-linecap="round"/>
+</svg>

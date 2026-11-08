@@ -1343,3 +1343,41 @@ was NOT pushed (never committed).
 - Remaining before transfer activation/deployment: bill + QR provider
   integrations (external), owner visual acceptance of the generated hero, and
   explicit deployment authorization. Transfer flag stays off.
+
+## NaijaGigs marketplace completed and verified (2026-11-08)
+
+Restored the isolated NaijaGigs WIP from stash and completed it as a working
+services marketplace on the shared platform:
+
+Fixed from the WIP (which had never compiled):
+- pro/apply + pro/dashboard pages: leaked template literals, unclosed img tag,
+  imports of a non-existent demo store, direct Prisma-service imports in client
+  components, missing default exports, wrong FormData usage. Both pages
+  rewritten against the real /api/gigs/pro endpoints (session-based; no user-id
+  parameters from the client).
+- Landing moved from /gigs to /naijagigs to match the ecosystem navigation.
+- Professionals page: broken default-avatar path replaced with an initials
+  avatar; filter rows made wrap-safe (0 overflow on all pages).
+
+Verified end-to-end (scripts/gigs-e2e-tests.mjs, 42/42 twice, on dev AND the
+production build): application (PENDING) -> publishing blocked while unverified
+(403) -> admin verification via gigs:moderate (customer gets 403) -> listing
+publication -> public search/detail -> booking -> funding blocked until
+accepted -> escrow hold from the customer wallet (balanced ledger) -> double
+fund blocked -> accept/start gated on payment -> submit -> approve restricted
+to the customer -> release with 12% commission -> pro credited net -> review
+gated on COMPLETED + single review -> booking-scoped conversation with
+outsider denial -> admin gigs overview gated -> ledger reconciliation 0/0.
+
+Fixture hygiene: gigs-e2e-cleanup.cjs posts balanced reversal transactions
+before deleting fixture rows (a first incomplete cleanup that deleted history
+without reversal was corrected by the audited GIGS-E2E-CLEANUP-CORRECTION-1
+transaction; the ledger is at 0 mismatches / 0 unbalanced). Taxonomy seeded
+idempotently via scripts/gigs-seed-taxonomy.cjs (8 categories, 6 spotlights,
+site config; no fake professionals, listings or reviews).
+
+Quality gates: tsc --noEmit clean; production build clean (gigs included);
+gigs visual QA passed at 390/1440 across landing, services, professionals,
+apply, pro-dashboard (qa-artifacts/gigs/*); regressions green: pay transfer
+tests 23/23, sessions API test, NaijaShop/Drive/Eats/Pay route checks.
+Ecosystem module links to /naijagigs (existing entry).

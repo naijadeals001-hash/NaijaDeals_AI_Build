@@ -36,17 +36,14 @@ export async function addCartItem(input: { userId: string; productId: string; va
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
     throw new ApiError(400, "validation_error", "Quantity must be between 1 and 10.");
   }
-  // Raw SQL keeps the contact-seller guard working on a dev server whose Prisma
-  // client predates the saleMode column.
-  const saleModeRows = await prisma.$queryRaw<Array<{ saleMode: string }>>`SELECT "saleMode"::text AS "saleMode" FROM "Product" WHERE id = ${input.productId} LIMIT 1`;
-  if (saleModeRows[0]?.saleMode === "contact") {
-    throw new ApiError(400, "contact_seller_only", "This listing is fulfilled by the seller directly; use Contact seller instead of checkout.");
-  }
   const product = await prisma.product.findUnique({
     where: { id: input.productId },
     include: { stock: true, vendor: true, variants: true }
   });
   if (!product || product.status !== "ACTIVE") throw new ApiError(404, "product_unavailable", "This product is not available.");
+  if (product.saleMode === "contact") {
+    throw new ApiError(400, "contact_seller_only", "This listing is fulfilled by the seller directly; use Contact seller instead of checkout.");
+  }
   if (product.vendor.status !== "VERIFIED") throw new ApiError(409, "vendor_unavailable", "This seller is not accepting orders.");
 
   let variant = null;

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-label="Illustration of a home repairs professional using a drill">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FDF4E7"/>
+      <stop offset="1" stop-color="#F3DDC0"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A9683F"/>
+      <stop offset="1" stop-color="#8A4F2C"/>
+    </linearGradient>
+    <linearGradient id="overall" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22506B"/>
+      <stop offset="1" stop-color="#16394E"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bg)"/>
+  <circle cx="540" cy="96" r="150" fill="#FFE3B6" opacity="0.75"/>
+  <rect x="44" y="70" width="230" height="150" rx="10" fill="#FFF9EF" stroke="#E1C9A6" stroke-width="6"/>
+  <path d="M44 70h230M44 220h230" stroke="#E1C9A6" stroke-width="6"/>
+  <rect x="70" y="250" width="120" height="12" rx="6" fill="#D9B98F"/>
+  <rect x="86" y="226" width="88" height="24" rx="4" fill="#C4543A"/>
+  <rect x="86" y="226" width="88" height="8" rx="4" fill="#E06B4E"/>
+  <circle cx="130" cy="338" r="52" fill="#D7B58C"/>
+  <path d="M78 480c0-64 24-110 52-110s52 46 52 110z" fill="#C4543A" opacity="0.18"/>
+  <path d="M330 480c0-96 44-168 96-168s96 72 96 168z" fill="url(#overall)"/>
+  <path d="M392 322h68v58c0 14-14 24-34 24s-34-10-34-24z" fill="url(#skin)"/>
+  <ellipse cx="426" cy="268" rx="56" ry="62" fill="url(#skin)"/>
+  <path d="M370 262c0-44 26-74 58-74s56 28 56 68c-14-14-30-22-56-22-24 0-44 10-58 28z" fill="#1B1A19"/>
+  <path d="M382 300c10 30 28 44 44 44s34-14 44-44c-12 10-28 16-44 16s-32-6-44-16z" fill="#2A211D" opacity="0.25"/>
+  <path d="M386 344c-12 8-20 24-20 40h48l-6-40z" fill="#F4F1EA"/>
+  <g transform="translate(470 322) rotate(-18)">
+    <rect x="0" y="0" width="112" height="46" rx="12" fill="#F07A22"/>
+    <rect x="14" y="8" width="44" height="30" rx="8" fill="#FFB25F"/>
+    <rect x="104" y="16" width="66" height="14" rx="4" fill="#3F4A52"/>
+    <rect x="166" y="19" width="34" height="8" rx="3" fill="#8E9AA3"/>
+    <rect x="-10" y="12" width="18" height="22" rx="5" fill="#D65C0D"/>
+  </g>
+  <path d="M470 354c-28 6-48 22-48 42v84h48z" fill="url(#overall)"/>
+  <path d="M470 354c22 8 36 24 42 44l-38 12z" fill="#1D4A63"/>
+  <rect x="0" y="432" width="640" height="48" fill="#E7CFAC" opacity="0.55"/>
+  <g fill="#8A5A2B" opacity="0.55">
+    <rect x="524" y="404" width="8" height="28" rx="3"/>
+    <path d="M528 406c-18-14-40-10-40 4 16 8 30 6 40-4z"/>
+    <path d="M528 410c16-16 40-12 42 2-14 10-30 10-42-2z"/>
+  </g>
+</svg>

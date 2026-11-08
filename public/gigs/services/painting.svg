@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Paint roller applying a fresh coat to a wall">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FBF5E9"/>
+      <stop offset="1" stop-color="#EDE0C7"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="420" fill="url(#bg)"/>
+  <rect x="0" y="0" width="640" height="330" fill="#F7F2E6"/>
+  <path d="M0 330h640v14H0z" fill="#D8C8AA"/>
+  <rect x="0" y="344" width="640" height="76" fill="#C9B591"/>
+  <path d="M0 0h640v330H0z" fill="#FDFBF5"/>
+  <path d="M120 330V74h250v256z" fill="#3E7A5B"/>
+  <path d="M132 86h226v230H132z" fill="#478A67"/>
+  <g stroke="#6AA987" stroke-width="2" opacity="0.6">
+    <path d="M132 120h226M132 160h226M132 200h226M132 240h226M132 280h226"/>
+  </g>
+  <path d="M138 330c22-96 60-160 104-198v198z" fill="#57A079" opacity="0.55"/>
+  <g transform="translate(248 150) rotate(24)">
+    <rect x="0" y="0" width="160" height="44" rx="22" fill="#E5DFD1"/>
+    <rect x="8" y="6" width="144" height="32" rx="16" fill="#F6F2E8"/>
+    <rect x="-8" y="16" width="20" height="12" rx="4" fill="#9AA6AD"/>
+    <path d="M-8 22h-96" stroke="#9AA6AD" stroke-width="10" stroke-linecap="round"/>
+    <path d="M-104 22h-64" stroke="#6F7B83" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <path d="M160 300c24 6 44 18 56 36" stroke="#8A4F2C" stroke-width="20" stroke-linecap="round" fill="none"/>
+  <path d="M214 336c8 10 6 24-6 30-14 6-28-4-28-18 0-12 20-22 34-12z" fill="#9B5B33"/>
+  <path d="M60 340h96v80H60z" fill="#B9A47D"/>
+  <ellipse cx="108" cy="340" rx="48" ry="12" fill="#D6C6A6"/>
+  <ellipse cx="108" cy="342" rx="38" ry="8" fill="#3E7A5B"/>
+  <g transform="translate(410 250)">
+    <path d="M0 0h150l-14 58H14z" fill="#D9CBB0"/>
+    <ellipse cx="75" cy="0" rx="75" ry="14" fill="#E8DDC7"/>
+    <ellipse cx="75" cy="4" rx="58" ry="9" fill="#3E7A5B"/>
+    <path d="M18 60h114l-8 24H26z" fill="#C7B792"/>
+  </g>
+  <g fill="#3E7A5B" opacity="0.18">
+    <circle cx="500" cy="120" r="56"/>
+    <circle cx="556" cy="88" r="24"/>
+  </g>
+</svg>

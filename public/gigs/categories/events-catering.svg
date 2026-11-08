@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-label="Illustration of a caterer preparing event food">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF6E8"/>
+      <stop offset="1" stop-color="#F7DDBB"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#95562F"/>
+      <stop offset="1" stop-color="#713B1C"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bg)"/>
+  <circle cx="520" cy="96" r="110" fill="#FFE0AE" opacity="0.7"/>
+  <g>
+    <path d="M0 96c80 40 160 0 240 32S400 96 480 72s160 0 160 0v34s-80-24-160 0-160 56-240 24S80 130 0 130z" fill="#E86A33" opacity="0.25"/>
+    <path d="M40 60l18 26 18-26M120 44l18 26 18-26M200 60l18 26 18-26M280 44l18 26 18-26M360 60l18 26 18-26M440 44l18 26 18-26" stroke="#E86A33" stroke-width="6" fill="none" stroke-linecap="round"/>
+  </g>
+  <rect x="0" y="380" width="640" height="100" fill="#8C3F22"/>
+  <rect x="0" y="368" width="640" height="16" fill="#B85834"/>
+  <path d="M120 480c-8-72 16-134 62-134s70 62 62 134z" fill="#F7F4EE"/>
+  <path d="M158 366h44v42c0 12-10 20-22 20s-22-8-22-20z" fill="url(#skin)"/>
+  <ellipse cx="180" cy="326" rx="44" ry="50" fill="url(#skin)"/>
+  <path d="M136 322c0-34 20-58 44-58s44 22 44 54c-12-12-26-18-44-18s-32 8-44 22z" fill="#241B17"/>
+  <path d="M142 306c0-30 18-50 42-50s40 18 40 48z" fill="#FFFFFF"/>
+  <rect x="136" y="300" width="90" height="18" rx="6" fill="#F1EFE8"/>
+  <path d="M154 344c8 14 16 20 28 20s20-6 28-20c-2 22-12 36-28 36s-26-14-28-36z" fill="#5A2F18" opacity="0.28"/>
+  <path d="M146 398c-24 8-38 26-42 48" stroke="#95562F" stroke-width="20" stroke-linecap="round" fill="none"/>
+  <path d="M214 398c24 4 42 22 48 44" stroke="#95562F" stroke-width="20" stroke-linecap="round" fill="none"/>
+  <g transform="translate(250 402)">
+    <ellipse cx="70" cy="20" rx="74" ry="18" fill="#E6DCCB"/>
+    <path d="M-4 20c0 22 32 40 74 40s74-18 74-40z" fill="#F3EEE2"/>
+    <path d="M-4 20h148" stroke="#D2C4AE" stroke-width="4"/>
+    <g>
+      <circle cx="30" cy="16" r="12" fill="#E8A126"/>
+      <circle cx="62" cy="12" r="14" fill="#D2542F"/>
+      <circle cx="96" cy="16" r="12" fill="#7FA653"/>
+      <circle cx="128" cy="14" r="11" fill="#E8A126"/>
+    </g>
+  </g>
+  <g transform="translate(430 300)">
+    <rect x="0" y="46" width="150" height="14" rx="7" fill="#D2C4AE"/>
+    <path d="M14 60h122l-10 64H24z" fill="#E6DCCB"/>
+    <path d="M8 124h134" stroke="#B9A78C" stroke-width="8" stroke-linecap="round"/>
+    <g fill="#D2542F">
+      <circle cx="40" cy="82" r="10"/>
+      <circle cx="66" cy="76" r="12"/>
+      <circle cx="96" cy="82" r="10"/>
+      <circle cx="120" cy="78" r="9"/>
+    </g>
+  </g>
+  <g fill="#FFFFFF" opacity="0.7">
+    <circle cx="420" cy="120" r="4"/>
+    <circle cx="442" cy="104" r="3"/>
+    <circle cx="410" cy="98" r="2"/>
+  </g>
+</svg>

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Electrical distribution board and a pendant light">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E9F5EF"/>
+      <stop offset="1" stop-color="#CBE5D9"/>
+    </linearGradient>
+    <linearGradient id="wall" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F7FBF8"/>
+      <stop offset="1" stop-color="#DCEBE3"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="420" fill="url(#bg)"/>
+  <rect x="0" y="0" width="640" height="330" fill="url(#wall)"/>
+  <rect x="0" y="322" width="640" height="12" fill="#B7D2C5"/>
+  <rect x="0" y="334" width="640" height="86" fill="#A3C3B4"/>
+  <rect x="58" y="58" width="174" height="214" rx="10" fill="#E7EEEA" stroke="#B7C9C0" stroke-width="6"/>
+  <rect x="74" y="74" width="142" height="182" rx="6" fill="#2F4640"/>
+  <g fill="#DDE8E2">
+    <rect x="86" y="86" width="52" height="30" rx="3"/>
+    <rect x="152" y="86" width="52" height="30" rx="3"/>
+    <rect x="86" y="126" width="52" height="30" rx="3"/>
+    <rect x="152" y="126" width="52" height="30" rx="3"/>
+    <rect x="86" y="166" width="52" height="30" rx="3"/>
+    <rect x="152" y="166" width="52" height="30" rx="3"/>
+  </g>
+  <g fill="#E86A33">
+    <rect x="96" y="96" width="10" height="10" rx="2"/>
+    <rect x="162" y="136" width="10" height="10" rx="2"/>
+    <rect x="96" y="176" width="10" height="10" rx="2"/>
+  </g>
+  <g fill="#56A47F">
+    <rect x="118" y="96" width="10" height="10" rx="2"/>
+    <rect x="184" y="176" width="10" height="10" rx="2"/>
+    <rect x="162" y="96" width="10" height="10" rx="2"/>
+  </g>
+  <rect x="84" y="206" width="122" height="34" rx="4" fill="#20312C"/>
+  <g fill="#9EC7B4">
+    <rect x="94" y="216" width="16" height="14" rx="2"/>
+    <rect x="116" y="216" width="16" height="14" rx="2"/>
+    <rect x="138" y="216" width="16" height="14" rx="2"/>
+    <rect x="160" y="216" width="16" height="14" rx="2"/>
+    <rect x="182" y="216" width="12" height="14" rx="2"/>
+  </g>
+  <path d="M150 58V20" stroke="#7C8F86" stroke-width="5"/>
+  <path d="M188 58V20" stroke="#7C8F86" stroke-width="5"/>
+  <path d="M462 0v116" stroke="#6B7C74" stroke-width="6"/>
+  <path d="M462 116c-46 0-78 34-78 70h156c0-36-32-70-78-70z" fill="#2F4640"/>
+  <ellipse cx="462" cy="192" rx="80" ry="12" fill="#1D2C27"/>
+  <circle cx="462" cy="200" r="26" fill="#FFE29A"/>
+  <circle cx="462" cy="200" r="58" fill="#FFE29A" opacity="0.3"/>
+  <path d="M382 202l-24 42M542 202l24 42" stroke="#FFE29A" stroke-width="5" opacity="0.5"/>
+  <path d="M282 420c-4-56 12-96 46-96s50 40 46 96z" fill="#2C6B4F"/>
+  <path d="M310 336h36v34c0 10-8 16-18 16s-18-6-18-16z" fill="#8A4F2C"/>
+  <ellipse cx="328" cy="306" rx="36" ry="40" fill="#9B5B33"/>
+  <path d="M292 302c0-28 16-46 36-46s36 18 36 44c-10-10-22-14-36-14s-26 4-36 16z" fill="#221A16"/>
+  <path d="M294 322c6 10 14 14 24 14" stroke="#5A2F18" stroke-width="3" fill="none" opacity="0.4"/>
+  <path d="M310 360c-20 6-34 22-38 42" stroke="#8A4F2C" stroke-width="18" stroke-linecap="round" fill="none"/>
+  <path d="M346 360c22 2 38 18 44 38" stroke="#8A4F2C" stroke-width="18" stroke-linecap="round" fill="none"/>
+  <g transform="translate(388 386) rotate(-16)">
+    <rect x="0" y="0" width="72" height="10" rx="4" fill="#E86A33"/>
+    <path d="M72 5l30-6v22l-30-6z" fill="#B9C4BE"/>
+  </g>
+</svg>

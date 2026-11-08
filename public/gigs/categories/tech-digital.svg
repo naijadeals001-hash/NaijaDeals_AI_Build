@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-label="Illustration of a software developer at a laptop">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EAF2FF"/>
+      <stop offset="1" stop-color="#CBDEF8"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8D5230"/>
+      <stop offset="1" stop-color="#6B3B1D"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bg)"/>
+  <circle cx="120" cy="104" r="76" fill="#BFD8F7" opacity="0.7"/>
+  <rect x="0" y="372" width="640" height="108" fill="#1B3A63"/>
+  <rect x="0" y="364" width="640" height="14" fill="#2D5487"/>
+  <g fill="#5B87BF" opacity="0.6">
+    <path d="M64 300h120v64H64zM212 268h96v96h-96zM336 292h128v72H336zM492 256h96v108h-96z"/>
+  </g>
+  <g fill="#8FB4E4" opacity="0.8">
+    <rect x="86" y="318" width="18" height="18"/>
+    <rect x="116" y="318" width="18" height="18"/>
+    <rect x="236" y="292" width="18" height="18"/>
+    <rect x="364" y="316" width="18" height="18"/>
+    <rect x="518" y="282" width="18" height="18"/>
+    <rect x="548" y="282" width="18" height="18"/>
+  </g>
+  <path d="M236 480c-6-76 18-138 66-138s72 62 66 138z" fill="#2F8F72"/>
+  <path d="M278 356h48v40c0 12-10 20-24 20s-24-8-24-20z" fill="url(#skin)"/>
+  <ellipse cx="302" cy="316" rx="44" ry="48" fill="url(#skin)"/>
+  <path d="M258 312c0-32 20-54 44-54s44 20 44 52c-12-12-26-18-44-18s-32 6-44 20z" fill="#201A16"/>
+  <path d="M274 336c8 10 16 14 28 14s20-4 28-14c-2 20-12 32-28 32s-26-12-28-32z" fill="#542C16" opacity="0.32"/>
+  <path d="M268 288c-14 0-22-10-22-22" stroke="#2F8F72" stroke-width="10" fill="none"/>
+  <path d="M336 288c14 0 22-10 22-22" stroke="#2F8F72" stroke-width="10" fill="none"/>
+  <path d="M252 396c-30 8-46 28-46 52" stroke="#8D5230" stroke-width="20" stroke-linecap="round" fill="none"/>
+  <path d="M352 396c30 8 48 26 54 48" stroke="#8D5230" stroke-width="20" stroke-linecap="round" fill="none"/>
+  <g transform="translate(140 404)">
+    <rect x="0" y="0" width="240" height="14" rx="7" fill="#A6B7CC"/>
+    <path d="M20 14h200l22 46H-2z" fill="#D9E2EE"/>
+    <path d="M34 20h172l14 32H20z" fill="#20364F"/>
+    <g fill="#7FE3B8">
+      <rect x="42" y="28" width="52" height="4" rx="2"/>
+      <rect x="42" y="36" width="30" height="4" rx="2"/>
+    </g>
+    <rect x="108" y="28" width="58" height="4" rx="2" fill="#8FB4E4"/>
+    <rect x="108" y="36" width="42" height="4" rx="2" fill="#8FB4E4"/>
+  </g>
+  <g fill="#3B78D8" opacity="0.45">
+    <path d="M486 120l-26 32 26 32 14-10-18-22 18-22z"/>
+    <path d="M546 120l26 32-26 32-14-10 18-22-18-22z"/>
+  </g>
+  <rect x="436" y="212" width="160" height="96" rx="10" fill="#1B3A63" opacity="0.12"/>
+  <g fill="#2D6F5B">
+    <rect x="452" y="232" width="62" height="8" rx="4"/>
+    <rect x="452" y="250" width="94" height="8" rx="4"/>
+    <rect x="452" y="268" width="74" height="8" rx="4"/>
+  </g>
+  <rect x="0" y="432" width="640" height="48" fill="#142C4B" opacity="0.55"/>
+</svg>

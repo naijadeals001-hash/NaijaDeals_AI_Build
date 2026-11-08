@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-label="Illustration of a solar technician installing a panel">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E9F8F0"/>
+      <stop offset="0.62" stop-color="#CBECDC"/>
+      <stop offset="1" stop-color="#F6E7C8"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1E5D9B"/>
+      <stop offset="0.55" stop-color="#123F72"/>
+      <stop offset="1" stop-color="#0C2C53"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9B5B33"/>
+      <stop offset="1" stop-color="#7A4423"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#sky)"/>
+  <circle cx="112" cy="92" r="58" fill="#FFC857"/>
+  <circle cx="112" cy="92" r="78" fill="#FFD77F" opacity="0.35"/>
+  <path d="M0 372h640v108H0z" fill="#DDEFD8"/>
+  <path d="M0 396c120-28 190 6 300-16s220-38 340-6v106H0z" fill="#C6E4C0"/>
+  <g fill="#B3D5AE" opacity="0.85">
+    <path d="M480 372l24-72 24 72z"/>
+    <path d="M520 372l18-54 18 54z"/>
+    <rect x="566" y="330" width="8" height="42"/>
+  </g>
+  <path d="M0 480V300h640v180z" fill="#EFE3C9"/>
+  <g transform="translate(300 150) rotate(-8)">
+    <rect x="0" y="0" width="268" height="188" rx="10" fill="#5B6B76"/>
+    <rect x="10" y="10" width="248" height="168" rx="4" fill="url(#panel)"/>
+    <g stroke="#5C93C7" stroke-width="2" opacity="0.75">
+      <path d="M72 10v168M134 10v168M196 10v168M10 52h248M10 94h248M10 136h248"/>
+    </g>
+    <rect x="98" y="188" width="16" height="44" fill="#5B6B76"/>
+    <rect x="156" y="188" width="16" height="44" fill="#5B6B76"/>
+  </g>
+  <path d="M285 480c-14-70 6-140 58-140 54 0 78 72 62 140z" fill="#2C5D3B"/>
+  <path d="M343 330h48v44c0 12-10 20-24 20s-24-8-24-20z" fill="url(#skin)"/>
+  <ellipse cx="367" cy="292" rx="42" ry="48" fill="url(#skin)"/>
+  <path d="M325 288c0-34 20-56 44-56s42 22 42 52c-12-10-24-16-44-16-18 0-32 8-42 20z" fill="#241F1C"/>
+  <path d="M322 268c4-32 24-50 48-50s44 18 48 50z" fill="#F2B33D"/>
+  <rect x="316" y="272" width="106" height="12" rx="6" fill="#E39A1F"/>
+  <path d="M325 300c10 16 24 22 42 22s34-6 44-22c-4 26-20 44-44 44s-38-18-42-44z" fill="#6E3B1E" opacity="0.35"/>
+  <path d="M300 396c-30-10-56-2-68 20" stroke="#8A4F2C" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <path d="M236 418c-8-10-2-24 12-24 12 0 20 12 14 22-4 8-18 10-26 2z" fill="#9B5B33"/>
+  <path d="M398 398c30-10 54 0 62 24" stroke="#8A4F2C" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <rect x="452" y="410" width="54" height="10" rx="5" fill="#3F4A52" transform="rotate(14 452 410)"/>
+  <path d="M290 424c20-14 44-20 78-20s60 6 80 20l10 56H280z" fill="#24502F"/>
+  <path d="M318 480l14-56h64l14 56z" fill="#1B3D24"/>
+  <g fill="#8FBF7E" opacity="0.5">
+    <circle cx="596" cy="426" r="28"/>
+    <circle cx="620" cy="446" r="22"/>
+  </g>
+</svg>

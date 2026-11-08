@@ -63,14 +63,12 @@ export function availableQuantity(product: {
 }
 
 
-/**
- * Sale mode read through raw SQL so a long-running dev server whose Prisma client
- * predates the column still returns the correct buying journey.
- */
 export async function saleModesFor(ids: string[]): Promise<Map<string, "escrow" | "contact">> {
   if (ids.length === 0) return new Map();
-  const rows = await prisma.$queryRaw<Array<{ id: string; saleMode: string }>>`
-    SELECT id, "saleMode"::text AS "saleMode" FROM "Product" WHERE id = ANY(${ids}::text[])`;
+  const rows = await prisma.product.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, saleMode: true }
+  });
   return new Map(rows.map((row) => [row.id, row.saleMode === "contact" ? "contact" : "escrow"]));
 }
 

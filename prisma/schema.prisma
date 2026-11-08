@@ -178,6 +178,16 @@ model User {
   restaurants Restaurant[] @relation("RestaurantOwner")
   foodOrders FoodOrder[] @relation("CustomerFoodOrders")
   restaurantApplications RestaurantApplication[] @relation("RestaurantApplications")
+  gigProfile ProfessionalProfile?
+  gigJobs CustomerJob[] @relation("GigCustomerJobs")
+  gigBookingsAsCustomer ServiceBooking[] @relation("GigCustomerBookings")
+  gigBookingsAsProfessional ServiceBooking[] @relation("GigProfessionalBookings")
+  gigConversationsAsCustomer Conversation[] @relation("GigCustomerConversations")
+  gigConversationsAsProfessional Conversation[] @relation("GigProfessionalConversations")
+  gigMessages Message[] @relation("GigMessageSender")
+  gigReviewsWritten ServiceReview[] @relation("GigReviewAuthor")
+  gigReviewsReceived ServiceReview[] @relation("GigReviewProfessional")
+  gigDisputesOpened ServiceDispute[] @relation("GigDisputeOpener")
 }
 
 model Role {
@@ -257,6 +267,8 @@ model Product {
   compareAtKobo  BigInt?
   countryCode    String           @default("NG")
   weightGrams    Int              @default(500)
+  /// escrow = paid through checkout; contact = seller-handled enquiry only.
+  saleMode       SaleMode         @default(escrow)
   status         ProductStatus    @default(ACTIVE)
   moderationNote String?
   createdAt      DateTime         @default(now())
@@ -1141,4 +1153,448 @@ model DatabaseClassification {
   classification String   @default("UNKNOWN")
   updatedBy      String?
   updatedAt      DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// NaijaGigs — professional services marketplace
+// ---------------------------------------------------------------------------
+
+enum ServiceMode {
+  LOCAL
+  REMOTE
+  PROJECT
+}
+
+enum ServicePricingType {
+  HOURLY
+  FIXED
+  QUOTE
+}
+
+enum ProfessionalStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum ServiceListingStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  SUSPENDED
+}
+
+enum CustomerJobStatus {
+  OPEN
+  ASSIGNED
+  CLOSED
+  CANCELLED
+}
+
+enum JobProposalStatus {
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum ServiceBookingStatus {
+  REQUESTED
+  ACCEPTED
+  DECLINED
+  IN_PROGRESS
+  SUBMITTED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum ServicePaymentStatus {
+  UNPAID
+  HELD
+  RELEASED
+  REFUNDED
+}
+
+enum ServiceReviewStatus {
+  PENDING
+  PUBLISHED
+  HIDDEN
+}
+
+enum ServiceDisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum GigMilestoneStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+  RELEASED
+}
+
+/// A vetted professional operating in the NaijaDeals services marketplace.
+model ProfessionalProfile {
+  id              String             @id @default(cuid())
+  userId          String             @unique
+  displayName     String
+  headline        String
+  bio             String
+  avatarUrl       String?
+  countryCode     String             @default("NG")
+  state           String
+  city            String
+  serviceModes    ServiceMode[]
+  languages       String[]           @default([])
+  yearsExperience Int?
+  status          ProfessionalStatus @default(PENDING)
+  verifiedAt      DateTime?
+  published       Boolean            @default(false)
+  responseMinutes Int?
+  commissionBps   Int                @default(1200)
+  suspendedReason String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  user            User               @relation(fields: [userId], references: [id])
+  categories      ProfessionalCategory[]
+  listings        ServiceListing[]
+  portfolio       PortfolioItem[]
+  serviceAreas    ServiceArea[]
+  availability    AvailabilitySlot[]
+  proposals       JobProposal[]
+  bookings        ServiceBooking[]
+
+  @@index([countryCode, city])
+  @@index([status, published])
+}
+
+model ProfessionalCategory {
+  professionalId String
+  categoryId     String
+  professional   ProfessionalProfile @relation(fields: [professionalId], references: [id])
+  category       ServiceCategory     @relation(fields: [categoryId], references: [id])
+
+  @@id([professionalId, categoryId])
+}
+
+/// Admin-managed service taxonomy shown on the NaijaGigs landing page and filters.
+model ServiceCategory {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  description String?
+  icon        String    @default("Wrench")
+  accent      String    @default("#0f7a4a")
+  imageUrl    String?
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  /// Null means every enabled country; otherwise the category is country-specific.
+  countryCode String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  professionals ProfessionalCategory[]
+  listings      ServiceListing[]
+  jobs          CustomerJob[]
+  portfolio     PortfolioItem[]
+  spotlights    ServiceSpotlight[]
+  bookings      ServiceBooking[]
+
+  @@index([isActive, sortOrder])
+}
+
+model ServiceListing {
+  id             String               @id @default(cuid())
+  professionalId String
+  categoryId     String
+  title          String
+  slug           String               @unique
+  summary        String
+  description    String
+  mode           ServiceMode
+  pricingType    ServicePricingType
+  priceKobo      BigInt?
+  currency       String               @default("NGN")
+  countryCode    String               @default("NG")
+  state          String?
+  city           String?
+  isRemote       Boolean              @default(false)
+  status         ServiceListingStatus @default(DRAFT)
+  isFeatured     Boolean              @default(false)
+  moderationNote String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  professional   ProfessionalProfile  @relation(fields: [professionalId], references: [id])
+  category       ServiceCategory      @relation(fields: [categoryId], references: [id])
+  images         ServiceListingImage[]
+  packages       ServicePackage[]
+  bookings       ServiceBooking[]
+
+  @@index([status, mode, countryCode])
+  @@index([categoryId, status])
+}
+
+model ServiceListingImage {
+  id        String         @id @default(cuid())
+  listingId String
+  url       String
+  alt       String
+  sortOrder Int            @default(0)
+  listing   ServiceListing @relation(fields: [listingId], references: [id])
+
+  @@index([listingId, sortOrder])
+}
+
+model ServicePackage {
+  id           String         @id @default(cuid())
+  listingId    String
+  name         String
+  description  String
+  priceKobo    BigInt
+  deliveryDays Int
+  revisions    Int            @default(1)
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  listing      ServiceListing @relation(fields: [listingId], references: [id])
+
+  @@index([listingId, isActive])
+}
+
+model PortfolioItem {
+  id             String           @id @default(cuid())
+  professionalId String
+  categoryId     String?
+  title          String
+  description    String?
+  imageUrl       String
+  createdAt      DateTime         @default(now())
+  professional   ProfessionalProfile @relation(fields: [professionalId], references: [id])
+  category       ServiceCategory?  @relation(fields: [categoryId], references: [id])
+
+  @@index([professionalId])
+}
+
+model ServiceArea {
+  id             String             @id @default(cuid())
+  professionalId String
+  countryCode    String
+  state          String
+  city           String?
+  professional   ProfessionalProfile @relation(fields: [professionalId], references: [id])
+
+  @@index([professionalId])
+  @@index([countryCode, state])
+}
+
+model AvailabilitySlot {
+  id             String             @id @default(cuid())
+  professionalId String
+  /// 0 = Sunday … 6 = Saturday.
+  weekday        Int
+  startMinute    Int
+  endMinute      Int
+  timezone       String             @default("Africa/Lagos")
+  professional   ProfessionalProfile @relation(fields: [professionalId], references: [id])
+
+  @@index([professionalId, weekday])
+}
+
+/// A customer-posted brief that professionals can answer with proposals.
+model CustomerJob {
+  id          String            @id @default(cuid())
+  customerId  String
+  categoryId  String?
+  title       String
+  description String
+  mode        ServiceMode
+  budgetKobo  BigInt?
+  currency    String            @default("NGN")
+  countryCode String            @default("NG")
+  state       String
+  city        String?
+  status      CustomerJobStatus @default(OPEN)
+  deadline    DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  customer    User              @relation("GigCustomerJobs", fields: [customerId], references: [id])
+  category    ServiceCategory?  @relation(fields: [categoryId], references: [id])
+  proposals   JobProposal[]
+  bookings    ServiceBooking[]
+
+  @@index([status, countryCode])
+  @@index([customerId])
+}
+
+model JobProposal {
+  id             String             @id @default(cuid())
+  jobId          String
+  professionalId String
+  amountKobo     BigInt
+  currency       String             @default("NGN")
+  message        String
+  deliveryDays   Int
+  status         JobProposalStatus  @default(SUBMITTED)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  job            CustomerJob        @relation(fields: [jobId], references: [id])
+  professional   ProfessionalProfile @relation(fields: [professionalId], references: [id])
+
+  @@unique([jobId, professionalId])
+  @@index([professionalId, status])
+}
+
+model ServiceBooking {
+  id             String               @id @default(cuid())
+  reference      String               @unique
+  customerId     String
+  professionalId String
+  professionalProfileId String
+  listingId      String?
+  jobId          String?
+  categoryId     String?
+  mode           ServiceMode
+  title          String
+  description    String?
+  status         ServiceBookingStatus @default(REQUESTED)
+  scheduledAt    DateTime?
+  address        String?
+  countryCode    String               @default("NG")
+  state          String
+  city           String?
+  amountKobo     BigInt
+  currency       String               @default("NGN")
+  commissionBps  Int                  @default(1200)
+  paymentStatus  ServicePaymentStatus @default(UNPAID)
+  acceptedAt     DateTime?
+  submittedAt    DateTime?
+  completedAt    DateTime?
+  cancelledReason String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  customer       User                  @relation("GigCustomerBookings", fields: [customerId], references: [id])
+  professional   User                  @relation("GigProfessionalBookings", fields: [professionalId], references: [id])
+  professionalProfile ProfessionalProfile @relation(fields: [professionalProfileId], references: [id])
+  listing        ServiceListing?       @relation(fields: [listingId], references: [id])
+  job            CustomerJob?          @relation(fields: [jobId], references: [id])
+  category       ServiceCategory?      @relation(fields: [categoryId], references: [id])
+  milestones     BookingMilestone[]
+  conversation   Conversation?
+  review         ServiceReview?
+  disputes       ServiceDispute[]
+
+  @@index([customerId, status])
+  @@index([professionalId, status])
+  @@index([paymentStatus])
+}
+
+model BookingMilestone {
+  id          String             @id @default(cuid())
+  bookingId   String
+  title       String
+  amountKobo  BigInt
+  dueAt       DateTime?
+  status      GigMilestoneStatus @default(PENDING)
+  note        String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  booking     ServiceBooking     @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId])
+}
+
+model Conversation {
+  id             String            @id @default(cuid())
+  bookingId      String?           @unique
+  jobId          String?
+  customerId     String
+  professionalId String
+  createdAt      DateTime          @default(now())
+  lastMessageAt  DateTime          @default(now())
+  booking        ServiceBooking?   @relation(fields: [bookingId], references: [id])
+  customer       User              @relation("GigCustomerConversations", fields: [customerId], references: [id])
+  professional   User              @relation("GigProfessionalConversations", fields: [professionalId], references: [id])
+  messages       Message[]
+
+  @@index([customerId, lastMessageAt])
+  @@index([professionalId, lastMessageAt])
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String
+  attachmentUrl  String?
+  readAt         DateTime?
+  createdAt      DateTime      @default(now())
+  conversation   Conversation  @relation(fields: [conversationId], references: [id])
+  sender         User          @relation("GigMessageSender", fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+}
+
+model ServiceReview {
+  id             String              @id @default(cuid())
+  bookingId      String              @unique
+  customerId     String
+  professionalId String
+  rating         Int
+  comment        String
+  status         ServiceReviewStatus @default(PENDING)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  booking        ServiceBooking      @relation(fields: [bookingId], references: [id])
+  customer       User                @relation("GigReviewAuthor", fields: [customerId], references: [id])
+  professional   User                @relation("GigReviewProfessional", fields: [professionalId], references: [id])
+
+  @@index([professionalId, status])
+}
+
+model ServiceDispute {
+  id          String                @id @default(cuid())
+  bookingId   String
+  openedById  String
+  reason      String
+  details     String?
+  status      ServiceDisputeStatus  @default(OPEN)
+  resolution  String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  booking     ServiceBooking        @relation(fields: [bookingId], references: [id])
+  openedBy    User                  @relation("GigDisputeOpener", fields: [openedById], references: [id])
+
+  @@index([bookingId])
+  @@index([status])
+}
+
+/// Curated landing-page cards. These describe a service offering, never a fake provider.
+model ServiceSpotlight {
+  id            String          @id @default(cuid())
+  categoryId    String
+  title         String
+  blurb         String?
+  imageUrl      String
+  locationLabel String?
+  href          String?
+  sortOrder     Int             @default(0)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  category      ServiceCategory @relation(fields: [categoryId], references: [id])
+
+  @@index([isActive, sortOrder])
+}
+
+/// Singleton admin-managed NaijaGigs landing copy.
+model GigSiteConfig {
+  id            String   @id @default("default")
+  heroTitle     String   @default("Skilled hands. Brilliant minds. One Africa.")
+  heroSubtitle  String   @default("Find trusted professionals for every project — at home, at work, and online.")
+  heroImageUrl  String?
+  announcement  String?
+  updatedBy     String?
+  updatedAt     DateTime @updatedAt
 }

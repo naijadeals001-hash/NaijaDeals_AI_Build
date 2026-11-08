@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-label="Illustration of a building and renovation professional">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF4E2"/>
+      <stop offset="1" stop-color="#F6DEBC"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A4683E"/>
+      <stop offset="1" stop-color="#7E4A28"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bg)"/>
+  <circle cx="112" cy="86" r="54" fill="#FFC96B" opacity="0.65"/>
+  <g stroke="#D9B281" stroke-width="10" fill="none">
+    <path d="M336 480V132h214v348"/>
+    <path d="M336 190h214M336 250h214M336 310h214M336 370h214M336 430h214"/>
+    <path d="M392 132v348M450 132v348M508 132v348"/>
+  </g>
+  <path d="M320 480V118l246-44v406" stroke="#B98B52" stroke-width="12" fill="none"/>
+  <path d="M320 118l246-44v40L320 158z" fill="#D9A45E"/>
+  <g fill="#F3D9AD">
+    <rect x="356" y="210" width="40" height="34" rx="4"/>
+    <rect x="470" y="210" width="40" height="34" rx="4"/>
+    <rect x="356" y="330" width="40" height="34" rx="4"/>
+    <rect x="470" y="270" width="40" height="34" rx="4"/>
+  </g>
+  <path d="M0 480V396h320v84z" fill="#E8C79A"/>
+  <path d="M0 396h320v16H0z" fill="#D3AC79"/>
+  <path d="M120 480c-6-64 14-118 56-118s64 54 58 118z" fill="#C25A2C"/>
+  <path d="M162 374h38v36c0 10-8 18-19 18s-19-8-19-18z" fill="url(#skin)"/>
+  <ellipse cx="181" cy="340" rx="38" ry="42" fill="url(#skin)"/>
+  <path d="M143 336c0-28 16-48 38-48s38 18 38 44c-10-10-22-14-38-14s-28 4-38 18z" fill="#2A211A"/>
+  <path d="M136 318c2-28 20-46 45-46s43 18 45 46z" fill="#F2B33D"/>
+  <rect x="132" y="314" width="98" height="12" rx="6" fill="#D99622"/>
+  <path d="M152 354c8 16 16 22 29 22s23-6 29-22c0 24-12 40-29 40s-29-16-29-40z" fill="#6B3A1C" opacity="0.32"/>
+  <path d="M154 396c-18 12-26 36-26 54" stroke="#8C5230" stroke-width="20" stroke-linecap="round" fill="none"/>
+  <path d="M208 396c16 14 22 34 18 52" stroke="#8C5230" stroke-width="20" stroke-linecap="round" fill="none"/>
+  <g transform="translate(206 402) rotate(28)">
+    <rect x="0" y="0" width="96" height="10" rx="5" fill="#6F7B83"/>
+    <path d="M96 5l34-16v32z" fill="#9AA6AD"/>
+    <rect x="-26" y="-5" width="30" height="20" rx="8" fill="#3F4A52"/>
+  </g>
+  <g fill="#C25A2C">
+    <rect x="36" y="432" width="54" height="24" rx="4"/>
+    <rect x="40" y="410" width="54" height="24" rx="4"/>
+    <rect x="44" y="388" width="54" height="24" rx="4"/>
+  </g>
+  <path d="M482 366h84v70h-84z" fill="#F6E6C8" stroke="#B98B52" stroke-width="6"/>
+  <path d="M500 386h20v20h-20zM528 386h20v20h-20zM500 412h20v20h-20z" fill="#D9B281"/>
+</svg>

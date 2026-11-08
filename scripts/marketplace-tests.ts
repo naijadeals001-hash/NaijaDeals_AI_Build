@@ -269,8 +269,6 @@ async function main() {
       },
       include: { variants: true }
     });
-    // The Prisma schema does not model saleMode; the catalogue reads it via raw SQL.
-    await prisma.$executeRaw`UPDATE "Product" SET "saleMode" = 'escrow'::"SaleMode" WHERE id = ${variantProduct.id}`;
 
     await clearCart(customer);
 

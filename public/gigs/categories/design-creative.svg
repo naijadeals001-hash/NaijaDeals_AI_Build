@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-label="Illustration of a designer working with colour swatches">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F6F0FF"/>
+      <stop offset="1" stop-color="#E4D6FA"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8A4E2D"/>
+      <stop offset="1" stop-color="#683719"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bg)"/>
+  <circle cx="510" cy="110" r="120" fill="#DCC8F7" opacity="0.7"/>
+  <circle cx="92" cy="330" r="80" fill="#F0E4FF" opacity="0.8"/>
+  <rect x="0" y="360" width="640" height="120" fill="#3B2A56"/>
+  <rect x="0" y="352" width="640" height="16" fill="#57406F"/>
+  <rect x="238" y="286" width="300" height="14" rx="7" fill="#C9B4E6"/>
+  <rect x="262" y="300" width="16" height="60" fill="#A98FCB"/>
+  <rect x="498" y="300" width="16" height="60" fill="#A98FCB"/>
+  <rect x="270" y="150" width="216" height="146" rx="12" fill="#241A35"/>
+  <rect x="282" y="162" width="192" height="118" rx="4" fill="#F7F3FF"/>
+  <rect x="300" y="180" width="66" height="42" rx="4" fill="#7C3AED"/>
+  <rect x="374" y="180" width="42" height="42" rx="4" fill="#F59E0B"/>
+  <rect x="424" y="180" width="32" height="42" rx="4" fill="#10B981"/>
+  <rect x="300" y="232" width="120" height="12" rx="6" fill="#C9B4E6"/>
+  <rect x="300" y="252" width="86" height="10" rx="5" fill="#DDD0EE"/>
+  <path d="M378 296h20v30h-20z" fill="#A98FCB"/>
+  <path d="M352 326h72v10h-72z" fill="#C9B4E6"/>
+  <path d="M104 480c-8-66 14-124 58-124s66 58 58 124z" fill="#E86A33"/>
+  <path d="M142 372h40v38c0 10-9 18-20 18s-20-8-20-18z" fill="url(#skin)"/>
+  <ellipse cx="162" cy="336" rx="40" ry="44" fill="url(#skin)"/>
+  <path d="M120 334c0-30 18-52 42-52s42 20 42 48c-12-10-24-16-42-16s-30 6-42 20z" fill="#241B17"/>
+  <g fill="#241B17">
+    <circle cx="122" cy="318" r="18"/>
+    <circle cx="134" cy="292" r="18"/>
+    <circle cx="158" cy="280" r="18"/>
+    <circle cx="184" cy="286" r="18"/>
+    <circle cx="202" cy="306" r="16"/>
+  </g>
+  <path d="M136 352c8 12 16 18 26 18s18-6 26-18c-2 20-12 34-26 34s-24-14-26-34z" fill="#5A2F18" opacity="0.3"/>
+  <path d="M136 392c-16 12-24 34-24 50" stroke="#8A4E2D" stroke-width="18" stroke-linecap="round" fill="none"/>
+  <path d="M188 392c18 6 32 16 39 32" stroke="#8A4E2D" stroke-width="18" stroke-linecap="round" fill="none"/>
+  <g transform="translate(212 408) rotate(-16)">
+    <rect x="0" y="0" width="86" height="58" rx="8" fill="#F7F3FF" stroke="#C9B4E6" stroke-width="4"/>
+    <circle cx="28" cy="24" r="10" fill="#7C3AED"/>
+    <rect x="46" y="16" width="28" height="8" rx="4" fill="#C9B4E6"/>
+    <rect x="46" y="30" width="20" height="6" rx="3" fill="#DDD0EE"/>
+  </g>
+  <g fill="#7C3AED" opacity="0.55">
+    <circle cx="470" cy="82" r="6"/>
+    <circle cx="492" cy="60" r="4"/>
+    <circle cx="454" cy="56" r="3"/>
+  </g>
+  <rect x="530" y="288" width="6" height="72" fill="#8A6DAE"/>
+  <path d="M506 288h54l-14-46h-26z" fill="#F2B33D"/>
+  <circle cx="533" cy="286" r="30" fill="#FFD98A" opacity="0.45"/>
+</svg>
