@@ -1677,3 +1677,25 @@ Verified: scripts/stream-mobile-qa.cjs across 320/360/390/430/768/1440 (no
 overflow, carousel next/prev/rotate ok, drawer opens/closes with 0 missing
 items, player expands, audio advances). Regression: full QA, API 23/23,
 features 9/9, premium 11/11, audio verify, upload/video/live suites.
+
+## NaijaStream — desktop reference parity (2026-11-08)
+
+Region-by-region gap closure against the approved desktop dashboard:
+- Genre chip row (All / Afrobeats / Amapiano / Highlife / Hip-Hop / Afro-fusion
+  / Gospel) linking to filtered music.
+- "Trending in Africa" now shows ARTIST PORTRAIT cards with rank and inline
+  play (was track tiles) — matching the reference.
+- Sidebar includes Explore Africa; "Your Library" and "Liked Songs" present.
+- Right panel: Live Now card (real event + honest upcoming state),
+  Recommended for You (real artists, single instance — a duplicate rendered by
+  an empty second call was removed), On Repeat queue.
+- Catalogue expanded with EXISTING artwork (no Kie.ai spend): 8 verified
+  artists, 20 published tracks, 9 editorial playlists (Afrobeats Hits,
+  Amapiano Mix, Naija Hip Hop, Gospel Flow, Chill Africa, Workout Vibes,
+  Love & R&B, African Classics), playlists auto-filled by genre.
+- Cleaned 10 "Test playlist" rows my own tests had created in public data, and
+  restored the artist name a profile test had overwritten.
+Remaining differences from the reference, by design: real artists cannot be
+depicted (fictional demo artists), no fabricated listener counts, and playlist
+counts are real. Regression: full QA, mobile QA, API 23/23, features 9/9,
+audio verify (play/seek/next via playlist queue).

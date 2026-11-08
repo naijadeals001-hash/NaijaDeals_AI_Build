@@ -6,6 +6,7 @@ import { useStreamPlayer } from "./player-context";
 import { CoverArt } from "./cover-art";
 import { StreamRightPanel } from "./right-panel";
 import { HeroCarousel, type HeroSlide } from "./hero-carousel";
+import { GenreChips, LiveNowCard, RecommendedArtists, TrendingArtists } from "./desktop-rails";
 
 export type StreamCardTrack = {
   id: string;
@@ -51,7 +52,23 @@ function Rail({ title, href, children }: { title: string; href?: string; childre
   );
 }
 
-export function StreamHome({ data, signedIn }: { data: StreamHomeData; signedIn: boolean }) {
+type TrendingArtist = {
+  id: string; name: string; slug: string; avatarUrl: string | null; genre: string | null; trackCount: number;
+  firstTrack: { id: string; title: string; slug: string; durationSec: number; artworkUrl: string | null; audioUrl: string | null } | null;
+};
+type LiveEvent = { slug: string; title: string; artworkUrl: string | null; status: string; startsAt: string } | null;
+
+export function StreamHome({
+  data,
+  signedIn,
+  trendingArtists = [],
+  liveEvent = null
+}: {
+  data: StreamHomeData;
+  signedIn: boolean;
+  trendingArtists?: TrendingArtist[];
+  liveEvent?: LiveEvent;
+}) {
   const player = useStreamPlayer();
   const toPlayer = (track: StreamCardTrack) => ({
     id: track.id,
@@ -83,54 +100,15 @@ export function StreamHome({ data, signedIn }: { data: StreamHomeData; signedIn:
         {/* Hero — rotating cinematic carousel of African entertainment */}
         {data.heroSlides && data.heroSlides.length > 0 ? <HeroCarousel slides={data.heroSlides} intervalMs={6000} /> : null}
 
-        {/* Genre chips */}
-        {data.genres.length > 0 ? (
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
-            {data.genres.slice(0, 10).map((genre) => (
-              <Link
-                key={genre.genre}
-                href={`/naijastream/music?genre=${encodeURIComponent(genre.genre)}`}
-                className="shrink-0 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[11.5px] font-bold text-white/75 hover:border-emerald-400/40 hover:text-emerald-300"
-              >
-                {genre.genre}
-              </Link>
-            ))}
-          </div>
-        ) : null}
+        <div className="mt-4">
+          <GenreChips genres={data.genres} />
+        </div>
 
         <Rail title="Trending in Africa" href="/naijastream/charts">
-          {data.trending.length === 0 ? (
-            <EmptyRail message="No published tracks yet. Verified creators' releases appear here as soon as they go live." />
+          {trendingArtists.length > 0 ? (
+            <TrendingArtists artists={trendingArtists} />
           ) : (
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {data.trending.map((track, index) => (
-                <li key={track.id}>
-                  <div className="group relative overflow-hidden rounded-xl bg-[#131a16] p-3 transition hover:bg-[#18201b]">
-                    <span className="absolute left-3 top-3 z-10 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-black text-white/80">{index + 1}</span>
-                    <div className="relative aspect-square overflow-hidden rounded-lg bg-black/40">
-                      {track.artworkUrl ? (
-                        <img src={track.artworkUrl} alt="" className="h-full w-full object-cover transition group-hover:scale-105" loading="lazy" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-2xl text-white/30">♪</div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => player.play(data.trending.map(toPlayer), index)}
-                        aria-label={`Play ${track.title}`}
-                        className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-black opacity-0 shadow-lg transition group-hover:opacity-100 focus-visible:opacity-100"
-                      >
-                        <Play className="h-4 w-4 fill-current" aria-hidden />
-                      </button>
-                    </div>
-                    <p className="mt-2 truncate text-[12.5px] font-bold">{track.title}</p>
-                    <p className="flex items-center gap-1 truncate text-[10.5px] text-white/50">
-                      {track.artist.name}
-                      {track.artist.verified && !track.artist.isSample ? <BadgeCheck className="h-3 w-3 text-emerald-400" aria-label="Verified" /> : null}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <EmptyRail message="No published tracks yet. Verified creators' releases appear here as soon as they go live." />
           )}
         </Rail>
 
@@ -183,7 +161,11 @@ export function StreamHome({ data, signedIn }: { data: StreamHomeData; signedIn:
       </main>
 
       {/* Right panel — Recommended for You + On Repeat (real data) */}
-      <StreamRightPanel artists={data.artists} />
+      <aside className="space-y-4 lg:sticky lg:top-20 lg:h-fit">
+        <LiveNowCard event={liveEvent} />
+        <RecommendedArtists artists={data.artists} />
+        <StreamRightPanel />
+      </aside>
     </div>
   );
 }

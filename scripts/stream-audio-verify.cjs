@@ -42,8 +42,10 @@ fs.mkdirSync(OUT, { recursive: true });
   await page.waitForTimeout(2000);
 
   // 3) Play through the UI and confirm the media clock advances.
-  // Hero is now a carousel; play from the first trending card's play button.
-  await page.locator('button[aria-label^="Play "]').first().click();
+  // Queue a multi-track list so Next has somewhere to go: click a playlist card.
+  await page.locator('a[href^="/naijastream/playlists/"]').first().click();
+  await page.waitForURL(/playlists\//, { timeout: 15000 });
+  await page.locator('table tbody tr button[aria-label^="Play "]').first().click();
   await page.waitForTimeout(1200);
   results.playingState = await page.evaluate(() => {
     const el = document.querySelector("audio");

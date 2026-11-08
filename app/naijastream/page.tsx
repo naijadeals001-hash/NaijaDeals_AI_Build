@@ -61,6 +61,29 @@ export default async function Page() {
   ]);
 
   const trending = (trendingResult.items as unknown as RawTrack[]).map(toCard);
+  const trendingArtists = await (async () => {
+    const rows = await prisma.streamArtist.findMany({
+      where: { verified: true },
+      select: { id: true, name: true, slug: true, avatarUrl: true, genres: true, tracks: { where: { status: "PUBLISHED" }, select: { id: true, title: true, slug: true, durationSec: true, artworkUrl: true, audioUrl: true }, take: 1 } },
+      take: 12
+    });
+    return rows
+      .filter((row) => row.tracks.length > 0)
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        avatarUrl: row.avatarUrl,
+        genre: row.genres[0] ?? null,
+        trackCount: row.tracks.length,
+        firstTrack: row.tracks[0] ?? null
+      }));
+  })();
+  const liveEvent = await prisma.streamLiveEvent.findFirst({
+    where: { status: { in: ["UPCOMING", "LIVE", "ENDED"] } },
+    orderBy: { startsAt: "asc" },
+    select: { slug: true, title: true, artworkUrl: true, status: true, startsAt: true }
+  });
   const artistCards: StreamCardArtist[] = artists.map((artist) => ({
     id: artist.id,
     name: artist.name,
@@ -102,6 +125,8 @@ export default async function Page() {
         }
         desktop={
       <StreamHome
+        trendingArtists={trendingArtists}
+        liveEvent={liveEvent ? { ...liveEvent, startsAt: liveEvent.startsAt.toISOString() } : null}
         signedIn={Boolean(user)}
         data={{
           heroSlides,
