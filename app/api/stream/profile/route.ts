@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
-import { assertSameOrigin, jsonError, optionalString, readJson, requireString, requireUser } from "@/lib/auth/guard";
+import { assertSameOrigin, getOptionalUserId, jsonError, optionalString, readJson, requireString, requireUser } from "@/lib/auth/guard";
 import { prisma } from "@/lib/prisma";
 import { jsonSafe } from "@/lib/services/core/serialize";
 import { recordAudit } from "@/lib/services/core/audit.service";
 
 export const dynamic = "force-dynamic";
 
-/** The signed-in creator's editable artist profile. */
+/**
+ * The signed-in creator's editable artist profile. A guest gets an explicit
+ * `signed_out` body so the settings page can offer a sign-in link instead of
+ * reporting a failed request.
+ */
 export async function GET() {
   try {
+    const userId = await getOptionalUserId();
+    if (!userId) return NextResponse.json({ error: "Sign in to manage your creator profile.", code: "signed_out" }, { status: 401 });
     const user = await requireUser();
     const artist = await prisma.streamArtist.findUnique({
       where: { userId: user.id },

@@ -14,6 +14,7 @@ import {
   Podcast,
   Radio,
   Search,
+  Sparkles,
   Settings,
   Upload,
   User,
@@ -29,7 +30,8 @@ const SECTIONS: Array<{ title: string; items: Array<{ label: string; href: strin
       { label: "Podcasts", href: "/naijastream/podcasts", icon: Podcast },
       { label: "Live Events", href: "/naijastream/live", icon: Radio },
       { label: "Videos", href: "/naijastream/videos", icon: Video },
-      { label: "Search", href: "/naijastream/search", icon: Search }
+      { label: "Search", href: "/naijastream/search", icon: Search },
+      { label: "Ask Aura", href: "/naijastream/aura", icon: Sparkles }
     ]
   },
   {

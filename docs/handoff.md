@@ -1699,3 +1699,78 @@ Remaining differences from the reference, by design: real artists cannot be
 depicted (fictional demo artists), no fabricated listener counts, and playlist
 counts are real. Regression: full QA, mobile QA, API 23/23, features 9/9,
 audio verify (play/seek/next via playlist queue).
+
+## NaijaStream — Pan-African discovery, city catalogue & category identity (2026-11-08)
+
+Directive: pan-African design, content discovery and real media playback.
+**Kie.ai spend: none.** Every asset below is platform-owned or already approved.
+
+**Schema (additive migration `20261108195127_stream_city_catalogue`)**
+- `StreamCity` (slug, name, country/region, genres, `imageUrl`, `imageCredit`,
+  `imageApprovedAt`, featured, sortOrder) — 35 cities seeded across West (9),
+  East (6), Southern (8), Central (5), North (7).
+- `StreamPodcastCategory` — 12 podcast categories.
+- `imageUrl` is null until an operator approves photography; the UI then shows
+  "Photo pending" rather than another city's picture. **Coverage: 0/35 images.**
+
+**Explore Africa**
+- Region tabs (All Africa + five regions) and a country filter
+  (`components/stream/explore-cities.tsx`); empty combinations disabled.
+- City pages `/naijastream/cities/[slug]`: artists, tracks, podcasts, events,
+  genres — real records only; a city without creators shows an honest empty
+  state ("No published Kumasi content yet").
+- Public `GET /api/stream/cities` with per-city artist/track counts.
+
+**Category identity** (`lib/stream/categories.ts`): Music #00C896, Podcasts
+#8B5CF6, Videos #3B82F6, Live Events #F97316, Premium #F5B942 — on charcoal,
+gold focus ring, wireframed and working CTAs. Applied to mobile tiles and a
+desktop category strip.
+
+**Collection labelling**: "Trending in Africa" renamed **Featured songs** (no
+verified listen-count ranking exists behind it). Rows carry artwork, artist,
+genre, duration, play/like/playlist actions.
+
+**Pan-African catalogue** (`prisma/stream-panafrican-seed.cjs`): six fictional
+artists (Accra, Dakar, Nairobi, Johannesburg, Kinshasa, Casablanca) each with a
+real, FFmpeg-synthesised track (`scripts/make-panafrican-audio.mjs`), plus eight
+published shows across distinct categories (total 10 shows). All `isSample`,
+hidden unless `NAIJA_STREAM_SHOW_SAMPLES=true`. New artists have no portrait —
+initial-letter avatars instead of reusing another artist's face.
+
+**Admin**: `GET/PATCH /api/admin/stream/cities` behind `stream:read` /
+`stream:write`; image URLs restricted to approved `/generated` or `/uploads`
+paths; every change writes `stream.city_updated` audit. Verified: anon 401,
+customer 403, admin 200, external URL 400.
+
+**Bugs fixed this slice**
+- `DELETE /api/stream/media/[id]` checked only track usage → deleting an asset
+  orphaned a published video (404 media). Now checks tracks, episodes, videos.
+- Video list rendered `<video src>` for missing posters, producing console 404s;
+  now uses a neutral placeholder. `prisma/stream-orphan-cleanup.cjs` repairs
+  earlier orphans.
+- Profile editor: `getByRole("textbox")` matched the artist-name input in tests,
+  overwriting names; editor now labels states and the test targets the bio.
+- Guest hitting `studio/settings` logged a 401; endpoint now returns
+  `signed_out` and the panel explains listener accounts.
+- Live events were owned by an orphaned organiser id (organiser controls 403);
+  reassigned to the real demo artist account.
+- **Tailwind stale CSS**: incremental builds reused a CSS bundle missing newly
+  introduced arbitrary utilities (`h-[140px]`, `h-[104px]`), collapsing city
+  cards to 2px. A clean `rm -rf .next-pay && next build` fixed it — do this
+  after adding arbitrary-value utilities.
+
+**Verification (all against http://localhost:3015, build served by scheduled
+task `NaijaDealsPreview3015`)**
+- Discovery QA (`scripts/stream-discovery-qa.cjs`): 34/34 — every city card
+  and destination, East Africa tab → 6, country filter → Kenya 2, category
+  distinctness + CTAs, featured artwork, podcast depth, widths 320/360/390/430/
+  768/1024/1440 with no overflow.
+- Platform audit: 52/52 routes, all interactions true.
+- Audio: real playback (currentTime 5.06s), seek 18.5s, next works.
+- Video/podcast: 10/10 (decoded frames, episode playback, cross-creator delete
+  blocked). Livestream: 7/7 (HLS segments reach the viewer, foreign creator 403).
+- Uploads 11/11; Premium 11/11; features 10/10; royalty maths 8/8; royalty flow
+  7/7. Test artefacts removed (`prisma/stream-verify-cleanup.cjs`).
+
+**Open blocker**: 35 city photographs and the six new artist portraits have not
+been generated (Kie.ai spend not approved). Estimated 41 images × $0.03 = $1.23.

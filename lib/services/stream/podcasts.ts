@@ -19,7 +19,7 @@ export async function listShows() {
       category: true,
       language: true,
       isSample: true,
-      artist: { select: { name: true, slug: true } },
+      artist: { select: { name: true, slug: true, countryCode: true } },
       _count: { select: { episodes: true } }
     }
   });

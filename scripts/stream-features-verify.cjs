@@ -28,7 +28,7 @@ const check = (name, ok, detail) => {
   await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded" });
   const loginStatus = await page.evaluate(async () => (await fetch("/api/auth/login", {
     method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
-    body: JSON.stringify({ email: "demo.stream.adaeze@naijastream.demo", password: "NaijaStreamDemo2026!" })
+    body: JSON.stringify({ email: "adaeze-moon@naijastream.demo", password: "NaijaStreamDemo2026!" })
   })).status);
   check("demo artist signs in", loginStatus === 200, String(loginStatus));
 
@@ -50,13 +50,18 @@ const check = (name, ok, detail) => {
   const hasEditor = await page.locator("form input").count();
   check("profile editor renders", hasEditor > 0, `inputs ${hasEditor}`);
   const bio = `Bio updated ${Date.now().toString(36)}`;
-  await page.getByRole("textbox").nth(1).fill(bio);
+  const bioField = page.locator("form textarea").first();
+  await bioField.fill(bio);
   await page.getByRole("button", { name: /save profile/i }).click();
   await page.waitForTimeout(1800);
   await page.reload({ waitUntil: "networkidle" });
-  await page.waitForTimeout(1200);
-  const persistedBio = await page.getByRole("textbox").nth(1).inputValue();
+  await page.locator("form textarea").first().waitFor({ state: "visible", timeout: 20000 });
+  await page.waitForFunction((expected) => document.querySelector("form textarea")?.value === expected, bio, { timeout: 10000 }).catch(() => undefined);
+  const persistedBio = await page.locator("form textarea").first().inputValue();
+  const nameField = page.getByLabel(/artist name/i).first();
+  const nameAfter = await nameField.inputValue();
   check("profile change persists after reload", persistedBio === bio, persistedBio);
+  check("editing the bio leaves the artist name intact", nameAfter === "Adaeze Moon", nameAfter);
   await page.screenshot({ path: path.join(OUT, "settings.png") });
 
   // Right panel is present with real data.

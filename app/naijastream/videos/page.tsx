@@ -28,7 +28,9 @@ export default async function VideosPage() {
                   {video.posterUrl ? (
                     <img src={video.posterUrl} alt="" className="h-full w-full object-cover transition group-hover:scale-105" loading="lazy" />
                   ) : (
-                    <video src={video.videoUrl} muted preload="metadata" className="h-full w-full object-cover" />
+                    <div className="grid h-full w-full place-items-center text-[11px] font-semibold uppercase tracking-wide text-white/40">
+                      Video
+                    </div>
                   )}
                   <span className="absolute bottom-2 right-2 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-bold text-white">
                     {duration(video.durationSec)}

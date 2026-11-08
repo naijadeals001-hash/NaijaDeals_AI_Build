@@ -2030,3 +2030,33 @@ model StreamHeroSlide {
 
   @@index([isActive, sortOrder])
 }
+
+/// Editorial city catalogue powering Explore Africa. Artwork is approved by
+/// operators; an empty imageUrl means "no approved city image yet" and the card
+/// must say so rather than borrowing another city's picture.
+model StreamCity {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  name            String
+  countryCode     String
+  countryName     String
+  region          String
+  genres          String[]  @default([])
+  imageUrl        String?
+  imageCredit     String?
+  imageApprovedAt DateTime?
+  featured        Boolean   @default(false)
+  sortOrder       Int       @default(0)
+
+  @@index([region, sortOrder])
+  @@index([featured])
+}
+
+/// Podcast category catalogue: drives the Featured Podcasts rail so operators
+/// can curate it without hardcoding copy in the UI.
+model StreamPodcastCategory {
+  id        String @id @default(cuid())
+  slug      String @unique
+  label     String
+  sortOrder Int    @default(0)
+}

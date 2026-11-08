@@ -6,7 +6,7 @@ import { useStreamPlayer } from "./player-context";
 import { CoverArt } from "./cover-art";
 import { StreamRightPanel } from "./right-panel";
 import { HeroCarousel, type HeroSlide } from "./hero-carousel";
-import { GenreChips, LiveNowCard, RecommendedArtists, TrendingArtists } from "./desktop-rails";
+import { CategoryStrip, CityRail, FeaturedSongs, GenreChips, LiveNowCard, RecommendedArtists, ShowRail, TrendingArtists } from "./desktop-rails";
 
 export type StreamCardTrack = {
   id: string;
@@ -15,6 +15,7 @@ export type StreamCardTrack = {
   durationSec: number;
   artworkUrl: string | null;
   audioUrl: string | null;
+  genre?: string | null;
   isSample?: boolean;
   artist: { id: string; name: string; slug: string; verified: boolean; isSample?: boolean; avatarUrl?: string | null | undefined };
 };
@@ -34,6 +35,8 @@ export type StreamHomeData = {
   artists: StreamCardArtist[];
   genres: Array<{ genre: string; tracks: number }>;
   live: StreamCardPlaylist[];
+  cities?: Array<{ slug: string; name: string; countryCode: string; countryName: string; region: string; imageUrl: string | null; artists: number; tracks: number }>;
+  shows?: Array<{ slug: string; title: string; category: string; coverUrl: string | null; episodes: number; language: string; creator: string }>;
 };
 
 function Rail({ title, href, children }: { title: string; href?: string; children: React.ReactNode }) {
@@ -100,17 +103,39 @@ export function StreamHome({
         {/* Hero — rotating cinematic carousel of African entertainment */}
         {data.heroSlides && data.heroSlides.length > 0 ? <HeroCarousel slides={data.heroSlides} intervalMs={6000} /> : null}
 
+        <CategoryStrip />
+
         <div className="mt-4">
           <GenreChips genres={data.genres} />
         </div>
 
-        <Rail title="Trending in Africa" href="/naijastream/charts">
-          {trendingArtists.length > 0 ? (
-            <TrendingArtists artists={trendingArtists} />
+        <Rail title="Featured songs" href="/naijastream/charts">
+          {data.trending.length > 0 ? (
+            <FeaturedSongs tracks={data.trending} />
           ) : (
             <EmptyRail message="No published tracks yet. Verified creators' releases appear here as soon as they go live." />
           )}
         </Rail>
+
+        <Rail title="Artists to explore" href="/naijastream/charts">
+          {trendingArtists.length > 0 ? (
+            <TrendingArtists artists={trendingArtists.slice(0, 8)} />
+          ) : (
+            <EmptyRail message="No published tracks yet. Verified creators' releases appear here as soon as they go live." />
+          )}
+        </Rail>
+
+        {data.cities && data.cities.length > 0 ? (
+          <Rail title="Explore Africa" href="/naijastream/explore">
+            <CityRail cities={data.cities} />
+          </Rail>
+        ) : null}
+
+        {data.shows && data.shows.length > 0 ? (
+          <Rail title="Featured podcasts" href="/naijastream/podcasts">
+            <ShowRail shows={data.shows} />
+          </Rail>
+        ) : null}
 
         <Rail title="African playlists for you" href="/naijastream/playlists">
           {data.playlists.length === 0 ? (

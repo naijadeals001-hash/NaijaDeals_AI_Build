@@ -22,7 +22,7 @@ export function ProfileEditor() {
         setProfile(body.artist);
         setState("ready");
       })
-      .catch((err) => setState(err.status === 401 ? "signed-out" : err.code === "no_artist" ? "no-artist" : "error"));
+      .catch((err) => setState(err.status === 401 || err.code === "signed_out" ? "signed-out" : err.code === "no_artist" ? "no-artist" : "error"));
   }, []);
 
   useEffect(load, [load]);
@@ -56,7 +56,12 @@ export function ProfileEditor() {
     );
   }
   if (state === "no-artist") {
-    return <p className="text-[12.5px] text-white/60">This account has no artist profile. Creator accounts are provisioned by the platform team.</p>;
+    return (
+      <p className="text-[12.5px] leading-7 text-white/60">
+        Your account is a listener account, so there is no artist profile to edit. Creator profiles are provisioned by the platform team and then
+        appear in <Link href="/naijastream/studio" className="font-bold text-emerald-400">Studio</Link>.
+      </p>
+    );
   }
   if (state === "loading") return <Loader2 className="h-6 w-6 animate-spin text-emerald-400" aria-label="Loading profile" />;
   if (state === "error" || !profile) return <p className="text-[12.5px] text-red-300">Profile could not be loaded.</p>;

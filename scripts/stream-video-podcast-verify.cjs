@@ -66,7 +66,7 @@ async function waitReady(page, id) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ email: "demo.stream.adaeze@naijastream.demo", password: "NaijaStreamDemo2026!" })
+      body: JSON.stringify({ email: "adaeze-moon@naijastream.demo", password: "NaijaStreamDemo2026!" })
     });
   });
 

@@ -7,6 +7,7 @@ import { listShows } from "@/lib/services/stream/podcasts";
 import { prisma } from "@/lib/prisma";
 import { MobileSections } from "@/components/stream/mobile-home";
 import { StreamHome, type StreamCardArtist, type StreamCardPlaylist, type StreamCardTrack } from "@/components/stream/home";
+import { listCities } from "@/lib/services/stream/cities";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ type RawTrack = {
   durationSec: number;
   artworkUrl: string | null;
   audioUrl: string | null;
+  genre?: string | null;
   isSample?: boolean;
   artist: { id: string; name: string; slug: string; verified: boolean; isSample?: boolean; avatarUrl?: string | null };
 };
@@ -29,6 +31,7 @@ function toCard(track: RawTrack): StreamCardTrack {
     durationSec: track.durationSec,
     artworkUrl: track.artworkUrl,
     audioUrl: track.audioUrl,
+    genre: track.genre ?? null,
     isSample: track.isSample,
     artist: {
       id: track.artist.id,
@@ -50,14 +53,7 @@ export default async function Page() {
     listArtists({ take: 12 }),
     listHeroSlides(),
     listShows(),
-    (async () => {
-      const rows = await prisma.streamArtist.groupBy({ by: ["city", "countryCode"], where: { verified: true, city: { not: null } }, _count: { _all: true } }).catch(() => []);
-      return rows
-        .filter((row) => row.city)
-        .map((row) => ({ city: row.city as string, countryCode: row.countryCode, artists: row._count._all }))
-        .sort((a, b) => b.artists - a.artists)
-        .slice(0, 8);
-    })()
+    listCities()
   ]);
 
   const trending = (trendingResult.items as unknown as RawTrack[]).map(toCard);
@@ -119,7 +115,16 @@ export default async function Page() {
           <MobileSections
             tracks={trending}
             cities={cities}
-            shows={shows.map((show) => ({ slug: show.slug, title: show.title, category: show.category, coverUrl: show.coverUrl, episodes: show._count.episodes }))}
+            shows={shows.slice(0, 12).map((show) => ({
+              slug: show.slug,
+              title: show.title,
+              category: show.category,
+              coverUrl: show.coverUrl,
+              episodes: show._count.episodes,
+              language: show.language,
+              creator: show.artist.name,
+              countryCode: show.artist.countryCode
+            }))}
             slides={heroSlides}
           />
         }
@@ -135,7 +140,9 @@ export default async function Page() {
           playlists: playlistCards,
           artists: artistCards,
           genres,
-          live: []
+          live: [],
+          cities: cities.slice(0, 8).map((city) => ({ slug: city.slug, name: city.name, countryCode: city.countryCode, countryName: city.countryName, region: city.region, imageUrl: city.imageUrl, artists: city.artists, tracks: city.tracks })),
+          shows: shows.slice(0, 10).map((show) => ({ slug: show.slug, title: show.title, category: show.category, coverUrl: show.coverUrl, episodes: show._count.episodes, language: show.language, creator: show.artist.name }))
         }}
       />
         }

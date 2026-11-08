@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Play, Plus } from "lucide-react";
+import { Pause, Play, Plus } from "lucide-react";
 import { useStreamPlayer } from "./player-context";
+import { STREAM_CATEGORIES } from "@/lib/stream/categories";
 
 type TrendArtist = { id: string; name: string; slug: string; avatarUrl: string | null; trackCount: number; genre: string | null; firstTrack: { id: string; title: string; slug: string; durationSec: number; artworkUrl: string | null; audioUrl: string | null } | null };
 
@@ -17,7 +18,7 @@ export function TrendingArtists({ artists }: { artists: TrendArtist[] }) {
   if (artists.length === 0) return null;
 
   return (
-    <ul className="grid grid-cols-4 gap-3 xl:grid-cols-8">
+    <ul className="grid grid-cols-4 gap-3">
       {artists.map((artist, index) => (
         <li key={artist.id}>
           <div className="group relative overflow-hidden rounded-xl bg-[#131a16]">
@@ -147,5 +148,173 @@ export function RecommendedArtists({ artists }: { artists: Array<{ id: string; n
         </ul>
       )}
     </section>
+  );
+}
+
+type FeaturedTrack = {
+  id: string;
+  title: string;
+  slug: string;
+  durationSec: number;
+  artworkUrl: string | null;
+  audioUrl: string | null;
+  genre?: string | null;
+  artist: { id: string; name: string; slug: string; avatarUrl?: string | null };
+};
+
+function fmtSeconds(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "";
+  return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+}
+
+/**
+ * Featured Songs — artwork-led rows feeding the shared player. Labelled
+ * "Featured" rather than "Trending" because there is no verified listen-count
+ * ranking behind it; each row can have its artwork or artist portrait.
+ */
+export function FeaturedSongs({ tracks }: { tracks: FeaturedTrack[] }) {
+  const player = useStreamPlayer();
+  const queue = tracks.map((track) => ({
+    id: track.id,
+    slug: track.slug,
+    title: track.title,
+    durationSec: track.durationSec,
+    artworkUrl: track.artworkUrl,
+    audioUrl: track.audioUrl,
+    artistName: track.artist.name
+  }));
+  if (tracks.length === 0) return null;
+
+  return (
+    <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+      {tracks.slice(0, 8).map((track, index) => {
+        const isCurrent = player.current?.id === track.id;
+        const playingThis = isCurrent && player.playing;
+        const image = track.artworkUrl ?? track.artist.avatarUrl ?? null;
+        return (
+          <li key={track.id} className="flex items-center gap-3 rounded-xl bg-[#111815] p-2 transition hover:bg-[#172019]">
+            <button
+              type="button"
+              onClick={() => (isCurrent ? player.toggle() : player.play(queue, index))}
+              aria-label={playingThis ? `Pause ${track.title}` : `Play ${track.title}`}
+              className="relative shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C99520]"
+            >
+              {image ? (
+                <img src={image} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" loading="lazy" />
+              ) : (
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-white/10 font-display text-lg font-black text-white/30">
+                  {track.title.charAt(0)}
+                </span>
+              )}
+              <span className="absolute inset-0 grid place-items-center rounded-lg bg-black/40 opacity-0 transition group-hover:opacity-100 hover:opacity-100">
+                {playingThis ? <Pause className="h-4 w-4 fill-white text-white" aria-hidden /> : <Play className="h-4 w-4 translate-x-[1px] fill-white text-white" aria-hidden />}
+              </span>
+            </button>
+            <Link href={`/naijastream/tracks/${track.slug}`} className="flex min-w-0 flex-1 items-center gap-3">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-bold">{track.title}</span>
+                <span className="block truncate text-[11px] text-white/45">
+                  {track.artist.name}
+                  {track.genre ? ` · ${track.genre}` : ""}
+                </span>
+              </span>
+              <span className="shrink-0 text-[11px] tabular-nums text-white/40">{fmtSeconds(track.durationSec)}</span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** Five verticals, five accents — Music emerald, Podcasts purple, Videos blue, Live orange, Premium gold. */
+export function CategoryStrip() {
+  return (
+    <section aria-labelledby="categories-heading" className="mt-6">
+      <h2 id="categories-heading" className="sr-only">
+        Browse by category
+      </h2>
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {STREAM_CATEGORIES.map((category) => (
+          <li key={category.key}>
+            <Link
+              href={category.href}
+              data-category={category.key}
+              className="group flex h-full flex-col gap-1 rounded-xl border p-3 transition hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C99520]"
+              style={{ borderColor: `${category.accent}55`, background: category.accentSoft }}
+            >
+              <span className="text-[12.5px] font-extrabold" style={{ color: category.accent }}>
+                {category.label}
+              </span>
+              <span className="text-[10.5px] leading-4 text-white/55">{category.blurb}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+type ExploreCityCard = { slug: string; name: string; countryCode: string; countryName: string; region: string; imageUrl: string | null; artists: number; tracks: number };
+
+/** Explore Africa rail — the same approved-imagery rules as the Explore page. */
+export function CityRail({ cities }: { cities: ExploreCityCard[] }) {
+  const featured = [...cities].sort((a, b) => b.artists - a.artists || b.tracks - a.tracks).slice(0, 8);
+  if (featured.length === 0) return null;
+  return (
+    <ul className="grid grid-cols-4 gap-3 xl:grid-cols-8">
+      {featured.map((city) => (
+        <li key={city.slug}>
+          <Link
+            href={`/naijastream/cities/${city.slug}`}
+            data-city={city.slug}
+            className="group relative flex h-[124px] flex-col justify-end overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-emerald-900 to-[#0b0f0d] p-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C99520]"
+          >
+            {city.imageUrl ? (
+              <>
+                <img src={city.imageUrl} alt={`${city.name}, ${city.countryName}`} className="absolute inset-0 h-full w-full object-cover transition group-hover:scale-105" loading="lazy" />
+                <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" aria-hidden />
+              </>
+            ) : (
+              <span className="relative mb-1 text-[8.5px] font-bold uppercase tracking-wide text-white/40">Photo pending</span>
+            )}
+            <span className="relative block truncate font-display text-[13.5px] font-extrabold leading-tight text-white">{city.name}</span>
+            <span className="relative block truncate text-[10px] text-white/60">
+              {city.countryName}
+              {city.artists > 0 ? ` · ${city.artists} artist${city.artists === 1 ? "" : "s"}` : ""}
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+type ShowCard = { slug: string; title: string; category: string; coverUrl: string | null; episodes: number; language: string; creator: string };
+
+/** Featured Podcasts rail with the purple category identity. */
+export function ShowRail({ shows }: { shows: ShowCard[] }) {
+  if (shows.length === 0) return null;
+  return (
+    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      {shows.slice(0, 10).map((show) => (
+        <li key={show.slug}>
+          <Link href={`/naijastream/podcasts/${show.slug}`} className="group block rounded-xl border border-[#8B5CF6]/25 bg-[#131a16] p-2.5 transition hover:border-[#8B5CF6]/60">
+            <div className="aspect-square w-full overflow-hidden rounded-lg bg-[#1a1426]">
+              {show.coverUrl ? (
+                <img src={show.coverUrl} alt="" className="h-full w-full object-cover transition group-hover:scale-105" loading="lazy" />
+              ) : (
+                <div className="grid h-full w-full place-items-center font-display text-2xl font-black text-[#8B5CF6]/50">{show.title.charAt(0)}</div>
+              )}
+            </div>
+            <p className="mt-2 truncate text-[12.5px] font-bold">{show.title}</p>
+            <p className="truncate text-[10.5px] font-semibold text-[#8B5CF6]">{show.category}</p>
+            <p className="truncate text-[10px] text-white/45">
+              {show.creator} · {show.language} · {show.episodes} ep
+            </p>
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }

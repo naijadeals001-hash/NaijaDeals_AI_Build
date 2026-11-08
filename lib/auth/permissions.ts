@@ -29,7 +29,9 @@ export const PERMISSIONS = [
   "disputes:read",
   "disputes:write",
   "gigs:read",
-  "gigs:moderate"
+  "gigs:moderate",
+  "stream:read",
+  "stream:write"
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -58,7 +60,8 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "products:read",
     "vendors:read",
     "users:read",
-    "gigs:read"
+    "gigs:read",
+    "stream:read"
   ],
   finance: [
     "dashboard:read",
@@ -67,7 +70,8 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "finance:read",
     "finance:payouts:write",
     "audit:read",
-    "gigs:read"
+    "gigs:read",
+    "stream:read"
   ],
   support: [
     "dashboard:read",
@@ -77,7 +81,8 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "vendors:read",
     "users:read",
     "disputes:read",
-    "gigs:read"
+    "gigs:read",
+    "stream:read"
   ],
   moderator: [
     "dashboard:read",
@@ -87,7 +92,9 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "vendors:read",
     "vendors:review",
     "gigs:read",
-    "gigs:moderate"
+    "gigs:moderate",
+    "stream:read",
+    "stream:write"
   ]
 };
 

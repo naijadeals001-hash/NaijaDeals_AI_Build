@@ -43,8 +43,18 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
     const user = await requireUser();
     const asset = await prisma.streamMediaAsset.findFirst({ where: { id: params.id, ownerId: user.id } });
     if (!asset) throw new ApiError(404, "media_not_found", "Media not found on your account.");
-    const inUse = await prisma.streamTrack.count({ where: { audioUrl: `/api/stream/media/${asset.id}/stream` } });
-    if (inUse > 0) throw new ApiError(409, "media_in_use", "Unpublish the track using this audio first.");
+    // Tracks, episodes and videos all reference the stream URL, so every
+    // referencing table must be checked or deleting the asset orphans a
+    // published item whose media 404s.
+    const mediaUrl = `/api/stream/media/${asset.id}/stream`;
+    const [tracks, episodes, videos] = await Promise.all([
+      prisma.streamTrack.count({ where: { audioUrl: mediaUrl } }),
+      prisma.streamEpisode.count({ where: { audioUrl: mediaUrl } }),
+      prisma.streamVideo.count({ where: { videoUrl: mediaUrl } })
+    ]);
+    if (tracks + episodes + videos > 0) {
+      throw new ApiError(409, "media_in_use", "Unpublish the track, episode or video using this media first.");
+    }
     await removeUpload(asset.storageKey).catch(() => undefined);
     await prisma.streamMediaAsset.delete({ where: { id: asset.id } });
     return NextResponse.json({ deleted: true });

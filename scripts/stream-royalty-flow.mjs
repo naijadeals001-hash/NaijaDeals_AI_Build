@@ -61,7 +61,7 @@ const check = (name, ok, detail) => {
 
   // Settlement goes through the artist API on the demo artist account.
   const artistJar = jar();
-  const login = await api(artistJar, "POST", "/api/auth/login", { email: "demo.stream.adaeze@naijastream.demo", password: "NaijaStreamDemo2026!" });
+  const login = await api(artistJar, "POST", "/api/auth/login", { email: "adaeze-moon@naijastream.demo", password: "NaijaStreamDemo2026!" });
   check("artist account can sign in", login.status === 200, `status ${login.status}`);
   const studio = await api(artistJar, "GET", "/api/stream/studio");
   check("studio returns earnings for the artist", studio.status === 200 && Array.isArray(studio.body?.accruals), `status ${studio.status}`);
