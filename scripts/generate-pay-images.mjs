@@ -80,6 +80,24 @@ const ASSETS = [
     kind: "feature",
     component: "Receive Money screen illustration",
     prompt: `${STYLE}. A small Nigerian street-food vendor smiling as a customer taps a phone to pay at her tidy stall, colourful umbrellas, warm evening light, landscape crop`
+  },
+  {
+    id: "pay-hero-phone",
+    kind: "hero",
+    component: "NaijaPay hero — subject holding a phone with a payment confirmation",
+    prompt: `${STYLE}. Portrait hero: a smiling Nigerian woman with long braided hair in a plain green blouse, holding a black smartphone in both hands and looking down at it warmly, standing on Lagos waterfront with the Third Mainland Bridge and skyline behind her, soft golden-hour light, shallow depth of field, generous headroom above her`
+  },
+  {
+    id: "pay-bills-woman",
+    kind: "feature",
+    component: "Pay Bills card in the home screen preview",
+    prompt: `${STYLE}. A Nigerian woman with braided hair in a mustard-yellow top smiling at her phone in a bright modern interior with green plants and a doorway, warm natural light, portrait crop, friendly and relaxed`
+  },
+  {
+    id: "pay-phone-bills",
+    kind: "feature",
+    component: "Pay Bills preview tile",
+    prompt: `${STYLE}. A Nigerian woman smiling while using her phone outdoors on a bright street, green foliage behind her, portrait crop, cheerful everyday moment`
   }
 ];
 

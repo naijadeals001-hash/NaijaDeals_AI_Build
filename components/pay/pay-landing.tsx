@@ -5,9 +5,11 @@ import Link from "next/link";
 import {
   ArrowRight,
   Banknote,
+  BarChart3,
   Check,
   Eye,
   EyeOff,
+  Heart,
   Landmark,
   Lock,
   QrCode,
@@ -17,12 +19,15 @@ import {
   Smartphone,
   Sparkles,
   Tv,
+  Users,
   Wallet,
   Wifi,
   Zap
 } from "lucide-react";
 import { apiClient, ApiRequestError, koboToNaira } from "@/lib/api-client";
 import { readBalanceVisibility, writeBalanceVisibility } from "@/lib/pay/balance-visibility";
+import { PhoneScreens } from "./pay-phone-screens";
+import { DesktopPanels } from "./pay-desktop-panels";
 
 type WalletData = {
   availableKobo?: string | number;
@@ -354,70 +359,114 @@ const quickServices = [
 export function PayLanding() {
   return (
     <div className="bg-white text-pay-ink">
-      {/* Hero — split layout after the approved mockup: text left, photography right */}
-      <section className="relative overflow-hidden">
-        <div className="mx-auto grid max-w-7xl items-stretch lg:grid-cols-2">
-          <div className="px-4 py-14 sm:px-8 sm:py-16 lg:py-24">
-            <p className="inline-flex items-center gap-2 rounded-full bg-pay-mint px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-pay-green">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> NaijaPay by NaijaDeals
-            </p>
-            <h1 className="mt-5 font-display text-4xl font-extrabold leading-tight text-pay-ink sm:text-5xl">
-              Pay. Send. Receive. Do More with NaijaPay.
+      {/* Hero — reproduced from the approved mockup: pale mint ground, brand
+          lockup, two-line headline, pill CTA, and the subject holding a phone
+          with a payment confirmation. The right-hand captions are the mockup's
+          own words, set as text so they stay readable at every width. */}
+      <section className="relative overflow-hidden bg-[#E8F8F0]">
+        <div className="mx-auto grid max-w-7xl items-center gap-8 px-4 py-10 sm:px-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1fr)_130px] lg:gap-4 lg:py-0">
+          <div className="min-w-0">
+            <Link href="/pay" className="inline-flex flex-col items-start gap-0.5">
+              <span className="flex items-center gap-2.5">
+                <span className="flex h-9 w-11 items-center justify-center rounded-md bg-pay-green shadow-sm">
+                  <Wallet className="h-5 w-5 text-white" aria-hidden="true" />
+                </span>
+                <span className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+                  <span className="text-pay-green">Naija</span>
+                  <span className="text-pay-gold">Pay</span>
+                </span>
+              </span>
+              <span className="pl-1 text-[11px] font-medium text-pay-ink-muted">Your Money. A Brighter Nigeria.</span>
+            </Link>
+
+            <h1 className="mt-7 font-display text-[30px] font-extrabold leading-[1.12] tracking-tight text-pay-ink sm:text-4xl lg:text-[42px]">
+              Pay. Send. Receive.
+              <br />
+              Do More with NaijaPay.
             </h1>
-            <p className="mt-4 text-sm font-semibold text-pay-green sm:text-base">Your Money. A Brighter Nigeria.</p>
-            <p className="mt-2 max-w-lg text-sm leading-relaxed text-pay-ink-muted sm:text-base">
-              Bills. Airtime. Data. TV. Shopping. Business. Everywhere. One ledger-backed wallet at the centre of the
-              NaijaDeals ecosystem.
+            <p className="mt-4 max-w-md text-[15px] leading-relaxed text-pay-ink/75 sm:text-base">
+              Bills. Airtime. Data. TV. Shopping. Business. Everywhere.
             </p>
-            <div className="mt-7 flex flex-wrap gap-3">
+
+            <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href="/login?next=/pay"
-                className="rounded-full bg-pay-green px-7 py-3.5 text-sm font-bold text-white shadow-lift transition hover:bg-pay-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
+                className="rounded-full bg-pay-green px-7 py-3 text-sm font-bold text-white transition hover:bg-pay-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
               >
                 Open NaijaPay →
               </Link>
-              <a
-                href="#services"
-                className="rounded-full border border-pay-green/30 px-7 py-3.5 text-sm font-bold text-pay-green transition hover:bg-pay-mint focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
-              >
-                Explore services
-              </a>
             </div>
-            <ul className="mt-8 grid gap-3 sm:grid-cols-3">
+
+            <ul className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-3">
               {[
                 { icon: Lock, title: "Secure", body: "Your money is safe" },
                 { icon: Zap, title: "Fast", body: "Payments in seconds" },
                 { icon: ShieldCheck, title: "For Nigerians", body: "Built for you" }
               ].map((badge) => (
-                <li key={badge.title} className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-pay-mint">
-                    <badge.icon className="h-4 w-4 text-pay-green" aria-hidden="true" />
-                  </span>
-                  <span>
-                    <span className="block text-sm font-bold">{badge.title}</span>
-                    <span className="block text-xs text-pay-ink-muted">{badge.body}</span>
+                <li key={badge.title} className="flex items-center gap-2">
+                  <badge.icon className="h-5 w-5 shrink-0 text-pay-green" aria-hidden="true" />
+                  <span className="leading-tight">
+                    <span className="block text-[13px] font-bold text-pay-ink">{badge.title}</span>
+                    <span className="block text-[11px] text-pay-ink/60">{badge.body}</span>
                   </span>
                 </li>
               ))}
             </ul>
           </div>
-          <div className="relative min-h-72 sm:min-h-96 lg:min-h-full">
+
+          <div className="relative min-h-[260px] sm:min-h-[340px] lg:min-h-[430px]">
             <img
-              src="/generated/pay/pay-hero-woman.webp"
-              alt="A Nigerian woman in green and gold attire using her smartphone, with the Lagos skyline behind her"
-              className="absolute inset-0 h-full w-full object-cover object-[50%_22%]"
+              src="/generated/pay/pay-hero-phone.webp"
+              alt="A smiling Nigerian woman in a green blouse using her phone on the Lagos waterfront, with the Third Mainland Bridge behind her"
+              className="absolute inset-0 h-full w-full rounded-2xl object-cover object-[50%_18%] lg:rounded-none"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-pay-deep/70 via-transparent to-transparent lg:bg-gradient-to-r lg:from-white lg:via-white/10 lg:to-transparent" aria-hidden="true" />
-            <div className="absolute bottom-5 left-5 right-5 rounded-2xl bg-white/95 p-4 shadow-soft backdrop-blur lg:left-auto lg:right-8 lg:bottom-8 lg:max-w-64">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-pay-green">
+            <div
+              className="absolute inset-0 rounded-2xl bg-gradient-to-t from-[#E8F8F0]/60 via-transparent to-transparent lg:rounded-none lg:bg-gradient-to-r lg:from-[#E8F8F0]/50 lg:via-transparent lg:to-transparent"
+              aria-hidden="true"
+            />
+            {/* The mockup's payment toast. It is a caption, not a claim about the
+                visitor's account, so it is marked as illustrative. */}
+            <div className="absolute bottom-6 left-1/2 flex w-56 -translate-x-1/2 items-center gap-2.5 rounded-lg bg-white px-3 py-2.5 shadow-[0_8px_24px_rgba(16,24,40,0.16)] sm:left-[46%] sm:bottom-10 lg:bottom-16">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-pay-green">
                 <Check className="h-4 w-4 text-white" aria-hidden="true" />
               </span>
-              <p className="mt-2 text-sm font-extrabold">One connected ecosystem</p>
-              <p className="text-xs text-pay-ink-muted">Shop, rides, deliveries and refunds settle into the same wallet.</p>
+              <span className="leading-tight">
+                <span className="block text-[10px] text-pay-ink/55">Payment Successful!</span>
+                <span className="block text-sm font-extrabold text-pay-ink">₦25,000</span>
+              </span>
             </div>
           </div>
         </div>
+
+        {/* The mockup sets two captions in the hero: a script line over the photo
+            and a stacked statement at the far right. Both are decorative copy,
+            hidden from assistive tech because the heading already carries the
+            message, and placed so neither covers the subject's face. */}
+        <p
+          className="pointer-events-none absolute left-[46%] top-[12%] hidden max-w-[120px] rotate-[-6deg] font-display text-[13px] font-semibold italic leading-snug text-pay-deep/90 lg:block"
+          aria-hidden="true"
+        >
+          A smarter way to pay in Nigeria
+          <span className="mt-1 block h-[3px] w-14 rounded-full bg-pay-green" />
+        </p>
+        <p
+          className="pointer-events-none absolute right-5 top-14 hidden max-w-[120px] text-[13px] font-semibold leading-[1.45] text-pay-ink lg:block"
+          aria-hidden="true"
+        >
+          People.
+          <br />
+          Payments.
+          <br />
+          Progress.
+          <br />A Brighter
+          <br />
+          Nigeria.
+          <span className="mt-1 block h-[3px] w-10 rounded-full bg-pay-gold" />
+        </p>
       </section>
+
+      {/* Mockup order: hero -> the five phone screens -> the three desktop panels */}
+      <PhoneScreens />
 
       {/* Wallet + Add Money + Quick Services */}
       <section className="bg-pay-mint">
@@ -512,60 +561,112 @@ export function PayLanding() {
         </div>
       </section>
 
-      {/* Marketing cards — after the approved mockup bottom row */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-8 lg:py-16">
-        <div className="grid gap-5 md:grid-cols-3">
-          <div className="overflow-hidden rounded-3xl border border-black/5 bg-white shadow-soft">
-            <img
-              src="/generated/pay/pay-security.webp"
-              alt="A calm Nigerian man checking his phone outdoors"
-              loading="lazy"
-              className="h-44 w-full object-cover"
-            />
-            <div className="p-5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-pay-mint">
-                <Lock className="h-4 w-4 text-pay-green" aria-hidden="true" />
-              </span>
-              <h3 className="mt-3 font-display text-lg font-extrabold">Your security comes first</h3>
-              <ul className="mt-3 space-y-1.5 text-sm text-pay-ink-muted">
-                {["Verified provider webhooks", "Session-protected payments", "Audited money movements", "Escrow-held order funds"].map((item) => (
-                  <li key={item} className="flex items-center gap-2">
-                    <Check className="h-4 w-4 shrink-0 text-pay-green" aria-hidden="true" /> {item}
+      <DesktopPanels />
+
+      {/* Bottom trio — reproduced from the mockup: image left, copy right. */}
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-8 lg:py-16" aria-label="Why NaijaPay">
+        <div className="grid gap-4 lg:grid-cols-3">
+          {/* 1 — Security */}
+          <div className="flex overflow-hidden rounded-xl bg-[#F1EFEA] shadow-[0_10px_26px_rgba(16,24,40,0.08)]">
+            <div className="w-[42%] shrink-0">
+              <img
+                src="/generated/pay/pay-security.webp"
+                alt="A Nigerian man in a white shirt checking his phone"
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <div className="flex flex-1 flex-col justify-center px-4 py-5">
+              <div className="flex items-start gap-2">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-pay-green">
+                  <Lock className="h-3.5 w-3.5 text-white" aria-hidden="true" />
+                </span>
+                <h3 className="font-display text-base font-extrabold leading-tight text-pay-ink">
+                  Your Security
+                  <br />
+                  Comes First
+                </h3>
+              </div>
+              <ul className="mt-3 space-y-1.5">
+                {["Session-protected payments", "Audited money movements", "Escrow-held order funds", "Real-time alerts"].map((item) => (
+                  <li key={item} className="flex items-center gap-1.5 text-[11px] font-medium text-pay-ink/75">
+                    <Check className="h-3 w-3 shrink-0 text-pay-green" aria-hidden="true" /> {item}
                   </li>
                 ))}
               </ul>
             </div>
           </div>
-          <div className="relative overflow-hidden rounded-3xl bg-pay-deep p-6 text-white shadow-soft">
-            <img
-              src="/generated/pay/pay-market-trader.webp"
-              alt="A Nigerian market trader smiling with her phone at a fabric stall"
-              loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover opacity-30"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-pay-deep via-pay-deep/70 to-pay-deep/30" aria-hidden="true" />
-            <div className="relative flex h-full min-h-64 flex-col justify-end">
-              <p className="text-xs font-bold uppercase tracking-widest text-pay-gold">People. Payments. Progress.</p>
-              <h3 className="mt-2 font-display text-2xl font-extrabold leading-snug">
-                From Market to Mainland — NaijaPay works for every Nigerian.
+
+          {/* 2 — Market to Mainland */}
+          <div className="relative flex overflow-hidden rounded-xl bg-pay-green shadow-[0_10px_26px_rgba(0,96,56,0.18)]">
+            <div className="flex flex-1 flex-col justify-center px-4 py-5">
+              <h3 className="font-display text-[15px] font-extrabold leading-snug text-white">
+                From Market to
+                <br />
+                Mainland —
+                <br />
+                <span className="text-pay-gold-soft">NaijaPay Works</span>
+                <br />
+                for Every Nigerian.
               </h3>
-              <p className="mt-2 text-sm text-white/70">Individuals. Businesses. Communities. A Brighter Nigeria.</p>
+              <p className="mt-2.5 text-[10px] leading-snug text-white/80">
+                Individuals. Businesses.
+                <br />
+                Communities. A Stronger Nigeria.
+              </p>
+              <span className="mt-2 h-[3px] w-10 rounded-full bg-[#9BE08C]" aria-hidden="true" />
+            </div>
+            <div className="w-[38%] shrink-0">
+              <img
+                src="/generated/pay/pay-market-trader.webp"
+                alt="A Nigerian woman in a yellow gele headtie holding her phone"
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
             </div>
           </div>
-          <div className="relative overflow-hidden rounded-3xl shadow-soft">
+
+          {/* 3 — Bigger possibilities */}
+          <div className="relative overflow-hidden rounded-xl shadow-[0_10px_26px_rgba(16,24,40,0.08)]">
             <img
               src="/generated/pay/pay-skyline.webp"
-              alt="Lagos skyline at blue hour reflected in the lagoon"
+              alt="Lagos skyline with the city highway below"
               loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover"
+              className="h-full min-h-[170px] w-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-pay-deep/80 to-transparent" aria-hidden="true" />
-            <div className="relative flex h-full min-h-64 flex-col justify-end p-6 text-white">
-              <h3 className="font-display text-2xl font-extrabold leading-snug">Same People. Bigger Possibilities.</h3>
-              <p className="mt-2 text-sm text-white/75">One wallet across every NaijaDeals vertical.</p>
+            <div className="absolute inset-0 bg-gradient-to-r from-pay-ink/55 to-transparent" aria-hidden="true" />
+            <div className="absolute right-3 top-4 text-right">
+              <p className="font-display text-[14px] font-extrabold leading-tight text-white">
+                Same People.
+                <br />
+                Bigger Possibilities.
+              </p>
+            </div>
+            <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md bg-white/95 px-2 py-1">
+              <span className="flex h-3.5 w-4 items-center justify-center rounded-[2px] bg-pay-green">
+                <Wallet className="h-2 w-2 text-white" aria-hidden="true" />
+              </span>
+              <span className="text-[9px] font-extrabold text-pay-green">
+                Naija<span className="text-pay-gold">Pay</span>
+              </span>
             </div>
           </div>
         </div>
+
+        {/* Footer trust strip from the mockup */}
+        <ul className="mt-8 grid grid-cols-2 gap-4 border-t border-black/5 pt-6 sm:grid-cols-4">
+          {[
+            { icon: ShieldCheck, label: "Built for Nigeria" },
+            { icon: Users, label: "Powering People" },
+            { icon: BarChart3, label: "Supporting Businesses" },
+            { icon: Heart, label: "A Brighter Tomorrow" }
+          ].map((item) => (
+            <li key={item.label} className="flex items-center gap-2">
+              <item.icon className="h-5 w-5 shrink-0 text-pay-green" aria-hidden="true" />
+              <span className="text-[11px] font-medium text-pay-ink/70">{item.label}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* Business band */}

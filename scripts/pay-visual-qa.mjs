@@ -23,13 +23,23 @@ try {
     const response = await page.goto(`${baseUrl}/pay`, { waitUntil: "networkidle", timeout: 60000 });
     // Scroll through the page so loading="lazy" images load before measuring.
     await page.evaluate(async () => {
-      for (let y = 0; y <= document.body.scrollHeight; y += 600) {
+      for (let y = 0; y <= document.body.scrollHeight; y += 400) {
         window.scrollTo(0, y);
-        await new Promise((resolve) => setTimeout(resolve, 120));
+        await new Promise((resolve) => setTimeout(resolve, 180));
       }
       window.scrollTo(0, 0);
     });
     await page.waitForLoadState("networkidle").catch(() => {});
+    // Lazy images only start loading once scrolled into view, and they decode a
+    // moment after that. Wait for every image to report complete, then settle.
+    await page
+      .waitForFunction(
+        () => Array.from(document.querySelectorAll("img")).every((img) => img.complete),
+        null,
+        { timeout: 20000, polling: 200 }
+      )
+      .catch(() => {});
+    await page.waitForTimeout(2500);
     const heading = await page.getByRole("heading", { name: "Pay. Send. Receive. Do More with NaijaPay." }).count();
     const sub = await page.getByText("Your Money. A Brighter Nigeria.").count();
     const images = await page.evaluate(() =>
