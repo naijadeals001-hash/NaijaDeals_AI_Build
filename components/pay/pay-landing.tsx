@@ -37,11 +37,35 @@ type WalletData = {
  * pills. Signed-out visitors get a sign-in card; empty wallets and API
  * failures show honest states — nothing is fabricated.
  */
+const BALANCE_VISIBILITY_KEY = "naijapay.balanceVisible";
+
 function WalletCard() {
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error" | "signed-out">("loading");
   const [error, setError] = useState("");
+  // Privacy preference survives a reload; read after mount so the server and
+  // first client render agree and the balance never flashes into view.
   const [balanceVisible, setBalanceVisible] = useState(true);
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(BALANCE_VISIBILITY_KEY) === "hidden") setBalanceVisible(false);
+    } catch {
+      // Private browsing can deny storage; the default visible balance still works.
+    }
+  }, []);
+
+  function toggleBalance() {
+    setBalanceVisible((visible) => {
+      const next = !visible;
+      try {
+        window.localStorage.setItem(BALANCE_VISIBILITY_KEY, next ? "shown" : "hidden");
+      } catch {
+        // Preference is a convenience, not a requirement.
+      }
+      return next;
+    });
+  }
 
   function loadWallet() {
     setStatus("loading");
@@ -143,7 +167,7 @@ function WalletCard() {
             </p>
             <button
               type="button"
-              onClick={() => setBalanceVisible((visible) => !visible)}
+              onClick={toggleBalance}
               aria-label={balanceVisible ? "Hide balance" : "Show balance"}
               className="rounded-lg p-1.5 text-white/60 transition hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-gold"
             >
@@ -277,8 +301,8 @@ const services: Array<{
     title: "Wallet & escrow",
     body: "One ledger-backed balance for shopping, rides and refunds, with escrow holds you can see.",
     icon: Wallet,
-    image: "/real-photography/module-wallet.jpg",
-    imageAlt: "Nigerian naira notes arranged in a fan",
+    image: "/generated/pay/pay-hero-wide.webp",
+    imageAlt: "A Nigerian trader at a Lagos waterfront stall checking his phone",
     live: true,
     href: "/wallet"
   },
@@ -286,8 +310,8 @@ const services: Array<{
     title: "Merchant payments",
     body: "Pay verified NaijaShop vendors with escrow protection on every eligible order.",
     icon: Landmark,
-    image: "/real-photography/NaijaFresh Nigerian Market Stall.jpg",
-    imageAlt: "A Nigerian market stall with fresh produce",
+    image: "/generated/pay/pay-market-trader.webp",
+    imageAlt: "A Nigerian market trader with fabric bales at her stall",
     live: true,
     href: "/naijashop"
   },
@@ -295,8 +319,8 @@ const services: Array<{
     title: "Ride payments",
     body: "NaijaDrive fares can be paid straight from your NaijaPay wallet or in cash.",
     icon: Smartphone,
-    image: "/brand-photography/drive-sedan-lagos.jpg",
-    imageAlt: "A sedan on a Lagos street",
+    image: "/generated/pay/pay-receive-lemonade.webp",
+    imageAlt: "A Nigerian street-food vendor taking a phone payment at her stall",
     live: true,
     href: "/naijadrive"
   },
@@ -304,8 +328,8 @@ const services: Array<{
     title: "Send & receive",
     body: "The full Send Money and Receive experience is live to review. Transfers post only when enabled for this environment.",
     icon: Send,
-    image: "/brand-photography/aura-concierge-lagos.jpg",
-    imageAlt: "A customer using an app on her phone in Lagos",
+    image: "/generated/pay/pay-send-screen.webp",
+    imageAlt: "Two young Nigerian professionals laughing at a phone screen in a Lagos cafe",
     live: false,
     href: "/pay#setup"
   },
@@ -313,8 +337,8 @@ const services: Array<{
     title: "Bills & airtime",
     body: "Airtime, data, electricity and TV payments arrive only when real bill providers are connected — never simulated.",
     icon: Receipt,
-    image: "/brand-photography/eats-jollof-delivery.jpg",
-    imageAlt: "A Nigerian meal being delivered",
+    image: "/generated/pay/pay-bills-card.webp",
+    imageAlt: "A young Nigerian woman smiling at her phone in a bright living room",
     live: false,
     href: "/pay#setup"
   },
@@ -322,8 +346,8 @@ const services: Array<{
     title: "Scan & pay",
     body: "QR merchant payments are planned on the same ledger. Disabled until merchant QR issuance is live.",
     icon: QrCode,
-    image: "/brand-photography/fresh-market-groceries.jpg",
-    imageAlt: "Fresh groceries packed for a customer",
+    image: "/generated/pay/pay-scan-market.webp",
+    imageAlt: "A market stall QR code being scanned by a phone",
     live: false,
     href: "/pay#setup"
   }
@@ -388,9 +412,9 @@ export function PayLanding() {
           </div>
           <div className="relative min-h-72 sm:min-h-96 lg:min-h-full">
             <img
-              src="/brand-photography/naijapay-hero-woman-lagos.jpg"
+              src="/generated/pay/pay-hero-woman.webp"
               alt="A Nigerian woman in green and gold attire using her smartphone, with the Lagos skyline behind her"
-              className="absolute inset-0 h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover object-[50%_22%]"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-pay-deep/70 via-transparent to-transparent lg:bg-gradient-to-r lg:from-white lg:via-white/10 lg:to-transparent" aria-hidden="true" />
             <div className="absolute bottom-5 left-5 right-5 rounded-2xl bg-white/95 p-4 shadow-soft backdrop-blur lg:left-auto lg:right-8 lg:bottom-8 lg:max-w-64">
@@ -502,8 +526,8 @@ export function PayLanding() {
         <div className="grid gap-5 md:grid-cols-3">
           <div className="overflow-hidden rounded-3xl border border-black/5 bg-white shadow-soft">
             <img
-              src="/brand-photography/aura-concierge-lagos.jpg"
-              alt="A customer reviewing a payment on her phone in Lagos"
+              src="/generated/pay/pay-security.webp"
+              alt="A calm Nigerian man checking his phone outdoors"
               loading="lazy"
               className="h-44 w-full object-cover"
             />
@@ -523,8 +547,8 @@ export function PayLanding() {
           </div>
           <div className="relative overflow-hidden rounded-3xl bg-pay-deep p-6 text-white shadow-soft">
             <img
-              src="/real-photography/NaijaFresh Nigerian Market Stall.jpg"
-              alt="A Nigerian market vendor's stall stocked with produce"
+              src="/generated/pay/pay-market-trader.webp"
+              alt="A Nigerian market trader smiling with her phone at a fabric stall"
               loading="lazy"
               className="absolute inset-0 h-full w-full object-cover opacity-30"
             />
@@ -539,8 +563,8 @@ export function PayLanding() {
           </div>
           <div className="relative overflow-hidden rounded-3xl shadow-soft">
             <img
-              src="/brand-photography/stay-waterfront-apartment.jpg"
-              alt="Lagos waterfront buildings at golden hour"
+              src="/generated/pay/pay-skyline.webp"
+              alt="Lagos skyline at blue hour reflected in the lagoon"
               loading="lazy"
               className="absolute inset-0 h-full w-full object-cover"
             />
@@ -580,8 +604,8 @@ export function PayLanding() {
           </div>
           <div className="overflow-hidden rounded-3xl shadow-soft">
             <img
-              src="/brand-photography/fresh-market-groceries.jpg"
-              alt="A Nigerian business owner's stocked grocery shelves"
+              src="/generated/pay/pay-business-owner.webp"
+              alt="A Nigerian shop owner in a green apron holding a tablet and phone"
               loading="lazy"
               className="h-56 w-full object-cover sm:h-72"
             />

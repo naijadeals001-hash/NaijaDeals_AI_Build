@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-11-09T22:16:18.242Z",
+  "assets": {
+    "pay-bills-card": "generated/pay/pay-bills-card.webp",
+    "pay-business-owner": "generated/pay/pay-business-owner.webp",
+    "pay-hero-wide": "generated/pay/pay-hero-wide.webp",
+    "pay-hero-woman": "generated/pay/pay-hero-woman.webp",
+    "pay-market-trader": "generated/pay/pay-market-trader.webp",
+    "pay-receive-lemonade": "generated/pay/pay-receive-lemonade.webp",
+    "pay-scan-market": "generated/pay/pay-scan-market.webp",
+    "pay-security": "generated/pay/pay-security.webp",
+    "pay-send-screen": "generated/pay/pay-send-screen.webp",
+    "pay-skyline": "generated/pay/pay-skyline.webp"
+  }
+}
