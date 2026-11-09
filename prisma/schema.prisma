@@ -3050,3 +3050,50 @@ model WalletTopUp {
   @@index([walletId, status])
   @@index([status, createdAt])
 }
+
+/// A milestone within a customer-to-customer escrow agreement.
+///
+/// The existing `EscrowHold` covers marketplace orders, where the buyer pays a
+/// vendor once. Milestone escrow is different: two people agree a scope split
+/// into stages, and each stage is funded, delivered and released separately.
+/// Additive — no existing escrow table changes, and every release still posts
+/// through the shared double-entry ledger.
+enum MilestoneStatus {
+  draft
+  awaiting_funding
+  funded
+  submitted
+  accepted
+  released
+  refunded
+  disputed
+  cancelled
+}
+
+model EscrowMilestone {
+  id                String          @id @default(cuid())
+  /// Human-facing reference shared by both parties and used in receipts.
+  reference         String          @unique
+  payerUserId       String
+  payeeUserId       String
+  title             String
+  description       String?
+  amountKobo        BigInt
+  currency          String          @default("NGN")
+  status            MilestoneStatus @default(draft)
+  /// Monotonic guard so two concurrent transitions cannot both succeed.
+  version           Int             @default(0)
+  fundedAt          DateTime?
+  submittedAt       DateTime?
+  acceptedAt        DateTime?
+  releasedAt        DateTime?
+  refundedAt        DateTime?
+  /// Which transaction moved the money, for receipt and reconciliation.
+  fundingTransactionId String?
+  settlementTransactionId String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([payerUserId, status])
+  @@index([payeeUserId, status])
+}

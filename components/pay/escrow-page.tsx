@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Circle, ShieldCheck } from "lucide-react";
 import { apiClient, ApiRequestError, koboToNaira } from "@/lib/api-client";
+import { EscrowWorkspace } from "./escrow-workspace";
 
 type EscrowEvent = { id: string; from: string | null; to: string; note: string | null; createdAt: string };
 type Hold = {
@@ -21,6 +22,18 @@ type Hold = {
  * on the signed-in customer's orders with its full event timeline. Read-only.
  */
 export function NaijaPayEscrowPage() {
+  // Two different things share the word "escrow": order holds created at
+  // checkout, and milestones two people agree between themselves. They are
+  // separate surfaces because the actions differ.
+  const [tab, setTab] = useState<"orders" | "milestones">("milestones");
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((me) => setUserId(me?.user?.id ?? me?.id ?? null))
+      .catch(() => setUserId(null));
+  }, []);
   const [holds, setHolds] = useState<Hold[] | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error" | "signed-out">("loading");
   const [error, setError] = useState("");
@@ -71,6 +84,31 @@ export function NaijaPayEscrowPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">
+      <div className="flex gap-2" role="tablist" aria-label="Escrow type">
+        {([
+          { key: "milestones" as const, label: "Milestones" },
+          { key: "orders" as const, label: "Order holds" }
+        ]).map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.key}
+            onClick={() => setTab(item.key)}
+            className={`rounded-full px-4 py-2 text-sm font-bold transition ${
+              tab === item.key ? "bg-pay-green text-white" : "border border-black/10 text-pay-ink hover:bg-pay-mint"
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "milestones" && userId && <EscrowWorkspace currentUserId={userId} />}
+      {tab === "milestones" && !userId && <div className="h-32 animate-pulse rounded-3xl bg-pay-mint" aria-busy="true" />}
+
+      {tab === "orders" && (
+      <>
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-extrabold text-pay-ink">Escrow protection</h1>
@@ -139,6 +177,8 @@ export function NaijaPayEscrowPage() {
             </li>
           ))}
         </ul>
+      )}
+      </>
       )}
     </div>
   );

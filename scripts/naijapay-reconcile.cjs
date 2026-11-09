@@ -15,7 +15,10 @@ const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
 const NGN = (k) => "NGN " + (Number(k) / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ESCROW = /ESCROW-HOLD|RELEASE-/i;
+// Escrow movements that change a wallet's held balance. Milestone funding does
+// not: it is an internal available -> held move on the payer's own wallet, tracked
+// by the milestone record rather than by this net.
+const ESCROW = /^(ESCROW-HOLD|RELEASE-)/i;
 const TESTISH = /^(ADJ-PHASE07|GIGS-E2E|SHOP-REVIEW-FUNDING|SEED-|RIDE-.*-HOLD|.*-E2E-.*|.*-TEST-.*)/i;
 
 async function report() {
