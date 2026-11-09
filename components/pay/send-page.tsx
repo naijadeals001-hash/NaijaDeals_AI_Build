@@ -95,9 +95,39 @@ export function NaijaPaySendPage() {
     }
   }
 
+  async function queueForLater(parsed: number, key: string) {
+    const me = await fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    const ownerUserId = me?.user?.id;
+    if (!ownerUserId) {
+      setResult({ message: "Sign in again before queueing a transfer on this device." });
+      setStep("failed");
+      return;
+    }
+    const mod = await import("@/lib/pay/outbox");
+    // The intent keeps the key created at review, so a later retry from the
+    // outbox is the same attempt rather than a second transfer.
+    const item = mod.queueIntent({
+      kind: "transfer",
+      target: recipient.trim().toLowerCase(),
+      amountKobo: String(parsed),
+      note: note.trim() || undefined,
+      ownerUserId
+    });
+    if (key && key !== item.idempotencyKey) mod.updateItem(item.id, { idempotencyKey: key });
+    setResult({ message: "Queued — awaiting connection. It will appear in your wallet under \"Waiting to send\" and needs a retry there once you are back online." });
+    setStep("failed");
+  }
+
   async function confirmSend() {
     const parsed = nairaToKobo(amount);
     if (!parsed) return;
+    const key0 = idempotencyKey || randomIdempotencyKey();
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      await queueForLater(parsed, key0);
+      return;
+    }
     // Reuse the key created at review: a retry after a timeout must be the same
     // attempt as far as the server is concerned.
     const key = idempotencyKey || randomIdempotencyKey();
@@ -119,8 +149,15 @@ export function NaijaPaySendPage() {
       setResult({ message: body.error ?? `Transfer failed (HTTP ${res.status}).` });
       setStep("failed");
     } catch {
-      // The request may have reached the server. Retrying with the same key is
-      // safe and returns the original result instead of sending twice.
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        // The device is definitely offline, so the request did not reach the
+        // server. Queue the intent instead of implying it failed.
+        await queueForLater(parsed, key);
+        return;
+      }
+      // Still online but the response was lost: the request may have reached the
+      // server. Retrying with the same key is safe and returns the original
+      // result rather than sending twice.
       setResult({
         uncertain: true,
         message: "The connection dropped before we heard back. Retrying with the same key will not send twice — it returns the original result if it already went through."
@@ -307,7 +344,7 @@ export function NaijaPaySendPage() {
           </span>
           <h2 className="mt-4 font-display text-xl font-extrabold text-pay-ink">Not sent</h2>
           <p className="mt-2 text-sm text-pay-ink-muted">{result.message}</p>
-          {!result.uncertain && <p className="mt-1 text-xs text-pay-ink-muted">No money left your wallet for this attempt.</p>}
+          {!result.uncertain && !/queued/i.test(result.message ?? "") && <p className="mt-1 text-xs text-pay-ink-muted">No money left your wallet for this attempt.</p>}
           <div className="mt-5 flex justify-center gap-3">
             {result.uncertain && (
               <button

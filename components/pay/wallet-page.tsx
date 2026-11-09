@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Banknote, Eye, EyeOff, QrCode, Search, Send, ShieldCheck, Smartphone, Wallet } from "lucide-react";
 import { apiClient, ApiRequestError, koboToNaira } from "@/lib/api-client";
 import { readBalanceVisibility, writeBalanceVisibility } from "@/lib/pay/balance-visibility";
+import { OutboxPanel } from "./outbox-panel";
 
 type Tx = { id: string; description: string; type: string; reference: string; amountKobo: string | number; createdAt?: string };
 type Hold = { id: string; amountKobo: string | number; status: string; reason: string; order?: { orderNumber?: string } | null };
@@ -18,7 +19,7 @@ type WalletData = { availableKobo?: string | number; heldKobo?: string | number;
  */
 const HISTORY_PAGE_SIZE = 25;
 
-export function NaijaPayWalletPage() {
+export function NaijaPayWalletPage({ currentUserId }: { currentUserId?: string }) {
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error" | "signed-out">("loading");
   const [error, setError] = useState("");
@@ -175,6 +176,8 @@ export function NaijaPayWalletPage() {
           ))}
         </div>
       </section>
+
+      {currentUserId && <OutboxPanel currentUserId={currentUserId} />}
 
       <section className="rounded-3xl border border-black/5 bg-white p-5 shadow-soft sm:p-6">
         <div className="flex items-center gap-2">

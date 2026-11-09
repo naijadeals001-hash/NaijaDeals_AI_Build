@@ -13,5 +13,5 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const user = await getSessionUser();
   if (!user) redirect("/login?next=/wallet");
-  return <NaijaPayWalletPage />;
+  return <NaijaPayWalletPage currentUserId={user.id} />;
 }
