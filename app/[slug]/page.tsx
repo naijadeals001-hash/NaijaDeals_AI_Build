@@ -6,6 +6,7 @@ import { publicRoutes, routeTitles } from "@/lib/routes";
 const explicitRoutes = new Set([
   "naijashop",
   "naijasend",
+  "naijastay",
   "search",
   "cart",
   "checkout",
@@ -15,6 +16,7 @@ const explicitRoutes = new Set([
   "naijaeats",
   "naijafresh",
   "naijasend",
+  "naijastay",
   "naijadrive",
   "driver"
 ]);

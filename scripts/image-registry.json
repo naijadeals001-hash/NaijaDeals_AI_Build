@@ -6511,6 +6511,567 @@
       "usageReferences": [
         "app/naijagigs"
       ]
+    },
+    {
+      "id": "stay-hero",
+      "vertical": "stay",
+      "kind": "hero",
+      "component": "stay-hero",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. A joyful African couple in straw hats and summer clothes walking through a lush tropical resort garden beside an infinity pool, a modern glass villa with warm lit interiors behind them, palm trees, Lagos coastline light",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "b893330bacf2db151dfa0e9c740a4e64",
+      "storagePath": "generated/stay/stay-hero.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/79877b783a9f.png",
+      "generatedAt": "2026-11-09T18:13:28.860Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-cat-hotels",
+      "vertical": "stay",
+      "kind": "category",
+      "component": "stay-cat-hotels",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Elegant Nigerian hotel facade with an illuminated entrance, palms and a lit pool at dusk",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "90702d800e875f1e6edea0ac2e5605da",
+      "storagePath": "generated/stay/stay-cat-hotels.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/a1d02a1451fe.png",
+      "generatedAt": "2026-11-09T18:14:12.130Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-cat-serviced",
+      "vertical": "stay",
+      "kind": "category",
+      "component": "stay-cat-serviced",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Bright modern serviced apartment living room with neutral sofa, plants and large windows",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "e414bb8fc6ee498c8693d45da363805b",
+      "storagePath": "generated/stay/stay-cat-serviced.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/2b1b803faadb.png",
+      "generatedAt": "2026-11-09T18:14:43.105Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-cat-short-term",
+      "vertical": "stay",
+      "kind": "category",
+      "component": "stay-cat-short-term",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Warm short-term rental interior with woven African textiles, rattan furniture and sunlight",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "c956751a63e5876441ca7634535ec9c6",
+      "storagePath": "generated/stay/stay-cat-short-term.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/1e7ba446e376.png",
+      "generatedAt": "2026-11-09T18:15:15.783Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-cat-long-term",
+      "vertical": "stay",
+      "kind": "category",
+      "component": "stay-cat-long-term",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Spacious long-term rental house exterior with a tidy garden and paved driveway",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "216c4f559dcc6be0a8fab683dc2e7fdc",
+      "storagePath": "generated/stay/stay-cat-long-term.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/16111f470515.png",
+      "generatedAt": "2026-11-09T18:15:46.725Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-cat-land",
+      "vertical": "stay",
+      "kind": "category",
+      "component": "stay-cat-land",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Open green land plot with a boundary survey marker on a red pin, hills behind, bright sky",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "d2a2f7ebf7c27b3dfc30fc79810ea873",
+      "storagePath": "generated/stay/stay-cat-land.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/69cd93c3256c.png",
+      "generatedAt": "2026-11-09T18:16:17.807Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-cat-student",
+      "vertical": "stay",
+      "kind": "category",
+      "component": "stay-cat-student",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Simple tidy student room with a desk, bed and bookshelf near a campus window",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "c2ab2cf7d56379242fdd01148958492c",
+      "storagePath": "generated/stay/stay-cat-student.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/de9f7a998076.png",
+      "generatedAt": "2026-11-09T18:16:48.735Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-cat-corporate",
+      "vertical": "stay",
+      "kind": "category",
+      "component": "stay-cat-corporate",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Contemporary corporate apartment with a desk, city view and neutral premium finish",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "4fea91afd0a46bc72bee56da2895fd7c",
+      "storagePath": "generated/stay/stay-cat-corporate.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/9af10348b6e5.png",
+      "generatedAt": "2026-11-09T18:17:19.694Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-cat-vacation",
+      "vertical": "stay",
+      "kind": "category",
+      "component": "stay-cat-vacation",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Beach vacation home with white walls and a palm-fringed pool",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "112f7747473b07f3fd7ddf0fbc780754",
+      "storagePath": "generated/stay/stay-cat-vacation.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/a9e09bc7b4bd.png",
+      "generatedAt": "2026-11-09T18:17:50.645Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-cat-event",
+      "vertical": "stay",
+      "kind": "category",
+      "component": "stay-cat-event",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Elegant hotel conference room set for an event, warm lighting and African geometric details",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "b174956e594a22eb057d7536e800c6b5",
+      "storagePath": "generated/stay/stay-cat-event.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/5324f584f498.png",
+      "generatedAt": "2026-11-09T18:18:22.069Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-dest-lagos",
+      "vertical": "stay",
+      "kind": "destination",
+      "component": "stay-dest-lagos",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Lagos skyline with the Lekki-Ikoyi suspension bridge over the lagoon, boats and modern towers, golden late-afternoon light",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "685444326072c16188489a7a107e59c7",
+      "storagePath": "generated/stay/stay-dest-lagos.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/dffaf075efed.png",
+      "generatedAt": "2026-11-09T18:18:53.293Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-dest-abuja",
+      "vertical": "stay",
+      "kind": "destination",
+      "component": "stay-dest-abuja",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Abuja cityscape with the golden domed National Mosque and modern towers against a clear sky",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "70ea1f2c3b70ebaed2a390ab5e7c31c5",
+      "storagePath": "generated/stay/stay-dest-abuja.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/bc5b25e210ec.png",
+      "generatedAt": "2026-11-09T18:19:24.766Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-dest-accra",
+      "vertical": "stay",
+      "kind": "destination",
+      "component": "stay-dest-accra",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Accra skyline with Independence Arch and coastal palm trees, bright daylight",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "520dd712da655dab5ee601ba64e20229",
+      "storagePath": "generated/stay/stay-dest-accra.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/c82bd5f8d8fc.png",
+      "generatedAt": "2026-11-09T18:20:56.607Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-dest-nairobi",
+      "vertical": "stay",
+      "kind": "destination",
+      "component": "stay-dest-nairobi",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Nairobi skyline with modern high-rises and acacia trees in the foreground, clear afternoon light",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "5aaf6e4b369c7533d92670e444c4ca3e",
+      "storagePath": "generated/stay/stay-dest-nairobi.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/51ab0b267ee4.png",
+      "generatedAt": "2026-11-09T18:22:28.892Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-dest-capetown",
+      "vertical": "stay",
+      "kind": "destination",
+      "component": "stay-dest-capetown",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Cape Town with Table Mountain behind the city and waterfront buildings, vivid blue sky",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "9789bdc516ebf993f06841d3fdc9e73c",
+      "storagePath": "generated/stay/stay-dest-capetown.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/57f601b7d60f.png",
+      "generatedAt": "2026-11-09T18:25:46.266Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-dest-kigali",
+      "vertical": "stay",
+      "kind": "destination",
+      "component": "stay-dest-kigali",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Kigali modern architecture with the Convention Centre dome on rolling green hills",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "5dab9e58f6531ba76ab332fe4bf87eb5",
+      "storagePath": "generated/stay/stay-dest-kigali.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/b47228f27464.png",
+      "generatedAt": "2026-11-09T18:27:02.651Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-demo-hotel",
+      "vertical": "stay",
+      "kind": "demo-property",
+      "component": "stay-demo-hotel",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Luxury hotel exterior at golden hour with a sign-free illuminated entrance, palm-lined driveway and pool reflection",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "1bc68558cc7a52e40a86e1c6b7ea1d55",
+      "storagePath": "generated/stay/stay-demo-hotel.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/2894dc05f1d5.png",
+      "generatedAt": "2026-11-09T18:27:33.549Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-demo-apartment",
+      "vertical": "stay",
+      "kind": "demo-property",
+      "component": "stay-demo-apartment",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Upscale Lagos apartment interior with an open-plan living area, warm lamps and city view",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "8c9ee9d7f17747ce6e5224db678ce4b2",
+      "storagePath": "generated/stay/stay-demo-apartment.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/76792e7d9bd0.png",
+      "generatedAt": "2026-11-09T18:28:04.459Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-demo-villa",
+      "vertical": "stay",
+      "kind": "demo-property",
+      "component": "stay-demo-villa",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Modern African villa exterior with flat roof, timber screens and landscaped garden in warm evening light",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "eea78880eb16bfeb44d5bb19f18fa4cc",
+      "storagePath": "generated/stay/stay-demo-villa.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/e8b0f0914fb5.png",
+      "generatedAt": "2026-11-09T18:28:50.596Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-demo-cozy",
+      "vertical": "stay",
+      "kind": "demo-property",
+      "component": "stay-demo-cozy",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Compact cosy two-bedroom apartment interior with soft textiles, plants and afternoon light",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "be79dc208b5d85539a8f431e033d4ff5",
+      "storagePath": "generated/stay/stay-demo-cozy.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/f257af0c0f63.png",
+      "generatedAt": "2026-11-09T18:29:21.557Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-demo-land",
+      "vertical": "stay",
+      "kind": "demo-property",
+      "component": "stay-demo-land",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Residential land plot with cleared grass, access road and neighbouring houses in the distance",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "c0c13e7d9cea931f6074dc280ed6e9d2",
+      "storagePath": "generated/stay/stay-demo-land.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/bcc4d5258b87.png",
+      "generatedAt": "2026-11-09T18:29:52.458Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-demo-duplex",
+      "vertical": "stay",
+      "kind": "demo-property",
+      "component": "stay-demo-duplex",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Three-bedroom duplex house exterior with a clean facade and paved frontage",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "4c98279ad91292b07b671550fe538b2d",
+      "storagePath": "generated/stay/stay-demo-duplex.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/d8e1d5674fb4.png",
+      "generatedAt": "2026-11-09T18:30:23.608Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-band-host",
+      "vertical": "stay",
+      "kind": "band",
+      "component": "stay-band-host",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Modern African villa with pool at dusk, warm interior lights, inviting for guests",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "e35c88d1edf507fa1e4071a3ef8b9518",
+      "storagePath": "generated/stay/stay-band-host.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/8ffc96572524.png",
+      "generatedAt": "2026-11-09T18:30:54.498Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-band-land",
+      "vertical": "stay",
+      "kind": "band",
+      "component": "stay-band-land",
+      "prompt": "Photorealistic premium African hospitality photography, natural warm daylight, refined interior styling, authentic African context, editorial travel-magazine quality, no text, no words, no watermark, no logo. Aerial view of surveyed residential land plots with roads and scattered buildings, green landscape",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "f87f51a53e96c616e3e335a3ae77b6b6",
+      "storagePath": "generated/stay/stay-band-land.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/a2303db35de6.png",
+      "generatedAt": "2026-11-09T18:31:25.553Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijastay"
+      ]
+    },
+    {
+      "id": "stay-hero-2",
+      "vertical": "stay",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium African hospitality photography, golden-hour natural light, editorial travel-magazine quality, rich saturated colours, no text, no words, no watermark, no logo. Wide hero: a modern glass-walled beach villa in Ghana with an infinity edge pool, palm trees and tropical garden, warm sunset light reflecting on the water, a woman in a sun hat relaxing on a lounger, no people facing the camera",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/stay/stay-hero-2.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/3e0208445645.png",
+      "generatedAt": "2026-11-09T18:54:38.072Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/stay/stay-home.tsx"
+      ]
+    },
+    {
+      "id": "stay-hero-3",
+      "vertical": "stay",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium African hospitality photography, golden-hour natural light, editorial travel-magazine quality, rich saturated colours, no text, no words, no watermark, no logo. Wide hero: a luxurious African safari lodge deck at dusk overlooking savannah and acacia trees, lanterns glowing, an inviting plunge pool, warm interior light through glass doors",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/stay/stay-hero-3.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/f72449576a18.png",
+      "generatedAt": "2026-11-09T18:55:54.414Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/stay/stay-home.tsx"
+      ]
+    },
+    {
+      "id": "stay-hero-4",
+      "vertical": "stay",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium African hospitality photography, golden-hour natural light, editorial travel-magazine quality, rich saturated colours, no text, no words, no watermark, no logo. Wide hero: an elegant Nairobi city rooftop apartment terrace with a pool and skyline at blue hour, warm lamps and lounge seating, lush plants",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/stay/stay-hero-4.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/535a3b4365a5.png",
+      "generatedAt": "2026-11-09T18:57:10.819Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/stay/stay-home.tsx"
+      ]
     }
   ]
 }

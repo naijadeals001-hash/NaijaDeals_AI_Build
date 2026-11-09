@@ -35,6 +35,21 @@ const PAGES = [
   "/naijagigs/stories",
   "/naijagigs/government",
   "/naijagigs/notifications",
+  "/naijastay",
+  "/naijastay/stays",
+  "/naijastay/stays/eko-signature-hotel",
+  "/naijastay/search",
+  "/naijastay/bookings",
+  "/naijastay/saved",
+  "/naijastay/messages",
+  "/naijastay/notifications",
+  "/naijastay/help",
+  "/naijastay/safety",
+  "/naijastay/destinations",
+  "/naijastay/how-it-works",
+  "/naijastay/agents",
+  "/naijastay/host",
+  "/naijastay/host/dashboard",
   "/"
 ];
 

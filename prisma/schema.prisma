@@ -170,6 +170,8 @@ model User {
   farms Farm[] @relation("FarmOwner")
   bulkQuotes BulkQuoteRequest[] @relation("BulkQuoteBuyer")
   logisticsShipments LogisticsShipment[] @relation("LogisticsShipments")
+  stayHost StayHost? @relation("StayHostOwner")
+  stayReservations StayReservation[] @relation("StayGuest")
   logisticsProviders LogisticsProvider[] @relation("LogisticsProviderOwner")
   freshCart FreshCartItem[] @relation("FreshCartOwner")
   freshOrders FreshOrder[] @relation("FreshOrders")
@@ -2677,4 +2679,208 @@ model ShipmentPickup {
   shipment        LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
   @@index([providerId])
+}
+
+// ---------------------------------------------------------------------------
+// NaijaStay — accommodation, short lets, rentals and land
+//
+// A host owns properties; a property has one or more units (a whole villa is one
+// unit). Availability is a date range on a unit, and an exclusion constraint in
+// the migration makes overlapping live reservations impossible at the database
+// level. Prices are always computed on the server in integer kobo.
+// ---------------------------------------------------------------------------
+
+model StayHost {
+  id           String   @id @default(cuid())
+  ownerId      String   @unique
+  displayName  String
+  bio          String?
+  phone        String?
+  country      String   @default("Nigeria")
+  /// pending | verified | rejected | suspended
+  status       String   @default("pending")
+  verifiedAt   DateTime?
+  /// Identity/document reference the host supplied; never invented by the platform.
+  documentRef  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  owner        User     @relation("StayHostOwner", fields: [ownerId], references: [id])
+  properties   StayProperty[]
+
+  @@index([status])
+}
+
+model StayProperty {
+  id            String   @id @default(cuid())
+  hostId        String
+  slug          String   @unique
+  title         String
+  /// hotels | serviced-apartments | short-term-rentals | long-term-rentals |
+  /// houses-for-sale | land-and-plots | student-accommodation | corporate-stays |
+  /// vacation-homes | event-conference-spaces
+  category      String
+  /// stay | rent | sale | land
+  listingType   String   @default("stay")
+  description   String
+  city          String
+  state         String?
+  country       String   @default("Nigeria")
+  addressLine   String?
+  latitude      Float?
+  longitude     Float?
+  bedrooms      Int      @default(1)
+  beds          Int      @default(1)
+  bathrooms     Int      @default(1)
+  maxGuests     Int      @default(2)
+  /// Amenities the HOST supplied; the platform never adds unverified claims.
+  amenities     String[] @default([])
+  houseRules    String[] @default([])
+  powerBackup   Boolean  @default(false)
+  waterSupply   Boolean  @default(false)
+  internet      Boolean  @default(false)
+  parking       Boolean  @default(false)
+  accessible    Boolean  @default(false)
+  security24h   Boolean  @default(false)
+  /// nightly price in kobo for the base unit (stays/rents)
+  nightlyKobo   BigInt   @default(0)
+  /// sale price in kobo for sale/land listings
+  salePriceKobo BigInt?
+  cleaningFeeKobo BigInt @default(0)
+  serviceFeeBps Int      @default(500)
+  minimumNights Int      @default(1)
+  currency      String   @default("NGN")
+  timeZone      String   @default("Africa/Lagos")
+  /// draft | pending | published | rejected | suspended
+  status        String   @default("draft")
+  /// true for clearly-labelled demonstration listings only
+  isDemo        Boolean  @default(false)
+  featured      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  host          StayHost @relation(fields: [hostId], references: [id])
+  images        StayImage[]
+  units         StayUnit[]
+  reservations  StayReservation[]
+  reviews       StayReview[]
+
+  @@index([category, status])
+  @@index([city, status])
+  @@index([listingType, status])
+}
+
+/// Ordered gallery images. Generated demo art is marked so it is never presented
+/// as a photograph of a real bookable property.
+model StayImage {
+  id         String   @id @default(cuid())
+  propertyId String
+  url        String
+  alt        String
+  sortOrder  Int      @default(0)
+  kind       String   @default("photo") // photo | generated-demo
+  property   StayProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, sortOrder])
+}
+
+model StayUnit {
+  id           String   @id @default(cuid())
+  propertyId   String
+  name         String
+  maxGuests    Int      @default(2)
+  nightlyKobo  BigInt   @default(0)
+  quantity     Int      @default(1)
+  property     StayProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  reservations StayReservation[]
+
+  @@index([propertyId])
+}
+
+/// A host-blocked date range (maintenance, personal use).
+model StayBlock {
+  id         String   @id @default(cuid())
+  unitId     String
+  startDate  DateTime
+  endDate    DateTime
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([unitId, startDate])
+}
+
+model StayReservation {
+  id            String   @id @default(cuid())
+  reference     String   @unique
+  propertyId    String
+  unitId        String
+  guestId       String
+  /// hold | awaiting_payment | confirmed | cancelled | completed | no_show | disputed
+  status        String   @default("hold")
+  paymentStatus String   @default("unpaid")
+  checkIn       DateTime
+  checkOut      DateTime
+  nights        Int
+  guests        Int
+  rooms         Int      @default(1)
+  /// Server-computed snapshot of the accepted price and policy.
+  currency      String   @default("NGN")
+  nightlyKobo   BigInt
+  subtotalKobo  BigInt
+  cleaningKobo  BigInt   @default(0)
+  serviceKobo   BigInt   @default(0)
+  totalKobo     BigInt
+  policySnapshot String
+  guestName     String
+  guestPhone    String
+  holdExpiresAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  /// Version for optimistic transitions.
+  version       Int      @default(0)
+  property      StayProperty @relation(fields: [propertyId], references: [id])
+  unit          StayUnit     @relation(fields: [unitId], references: [id])
+  guest         User         @relation("StayGuest", fields: [guestId], references: [id])
+  events        StayReservationEvent[]
+
+  @@index([propertyId, status])
+  @@index([guestId, status])
+  @@index([unitId, checkIn, checkOut])
+}
+
+model StayReservationEvent {
+  id            String   @id @default(cuid())
+  reservationId String
+  status        String
+  note          String?
+  actorId       String?
+  createdAt     DateTime @default(now())
+  reservation   StayReservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([reservationId, createdAt])
+}
+
+model StayReview {
+  id            String   @id @default(cuid())
+  propertyId    String
+  reservationId String   @unique
+  guestId       String
+  rating        Int
+  comment       String?
+  status        String   @default("published")
+  createdAt     DateTime @default(now())
+  property      StayProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, status])
+}
+
+/// Host ↔ guest messages, scoped to one property or reservation.
+model StayMessage {
+  id            String   @id @default(cuid())
+  propertyId    String?
+  reservationId String?
+  senderId      String
+  body          String
+  createdAt     DateTime @default(now())
+
+  @@index([propertyId, createdAt])
+  @@index([reservationId, createdAt])
 }

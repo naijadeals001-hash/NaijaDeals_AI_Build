@@ -31,3 +31,5 @@ public/generated/fresh/originals/
 public/generated/send/originals/
 # NaijaGigs: PNG originals kept locally for re-encoding; the app serves WebP.
 public/generated/gigs/originals/
+# NaijaStay: PNG originals kept locally for re-encoding; the app serves WebP.
+public/generated/stay/originals/
