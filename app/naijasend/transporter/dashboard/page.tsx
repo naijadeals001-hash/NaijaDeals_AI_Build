@@ -45,7 +45,12 @@ export default async function TransporterDashboardPage() {
         eyebrow="Transporters"
         title={provider.name}
         description={`${provider.providerType} · ${provider.country}${provider.operatingCities.length ? ` · ${provider.operatingCities.join(", ")}` : ""}`}
-        action={<span className={`rounded-full px-3 py-1 text-[11px] font-extrabold ${provider.status === "verified" ? "bg-[#e8f3e4] text-[#0b5c33]" : "bg-[#fff3e8] text-[#a3480f]"}`}>{provider.status === "verified" ? "Verified" : provider.status}</span>}
+        action={
+          <div className="flex items-center gap-2">
+            <Link href="/naijasend/driver/jobs" className="rounded-full bg-[#0b5c33] px-4 py-1.5 text-[11.5px] font-extrabold text-white">My jobs &amp; navigation</Link>
+            <span className={`rounded-full px-3 py-1 text-[11px] font-extrabold ${provider.status === "verified" ? "bg-[#e8f3e4] text-[#0b5c33]" : "bg-[#fff3e8] text-[#a3480f]"}`}>{provider.status === "verified" ? "Verified" : provider.status}</span>
+          </div>
+        }
       />
       {provider.status !== "verified" ? (
         <p className="mb-3 rounded-xl bg-[#fff3e8] p-3 text-[11.5px] leading-5 text-[#a3480f]">Your application is with the NaijaDeals Control Center. You can add vehicles now; quoting opens once verified.</p>

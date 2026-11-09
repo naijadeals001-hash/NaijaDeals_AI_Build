@@ -81,6 +81,8 @@ export function SendHeader() {
               ))}
               <li><Link href="/naijasend/orders" onClick={() => setOpen(false)} className="block rounded px-2 py-2 hover:bg-[#f2f9f0]">Your shipments</Link></li>
               <li><Link href="/naijasend/transporter/dashboard" onClick={() => setOpen(false)} className="block rounded px-2 py-2 hover:bg-[#f2f9f0]">Transporter dashboard</Link></li>
+              <li><Link href="/naijasend/driver/jobs" onClick={() => setOpen(false)} className="block rounded px-2 py-2 hover:bg-[#f2f9f0]">My jobs &amp; navigation</Link></li>
+              <li><Link href="/naijasend/track" onClick={() => setOpen(false)} className="block rounded px-2 py-2 hover:bg-[#f2f9f0]">Track by number</Link></li>
               <li><Link href="/account" onClick={() => setOpen(false)} className="block rounded px-2 py-2 hover:bg-[#f2f9f0]">Account</Link></li>
             </ul>
           </div>

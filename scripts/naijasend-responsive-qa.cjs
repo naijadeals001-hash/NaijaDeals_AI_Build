@@ -27,12 +27,16 @@ const ROUTES = [
   "/naijasend/track",
   "/naijasend/orders",
   "/naijasend/providers",
+  "/naijasend/transporter",
   "/naijasend/transporter/apply",
   "/naijasend/transporter/dashboard",
   "/naijasend/enterprise",
   "/naijasend/help",
   "/naijasend/how-it-works",
-  "/naijasend/notifications"
+  "/naijasend/notifications",
+  "/naijasend/driver/jobs",
+  "/naijasend/driver/earnings",
+  "/naijasend/track"
 ];
 // The quote card sits beside the hero (as in the mockup), so its heading is
 // horizontally adjacent rather than sequentially below it.
@@ -104,6 +108,12 @@ const check = (name, ok, detail) => {
       check(`${label} ${route} main landmark`, metrics.main);
       if (metrics.cards) check(`${label} ${route} every card has an image`, metrics.withImg === metrics.cards, `${metrics.withImg}/${metrics.cards}`);
       if (metrics.cards) check(`${label} ${route} every card image loads`, metrics.loaded === metrics.cards, `${metrics.loaded}/${metrics.cards}`);
+      if (route === "/naijasend") {
+        for (const dir of ["left", "right"]) {
+          const arrow = page.locator(`button[aria-label='Scroll Choose a Transport Solution ${dir}']`);
+          check(`${label} transport rail ${dir} arrow visible`, await arrow.isVisible());
+        }
+      }
       if (width < 1024) {
         check(`${label} ${route} mobile menu button`, metrics.burger);
         if (metrics.navPinned !== null) check(`${label} ${route} bottom nav pinned`, metrics.navPinned === true);
@@ -128,6 +138,16 @@ const check = (name, ok, detail) => {
       check(`${label} homepage has every mockup section`, missing.length === 0, missing.join(", "));
       const outOfOrder = positions.filter((row, i) => i > 0 && row.at >= 0 && row.at < positions[i - 1].at).map((row) => row.label);
       check(`${label} homepage follows mockup order`, outOfOrder.length === 0, outOfOrder.join(", "));
+      const rail = page.locator("ul[aria-label='Choose a Transport Solution']");
+      const before = await rail.evaluate((n) => n.scrollLeft);
+      await page.locator("button[aria-label='Scroll Choose a Transport Solution right']").click();
+      await page.waitForTimeout(600);
+      const after = await rail.evaluate((n) => n.scrollLeft);
+      check(`${label} transport rail scrolls right`, after > before, `${before} → ${after}`);
+      await page.locator("button[aria-label='Scroll Choose a Transport Solution left']").click();
+      await page.waitForTimeout(600);
+      const back = await rail.evaluate((n) => n.scrollLeft);
+      check(`${label} transport rail scrolls back left`, back < after, `${after} → ${back}`);
       const h1 = (await page.locator("h1").first().innerText()).toLowerCase();
       check(`${label} hero headline matches mockup`, h1.includes("logistics marketplace"), h1);
       await page.close();

@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { recordAudit } from "@/lib/services/core/audit.service";
+import { pinHash } from "@/lib/services/send/state-machine";
 
 /**
  * NaijaSend shipment lifecycle.
@@ -109,10 +110,13 @@ export async function createShipment(input: {
   const destination = text(input.destinationLabel, "Delivery location", 160);
   const description = text(input.description, "Cargo description", 240);
   const ref = reference();
+  // Every shipment is identifiable from creation, before any quote exists.
+  const tracking = `NSTK-${ref.replace(/^NSH-/, "")}`;
 
   const shipment = await prisma.logisticsShipment.create({
     data: {
       reference: ref,
+      trackingNumber: tracking,
       customerId: input.customerId,
       customerKind: input.customerKind ?? "individual",
       cargoClass: input.cargoClass,
@@ -133,6 +137,8 @@ export async function createShipment(input: {
       recipientPhone: text(input.recipientPhone, "Recipient phone", 40),
       pickupDate: input.pickupDate ? new Date(input.pickupDate) : null,
       preferredMode: input.preferredMode ?? null,
+      originVertical: input.sourceVertical ?? "naijasend",
+      transportState: "awaiting_quote",
       sourceVertical: input.sourceVertical ?? null,
       sourceReference: input.sourceReference ?? null,
       events: { create: { status: "open", label: "Shipment requested", note: "Waiting for itemised quotes from verified providers.", actorId: input.customerId } }
@@ -235,7 +241,7 @@ export async function listQuotesForShipment(shipmentId: string, customerId: stri
  * never hold two accepted quotes.
  */
 export async function bookShipment(input: { customerId: string; shipmentId: string; quoteId: string }) {
-  const shipment = await prisma.logisticsShipment.findUnique({ where: { id: input.shipmentId }, select: { id: true, reference: true, customerId: true, status: true } });
+  const shipment = await prisma.logisticsShipment.findUnique({ where: { id: input.shipmentId }, select: { id: true, reference: true, trackingNumber: true, customerId: true, status: true } });
   if (!shipment) throw new ApiError(404, "shipment_not_found", "Shipment not found.");
   if (shipment.customerId !== input.customerId) throw new ApiError(403, "forbidden", "This shipment belongs to another account.");
   if (!["open", "quoting"].includes(shipment.status)) throw new ApiError(409, "already_booked", "This shipment is no longer open for booking.");
@@ -283,8 +289,27 @@ export async function bookShipment(input: { customerId: string; shipmentId: stri
     await tx.shipmentQuote.update({ where: { id: quote.id }, data: { status: "accepted" } });
     await tx.shipmentQuote.updateMany({ where: { shipmentId: shipment.id, id: { not: quote.id }, status: "offered" }, data: { status: "declined" } });
 
+    // The assignment record is what makes every later pickup and delivery check
+    // verifiable: it names the booked provider and holds only PIN hashes.
+    const providerVehicle = await tx.providerVehicle.findFirst({ where: { providerId: quote.providerId, active: true }, select: { id: true } });
     // One leg per quoted mode, in the order the provider listed them.
     const firstPin = pins();
+    const pickupHash = pinHash(firstPin.pickupPin);
+    const deliveryHash = pinHash(firstPin.deliveryPin);
+    const trackingNumber = shipment.trackingNumber ?? `NSTK-${shipment.reference.replace(/^NSH-/, "")}`;
+    await tx.shipmentAssignment.create({
+      data: {
+        shipmentId: shipment.id,
+        providerId: quote.providerId,
+        quoteId: quote.id,
+        vehicleId: providerVehicle?.id ?? null,
+        deliveryPinHash: deliveryHash
+      }
+    });
+    await tx.logisticsShipment.update({
+      where: { id: shipment.id },
+      data: { trackingNumber, transportState: "assigned", assignedAt: new Date(), assignedPickupPinHash: pickupHash, version: { increment: 1 } }
+    });
     await tx.shipmentLeg.createMany({
       data: quote.modes.map((mode, index) => ({
         shipmentId: shipment.id,
@@ -298,9 +323,9 @@ export async function bookShipment(input: { customerId: string; shipmentId: stri
         ...(index === quote.modes.length - 1 ? { deliveryPin: firstPin.deliveryPin } : {})
       }))
     });
-    await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status: "booked", label: "Provider confirmed", note: `${quote.provider.name} booked at ₦${(Number(quote.amountKobo) / 100).toLocaleString("en-NG")}.`, actorId: input.customerId } });
+    await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status: "assigned", label: "Transporter assigned", note: `${quote.provider.name} booked at ₦${(Number(quote.amountKobo) / 100).toLocaleString("en-NG")}.`, actorId: input.customerId } });
     await recordAudit({ tx, actorId: input.customerId, action: "shipment.booked", entity: "LogisticsShipment", entityId: shipment.id, metadata: { quoteId: quote.id, providerId: quote.providerId, amountKobo: quote.amountKobo.toString(), modes: quote.modes } });
-    return { shipmentId: shipment.id, reference: shipment.reference, amountKobo: quote.amountKobo.toString(), providerName: quote.provider.name, modes: quote.modes, pickupPin: firstPin.pickupPin, deliveryPin: firstPin.deliveryPin };
+    return { shipmentId: shipment.id, reference: shipment.reference, trackingNumber, amountKobo: quote.amountKobo.toString(), providerName: quote.provider.name, modes: quote.modes, pickupPin: firstPin.pickupPin, deliveryPin: firstPin.deliveryPin };
   });
 }
 

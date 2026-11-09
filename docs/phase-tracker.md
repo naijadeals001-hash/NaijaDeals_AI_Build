@@ -358,3 +358,38 @@ Imagery: 33 Kie.ai assets (`send-*`), 198 credits ≈ **$0.99** confirmed, serve
 Open: commission rate not approved; live carrier integration for air/sea milestones is not
 configured (milestones recorded by the operator, flagged `simulated` for external modes); enterprise
 contracted rates and multi-user approval are not built.
+
+### NaijaSend transport identity, navigation and cross-vertical fulfilment (2026-11-09)
+
+**The rule enforced here:** a shipment is recognised as NaijaSend's because verified booking,
+assignment and pickup records exist — never because a transporter pressed a button.
+
+- `ShipmentAssignment` (unique per shipment) records the provider, the accepted quote and the
+  vehicle at booking; PINs are stored only as SHA-256 hashes. There is no code path that creates
+  an assignment from a driver action.
+- `ShipmentPickup` (unique per shipment) is written only inside a transition that passed the PIN
+  check, so a second pickup cannot be recorded even concurrently.
+- `LogisticsShipment.originVertical` is set at creation and immutable; a partial unique index on
+  `(originVertical, sourceReference)` makes a duplicate shipment for one order impossible.
+- `transportState` + `version` form the state machine (`lib/services/send/state-machine.ts`):
+  every transition validates actor authority from the assignment, legal next state, required
+  evidence, the version the client saw, and an idempotency key. Row-level `FOR UPDATE` serialises
+  concurrent actions.
+- Cross-vertical entry point: `POST /api/send/logistics/from-order` reads the authoritative order
+  row (NaijaShop / NaijaFresh / NaijaEats) and returns the same shipment on repeat calls.
+- One tracking record for every vertical: `GET /api/send/logistics/tracking` and
+  `/naijasend/track/[trackingNumber]`.
+
+Routes added: `/naijasend/driver/jobs`, `/naijasend/driver/navigation/[id]`,
+`/naijasend/driver/earnings`, `/naijasend/track/[trackingNumber]`.
+
+Verification: `node scripts/naijasend-transport-e2e.cjs` **37/37** (includes concurrent duplicate
+pickup, idempotent replay, stale version, unassigned provider, origin immutability),
+`node scripts/naijasend-e2e.cjs` **46/46**, `node scripts/naijasend-responsive-qa.cjs` **402/402**.
+
+Navigation: OpenStreetMap tiles via the existing Leaflet dependency; the connecting line is
+straight-line distance, labelled as such — **no turn-by-turn routing exists**, and the UI says so.
+
+Open: live carrier milestone integration (air/sea/rail remain operator-recorded and flagged);
+map routing/turn-by-turn is not implemented; NaijaShop order → shipment wiring is available through
+the API but not yet triggered from the seller fulfilment screen.

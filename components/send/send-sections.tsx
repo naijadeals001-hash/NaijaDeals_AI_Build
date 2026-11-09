@@ -1,13 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Bike, Boxes, Building2, Car, Check, Container, Factory, Globe2, Headset, Landmark, Package, Refrigerator, ShieldCheck, Sprout, Store, Truck, Warehouse, Wheat, Plane, TrainFront, User, Clock, CreditCard, Navigation } from "lucide-react";
 
 /** Horizontal rail with arrow controls, as in the approved mockup. */
 export function SendRail({ title, href, seeAll, children }: { title?: string; href?: string; seeAll?: string; children: React.ReactNode }) {
   const track = useRef<HTMLUListElement | null>(null);
   const [pos, setPos] = useState({ left: 0, max: 1 });
+  useEffect(() => {
+    // Recompute after layout and on resize: a rail that fits needs no arrows, and
+    // a rail that overflows must show its right arrow straight away.
+    const node = track.current;
+    if (!node) return;
+    const update = () => setPos({ left: node.scrollLeft, max: Math.max(1, node.scrollWidth - node.clientWidth) });
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
   const sync = () => {
     const node = track.current;
     if (node) setPos({ left: node.scrollLeft, max: Math.max(1, node.scrollWidth - node.clientWidth) });
@@ -27,13 +37,13 @@ export function SendRail({ title, href, seeAll, children }: { title?: string; hr
         </div>
       ) : null}
       <div className="relative">
-        <button type="button" onClick={() => page(-1)} disabled={pos.left <= 2} aria-label={`Scroll ${title ?? "rail"} left`} className="absolute -left-2 top-1/2 z-10 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full border border-[#e2e6e3] bg-white text-[#0b5c33] shadow-md disabled:opacity-0 sm:grid">
+        <button type="button" onClick={() => page(-1)} disabled={pos.left <= 2} aria-label={`Scroll ${title ?? "rail"} left`} className="absolute -left-1 top-1/2 z-10 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full border border-[#e2e6e3] bg-white text-[#0b5c33] shadow-md disabled:cursor-not-allowed disabled:opacity-40 sm:-left-2">
           <ArrowRight className="h-4 w-4 rotate-180" aria-hidden />
         </button>
         <ul ref={track} onScroll={sync} aria-label={title ?? "Carousel"} className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none]">
           {children}
         </ul>
-        <button type="button" onClick={() => page(1)} disabled={pos.left >= pos.max - 2} aria-label={`Scroll ${title ?? "rail"} right`} className="absolute -right-2 top-1/2 z-10 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full border border-[#e2e6e3] bg-white text-[#0b5c33] shadow-md disabled:opacity-0 sm:grid">
+        <button type="button" onClick={() => page(1)} disabled={pos.left >= pos.max - 2} aria-label={`Scroll ${title ?? "rail"} right`} className="absolute -right-1 top-1/2 z-10 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full border border-[#e2e6e3] bg-white text-[#0b5c33] shadow-md disabled:cursor-not-allowed disabled:opacity-40 sm:-right-2">
           <ArrowRight className="h-4 w-4" aria-hidden />
         </button>
       </div>

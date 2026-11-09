@@ -2457,6 +2457,22 @@ model LogisticsShipment {
   /// Set when this shipment fulfils another vertical (eats | fresh | drive | shop).
   sourceVertical  String?
   sourceReference String?
+  /// Immutable origin of the shipment: naijasend | naijashop | naijafresh | naijaeats.
+  /// A shipment created from an order keeps that vertical for life; only an
+  /// audited admin correction may change it.
+  originVertical  String   @default("naijasend")
+  /// Customer-facing tracking number (distinct from the internal reference).
+  trackingNumber  String?  @unique
+  /// Optimistic concurrency guard: every state transition must match this.
+  version         Int      @default(0)
+  /// Transport state machine position (see lib/services/send/state-machine.ts).
+  transportState  String   @default("awaiting_quote")
+  /// Hash of the pickup PIN the sender holds; the plain PIN is never stored here.
+  assignedPickupPinHash String?
+  /// Set when the current transporter assignment was made.
+  assignedAt      DateTime?
+  pickupVerifiedAt   DateTime?
+  deliveryVerifiedAt DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   customer        User     @relation("LogisticsShipments", fields: [customerId], references: [id])
@@ -2464,10 +2480,16 @@ model LogisticsShipment {
   quotes          ShipmentQuote[]
   legs            ShipmentLeg[]
   events          ShipmentEvent[]
+  assignment      ShipmentAssignment?
+  pickups         ShipmentPickup[]
 
   @@index([customerId, status])
   @@index([status, createdAt])
   @@index([sourceVertical, sourceReference])
+  @@index([originVertical])
+  /// One logistics shipment per originating order: the database, not the app,
+  /// prevents a second shipment being created for the same order.
+  @@unique([originVertical, sourceReference])
 }
 
 model ShipmentPackage {
@@ -2593,10 +2615,13 @@ model ShipmentEvent {
   actorId    String?
   /// Simulated external carrier milestone (never presented as live tracking).
   simulated  Boolean  @default(false)
+  /// Makes a repeated transition a no-op instead of a duplicate event.
+  idempotencyKey String?
   createdAt  DateTime @default(now())
   shipment   LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
   @@index([shipmentId, createdAt])
+  @@unique([shipmentId, idempotencyKey])
 }
 
 /// Proof supplied by the provider at handover.
@@ -2611,4 +2636,45 @@ model ShipmentProof {
   createdAt  DateTime @default(now())
 
   @@index([shipmentId])
+}
+
+/// The authoritative link between a shipment and the transporter executing it.
+/// A shipment is "NaijaSend-validated" only when this row exists, the provider is
+/// verified, and the customer booked that provider's quote. A driver pressing a
+/// button cannot create this row.
+model ShipmentAssignment {
+  id             String   @id @default(cuid())
+  shipmentId     String   @unique
+  providerId     String
+  quoteId        String
+  /// Vehicle the provider committed for this shipment.
+  vehicleId      String?
+  /// Hash of the delivery PIN handed to the customer at booking; the plain PIN
+  /// is never stored on the assignment.
+  deliveryPinHash String
+  assignedAt     DateTime @default(now())
+  revokedAt      DateTime?
+  revokedReason  String?
+  shipment       LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+}
+
+/// A verified physical handover. Only a customer-verified pickup PIN or a sender
+/// confirmation creates one, and the unique shipmentId means a shipment can never
+/// be marked picked up twice.
+model ShipmentPickup {
+  id              String   @id @default(cuid())
+  shipmentId      String   @unique
+  legId           String?
+  actorId         String
+  /// pin | sender | admin
+  method          String
+  pickupPinUsed   Boolean  @default(true)
+  providerId      String
+  verifiedAt      DateTime @default(now())
+  note            String?
+  shipment        LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
 }
