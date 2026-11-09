@@ -1995,3 +1995,30 @@ Verified: 85/85 mobile checks (320/360/375/390/412/430/600, landscape, 768,
 departments present in the strip, promo single-row, eight category images;
 storefront QA 43/43; destinations resolve signed out (sign-in wall) and signed
 in (Account/Orders pages); department strip scrolls to Gaming.
+
+## NaijaShop — four-card mobile merchandising (2026-11-09)
+
+Owner requires four cards across on phones, with arrows as well as swipe.
+
+- New `components/shop/card-carousel.tsx`: a shared track showing 4 cards on
+  phones (6 from `sm`, 7–8 from `lg`), with previous/next arrows that page by
+  exactly the visible count, scroll snapping, ArrowLeft/ArrowRight keyboard
+  support, focus rings, and arrows disabled at each boundary.
+- **Deals of the day** now shows four compact cards per row on phones (was three
+  at 176px); the "Support Nigerian sellers" card appears only on desktop where
+  the row has room. Product cards were compressed for the denser grid — smaller
+  padding, 3-line clamped title, tighter price and a short "Add" button below
+  `sm` that keeps its full accessible label.
+- **Shop by Category** is a four-across carousel with arrows; scrolling right
+  reveals the remaining four categories. All eight keep their generated images.
+- **Gap arithmetic matters**: the track uses `gap-1.5` (6px) below `sm`, so the
+  card width is `calc((100% - 1.125rem)/4)`. An earlier attempt assumed 1.5px
+  gaps and silently made only three cards fit — the QA suite caught it.
+
+Verification: `scripts/naijashop-four-card-qa.cjs` **62/62** — four fully
+visible deal and category cards at 320/360/375/390/412/430, arrows scrolling
+and enabling/disabling correctly, keyboard arrows, remaining cards reachable at
+the end, every card linking to a real destination, displayed prices matching the
+API catalogue, no broken images, no page overflow; 768/1024/1440 keep wider
+rows. Storefront QA 43/43, mobile QA 85/85 (the category image count now scrolls
+the lazy track before measuring).

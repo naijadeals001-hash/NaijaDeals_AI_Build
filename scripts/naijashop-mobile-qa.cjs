@@ -44,6 +44,15 @@ const check = (name, ok, detail) => {
     page.on("pageerror", (error) => errors.push(String(error).slice(0, 100)));
     await page.goto(`${BASE}/naijashop`, { waitUntil: "load", timeout: 120000 });
     await page.waitForTimeout(2500);
+    // Scroll the category rail through so every lazily-loaded image is requested.
+    await page.evaluate(() => {
+      const list = [...document.querySelectorAll('ul[tabindex="0"]')].find((node) => node.getAttribute("aria-label") === "Shop by category");
+      if (list) {
+        list.scrollIntoView({ block: "center" });
+        list.scrollTo({ left: list.scrollWidth });
+      }
+    });
+    await page.waitForTimeout(1200);
     const result = await page.evaluate(() => {
       const header = document.querySelector("header");
       const row = header?.querySelector("div");
@@ -80,6 +89,8 @@ const check = (name, ok, detail) => {
         deptSingleRow: deptNav ? Math.max(...[...deptNav.querySelectorAll("a,button")].map((n) => Math.round(n.getBoundingClientRect().top))) - Math.min(...[...deptNav.querySelectorAll("a,button")].map((n) => Math.round(n.getBoundingClientRect().top))) < 40 : null,
         departmentLabels: deptNav ? [...deptNav.querySelectorAll("a,button")].map((node) => node.innerText.trim()).filter(Boolean) : [],
         categories: document.querySelectorAll("[data-category]").length,
+        // Cards outside the visible track are lazily loaded, so this is
+        // measured after the caller scrolls the category track through.
         categoryImages: [...document.querySelectorAll("[data-category] img")].filter((img) => img.naturalWidth > 0).length
       };
     });

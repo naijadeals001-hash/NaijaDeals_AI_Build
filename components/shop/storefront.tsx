@@ -31,6 +31,7 @@ import {
 import { apiClient, type ApiCategory, type ApiProduct } from "@/lib/api-client";
 import type { ShopProduct } from "./product-card";
 import { ShopHeroCarousel, type ShopHeroSlide } from "./hero-carousel";
+import { CardCarousel } from "./card-carousel";
 import { DepartmentSidebar, PlusPanel } from "./department-sidebar";
 import { ShopProductCard } from "./product-card";
 
@@ -439,13 +440,13 @@ export function NaijaShopStorefront() {
                 See all deals
               </Link>
             </div>
-            <ul className="-mx-2 flex snap-x gap-2 overflow-x-auto px-2 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-2 sm:overflow-visible sm:px-0 lg:grid-cols-7">
-              {deals.slice(0, 8).map((product) => (
-                <li key={product.id} className="w-[45vw] max-w-[180px] shrink-0 snap-start sm:w-auto sm:max-w-none">
+            <CardCarousel label="Deals of the day">
+              {deals.slice(0, 12).map((product) => (
+                <li key={product.id} className="w-[calc((100%-1.125rem)/4)] shrink-0 snap-start sm:w-[calc((100%-2.5rem)/6)] lg:w-[calc((100%-3.5rem)/7)]">
                   <ShopProductCard product={product} onAdd={addToCart} adding={addingId === product.id} variant="deal" />
                 </li>
               ))}
-              <li className="hidden lg:block">
+              <li className="hidden w-[calc((100%-3.5rem)/7)] shrink-0 snap-start lg:block">
                 <Link href="/naijashop/sellers" className="relative flex h-full flex-col justify-end overflow-hidden rounded-lg bg-[#0d3b23] p-3 text-white">
                   <img src="/generated/shop/banner-sellers.webp" alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
                   <span className="relative">
@@ -455,7 +456,7 @@ export function NaijaShopStorefront() {
                   </span>
                 </Link>
               </li>
-            </ul>
+            </CardCarousel>
           </section>
         ) : null}
 
@@ -490,26 +491,26 @@ export function NaijaShopStorefront() {
           </div>
           {/* Two columns on phones so every category image is visible without
               horizontal scrolling, matching the approved mobile mockup. */}
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
+          <CardCarousel label="Shop by category">
             {categories.map((category) => {
               const override = (category as ApiCategory & { imageUrl?: string | null }).imageUrl;
               const url = override ?? `/generated/shop/category-${category.slug}.webp`;
               return (
-                <li key={category.id} className="min-w-0">
+                <li key={category.id} className="w-[calc((100%-1.125rem)/4)] shrink-0 snap-start sm:w-[calc((100%-2.5rem)/6)] lg:w-[calc((100%-3.5rem)/8)]">
                   <Link href={`/naijashop/c/${category.slug}`} data-category={category.slug} className="group block overflow-hidden rounded-lg bg-white ring-1 ring-[#e3e6e6] transition hover:shadow-md">
-                    <div className="aspect-[4/3] w-full overflow-hidden bg-[#f7f8f8]">
+                    <div className="aspect-square w-full overflow-hidden bg-[#f7f8f8]">
                       {!missingArt[url] ? (
                         <img src={url} alt={category.name} loading="lazy" onError={() => markMissing(url)} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                       ) : (
-                        <div className="grid h-full w-full place-items-center bg-[#f0f2f2] text-[11px] font-semibold text-[#565959]">{category.name}</div>
+                        <div className="grid h-full w-full place-items-center bg-[#f0f2f2] text-[10px] font-semibold text-[#565959]">{category.name}</div>
                       )}
                     </div>
-                    <p className="px-1 py-1.5 text-center text-[11.5px] font-bold leading-tight sm:text-[12px]">{category.name}</p>
+                    <p className="line-clamp-2 px-1 py-1 text-center text-[10px] font-bold leading-tight sm:text-[11px]">{category.name}</p>
                   </Link>
                 </li>
               );
             })}
-          </ul>
+          </CardCarousel>
         </section>
 
         {/* Product shelves */}
