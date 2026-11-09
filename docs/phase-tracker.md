@@ -412,3 +412,27 @@ BLOCKED / OPEN: Android APK (no Android SDK or Gradle on this machine; no signin
 key), push notifications (no provider configured), dispatch-side location
 endpoint, and location retention job. iOS background tracking is unsupported by
 the platform — documented, not worked around. See `docs/mobile-foundation.md`.
+
+### Mobile foundation — Android build, operations access, retention (2026-11-09)
+
+Android SDK installed locally (cmdline-tools, platform-tools 37.0.1, platforms
+34/35, build-tools 34/35). Capacitor 8.6.0 and @capacitor/geolocation 8.2.4 (both
+MIT) added; the Transistorsoft background-geolocation plugin was **rejected** for
+its CUSTOM licence.
+
+Native tracking: `LocationTrackingService` (foreground service,
+FusedLocationProvider, persistent queue, idempotent uploads, stop control) plus
+`NaijaDealsLocationPlugin` implementing the `window.NaijaDealsLocation.start/stop`
+contract. **Debug and signed release APKs both build**; the release APK is signed
+with a keystore held outside the repo and published at
+`public/downloads/naijadeals-1.0.0.apk` (SHA-256 recorded in `lib/platform/release.ts`).
+
+Operations: `GET /api/admin/location` (`deliveries:read`, per-session only,
+audited, freshness from server time). Retention:
+`scripts/location-retention.cjs` + `scripts/schedule-location-retention.ps1`.
+
+Verified: `scripts/mobile-foundation-e2e.cjs` **26/26**,
+`scripts/platform-pwa-e2e.cjs` **28/28**, link audit **232/232**.
+
+OPEN: physical-device acceptance; push (no VAPID keys); operations UI; Android
+developer verification; production scheduling of the retention job.

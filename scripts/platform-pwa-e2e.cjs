@@ -62,7 +62,11 @@ const stamp = Date.now();
   check("install page loads", installResponse.status() === 200);
   const installText = await page.locator("#main-content").first().innerText();
   check("install page states iOS background limitation", /iPhone/i.test(installText) && /background/i.test(installText));
-  check("install page shows the Android build blocker honestly", /Not available yet/.test(installText));
+  // The page must tell the truth either way: a real download, or an explicit blocker plus checksum text.
+  const hasDownload = /Download v/.test(installText);
+  const hasBlocker = /Not available yet/.test(installText);
+  check("install page shows a real download or an explicit blocker", hasDownload || hasBlocker);
+  check("install page publishes a checksum or names the blocker", /SHA-256/i.test(installText));
   const offlineResponse = await page.goto(`${BASE}/offline`, { waitUntil: "load" });
   check("offline page loads", offlineResponse.status() === 200);
   const manifestLink = await page.evaluate(() => document.querySelector('link[rel="manifest"]')?.getAttribute("href"));

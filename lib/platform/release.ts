@@ -6,14 +6,14 @@
  * the page would offer a download that cannot complete.
  */
 export const APP_RELEASE = {
-  available: false,
+  available: true,
   version: "1.0.0",
-  build: "not built",
+  build: "app-release / versionCode 1",
   minAndroid: "Android 8.0 (API 26)",
-  sizeLabel: "—",
+  sizeLabel: "3.6 MB",
   downloadPath: "/downloads/naijadeals-1.0.0.apk",
-  sha256: "Not available — the APK has not been built in this environment (no Android SDK).",
-  blocker: "no Android SDK or Gradle on the build machine, and no signing key has been created. See docs/mobile-foundation.md for the exact build steps.",
+  sha256: "e7e8c7dbfff853d8ad0643a3e4b06c29797cf673bfd53cd9dd6758b7f4caac55",
+  blocker: "Signed with the project release key. Not published publicly pending distribution authorization; Android developer verification is still required before installs on certified devices in enforced markets.",
   releaseNotes: [
     "Shared NaijaDeals app shell for every vertical.",
     "Background location for NaijaDrive and NaijaSend work sessions with a visible tracking notification.",

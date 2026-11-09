@@ -33,3 +33,8 @@ public/generated/send/originals/
 public/generated/gigs/originals/
 # NaijaStay: PNG originals kept locally for re-encoding; the app serves WebP.
 public/generated/stay/originals/
+
+# Android signing material must never be committed.
+android/keystore.properties
+*.jks
+*.keystore

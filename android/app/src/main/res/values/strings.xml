@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NaijaDeals</string>
+    <string name="title_activity_main">NaijaDeals</string>
+    <string name="package_name">com.naijadeals.app</string>
+    <string name="custom_url_scheme">com.naijadeals.app</string>
+</resources>

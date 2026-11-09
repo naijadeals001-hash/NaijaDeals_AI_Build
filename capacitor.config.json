@@ -1,0 +1,23 @@
+{
+  "appId": "com.naijadeals.app",
+  "appName": "NaijaDeals",
+  "webDir": "www",
+  "server": {
+    "url": "https://naijadeals.com",
+    "cleartext": false,
+    "allowNavigation": [
+      "naijadeals.com",
+      "*.naijadeals.com"
+    ]
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "NaijaDealsLocation": {
+      "backgroundMessage": "NaijaDeals is sharing your location for an active job."
+    }
+  }
+}

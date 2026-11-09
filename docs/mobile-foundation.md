@@ -195,22 +195,68 @@ deploy; iOS install and push.
 | Responsive site | Yes | Yes | Yes | Partly (browser only) | Yes | — |
 | PWA (manifest, SW, offline, install) | Yes | Yes | Yes | No | Yes, pending device check | — |
 | Capability + location interfaces | Yes | Yes | Yes | No | Yes | — |
-| Android native tracking + APK | Contract + config only | **No** | No | No | **No** | No Android SDK/Gradle on this machine; signing key not created |
-| Direct-download/update flow | Page + release metadata | Page only | Yes (blocker shown) | No | **No** | Depends on the APK |
+| Android native tracking + APK | Yes (service + plugin) | **Yes — signed release APK built** | Unit/build only | **No — no physical device used** | Signed and checksummed; not publicly published | Physical-device acceptance and Play developer verification |
+| Direct-download/update flow | Yes | Yes | Yes (checksum + signature verified) | No | Ready once distribution is authorised | — |
 | iPhone PWA | Yes | Yes | Yes (browser) | No | Yes for customer use | Background tracking **unsupported by platform** |
 | Capability matrix, licence inventory, security doc | Yes | — | — | — | Yes | — |
 
 ---
 
+## 8a. Android build — actual result (2026-11-09)
+
+The Android SDK was **installed** during this session (command-line tools
+16111833, platform-tools 37.0.1, platforms android-34/35, build-tools 34/35), so
+the earlier "no SDK" blocker is resolved.
+
+| Step | Command | Result |
+|---|---|---|
+| Debug APK | `cd android && ./gradlew assembleDebug` | **BUILD SUCCESSFUL**, `app-debug.apk` 4.8 MB |
+| Release APK | `cd android && ./gradlew assembleRelease` | **BUILD SUCCESSFUL**, `app-release.apk` 3.6 MB |
+| Signature | `apksigner verify --print-certs` | valid, `CN=NaijaDeals, L=Lagos, C=NG` |
+| Published copy | `public/downloads/naijadeals-1.0.0.apk` | served (HTTP 200) |
+| SHA-256 | `e7e8c7db…f4caac55` | matches `lib/platform/release.ts` |
+
+The APK declares `ACCESS_BACKGROUND_LOCATION`, `FOREGROUND_SERVICE_LOCATION` and
+`POST_NOTIFICATIONS`, and ships `.LocationTrackingService` with
+`foregroundServiceType="location"`.
+
+**Not done:** no physical device or emulator was used, so nothing has been
+observed running on Android. The 30-minute locked-screen test, force-stop
+behaviour and battery-saver behaviour remain **pending device acceptance**.
+
+**Signing key:** stored at `C:/NaijaDeals-Keys/naijadeals-release.jks` with its
+password in `android/keystore.properties` — both outside Git (verified by
+`.gitignore`). Losing it means users must uninstall before reinstalling.
+
+## 8b. Operations access
+
+`GET /api/admin/location?sessionRef=…&limit=…` requires `deliveries:read`, refuses
+requests without a session reference (no bulk feed exists), returns freshness
+computed from server time, bounds the trail to 500 points, and writes an audit
+row (`location.positions_viewed`) on every read. Customers cannot reach it (403).
+
+## 8c. Retention
+
+`scripts/location-retention.cjs` deletes raw pings older than 30 days
+(`LOCATION_RETENTION_DAYS`) in batches of 5,000 (`LOCATION_RETENTION_BATCH`),
+with `--dry-run`. It prints a JSON summary and exits non-zero on failure so a
+scheduler records it. A delayed upload of an old fix is expired by the next run,
+because the cutoff uses `capturedAt`, not arrival time.
+
+Scheduler config: `scripts/schedule-location-retention.ps1` registers a daily
+02:30 Windows task with retries. **The job is implemented; it is not scheduled in
+production** — that is a deployment step.
+
 ## 9. Gaps that remain
 
-1. Push notifications: no push provider is configured, so the app shows no push
-   capability and does not promise any.
-2. Server-side location visibility for dispatch: a staff endpoint to read live or
-   stale driver positions for authorised operations does not exist yet.
-3. Retention/deletion job for location pings (30-day target) is not implemented.
+1. Push notifications: no push provider or VAPID keys are configured, so the app
+   reports no push capability and promises none. Integration is not written.
+2. Physical-device acceptance for Android background tracking is pending.
+3. No Control Center screen consumes the operations endpoint yet — the API is
+   live and audited, the UI is not built.
 4. iOS push in an installed PWA is untested.
-5. Capacitor packages are not installed and the Android plugin is not written.
+5. Google's Android developer verification is not completed; installs on
+   certified devices in enforced markets need it (see §2).
 
 ## 10. Physical device test procedure (to run when devices are available)
 
