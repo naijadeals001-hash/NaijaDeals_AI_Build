@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { createFoodOrder, listFoodOrdersForCustomer } from "@/lib/services/core/eats-order.service";
 import { ApiError, assertSameOrigin, jsonError, readJson, requireUser } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
+import { clearBasketForRestaurant } from "@/lib/services/eats/cart";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,8 @@ export async function POST(request: NextRequest) {
       contactPhone: String(body.contactPhone ?? ""),
       notes: typeof body.notes === "string" ? body.notes : undefined
     });
+    // The basket lines for this kitchen are consumed by a successful order.
+    await clearBasketForRestaurant(user.id, String(body.restaurantId ?? "")).catch(() => undefined);
     return NextResponse.json(jsonSafe(order), { status: 201 });
   } catch (error) {
     return jsonError(error);

@@ -2203,3 +2203,17 @@ serves a cuisine, the page says so and links to restaurant applications.
 **Image reality**: only 19 of 298 dishes have art from the approved set; the
 other 279 show "pending photo". They were not given a jollof photo to fill the
 grid.
+
+### NaijaEats basket, checkout and favourites
+`scripts/naijaeats-cart-check.cjs` **13/13**: dishes add to the basket, the
+basket page renders saved lines, quantity changes persist, the basket survives a
+brand-new browser session (server-side), checkout creates a real food order and
+empties that kitchen's lines, favourites toggle and persist across sessions, and
+the negatives hold (guest 401, quantity capped at 10, cross-kitchen item 400).
+
+Schema: `FoodCartItem` (one basket per account, one row per dish, grouped by
+kitchen) and `EatsFavourite` (restaurant/dish, unique per user) — additive
+migration `eats_cart_favourites`.
+
+**Note on checkout:** an order with an empty wallet correctly returns 402
+`insufficient_funds` and keeps the basket intact; the UI surfaces that message.

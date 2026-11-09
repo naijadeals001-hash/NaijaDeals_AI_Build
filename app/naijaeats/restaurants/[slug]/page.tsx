@@ -6,6 +6,7 @@ import { EatsHeader } from "@/components/eats/eats-header";
 import { EatsFooter } from "@/components/eats/eats-footer";
 import { EatsBottomNav } from "@/components/eats/eats-bottom-nav";
 import { listCuisineRail, listStorefrontRestaurants } from "@/lib/services/eats/storefront";
+import { AddToBasket } from "@/components/eats/add-to-basket";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -115,7 +116,7 @@ export default async function RestaurantPage({ params }: { params: { slug: strin
                     {dish.description ? <span className="mt-0.5 line-clamp-2 block text-[10.5px] leading-4 text-[#6b7a70]">{dish.description}</span> : null}
                     <span className="mt-1 flex items-center justify-between gap-2">
                       <span className="text-[12.5px] font-extrabold text-[#0b5c33]">₦{(Number(dish.priceKobo) / 100).toLocaleString("en-NG")}</span>
-                      <span className={`text-[10px] font-bold ${dish.available ? "text-[#0b8f47]" : "text-[#b45309]"}`}>{dish.available ? "Available" : "Sold out"}</span>
+                      <AddToBasket menuItemId={dish.id} name={dish.name} available={dish.available} />
                     </span>
                   </span>
                 </li>
