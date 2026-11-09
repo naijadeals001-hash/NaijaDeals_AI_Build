@@ -33,6 +33,21 @@ export default async function NaijaStayHomePage() {
     reviews: item.reviewCount
   }));
 
+  const solutionImages: Record<string, string | null> = {
+    "stay-sol-travelers": stayImage("stay-sol-travelers"),
+    "stay-sol-tenants": stayImage("stay-sol-tenants"),
+    "stay-sol-buyers": stayImage("stay-sol-buyers"),
+    "stay-sol-owners": stayImage("stay-sol-owners"),
+    "stay-sol-business": stayImage("stay-sol-business"),
+    "stay-cat-vacation": stayImage("stay-cat-vacation"),
+    "stay-cat-event": stayImage("stay-cat-event"),
+    "stay-cat-student": stayImage("stay-cat-student"),
+    "stay-cat-serviced": stayImage("stay-cat-serviced"),
+    "stay-cat-land": stayImage("stay-cat-land"),
+    "stay-cat-hotels": stayImage("stay-cat-hotels"),
+    "stay-cat-long-term": stayImage("stay-cat-long-term"),
+    "stay-band-host": stayImage("stay-band-host"),
+  };
   return (
     <div className="min-h-screen bg-white text-[#14241b]">
       <StayHeader />
@@ -51,7 +66,7 @@ export default async function NaijaStayHomePage() {
         <FeaturedProperties items={featured} />
         <DestinationCards destinations={DESTINATIONS.map((d) => ({ slug: d.slug, city: d.city, country: d.country, imageUrl: stayImage(d.image) }))} />
         <StaySteps />
-        <StaySolutions images={{ "stay-sol-travelers": stayImage("stay-sol-travelers"), "stay-sol-tenants": stayImage("stay-sol-tenants"), "stay-sol-buyers": stayImage("stay-sol-buyers"), "stay-sol-owners": stayImage("stay-sol-owners"), "stay-sol-business": stayImage("stay-sol-business") }} />
+        <StaySolutions images={solutionImages} />
         <StayPromoBands hostImage={stayImage("stay-band-host")} landImage={stayImage("stay-band-land")} />
         <SuccessStories />
         <StayAppBanner />

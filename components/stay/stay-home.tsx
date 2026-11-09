@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, BedDouble, CalendarCheck, Check, ChevronLeft, ChevronRight, CreditCard, Globe2, Handshake, Headset, Heart, House, LandPlot, MapPin, Search, ShieldCheck, Sparkles, Store, TreePalm, Users, KeyRound, UserPlus, Star } from "lucide-react";
 
 function naira(kobo: string | null) {
@@ -10,31 +10,84 @@ function naira(kobo: string | null) {
 }
 
 /** Horizontal rail with arrows that work at every width. */
-export function StayRail({ title, href, seeAll, label, children }: { title?: string; href?: string; seeAll?: string; label: string; children: React.ReactNode }) {
+export function StayRail({
+  title,
+  href,
+  seeAll,
+  label,
+  gap = 10,
+  children
+}: {
+  title?: string;
+  href?: string;
+  seeAll?: string;
+  label: string;
+  /** Gap in px, so the scroll step can advance whole cards. */
+  gap?: number;
+  children: React.ReactNode;
+}) {
   const track = useRef<HTMLUListElement | null>(null);
-  const [pos, setPos] = useState({ left: 0, max: 1 });
-  const sync = () => {
+  const [pos, setPos] = useState({ left: 0, max: 1, step: 260, atStart: true, atEnd: true });
+
+  const measure = () => {
     const node = track.current;
-    if (node) setPos({ left: node.scrollLeft, max: Math.max(1, node.scrollWidth - node.clientWidth) });
+    if (!node) return;
+    const first = node.firstElementChild as HTMLElement | null;
+    // Scroll one card width at a time on touch devices, a screenful on desktop.
+    const card = first ? (first as HTMLElement & { offsetWidth?: number }).offsetWidth ?? 0 : 0;
+    const cardStep = card ? card + gap : 260;
+    const step = window.matchMedia("(pointer: coarse)").matches ? cardStep : Math.max(cardStep, Math.round(node.clientWidth * 0.8));
+    const max = Math.max(0, node.scrollWidth - node.clientWidth);
+    setPos({ left: node.scrollLeft, max, step, atStart: node.scrollLeft <= 2, atEnd: node.scrollLeft >= max - 2 });
   };
+
+  useEffect(() => {
+    measure();
+    const node = track.current;
+    const ro = typeof ResizeObserver !== "undefined" && node ? new ResizeObserver(measure) : null;
+    if (node && ro) ro.observe(node);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const page = (dir: -1 | 1) => {
     const node = track.current;
     if (!node) return;
-    node.scrollBy({ left: dir * Math.max(240, node.clientWidth * 0.85), behavior: "smooth" });
-    window.setTimeout(sync, 320);
+    node.scrollBy({ left: dir * pos.step, behavior: "smooth" });
+    window.setTimeout(measure, 340);
   };
+
+  const arrow = "grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#d8e2da] bg-white text-[#0b5c33] shadow-[0_2px_8px_rgba(15,40,28,0.14)] transition hover:bg-[#0b5c33] hover:text-white disabled:opacity-35 disabled:hover:bg-white disabled:hover:text-[#0b5c33] sm:h-10 sm:w-10";
+
   return (
     <section className="mt-5">
-      {title ? (
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="font-display text-[17px] font-extrabold text-[#14241b] sm:text-[19px]">{title}</h2>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        {title ? <h2 className="font-display text-[17px] font-extrabold text-[#14241b] sm:text-[19px]">{title}</h2> : <span />}
+        <div className="flex items-center gap-2">
           {href ? <Link href={href} className="text-[11.5px] font-bold text-[#0b5c33] hover:underline">{seeAll ?? "See all"} →</Link> : null}
+          {/* Controls sit in the header on every device, so they are always reachable. */}
+          <div className="flex gap-1.5">
+            <button type="button" onClick={() => page(-1)} disabled={pos.atStart} aria-label={`Scroll ${label} left`} className={arrow}><ChevronLeft className="h-5 w-5" aria-hidden /></button>
+            <button type="button" onClick={() => page(1)} disabled={pos.atEnd} aria-label={`Scroll ${label} right`} className={arrow}><ChevronRight className="h-5 w-5" aria-hidden /></button>
+          </div>
         </div>
-      ) : null}
+      </div>
       <div className="relative">
-        <button type="button" onClick={() => page(-1)} disabled={pos.left <= 2} aria-label={`Scroll ${label} left`} className="absolute -left-1 top-1/2 z-10 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full border border-[#e2e6e3] bg-white text-[#0b5c33] shadow-md disabled:opacity-40 sm:-left-2"><ChevronLeft className="h-4 w-4" aria-hidden /></button>
-        <ul ref={track} onScroll={sync} aria-label={label} className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none]">{children}</ul>
-        <button type="button" onClick={() => page(1)} disabled={pos.left >= pos.max - 2} aria-label={`Scroll ${label} right`} className="absolute -right-1 top-1/2 z-10 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full border border-[#e2e6e3] bg-white text-[#0b5c33] shadow-md disabled:opacity-40 sm:-right-2"><ChevronRight className="h-4 w-4" aria-hidden /></button>
+        {/* Edge fades signal that more content continues off-screen. */}
+        {!pos.atStart ? <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-white to-transparent" aria-hidden /> : null}
+        {!pos.atEnd ? <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-white to-transparent" aria-hidden /> : null}
+        <ul
+          ref={track}
+          onScroll={measure}
+          aria-label={label}
+          className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {children}
+        </ul>
       </div>
     </section>
   );
@@ -192,7 +245,7 @@ export function CategoryCards({ categories }: { categories: Array<{ slug: string
   return (
     <StayRail title="Explore by Category" href="/naijastay/search" seeAll="See All Categories" label="Category carousel">
       {categories.map((c) => (
-        <li key={c.slug} data-category={c.slug} className="w-[124px] shrink-0 snap-start sm:w-[150px]">
+        <li key={c.slug} data-category={c.slug} className="w-[30vw] max-w-[132px] shrink-0 snap-start sm:w-[150px] sm:max-w-none">
           <Link href={`/naijastay/search?category=${c.slug}`} className="block h-full overflow-hidden rounded-xl bg-white p-1.5 text-center ring-1 ring-[#eef1ef] hover:shadow-md">
             <span className="block aspect-[4/3] w-full overflow-hidden rounded-lg bg-[#f2f9f0]">{c.imageUrl ? <img src={c.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}</span>
             <span className="mt-1 block text-[10px] font-extrabold leading-tight">{c.label}</span>
@@ -246,33 +299,52 @@ export function StaySteps() {
   );
 }
 
+/**
+ * Every way NaijaStay is used, grouped by audience. Each card routes to a real,
+ * filtered destination, so the rail represents the whole service rather than
+ * only the five broad groups.
+ */
 const SOLUTIONS = [
   ["For Travelers", "Book hotels, holiday stays and unique places across Africa.", "/naijastay/stays", "stay-sol-travelers"],
   ["For Tenants", "Find verified homes and apartments for short or long-term rent.", "/naijastay/search?type=rent", "stay-sol-tenants"],
   ["For Buyers", "Discover houses, land and investment properties across Africa.", "/naijastay/search?type=sale", "stay-sol-buyers"],
   ["For Property Owners", "List your property, manage bookings and earn more.", "/naijastay/host", "stay-sol-owners"],
-  ["For Businesses & Organizations", "Book corporate stays, long-stay accommodation, event spaces and staff housing.", "/naijastay/search?category=corporate-stays", "stay-sol-business"]
+  ["For Businesses & Organizations", "Book corporate stays, long-stay accommodation, event spaces and staff housing.", "/naijastay/search?category=corporate-stays", "stay-sol-business"],
+  ["Holiday & Vacation Stays", "Beach houses, resorts and holiday homes by the night.", "/naijastay/search?category=vacation-homes", "stay-cat-vacation"],
+  ["Event & Conference Spaces", "Halls and venues for meetings, conferences and celebrations.", "/naijastay/search?category=event-conference-spaces", "stay-cat-event"],
+  ["Student Accommodation", "Rooms and shared housing close to campuses.", "/naijastay/search?category=student-accommodation", "stay-cat-student"],
+  ["Serviced Apartments", "Furnished apartments with everything ready to move into.", "/naijastay/search?category=serviced-apartments", "stay-cat-serviced"],
+  ["Land & Plots", "Surveyed plots for building or investment.", "/naijastay/search?type=land", "stay-cat-land"],
+  ["Hotels & Resorts", "Hotels, resorts and guesthouses across Africa.", "/naijastay/search?category=hotels", "stay-cat-hotels"],
+  ["Long-Term Rentals", "Homes to rent for months or years.", "/naijastay/search?category=long-term-rentals", "stay-cat-long-term"],
+  ["Real Estate Agents", "Verified agents with published sale and land listings.", "/naijastay/agents", "stay-sol-owners"],
+  ["Become a Host", "Apply to list your property on NaijaStay.", "/naijastay/host", "stay-band-host"],
+  ["Help & Support", "Answers on booking, payment and cancellation.", "/naijastay/help", null],
+  ["Trust & Safety", "How verification and payment protection work.", "/naijastay/safety", null]
 ] as const;
 
 export function StaySolutions({ images }: { images: Record<string, string | null> }) {
   return (
     <StayRail title="Solutions for Everyone" href="/naijastay/stays" seeAll="See All" label="Solutions carousel">
-      {SOLUTIONS.map(([title, body, href, imageId]) => (
-        <li key={title} className="w-[200px] shrink-0 snap-start sm:w-[230px]">
-          <Link href={href} className="group block overflow-hidden rounded-xl bg-white ring-1 ring-[#e6ebe7] transition hover:shadow-md">
-            <span className="relative block aspect-[4/3] w-full overflow-hidden bg-[#eef2ef]">
-              {images[imageId] ? <img src={images[imageId] ?? undefined} alt="" loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" /> : null}
-              <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-                <span className="block text-[12px] font-extrabold text-white">{title}</span>
+      {SOLUTIONS.map(([title, body, href, imageId]) => {
+        const src = imageId ? images[imageId] : null;
+        return (
+          <li key={title} data-solution={title} className="w-[46vw] max-w-[210px] shrink-0 snap-start sm:w-[220px]">
+            <Link href={href} className="group flex h-full flex-col overflow-hidden rounded-xl bg-white ring-1 ring-[#e6ebe7] transition hover:shadow-md">
+              <span className="relative block aspect-[4/3] w-full overflow-hidden bg-[#eef2ef]">
+                {src ? <img src={src} alt="" loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" /> : <span className="grid h-full w-full place-items-center bg-[#f2f9f0]"><ArrowRight className="h-6 w-6 text-[#0b5c33]/40" aria-hidden /></span>}
+                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent p-2">
+                  <span className="block text-[11.5px] font-extrabold leading-tight text-white">{title}</span>
+                </span>
               </span>
-            </span>
-            <span className="block p-2">
-              <span className="block text-[10px] leading-tight text-[#5d6d64]">{body}</span>
-              <span className="mt-1 flex items-center justify-end"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#0b8f47] text-white"><ArrowRight className="h-3 w-3" aria-hidden /></span></span>
-            </span>
-          </Link>
-        </li>
-      ))}
+              <span className="flex flex-1 flex-col p-2">
+                <span className="block text-[10px] leading-tight text-[#5d6d64]">{body}</span>
+                <span className="mt-auto flex justify-end pt-1"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#0b8f47] text-white"><ArrowRight className="h-3 w-3" aria-hidden /></span></span>
+              </span>
+            </Link>
+          </li>
+        );
+      })}
     </StayRail>
   );
 }
