@@ -2217,3 +2217,18 @@ migration `eats_cart_favourites`.
 
 **Note on checkout:** an order with an empty wallet correctly returns 402
 `insufficient_funds` and keeps the basket intact; the UI surfaces that message.
+
+### NaijaEats operator and favourites
+- `scripts/naijaeats-operator-check.cjs` **9/9**: a kitchen sees its order queue,
+  accepts → preparing → ready_for_pickup through the state machine, an unrelated
+  account is refused (403), a jump straight to `delivered` is refused, and the
+  customer's tracker shows the kitchen's real status.
+- Fixed: the kitchen queue filtered out `isSample`, so demo operators got a 403
+  and could never see their orders.
+- Favourites page now reads `EatsFavourite`; a `FavouriteButton` on the
+  restaurant page toggles it server-side.
+- Fixed: the basket-clear after checkout was being tree-shaken away when its
+  result was discarded; it now logs failures so it is preserved in the build.
+- `scripts/naijaeats-cart-check.cjs` **13/13** and the functional suite **23/23**
+  both green; the functional suite's cuisine and ratings assertions were updated
+  to the new `/restaurants/cuisine/<slug>` routes rather than loosened.

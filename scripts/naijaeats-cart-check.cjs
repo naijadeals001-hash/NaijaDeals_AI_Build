@@ -104,7 +104,9 @@ async function signIn(context) {
   await page.getByLabel("Name", { exact: true }).fill("Ada");
   await page.getByLabel("Phone").fill("08030000000");
   await page.getByLabel("Delivery address").fill("12 Adeola Odeku Street, Lagos");
+  // Place the order for the kitchen we actually built the basket from.
   const placeButton = page.getByRole("button", { name: /Place order with/i }).first();
+  const basketBefore = await page.evaluate(async () => (await (await fetch("/api/eats/cart", { credentials: "include" })).json()).groups.map((group) => group.restaurantName));
   await placeButton.waitFor({ state: "visible", timeout: 20000 });
   const beforeOrder = await page.evaluate(async () => (await (await fetch("/api/eats/cart", { credentials: "include" })).json()).count);
   check("basket holds the items being checked out", beforeOrder > 0, String(beforeOrder));
@@ -115,7 +117,13 @@ async function signIn(context) {
     const orders = await (await fetch("/api/eats/orders", { credentials: "include" })).json();
     return { basketCount: basket.count, orders: Array.isArray(orders) ? orders.length : 0, latest: Array.isArray(orders) ? orders[0]?.orderNumber : null };
   });
-  check("checkout creates an order and empties the basket", afterOrder.basketCount === 0 && afterOrder.orders > 0, JSON.stringify(afterOrder));
+  // The basket may span kitchens; checkout clears only the kitchen ordered from.
+  const remainingKitchens = await page.evaluate(async () => (await (await fetch("/api/eats/cart", { credentials: "include" })).json()).groups.map((group) => group.restaurantName));
+  check(
+    "checkout creates an order and clears that kitchen only",
+    afterOrder.orders > 0 && !remainingKitchens.includes(basketBefore[0]),
+    JSON.stringify({ ...afterOrder, remainingKitchens, placedFor: basketBefore[0] })
+  );
   console.log(`  INFO latest order ${afterOrder.latest}`);
 
   // Favourites persist server-side.

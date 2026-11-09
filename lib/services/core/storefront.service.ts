@@ -2,6 +2,20 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { recordAudit } from "./audit.service";
 
+export type StorefrontHeroSlide = {
+  id: string;
+  eyebrow?: string;
+  headline: string;
+  body: string;
+  ctaLabel: string;
+  ctaHref: string;
+  imageUrl: string;
+  sideTitle?: string;
+  sideBody?: string;
+  sideCtaLabel?: string;
+  sideCtaHref?: string;
+};
+
 export type StorefrontConfig = {
   announcement: string;
   heroTitle: string;
@@ -12,6 +26,8 @@ export type StorefrontConfig = {
   showDemoProducts: boolean;
   showHero: boolean;
   showShelves: boolean;
+  /** Operator-published hero campaigns. Empty means the built-in launch slides. */
+  heroSlides: StorefrontHeroSlide[];
   version: number;
 };
 
@@ -25,8 +41,11 @@ export const DEFAULT_STOREFRONT: StorefrontConfig = {
   showDemoProducts: true,
   showHero: true,
   showShelves: true,
+  heroSlides: [],
   version: 1
 };
+
+const MAX_SLIDES = 6;
 
 function textField(value: unknown, label: string, max: number) {
   if (typeof value !== "string") throw new ApiError(400, "validation_error", `${label} must be text.`);
@@ -48,6 +67,43 @@ function listField(value: unknown, label: string) {
   return value.map((item) => item.trim()).filter(Boolean);
 }
 
+/**
+ * Hero slides are operator-authored campaigns: every destination must be an
+ * internal NaijaShop/catalogue path and every image an approved generated
+ * asset, so a bad paste can never point the storefront at an external host.
+ */
+function slidesField(value: unknown): StorefrontHeroSlide[] {
+  if (!Array.isArray(value)) throw new ApiError(400, "validation_error", "Hero slides must be a list.");
+  if (value.length > MAX_SLIDES) throw new ApiError(400, "validation_error", `Publish at most ${MAX_SLIDES} hero slides.`);
+  const internal = (href: string, label: string) => {
+    if (!href.startsWith("/") || href.startsWith("//")) throw new ApiError(400, "validation_error", `${label} must be an internal path.`);
+    return href.slice(0, 300);
+  };
+  const image = (url: string) => {
+    if (!/^\/(generated|uploads)\/[\w\-./]+\.(jpg|jpeg|png|webp)$/i.test(url)) {
+      throw new ApiError(400, "validation_error", "Hero images must be approved assets under /generated or /uploads.");
+    }
+    return url;
+  };
+  return value.map((raw, index) => {
+    const slide = (raw ?? {}) as Record<string, unknown>;
+    const at = `Slide ${index + 1}`;
+    return {
+      id: textField(slide.id, `${at} id`, 40).replace(/[^\w-]/g, "") || `slide-${index + 1}`,
+      eyebrow: slide.eyebrow === undefined ? undefined : textField(slide.eyebrow, `${at} eyebrow`, 30),
+      headline: textField(slide.headline, `${at} headline`, 70) || (() => { throw new ApiError(400, "validation_error", `${at} needs a headline.`); })(),
+      body: textField(slide.body, `${at} body`, 200),
+      ctaLabel: textField(slide.ctaLabel, `${at} CTA label`, 30) || (() => { throw new ApiError(400, "validation_error", `${at} needs a CTA.`); })(),
+      ctaHref: internal(textField(slide.ctaHref, `${at} CTA link`, 300), `${at} CTA link`),
+      imageUrl: image(textField(slide.imageUrl, `${at} image`, 300)),
+      sideTitle: slide.sideTitle === undefined ? undefined : textField(slide.sideTitle, `${at} side title`, 40),
+      sideBody: slide.sideBody === undefined ? undefined : textField(slide.sideBody, `${at} side body`, 160),
+      sideCtaLabel: slide.sideCtaLabel === undefined ? undefined : textField(slide.sideCtaLabel, `${at} side CTA`, 30),
+      sideCtaHref: slide.sideCtaHref === undefined ? undefined : internal(textField(slide.sideCtaHref, `${at} side CTA link`, 300), `${at} side CTA link`)
+    };
+  });
+}
+
 async function validate(input: Record<string, unknown>, current: StorefrontConfig) {
   const next: StorefrontConfig = { ...current, version: current.version };
   if (input.announcement !== undefined) next.announcement = textField(input.announcement, "Announcement", 200);
@@ -63,6 +119,7 @@ async function validate(input: Record<string, unknown>, current: StorefrontConfi
   if (input.showShelves !== undefined) next.showShelves = boolField(input.showShelves, "Show shelves");
   if (input.visibleCategories !== undefined) next.visibleCategories = listField(input.visibleCategories, "Visible departments");
   if (input.categoryOrder !== undefined) next.categoryOrder = listField(input.categoryOrder, "Shelf order");
+  if (input.heroSlides !== undefined) next.heroSlides = slidesField(input.heroSlides);
 
   const slugs = new Set((await prisma.category.findMany({ select: { slug: true } })).map((row) => row.slug));
   for (const slug of [...next.visibleCategories, ...next.categoryOrder]) {

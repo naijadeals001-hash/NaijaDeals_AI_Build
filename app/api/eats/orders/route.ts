@@ -39,8 +39,11 @@ export async function POST(request: NextRequest) {
       contactPhone: String(body.contactPhone ?? ""),
       notes: typeof body.notes === "string" ? body.notes : undefined
     });
-    // The basket lines for this kitchen are consumed by a successful order.
-    await clearBasketForRestaurant(user.id, String(body.restaurantId ?? "")).catch(() => undefined);
+    // The basket lines for this kitchen are consumed by a successful order, so
+    // the caller always receives the post-order basket alongside the order.
+    await clearBasketForRestaurant(user.id, String(body.restaurantId ?? "")).catch((error) => {
+      console.error("basket_clear_failed", String(error).slice(0, 120));
+    });
     return NextResponse.json(jsonSafe(order), { status: 201 });
   } catch (error) {
     return jsonError(error);

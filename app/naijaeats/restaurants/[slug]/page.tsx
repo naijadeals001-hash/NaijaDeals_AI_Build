@@ -7,6 +7,7 @@ import { EatsFooter } from "@/components/eats/eats-footer";
 import { EatsBottomNav } from "@/components/eats/eats-bottom-nav";
 import { listCuisineRail, listStorefrontRestaurants } from "@/lib/services/eats/storefront";
 import { AddToBasket } from "@/components/eats/add-to-basket";
+import { FavouriteButton } from "@/components/eats/favourite-button";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -78,6 +79,7 @@ export default async function RestaurantPage({ params }: { params: { slug: strin
                 {restaurant.name} <BadgeCheck className="h-4 w-4 text-[#8ed14b]" aria-label="Verified" />
               </h1>
               <p className="text-[11.5px] text-white/75">{restaurant.cuisine} · {restaurant.market} · {restaurant.address}</p>
+              <FavouriteButton kind="restaurant" targetId={restaurant.id} label={restaurant.name} className="mt-1" />
               <p className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-white/85">
                 {average ? (
                   <span className="flex items-center gap-0.5 font-bold"><Star className="h-3 w-3 fill-[#f5a623] text-[#f5a623]" aria-hidden /> {average.toFixed(1)} ({restaurant.ratings.length})</span>

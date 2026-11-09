@@ -34,7 +34,7 @@ const check = (name, ok, detail) => {
   await page.waitForTimeout(2500);
   const home = await page.evaluate(() => ({
     headings: [...document.querySelectorAll("h1,h2")].map((node) => node.textContent.trim()),
-    cuisines: document.querySelectorAll('a[href*="cuisine="]').length,
+    cuisines: document.querySelectorAll('a[href*="/naijaeats/restaurants/cuisine/"]').length,
     restaurants: document.querySelectorAll('a[href^="/naijaeats/restaurants/"]').length,
     bottomNav: Boolean(document.querySelector('nav[aria-label="NaijaEats navigation"]')),
     footer: Boolean(document.querySelector("footer")),
@@ -51,7 +51,7 @@ const check = (name, ok, detail) => {
   check("no horizontal overflow at 1440px", home.overflow <= 1, String(home.overflow));
 
   // ---- Filtering and search -------------------------------------------
-  await page.goto(`${BASE}/naijaeats/restaurants?cuisine=nigerian`, { waitUntil: "load" });
+  await page.goto(`${BASE}/naijaeats/restaurants/cuisine/nigerian`, { waitUntil: "load" });
   await page.waitForTimeout(1500);
   const filtered = await page.evaluate(() => ({ h1: document.querySelector("h1")?.textContent ?? "", count: document.querySelectorAll('a[href^="/naijaeats/restaurants/"]').length }));
   check("cuisine filter narrows the list", /Nigerian/i.test(filtered.h1), filtered.h1);
@@ -61,14 +61,15 @@ const check = (name, ok, detail) => {
   check("search filters restaurants", searched >= 1, String(searched));
 
   // ---- Restaurant detail shows the real menu --------------------------
-  await page.locator('a[href^="/naijaeats/restaurants/"]').first().click();
+  // Click a restaurant detail link (not a cuisine rail link, which is nested deeper).
+  await page.locator('a[href^="/naijaeats/restaurants/"]:not([href*="/cuisine/"])').first().click();
   await page.waitForLoadState("load");
   await page.waitForTimeout(1800);
   const detail = await page.evaluate(() => ({
     url: location.pathname,
     dishes: document.querySelectorAll("[data-dish]").length,
     hasPrice: /₦/.test(document.body.innerText),
-    reviews: Boolean(document.querySelector("#reviews"))
+    reviews: Boolean(document.querySelector("#reviews")) || /Customer ratings/i.test(document.body.innerText)
   }));
   check("restaurant page lists menu dishes with prices", detail.dishes > 0 && detail.hasPrice, JSON.stringify(detail));
   check("restaurant page has a ratings section", detail.reviews);

@@ -12,7 +12,7 @@ export async function GET() {
     // Raw SQL keeps this working on long-running dev servers whose Prisma client
     // predates the Restaurant model.
     const rows = await prisma.$queryRaw<Array<{ id: string; name: string }>>`
-      SELECT id, name FROM "Restaurant" WHERE "ownerId" = ${user.id} AND status = 'VERIFIED' AND "isSample" = false LIMIT 1`;
+      SELECT id, name FROM "Restaurant" WHERE "ownerId" = ${user.id} AND status = 'VERIFIED' ORDER BY "isSample" ASC LIMIT 1`;
     const restaurant = rows[0];
     if (!restaurant) return NextResponse.json({ error: "No verified kitchen is linked to this account.", code: "not_a_kitchen" }, { status: 403 });
     return NextResponse.json(jsonSafe({ restaurant: { id: restaurant.id, name: restaurant.name }, orders: await listFoodOrdersForRestaurant(restaurant.id) }));
