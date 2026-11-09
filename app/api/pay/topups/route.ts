@@ -3,12 +3,14 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, requireUser, assertSameOrigin } from "@/lib/auth/guard";
 import { recordAudit } from "@/lib/services/core/audit.service";
+import { jsonSafe } from "@/lib/services/core/serialize";
 import {
   createTopUp,
   creditTopUp,
   failTopUp,
   listTopUps,
   testProviderAllowed,
+  testProviderAvailable,
   TOP_UP_MIN_KOBO,
   TOP_UP_MAX_KOBO,
   type TopUpProvider
@@ -27,7 +29,7 @@ export const dynamic = "force-dynamic";
  * production. Card and bank top-ups stay unavailable until a sandbox provider is
  * configured; the response says which variable is missing rather than pretending.
  */
-function availableProviders() {
+async function availableProviders() {
   const providers = [];
   const paystack = Boolean(process.env.PAYSTACK_SECRET_KEY && String(process.env.PAYSTACK_SECRET_KEY).startsWith("sk_test_"));
   const flutterwave = Boolean(
@@ -46,11 +48,16 @@ function availableProviders() {
     available: flutterwave,
     reason: flutterwave ? null : "Requires FLUTTERWAVE_SECRET_KEY with a test key in this environment."
   });
+  const testOk = await testProviderAvailable(prisma);
   providers.push({
     id: "test",
     label: "Local test provider",
-    available: testProviderAllowed(),
-    reason: testProviderAllowed() ? null : "Set ENABLE_TEST_PAYMENTS=true in a non-production environment."
+    available: testOk,
+    reason: testOk
+      ? null
+      : testProviderAllowed()
+        ? "The local test provider only runs against a TEST-classified database."
+        : "Set ENABLE_TEST_PAYMENTS=true to use test money in this environment."
   });
   return providers;
 }
@@ -59,11 +66,16 @@ export async function GET() {
   try {
     const user = await requireUser();
     const [topUps] = await Promise.all([listTopUps(user.id)]);
-    return NextResponse.json({
-      providers: availableProviders(),
-      limits: { minKobo: TOP_UP_MIN_KOBO.toString(), maxKobo: TOP_UP_MAX_KOBO.toString() },
-      topUps
-    });
+    // TopUp records carry BigInt amounts; JSON.stringify throws on those, so the
+    // shared serialiser converts them to strings. Without it the whole endpoint
+    // 500s as soon as the customer has one top-up.
+    return NextResponse.json(
+      jsonSafe({
+        providers: await availableProviders(),
+        limits: { minKobo: TOP_UP_MIN_KOBO.toString(), maxKobo: TOP_UP_MAX_KOBO.toString() },
+        topUps
+      })
+    );
   } catch (error) {
     return jsonError(error);
   }
@@ -84,7 +96,7 @@ export async function POST(request: NextRequest) {
       if (!["test", "paystack", "flutterwave"].includes(provider)) {
         return NextResponse.json({ error: "Unknown provider.", code: "invalid_provider" }, { status: 400 });
       }
-      const offered = availableProviders().find((p) => p.id === provider);
+      const offered = (await availableProviders()).find((p) => p.id === provider);
       if (!offered?.available) {
         return NextResponse.json({ error: offered?.reason ?? "That provider is not configured.", code: "provider_unavailable" }, { status: 503 });
       }
@@ -110,7 +122,7 @@ export async function POST(request: NextRequest) {
         metadata: { provider, amountKobo: String(amountKobo), duplicate }
       });
       return NextResponse.json(
-        {
+        jsonSafe({
           topUpId: topUp.id,
           providerReference: topUp.providerReference,
           status: topUp.status,
@@ -118,8 +130,11 @@ export async function POST(request: NextRequest) {
           duplicate,
           // The test provider confirms on this page; real providers return a
           // checkout URL that the client redirects to.
-          checkout: provider === "test" ? { kind: "inline", confirmAction: "verify" } : { kind: "redirect", url: null, note: "Sandbox checkout is not wired yet." }
-        },
+          checkout:
+            provider === "test"
+              ? { kind: "inline", confirmAction: "verify" }
+              : { kind: "redirect", url: null, note: "Sandbox checkout is not wired yet." }
+        }),
         { status: duplicate ? 200 : 201 }
       );
     }
@@ -137,8 +152,8 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
-      if (!testProviderAllowed()) {
-        return NextResponse.json({ error: "The local test provider is disabled.", code: "test_provider_blocked" }, { status: 403 });
+      if (!(await testProviderAvailable(prisma))) {
+        return NextResponse.json({ error: "The local test provider is disabled in this environment.", code: "test_provider_blocked" }, { status: 403 });
       }
 
       const result = await creditTopUp(prisma, {

@@ -13,17 +13,27 @@ function sumCredits(entries: Array<{ direction: LedgerDirection; amountKobo: big
   return entries.filter((entry) => entry.direction === "CREDIT").reduce((total, entry) => total + entry.amountKobo, BigInt(0));
 }
 
+/**
+ * The customer's wallet with history.
+ *
+ * History must include transactions where this wallet is on EITHER side of the
+ * journal, not only those it "owns". An incoming transfer has the sender's
+ * wallet as the primary `walletId`, so filtering on that alone leaves the
+ * recipient with no record of money they received.
+ */
 export async function getWalletForUser(userId: string) {
-  const wallet = await prisma.wallet.findFirstOrThrow({
-    where: { userId },
-    include: { transactions: { orderBy: { createdAt: "desc" } }, ledgerEntries: { orderBy: { createdAt: "desc" } } }
+  const wallet = await prisma.wallet.findFirstOrThrow({ where: { userId } });
+  const transactions = await prisma.walletTransaction.findMany({
+    where: { ledger: { some: { walletId: wallet.id } } },
+    orderBy: { createdAt: "desc" },
+    take: 300
   });
   const escrowHolds = await prisma.escrowHold.findMany({
     where: { order: { customerId: userId } },
     include: { order: { select: { orderNumber: true, status: true } }, events: { orderBy: { createdAt: "asc" } } },
     orderBy: { createdAt: "desc" }
   });
-  return { ...wallet, escrowHolds };
+  return { ...wallet, transactions, escrowHolds };
 }
 
 export async function getWalletLedger(userId: string) {

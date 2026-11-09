@@ -28,9 +28,25 @@ export type TopUpProvider = "test" | "paystack" | "flutterwave";
  * database unless the local test provider is explicitly in use.
  */
 
-/** Local test provider is a development aid, never available in production. */
+/**
+ * Local test provider: a development aid for a TEST-classified database.
+ *
+ * It is gated on the database classification rather than on NODE_ENV because a
+ * local `next start` preview runs with NODE_ENV=production while still pointing
+ * at a TEST database; blocking on NODE_ENV alone would make the flow
+ * unverifiable locally without making it any safer. A LIVE database always
+ * blocks it (checked again in creditTopUp), so test money cannot reach real
+ * balances.
+ */
 export function testProviderAllowed() {
-  return process.env.ENABLE_TEST_PAYMENTS === "true" && process.env.NODE_ENV !== "production";
+  return process.env.ENABLE_TEST_PAYMENTS === "true";
+}
+
+/** Combines the flag with the database class; the class is authoritative. */
+export async function testProviderAvailable(client: PrismaClient) {
+  if (!testProviderAllowed()) return false;
+  const classification = await getDatabaseClassification(client);
+  return classification === "TEST";
 }
 
 export async function createTopUp(

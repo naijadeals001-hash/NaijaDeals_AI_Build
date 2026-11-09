@@ -28,6 +28,7 @@ import { apiClient, ApiRequestError, koboToNaira } from "@/lib/api-client";
 import { readBalanceVisibility, writeBalanceVisibility } from "@/lib/pay/balance-visibility";
 import { PhoneScreens } from "./pay-phone-screens";
 import { DesktopPanels } from "./pay-desktop-panels";
+import { AddMoneyFlow } from "./add-money-flow";
 
 type WalletData = {
   availableKobo?: string | number;
@@ -215,74 +216,6 @@ function WalletCard() {
   );
 }
 
-/**
- * Add Money panel fed by /api/payments/methods. Providers are listed only as
- * the server reports them configured; when nothing is configured the panel
- * says so instead of offering a fake top-up.
- */
-function AddMoneyPanel() {
-  const [methods, setMethods] = useState<Array<{ id: string; label: string; configured: boolean; supportsCountry: boolean; reason?: string }> | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-
-  useEffect(() => {
-    fetch("/api/payments/methods?country=NG&all=true")
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Unable to load payment methods."))))
-      .then((data) => {
-        setMethods(data.methods ?? []);
-        setStatus("ready");
-      })
-      .catch(() => setStatus("error"));
-  }, []);
-
-  const fundingMethods = (methods ?? []).filter((m) => m.id !== "wallet");
-
-  return (
-    <div id="add-money" className="rounded-3xl border border-black/5 bg-white p-6 shadow-soft sm:p-8">
-      <div className="flex items-center gap-2">
-        <Banknote className="h-5 w-5 text-pay-green" aria-hidden="true" />
-        <h3 className="font-display text-xl font-extrabold">Add money</h3>
-      </div>
-      {status === "loading" && <div className="mt-4 h-16 animate-pulse rounded-xl bg-pay-mint" aria-busy="true" />}
-      {status === "error" && (
-        <p className="mt-3 text-sm text-pay-ink-muted">
-          Payment providers could not be checked right now. Try again in a moment — nothing is charged from this panel.
-        </p>
-      )}
-      {status === "ready" && (
-        <>
-          {fundingMethods.length === 0 && (
-            <p className="mt-3 text-sm text-pay-ink-muted">
-              No card or transfer provider is available in this environment yet. Top-up opens as soon as a verified
-              provider is configured — the panel never simulates a deposit.
-            </p>
-          )}
-          {fundingMethods.length > 0 && (
-            <ul className="mt-4 space-y-2">
-              {fundingMethods.map((method) => (
-                <li key={method.id} className="flex items-start justify-between gap-3 rounded-xl border border-black/5 p-3">
-                  <div>
-                    <p className="text-sm font-bold">{method.label}</p>
-                    <p className="text-xs text-pay-ink-muted">{method.reason ?? "Available for wallet top-up."}</p>
-                  </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${
-                      method.configured && method.supportsCountry ? "bg-pay-green text-white" : "bg-pay-mint text-pay-ink-muted"
-                    }`}
-                  >
-                    {method.configured && method.supportsCountry ? "Ready" : "Not configured"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="mt-3 text-xs text-pay-ink-muted">
-            Card and bank top-ups settle through signature-verified provider webhooks into the same ledger-backed wallet.
-          </p>
-        </>
-      )}
-    </div>
-  );
-}
 
 const services: Array<{
   title: string;
@@ -479,7 +412,7 @@ export function PayLanding() {
                 <WalletCard />
               </div>
               <div className="mt-4">
-                <AddMoneyPanel />
+                <AddMoneyFlow />
               </div>
             </div>
 
