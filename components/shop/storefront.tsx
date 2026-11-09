@@ -6,6 +6,7 @@ import {
   ArrowRight,
   ChevronDown,
   ChevronRight,
+  Flag,
   Gamepad2,
   Grid2x2,
   Heart,
@@ -83,7 +84,8 @@ const SERVICE_TILES = [
   { label: "Local Sellers", href: "/naijashop/sellers", icon: Store },
   { label: "Electronics", href: "/naijashop/c/phones-tablets", icon: Smartphone },
   { label: "Fashion", href: "/naijashop/c/fashion", icon: Shirt },
-  { label: "Home & Kitchen", href: "/naijashop/c/home-kitchen", icon: HomeIcon }
+  { label: "Home & Kitchen", href: "/naijashop/c/home-kitchen", icon: HomeIcon },
+  { label: "Made in Nigeria", href: "/naijashop/sellers", icon: Flag }
 ];
 
 const BOTTOM_NAV = [
@@ -92,6 +94,13 @@ const BOTTOM_NAV = [
   { label: "Cart", href: "/cart", icon: ShoppingCart },
   { label: "Account", href: "/account", icon: User }
 ];
+
+/**
+ * Acceptance suites create throwaway listings named "Variant Fixture …",
+ * "Test checkout …", "Last unit …" and similar. They are real database rows but
+ * never part of the storefront, so they must not appear in any shelf or deal.
+ */
+const TEST_LISTING = /^(variant fixture|test |upload test|last unit|product test)\b/i;
 
 type StorefrontConfig = {
   announcement?: string;
@@ -121,7 +130,7 @@ export function NaijaShopStorefront() {
     Promise.all([apiClient.getProducts(), apiClient.getCategories()])
       .then(([items, cats]) => {
         if (!active) return;
-        setProducts(items);
+        setProducts(items.filter((product) => !TEST_LISTING.test(product.name)));
         setCategories(cats);
         setStatus("ready");
       })
@@ -199,10 +208,16 @@ export function NaijaShopStorefront() {
   }
 
   return (
-    <div className="bg-white text-[#0f1111]">
+    <div className="w-full max-w-full overflow-x-clip bg-white text-[#0f1111]">
+      <a
+        href="#shop-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[100] focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-[13px] focus:font-bold focus:text-[#0f1111] focus:shadow-lg"
+      >
+        Skip to content
+      </a>
       {/* ---------- Header ---------- */}
       <header className="bg-[#0f1b2d] text-white">
-        <div className="mx-auto flex max-w-[1600px] items-center gap-2 px-3 py-2 sm:gap-4 sm:px-4">
+        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4">
           <button
             ref={menuButtonRef}
             type="button"
@@ -214,14 +229,15 @@ export function NaijaShopStorefront() {
             <Menu className="h-5 w-5" aria-hidden />
           </button>
 
-          <Link href="/naijashop" className="flex shrink-0 items-center gap-1.5" aria-label="NaijaShop home">
-            <span className="text-[22px] font-extrabold tracking-tight sm:text-[26px]">
+          <Link href="/naijashop" className="flex min-w-0 shrink items-center gap-1.5" aria-label="NaijaShop home">
+            <span className="text-[18px] font-extrabold tracking-tight sm:text-[24px] lg:text-[26px]">
               Naija<span className="text-[#f7b733]">Shop</span>
             </span>
             <span className="hidden text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50 sm:block">Africa&apos;s marketplace</span>
+            <span className="sr-only">NaijaDeals</span>
           </Link>
 
-          <Link href="/account#addresses" className="hidden items-start gap-1.5 rounded px-2 text-[11px] leading-tight text-white/80 hover:text-white lg:flex">
+          <Link href="/account#addresses" className="hidden shrink-0 items-start gap-1.5 rounded px-2 text-[11px] leading-tight text-white/80 hover:text-white xl:flex">
             <MapPin className="mt-0.5 h-4 w-4 text-[#f7b733]" aria-hidden />
             <span>
               <span className="block text-white/60">Deliver to</span>
@@ -229,7 +245,7 @@ export function NaijaShopStorefront() {
             </span>
           </Link>
 
-          <form action="/naijashop/search" method="get" className="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-md bg-white">
+          <form action="/naijashop/search" method="get" className="order-last flex w-full min-w-0 items-stretch overflow-hidden rounded-md bg-white sm:max-w-[560px] lg:order-none lg:flex-1">
             <label htmlFor="shop-q" className="sr-only">
               Search NaijaShop products, brands and categories
             </label>
@@ -238,37 +254,37 @@ export function NaijaShopStorefront() {
               name="q"
               type="search"
               placeholder="Search NaijaShop (products, brands, categories)…"
-              className="min-h-10 min-w-0 flex-1 bg-white px-3 text-[13px] text-[#0f1111] outline-none placeholder:text-[#6b7280]"
+              className="min-h-10 w-full min-w-0 flex-1 bg-white px-3 text-[13px] text-[#0f1111] outline-none placeholder:text-[#6b7280]"
             />
             <button type="submit" aria-label="Search" className="grid w-11 place-items-center bg-[#ffb020] text-[#12100a] transition hover:bg-[#f59e0b]">
               <Search className="h-4 w-4" aria-hidden />
             </button>
           </form>
 
-          <div className="flex items-center gap-1 sm:gap-2">
-            <Link href="/account" className="hidden flex-col px-2 text-[11px] leading-tight hover:text-[#f7b733] sm:flex">
-              <span className="text-white/60">Hello, sign in</span>
-              <span className="text-[13px] font-bold">Account &amp; Lists</span>
+          <div className="ml-auto flex items-center gap-1 sm:gap-2">
+            <Link href="/account" className="hidden flex-col px-2 text-[11px] leading-tight hover:text-[#f7b733] md:flex">
+              <span className="whitespace-nowrap text-white/60">Hello, sign in</span>
+              <span className="whitespace-nowrap text-[13px] font-bold">Account &amp; Lists</span>
             </Link>
-            <Link href="/orders" className="hidden flex-col px-2 text-[11px] leading-tight hover:text-[#f7b733] md:flex">
-              <span className="text-white/60">Returns</span>
-              <span className="text-[13px] font-bold">&amp; Orders</span>
+            <Link href="/orders" className="hidden flex-col px-2 text-[11px] leading-tight hover:text-[#f7b733] lg:flex">
+              <span className="whitespace-nowrap text-white/60">Returns</span>
+              <span className="whitespace-nowrap text-[13px] font-bold">&amp; Orders</span>
             </Link>
-            <Link href="/account" aria-label="Account" className="grid h-9 w-9 place-items-center rounded hover:bg-white/10 sm:hidden">
+            <Link href="/account" aria-label="Account" className="grid h-9 w-9 shrink-0 place-items-center rounded hover:bg-white/10 md:hidden">
               <User className="h-5 w-5" aria-hidden />
             </Link>
-            <Link href="/cart" className="relative flex items-center gap-1.5 rounded px-2 py-1 hover:text-[#f7b733]" aria-label={`Cart, ${cartCount} items`}>
+            <Link href="/cart" className="relative flex shrink-0 items-center gap-1.5 rounded px-2 py-1 hover:text-[#f7b733]" aria-label={`Cart, ${cartCount} items`}>
               <ShoppingCart className="h-6 w-6" aria-hidden />
               <span className="absolute -top-0.5 left-4 grid h-4 min-w-4 place-items-center rounded-full bg-[#f7b733] px-1 text-[10px] font-black text-[#12100a]">
                 {cartCount}
               </span>
-              <span className="hidden text-[13px] font-bold sm:inline">Cart</span>
+              <span className="hidden whitespace-nowrap text-[13px] font-bold lg:inline">Cart</span>
             </Link>
           </div>
         </div>
 
         {/* Department strip */}
-        <nav aria-label="Departments" className="border-t border-white/10 bg-[#132339]">
+        <nav aria-label="Primary" aria-description="NaijaShop departments" className="border-t border-white/10 bg-[#132339]">
           <div className="mx-auto flex max-w-[1600px] items-center gap-1 overflow-x-auto px-2 text-[12.5px] [scrollbar-width:none] sm:px-4">
             <button
               type="button"
@@ -326,12 +342,7 @@ export function NaijaShopStorefront() {
         </div>
       ) : null}
 
-      <main className="mx-auto max-w-[1600px] px-2 pb-24 sm:px-4 lg:pb-10">
-        {config.announcement ? (
-          <p role="status" className="mb-2 rounded bg-[#fff3cd] px-3 py-1.5 text-[11.5px] font-semibold text-[#5c4400]">
-            {config.announcement}
-          </p>
-        ) : null}
+      <main id="shop-main" className="mx-auto w-full max-w-[1600px] px-2 pb-24 sm:px-4 lg:pb-10">
         {notice ? (
           <p role="status" className="mb-2 flex items-center justify-between gap-3 rounded bg-[#e7f6ec] px-3 py-2 text-[12px] font-semibold text-[#0b5c2e]">
             {notice}
@@ -350,10 +361,10 @@ export function NaijaShopStorefront() {
 
         {/* Service tiles */}
         <section aria-label="Quick links" className="mt-3 rounded-lg bg-white p-2 ring-1 ring-[#e3e6e6]">
-          <ul className="grid grid-cols-4 gap-1 sm:grid-cols-4 lg:grid-cols-8">
-            {SERVICE_TILES.map((tile) => (
-              <li key={tile.label}>
-                <Link href={tile.href} className="flex flex-col items-center gap-1 rounded p-1.5 text-center hover:bg-[#f7f8f8] sm:p-2">
+          <ul className="grid grid-cols-6 gap-0.5 sm:grid-cols-4 lg:grid-cols-8 lg:gap-1">
+            {SERVICE_TILES.map((tile, index) => (
+              <li key={tile.label} className={index >= 8 ? "hidden" : index >= 6 ? "hidden sm:block" : ""}>
+                <Link href={tile.href} className="flex flex-col items-center gap-1 rounded p-1 text-center hover:bg-[#f7f8f8] sm:p-2">
                   <tile.icon className="h-5 w-5 text-[#005f4b] sm:h-6 sm:w-6" aria-hidden />
                   <span className="text-[10px] font-semibold leading-tight sm:text-[11.5px]">{tile.label}</span>
                 </Link>
@@ -383,15 +394,36 @@ export function NaijaShopStorefront() {
                 See all deals
               </Link>
             </div>
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <ul className="-mx-2 flex snap-x gap-2 overflow-x-auto px-2 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-2 sm:overflow-visible sm:px-0 lg:grid-cols-6">
               {deals.map((product) => (
-                <li key={product.id}>
+                <li key={product.id} className="w-[42vw] max-w-[190px] shrink-0 snap-start sm:w-auto sm:max-w-none">
                   <ShopProductCard product={product} onAdd={addToCart} adding={addingId === product.id} variant="deal" />
                 </li>
               ))}
             </ul>
           </section>
         ) : null}
+
+        {/* Prime card (mobile mockup places it under the deals row) */}
+        <section aria-labelledby="prime-card" className="mt-3 rounded-lg bg-[#eaf2ff] p-3 lg:hidden">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p id="prime-card" className="font-display text-[17px] font-extrabold">
+                NaijaShop <span className="text-[#1a4fb4]">Prime</span>
+              </p>
+              <p className="mt-0.5 text-[11px] leading-4 text-[#414d63]">Fast delivery, exclusive deals and more benefits</p>
+            </div>
+            <Link href="/naijashop/prime" className="shrink-0 rounded-full bg-[#ffc43d] px-3 py-1.5 text-[11.5px] font-bold text-[#12100a]">
+              Join Prime
+            </Link>
+          </div>
+          <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10.5px] font-semibold text-[#243049]">
+            <li>✓ Free &amp; faster delivery</li>
+            <li>✓ Prime-only deals</li>
+            <li>✓ Early access to sales</li>
+            <li>✓ Escrow protection</li>
+          </ul>
+        </section>
 
         {/* Category tiles */}
         <section aria-labelledby="category-heading" className="mt-4">
@@ -401,25 +433,25 @@ export function NaijaShopStorefront() {
               See all categories
             </Link>
           </div>
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
-            {categories.map((category) => (
-              <li key={category.id}>
-                <Link href={`/naijashop/c/${category.slug}`} data-category={category.slug} className="group block overflow-hidden rounded-lg bg-white ring-1 ring-[#e3e6e6] transition hover:shadow-md">
-                  <div className="aspect-[4/3] w-full overflow-hidden bg-[#f7f8f8]">
-                    {(() => {
-                      // Prefer operator artwork; otherwise use the first product photo in the department.
-                      const url = (category as ApiCategory & { imageUrl?: string | null }).imageUrl ?? byCategory.get(category.slug)?.[0]?.images?.[0]?.url ?? null;
-                      return url && !missingArt[url] ? (
-                        <img src={url} alt={category.name} loading="lazy" onError={() => markMissing(url)} className="h-full w-full object-contain p-2 transition duration-300 group-hover:scale-105" />
+          <ul className="-mx-2 flex snap-x gap-2 overflow-x-auto px-2 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 lg:grid-cols-4 xl:grid-cols-8">
+            {categories.map((category) => {
+              const override = (category as ApiCategory & { imageUrl?: string | null }).imageUrl;
+              const url = override ?? `/generated/shop/category-${category.slug}.webp`;
+              return (
+                <li key={category.id} className="w-[104px] shrink-0 snap-start sm:w-auto">
+                  <Link href={`/naijashop/c/${category.slug}`} data-category={category.slug} className="group block overflow-hidden rounded-lg bg-white ring-1 ring-[#e3e6e6] transition hover:shadow-md">
+                    <div className="aspect-[4/3] w-full overflow-hidden bg-[#f7f8f8]">
+                      {!missingArt[url] ? (
+                        <img src={url} alt={category.name} loading="lazy" onError={() => markMissing(url)} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                       ) : (
                         <div className="grid h-full w-full place-items-center bg-[#f0f2f2] text-[11px] font-semibold text-[#565959]">{category.name}</div>
-                      );
-                    })()}
-                  </div>
-                  <p className="px-2 py-2 text-center text-[12px] font-bold">{category.name}</p>
-                </Link>
-              </li>
-            ))}
+                      )}
+                    </div>
+                    <p className="px-1 py-1.5 text-center text-[11px] font-bold leading-tight sm:text-[12px]">{category.name}</p>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </section>
 
@@ -496,7 +528,7 @@ export function NaijaShopStorefront() {
       </main>
 
       {/* Mobile bottom navigation */}
-      <nav aria-label="Shop navigation" className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e3e6e6] bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <nav aria-label="Mobile" aria-description="NaijaShop bottom navigation" className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e3e6e6] bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
         <ul className="grid grid-cols-4">
           {BOTTOM_NAV.map((item) => (
             <li key={item.label}>

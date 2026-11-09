@@ -47,9 +47,7 @@ export function ShopProductCard({
   return (
     <article
       data-product={product.slug}
-      className={`group relative flex h-full flex-col overflow-hidden rounded-lg border border-[#e3e6e6] bg-white p-2.5 transition hover:shadow-[0_4px_16px_rgba(15,17,17,0.12)] ${
-        variant === "deal" ? "min-w-[168px]" : ""
-      }`}
+      className={`group relative flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-[#e3e6e6] bg-white p-2 transition hover:shadow-[0_4px_16px_rgba(15,17,17,0.12)] sm:p-2.5`}
     >
       {discount !== null ? (
         <span className="absolute left-2 top-2 z-10 rounded bg-[#cc0c39] px-1.5 py-0.5 text-[11px] font-extrabold text-white">

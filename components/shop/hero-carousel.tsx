@@ -70,7 +70,7 @@ export function ShopHeroCarousel({ slides, intervalMs = 7000 }: { slides: ShopHe
             fetchPriority="high"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/5" aria-hidden />
-          <div className="relative flex h-full max-w-[62%] flex-col justify-center gap-2 p-5 sm:p-7 lg:p-9">
+          <div className="relative flex h-full max-w-[calc(100%-5rem)] flex-col justify-center gap-2 p-5 pl-14 sm:max-w-[62%] sm:p-7 sm:pl-7 lg:p-9">
             {slide.eyebrow ? (
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#f7c948]">{slide.eyebrow}</p>
             ) : null}
@@ -115,7 +115,7 @@ export function ShopHeroCarousel({ slides, intervalMs = 7000 }: { slides: ShopHe
             type="button"
             onClick={() => go(index - 1)}
             aria-label="Previous promotion"
-            className="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white lg:left-3"
           >
             <ChevronLeft className="h-5 w-5" aria-hidden />
           </button>

@@ -7,6 +7,9 @@ import { ShopProductCard, type ShopProduct } from "./product-card";
 
 type SortKey = "featured" | "price-asc" | "price-desc" | "name";
 
+/** Acceptance-suite listings are database rows but never storefront products. */
+const TEST_LISTING = /^(variant fixture|test |upload test|last unit|product test)\b/i;
+
 /**
  * Category browse / deals / search-result grid. Sorting and filtering run on
  * real catalogue fields only; counts come from the loaded products.
@@ -34,7 +37,7 @@ export function CategoryBrowse({
     Promise.all([apiClient.getProducts(), apiClient.getCategories()])
       .then(([items, cats]) => {
         if (!active) return;
-        setProducts(items);
+        setProducts(items.filter((product) => !TEST_LISTING.test(product.name)));
         setCategories(cats);
         setStatus("ready");
       })

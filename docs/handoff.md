@@ -1818,3 +1818,39 @@ Verified in browser: On Repeat shows Port Harcourt/Kunle Ave portraits; podcast
 rail scrolls 12 → 348 → end, left disabled at start and right at end.
 Regression: asset audit 147/147, discovery QA 34/34, platform audit 52/52,
 audio play/seek/next pass.
+
+## NaijaShop — Kie.ai imagery, header fixes and mockup fidelity (2026-11-09)
+
+Owner approved unlimited Kie.ai image generation for NaijaShop.
+
+- **55 images generated** (GPT Image 2 1K, 6 credits each): 3 hero campaigns,
+  2 mobile/portrait heroes, 3 promo banners, 8 category tiles, 8 extra product
+  types, a page texture and the seller/app banners. **Cost: $1.65.**
+  Delivered as WebP: 96 MB of PNGs → 2.8 MB (−97%).
+- Product photos are type-accurate and unbranded; no fabricated logos. All of
+  them are attached by slug → listing, never by position. Every listing that
+  previously used stock or SVG stand-ins now shows generated photography.
+- Hero slides published through the storefront config (`heroSlides`), so the
+  Control Center can edit them; validation rejects external image URLs and
+  off-site CTA links, and every save is audited.
+- **Header fixed** per owner feedback: the search field no longer occupies a
+  full row — one 56px row with a capped 370–516px search, and Account &
+  Lists / Returns & Orders / Cart sit beside it. The demo-inventory
+  announcement banner was removed.
+- **Test-listing leak fixed**: acceptance-suite rows ("Variant Fixture …",
+  "Test retry …", "Last Unit …") were appearing as storefront products because
+  a shell edit silently dropped the `\b` from the filter regex. Now filtered in
+  both the storefront and the browse grid; verified 0 of 38 cards.
+- Mobile now mirrors the mockup: six service tiles including Made in Nigeria,
+  a Prime card under the deals row, scrollable category and deals rails, bottom
+  navigation.
+- **Root cause fixed**: stale Tailwind CSS surviving incremental builds has now
+  broken three releases. `scripts/clean-css-cache.mjs` runs as `prebuild`; a
+  clean `rm -rf .next-pay` build is still required when adding arbitrary-value
+  utilities, because Next reuses the CSS chunk hash emitted in the cached
+  build manifest.
+- Verification: `scripts/naijashop-qa.cjs` **43/43** (homepage structure, hero,
+  search, category sort, PDP, guest + signed-in cart, orders, mobile drawer,
+  dead links, nine widths 320–1920). Marketplace 10/13 and drive 15/28 — the
+  failures are environment gates (`ENABLE_TEST_PAYMENTS` off, demo wallet at
+  ₦0), not code; admin security 21/21.
