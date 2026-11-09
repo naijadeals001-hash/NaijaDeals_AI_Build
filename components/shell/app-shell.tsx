@@ -54,6 +54,12 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
     return <>{children}</>;
   }
 
+  // NaijaFresh owns its own deep-green header, produce fountains, footer and
+  // mobile bottom navigation on every route.
+  if (pathname?.startsWith("/naijafresh")) {
+    return <>{children}</>;
+  }
+
   // The storefront and NaijaEats landing use the full-bleed layout; the ecosystem
   // sidebar starts on the remaining inner routes.
   const isHome = pathname === "/" || pathname === "/naijaeats" || pathname === "/naijashop";

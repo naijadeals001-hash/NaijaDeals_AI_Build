@@ -24,3 +24,6 @@ test-results/
 # NaijaStream private media store (never commit user uploads)
 .media-store/
 .tailwind-build/
+
+# NaijaFresh: PNG originals kept locally for re-encoding; the app serves WebP.
+public/generated/fresh/originals/

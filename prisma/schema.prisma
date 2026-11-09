@@ -167,6 +167,10 @@ model User {
   streamMedia       StreamMediaAsset[]     @relation("StreamMediaOwner")
   streamSubscriptions StreamSubscription[] @relation("StreamSubscriptions")
   foodCartItems FoodCartItem[]
+  farms Farm[] @relation("FarmOwner")
+  bulkQuotes BulkQuoteRequest[] @relation("BulkQuoteBuyer")
+  freshCart FreshCartItem[] @relation("FreshCartOwner")
+  freshOrders FreshOrder[] @relation("FreshOrders")
   eatsFavourites EatsFavourite[] @relation("EatsFavourites")
   streamArtist      StreamArtist?
   disputes          Dispute[]          @relation("CustomerDisputes")
@@ -1039,6 +1043,189 @@ model EatsFavourite {
 
   @@unique([userId, kind, targetId])
   @@index([userId, kind])
+}
+
+/// A farm or cooperative selling produce directly to households and businesses.
+model Farm {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  ownerId       String
+  name          String
+  farmerName    String
+  description   String?
+  countryCode   String   @default("NG")
+  /// Country name as the farmer entered it; countryCode stays for filtering.
+  country       String   @default("Nigeria")
+  state         String
+  city          String
+  coverUrl      String?
+  avatarUrl     String?
+  /// Produce specialisations shown on the farmer card.
+  specialities  String[] @default([])
+  verified      Boolean  @default(false)
+  verifiedAt    DateTime?
+  isSample      Boolean  @default(false)
+  deliveryFeeKobo BigInt @default(0)
+  prepMinMinutes  Int?
+  prepMaxMinutes  Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  owner         User     @relation("FarmOwner", fields: [ownerId], references: [id])
+  listings      ProduceListing[]
+  orders        FreshOrder[]
+
+  @@index([verified, state])
+}
+
+/// Produce sold by a farm. `unit` is the agricultural unit of sale, which is
+/// what makes prices comparable (per kg, per tuber, per bunch, per tray…).
+model ProduceListing {
+  id            String   @id @default(cuid())
+  farmId        String
+  slug          String   @unique
+  name          String
+  category      String
+  description   String?
+  unit          String   @default("kg")
+  priceKobo     BigInt
+  available     Boolean  @default(true)
+  quantity      Int      @default(0)
+  minimumOrder  Int      @default(1)
+  imageUrl      String?
+  isSample      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  farm          Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  cartItems     FreshCartItem[] @relation("ListingCartItems")
+  bulkQuotes    BulkQuoteRequest[]
+
+  @@index([farmId, available])
+  @@index([category])
+}
+
+/// Business/wholesale quote request against one listing. Farmers respond with an
+/// offer; nothing here invents a quote on the farmer's behalf.
+model BulkQuoteRequest {
+  id           String   @id @default(cuid())
+  listingId    String
+  buyerId      String
+  quantity     Int
+  note         String?
+  status       String   @default("requested") // requested | quoted | accepted | declined
+  quotedPriceKobo BigInt?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  buyer        User     @relation("BulkQuoteBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  listing      ProduceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, status])
+}
+
+/// Per-account NaijaFresh basket. Prices are always re-read from the listing.
+model FreshCartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User           @relation("FreshCartOwner", fields: [userId], references: [id], onDelete: Cascade)
+  listing   ProduceListing @relation("ListingCartItems", fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId])
+}
+
+/// One NaijaFresh order per farm: a mixed basket becomes several orders so each
+/// harvest is paid to the farm that grew it.
+model FreshOrder {
+  id              String   @id @default(cuid())
+  orderNumber     String   @unique
+  customerId      String
+  farmId          String
+  /// customer | business
+  orderKind       String   @default("customer")
+  status          String   @default("payment_pending")
+  paymentStatus   String   @default("pending")
+  subtotalKobo    BigInt
+  deliveryFeeKobo BigInt   @default(0)
+  totalKobo       BigInt
+  currency        String   @default("NGN")
+  deliveryAddress String
+  contactName     String
+  contactPhone    String
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  customer        User            @relation("FreshOrders", fields: [customerId], references: [id])
+  farm            Farm            @relation(fields: [farmId], references: [id])
+  items           FreshOrderItem[]
+  events          FreshOrderEvent[]
+  dispatch        FreshDispatch?
+
+  @@index([customerId, createdAt])
+  @@index([farmId, status])
+}
+
+model FreshOrderItem {
+  id            String   @id @default(cuid())
+  orderId       String
+  listingId     String?
+  name          String
+  unit          String
+  unitPriceKobo BigInt
+  quantity      Int
+  order         FreshOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model FreshOrderEvent {
+  id        String   @id @default(cuid())
+  orderId   String
+  status    String
+  note      String?
+  actorId   String?
+  createdAt DateTime @default(now())
+  order     FreshOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+}
+
+model FreshDispatch {
+  id           String    @id @default(cuid())
+  orderId      String    @unique
+  status       String    @default("open") // open | assigned | completed | failed
+  vehicleNeed  String    @default("motorcycle")
+  attempts     Int       @default(0)
+  assignedType String?   // courier | driver
+  assignedId   String?
+  pickupPin    String
+  deliveryPin  String
+  pickedUpAt   DateTime?
+  deliveredAt  DateTime?
+  settlementReference String? @unique
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  order        FreshOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  offers       FreshDispatchOffer[]
+
+  @@index([status])
+}
+
+model FreshDispatchOffer {
+  id           String   @id @default(cuid())
+  dispatchId   String
+  /// courier = NaijaSend provider, driver = NaijaDrive provider.
+  providerType String
+  providerId   String
+  status       String   @default("offered") // offered | accepted | declined | expired
+  earningsKobo BigInt
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  dispatch     FreshDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+
+  @@index([dispatchId, status])
+  @@index([providerType, providerId, status])
 }
 
 /// Documented dish catalogue. A catalogue row describes a real dish; it is not

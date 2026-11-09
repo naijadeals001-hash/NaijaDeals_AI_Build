@@ -302,3 +302,34 @@ their ledger net: one SYSTEM and two VENDOR wallets. Payouts before this change 
 transaction, and early fixture/escrow flows left gaps. New payouts now post a balanced payout
 transaction (vendor debit, SYSTEM credit). The historical rows require an explicit, reviewed backfill
 before reconciliation can pass; no backfill was applied.
+
+### NaijaFresh marketplace increment (2026-11-09)
+
+Pan-African farm-to-home / farm-to-business marketplace. Design reference: the approved desktop and
+mobile mockups in `design-references/approved/NaijaFresh/` (hashes recorded in the final report).
+REA evidence is in `qa-artifacts/rea-fresh/REA-EVIDENCE.md`: both public farm-direct comparators were
+NXDOMAIN or a corporate site with no ordering UI, so no competitor flow was copied.
+
+Data (additive migrations `20261109065111_naijafresh_catalogue`, `20261109065545_naijafresh_orders`,
+`20261109065833_naijafresh_bulk_quote_relation`, `20261109…_naijafresh_pan_african_farm`): `Farm`,
+`ProduceListing` (agricultural `unit` + `minimumOrder`), `BulkQuoteRequest`, `FreshCartItem`,
+`FreshOrder`/`FreshOrderItem`/`FreshOrderEvent`, `FreshDispatch`/`FreshDispatchOffer`.
+
+Demonstration catalogue (`prisma/naijafresh-seed.cjs`): 26 farms across 13 African countries
+(Nigeria, Ghana, Kenya, South Africa, Cameroon, Ethiopia, Senegal, Tanzania, Uganda, Zambia, Rwanda,
+Mozambique, Egypt) and 82 listings across the 9 mockup categories. Every row is `isSample: true` and
+labelled "Demo" in the UI; prices are illustrative fixtures, not market prices.
+
+Workflows: basket (per farm) → NaijaPay checkout (one order per farm, stock reserved) → farm accept /
+pack / ready → dispatch to NaijaSend couriers **and** NaijaDrive drivers → pickup PIN → delivery PIN →
+balanced settlement (farm revenue, courier earnings, platform fee) guarded by `FRESH-SETTLE-<dispatchId>`.
+Cancellation before acceptance refunds the wallet and restores stock. Bulk quote requests are answered
+by the farm only; no quote is generated on a farm's behalf.
+
+Verification: `node scripts/naijafresh-e2e.cjs` — 51/51 checks including unauthorised owner, competing
+provider, wrong PIN, replayed delivery, double settlement, over-stock, minimum order and cancel-window
+cases. Admin verification lives at `POST /api/admin/fresh/farms` (`vendors:review`).
+
+Open: image generation (see report), commercial commission/delivery terms, real farmer onboarding,
+and cross-border delivery zones (dispatch widens to any online provider when no zone matches, which
+must be confirmed as a commercial decision).

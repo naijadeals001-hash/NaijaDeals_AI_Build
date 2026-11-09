@@ -12,6 +12,7 @@ const explicitRoutes = new Set([
   "wallet",
   "account",
   "naijaeats",
+  "naijafresh",
   "naijasend",
   "naijadrive",
   "driver"
