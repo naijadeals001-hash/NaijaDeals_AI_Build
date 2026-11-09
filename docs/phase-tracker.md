@@ -333,3 +333,28 @@ cases. Admin verification lives at `POST /api/admin/fresh/farms` (`vendors:revie
 Open: image generation (see report), commercial commission/delivery terms, real farmer onboarding,
 and cross-border delivery zones (dispatch widens to any online provider when no zone matches, which
 must be confirmed as a commercial decision).
+
+### NaijaSend logistics marketplace increment (2026-11-09)
+
+NaijaSend is built as a logistics **marketplace**, not a courier app: customers request
+shipments, independent providers quote, the customer books one quote, and NaijaPay holds the money
+until delivery. NaijaSend never owns or operates vehicles; NaijaDrive drivers and vehicles may enrol
+as providers (`sourcePlatform = "naijadrive"`, linked by `driverProfileId`, not copied).
+
+Schema (additive migration `20261109153242_naijasend_marketplace`): `LogisticsShipment`,
+`ShipmentPackage`, `LogisticsProvider`, `ProviderVehicle`, `ShipmentQuote`, `ShipmentLeg`,
+`ShipmentEvent`, `ShipmentProof`. The legacy `FreightRequest` flow is untouched.
+
+Workflow: request → verified providers quote → compare → book (wallet debited, competing quotes
+declined atomically) → legs per mode → pickup PIN → transit → arrived per leg → shipment delivered
+only when every leg is complete → customer confirms with delivery PIN → settlement
+(`SEND-SETTLE-<shipmentId>`, provider 95%, platform 5% inherited from the shared ledger).
+
+Verification: `node scripts/naijasend-e2e.cjs` **46/46** and
+`node scripts/naijasend-responsive-qa.cjs` **294/294** (320–1920, 12 routes).
+
+Imagery: 33 Kie.ai assets (`send-*`), 198 credits ≈ **$0.99** confirmed, served as WebP (4.5 MB).
+
+Open: commission rate not approved; live carrier integration for air/sea milestones is not
+configured (milestones recorded by the operator, flagged `simulated` for external modes); enterprise
+contracted rates and multi-user approval are not built.

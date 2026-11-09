@@ -169,6 +169,8 @@ model User {
   foodCartItems FoodCartItem[]
   farms Farm[] @relation("FarmOwner")
   bulkQuotes BulkQuoteRequest[] @relation("BulkQuoteBuyer")
+  logisticsShipments LogisticsShipment[] @relation("LogisticsShipments")
+  logisticsProviders LogisticsProvider[] @relation("LogisticsProviderOwner")
   freshCart FreshCartItem[] @relation("FreshCartOwner")
   freshOrders FreshOrder[] @relation("FreshOrders")
   eatsFavourites EatsFavourite[] @relation("EatsFavourites")
@@ -2407,4 +2409,206 @@ model StreamPodcastCategory {
   slug      String @unique
   label     String
   sortOrder Int    @default(0)
+}
+
+// ---------------------------------------------------------------------------
+// NaijaSend — logistics marketplace
+//
+// NaijaSend connects shipping demand with INDEPENDENT providers. It does not
+// own trucks, vans, aircraft, ships, rail or warehouses, and the schema never
+// records NaijaSend as the operator of a transport mode. NaijaDrive drivers and
+// vehicles may enrol as providers through `sourcePlatform = "naijadrive"`;
+// airlines, shipping lines, rail operators, forwarders and trucking companies
+// are separate provider organisations.
+// ---------------------------------------------------------------------------
+
+/// One shipment request from a customer, business or another NaijaDeals vertical.
+model LogisticsShipment {
+  id              String   @id @default(cuid())
+  reference       String   @unique
+  customerId      String
+  /// individual | business | enterprise | farm | institution
+  customerKind    String   @default("individual")
+  /// parcel | goods | freight | bulk
+  cargoClass      String   @default("parcel")
+  /// Produce category slug when cargoClass is bulk/farm.
+  cargoCategory   String?
+  description     String
+  weightKg        Int      @default(1)
+  quantity        Int      @default(1)
+  dimensions      String?
+  declaredValueKobo BigInt @default(0)
+  handling        String?
+  originLabel     String
+  originCountry   String   @default("Nigeria")
+  destinationLabel String
+  destinationCountry String @default("Nigeria")
+  senderName      String
+  senderPhone     String
+  recipientName   String
+  recipientPhone  String
+  pickupDate      DateTime?
+  /// "request_quote" (default) | "instant" (only where a verified rate exists)
+  bookingModel    String   @default("request_quote")
+  /// Preferred first-leg mode: motorcycle | car | van | truck | air | sea | rail | warehouse
+  preferredMode   String?
+  /// open | quoting | booked | in_transit | delivered | completed | cancelled | expired
+  status          String   @default("open")
+  /// Set when this shipment fulfils another vertical (eats | fresh | drive | shop).
+  sourceVertical  String?
+  sourceReference String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  customer        User     @relation("LogisticsShipments", fields: [customerId], references: [id])
+  packages        ShipmentPackage[]
+  quotes          ShipmentQuote[]
+  legs            ShipmentLeg[]
+  events          ShipmentEvent[]
+
+  @@index([customerId, status])
+  @@index([status, createdAt])
+  @@index([sourceVertical, sourceReference])
+}
+
+model ShipmentPackage {
+  id          String   @id @default(cuid())
+  shipmentId  String
+  description String
+  weightKg    Int
+  quantity    Int      @default(1)
+  dimensions  String?
+  shipment    LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+}
+
+/// An independent logistics provider organisation or individual.
+model LogisticsProvider {
+  id            String   @id @default(cuid())
+  ownerId       String
+  name          String
+  /// courier | car | van | truck | fleet | air | sea | rail | warehouse | forwarder | logistics
+  providerType  String
+  /// naijasend (registered here) | naijadrive (enrolled from NaijaDrive)
+  sourcePlatform String  @default("naijasend")
+  country       String   @default("Nigeria")
+  operatingCities String[] @default([])
+  contactPhone  String
+  /// Legal registration / licence details supplied by the provider.
+  licenceRef    String?
+  insuranceRef  String?
+  /// pending | verified | rejected | suspended
+  status        String   @default("pending")
+  verifiedAt    DateTime?
+  /// Capacity envelope advertised by the provider (not a NaijaSend guarantee).
+  capacityKg    Int?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  owner         User     @relation("LogisticsProviderOwner", fields: [ownerId], references: [id])
+  vehicles      ProviderVehicle[]
+  quotes        ShipmentQuote[]
+
+  @@index([providerType, status])
+  @@index([country, status])
+  @@index([sourcePlatform])
+}
+
+/// A vehicle or transport asset the provider operates. NaijaDrive vehicles are
+/// linked here by `driverProfileId` rather than copied.
+model ProviderVehicle {
+  id              String   @id @default(cuid())
+  providerId      String
+  /// truck types: box | flatbed | container | refrigerated | tipper | tanker | heavy_haul
+  vehicleType     String
+  make            String?
+  model           String?
+  plate           String?
+  capacityKg      Int      @default(0)
+  /// Enrolled NaijaDrive driver, when the vehicle came from NaijaDrive.
+  driverProfileId String?
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  provider        LogisticsProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, active])
+  @@unique([providerId, plate])
+}
+
+/// A provider's quotation against a shipment. Only the provider sets the price.
+model ShipmentQuote {
+  id           String   @id @default(cuid())
+  shipmentId   String
+  providerId   String
+  amountKobo   BigInt
+  currency     String   @default("NGN")
+  transitDays  Int      @default(1)
+  /// Transport modes this quote covers, in order (multimodal when > 1).
+  modes        String[] @default([])
+  message      String?
+  /// offered | accepted | declined | expired | withdrawn
+  status       String   @default("offered")
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  shipment     LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  provider     LogisticsProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([shipmentId, providerId])
+  @@index([shipmentId, status])
+  @@index([providerId, status])
+}
+
+/// One leg of a shipment. A shipment is delivered only when every leg is.
+model ShipmentLeg {
+  id            String   @id @default(cuid())
+  shipmentId    String
+  sequence      Int
+  /// motorcycle | car | van | truck | air | sea | rail | warehouse
+  mode          String
+  providerId    String?
+  fromLabel     String
+  toLabel       String
+  /// pending | assigned | picked_up | in_transit | arrived | failed
+  status        String   @default("pending")
+  carrierRef    String?
+  /// Customer-visible pickup and delivery codes for the first and last leg.
+  pickupPin     String?
+  deliveryPin   String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  shipment      LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([shipmentId, sequence])
+  @@index([shipmentId, status])
+}
+
+model ShipmentEvent {
+  id         String   @id @default(cuid())
+  shipmentId String
+  status     String
+  /// Timeline label shown to the customer.
+  label      String
+  note       String?
+  actorId    String?
+  /// Simulated external carrier milestone (never presented as live tracking).
+  simulated  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  shipment   LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId, createdAt])
+}
+
+/// Proof supplied by the provider at handover.
+model ShipmentProof {
+  id         String   @id @default(cuid())
+  shipmentId String
+  legId      String?
+  /// pickup | delivery | incident
+  kind       String
+  note       String?
+  actorId    String?
+  createdAt  DateTime @default(now())
+
+  @@index([shipmentId])
 }

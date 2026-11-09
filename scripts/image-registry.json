@@ -3028,14 +3028,14 @@
       "status": "generated",
       "history": [],
       "taskId": "0f943db7157b785b772367f4edff1d35",
-      "storagePath": "generated/fresh/hero.png",
+      "storagePath": "generated/send/hero.png",
       "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000e4f081f5b308897b6bf2c100.png",
-      "generatedAt": "2026-11-09T07:21:25.440Z",
+      "generatedAt": "2026-11-09T15:35:50.591Z",
       "creditsConsumed": 6,
       "costUsd": 0.03,
       "qualityReview": "pending-owner-review",
       "usageReferences": [
-        "app/naijafresh"
+        "app/naijasend"
       ]
     },
     {
@@ -5682,6 +5682,666 @@
       "qualityReview": "pending-owner-review",
       "usageReferences": [
         "ProduceListing cucumbers"
+      ]
+    },
+    {
+      "id": "send-hero",
+      "vertical": "send",
+      "kind": "scene",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. A confident African logistics coordinator in a high-visibility green vest with arms folded, standing on a highway shoulder with a scene of independent transport behind them: a green container truck, a white delivery van, a white delivery car, a motorcycle courier in green, and in the distance a cargo aircraft on approach over a port with stacked shipping containers and a container ship",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "c51e292ec6f5b38bcd5c77a39fb71ddd",
+      "storagePath": "generated/send/send-hero.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000221081f5b5cfcd3f6a99f583.png",
+      "generatedAt": "2026-11-09T15:37:27.532Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-banner-business",
+      "vertical": "send",
+      "kind": "scene",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Warehouse dock at an African business campus where workers load stacked pallets and cartons into an independent truck, forklift in the background",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "291468d81cc1042e13c2db828b8b0eda",
+      "storagePath": "generated/send/send-banner-business.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000f00c81f68590fd134b855126.png",
+      "generatedAt": "2026-11-09T15:38:37.499Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-banner-farm",
+      "vertical": "send",
+      "kind": "scene",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Fresh African farm produce in woven baskets and crates ready to be loaded into a small truck at a farm gate, tomatoes and root vegetables, farmer supervising",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "98736d43d9d5513ec44c9144de4694a8",
+      "storagePath": "generated/send/send-banner-farm.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_000000001210821294b51c31d3c7bef4.png",
+      "generatedAt": "2026-11-09T15:39:39.086Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-banner-transporter",
+      "vertical": "send",
+      "kind": "scene",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Portrait of a smiling independent African truck owner in a green work shirt beside the cab of their own white truck, holding a clipboard",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "549ac03391c4f38f231fe4571d464a11",
+      "storagePath": "generated/send/send-banner-transporter.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000dbcc81f58d0ba159b75cd5a9.png",
+      "generatedAt": "2026-11-09T15:40:40.511Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-banner-enterprise",
+      "vertical": "send",
+      "kind": "scene",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Two African logistics managers in hard hats and hi-vis vests reviewing a tablet at a busy distribution centre with trucks at loading bays",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "3f4169a9e315a7476341bda750055891",
+      "storagePath": "generated/send/send-banner-enterprise.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/gpt-image-2-kie/1794238895487-tb5p4wwp1pr.png",
+      "generatedAt": "2026-11-09T15:41:43.096Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-banner-network",
+      "vertical": "send",
+      "kind": "scene",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Wide view of an African integrated freight hub: trucks queued at a warehouse, an aircraft on the apron in the distance and a container terminal behind",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "21f1b80f10b5a85055a1d569faacdebb",
+      "storagePath": "generated/send/send-banner-network.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000fcf88212984eaf195c7c67fe.png",
+      "generatedAt": "2026-11-09T15:42:44.343Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-mode-truck",
+      "vertical": "send",
+      "kind": "mode",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. A large green box-body semi truck with a white trailer parked on an African highway, front three-quarter view, clear daylight",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "04eda162ae7e9f60ced08deef3e874c8",
+      "storagePath": "generated/send/send-mode-truck.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_000000002c3081f59c9bee0f6de5f217.png",
+      "generatedAt": "2026-11-09T15:43:45.538Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-mode-van",
+      "vertical": "send",
+      "kind": "mode",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. White cargo van with its rear doors open at a city kerb, parcel boxes stacked inside",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "ef96d9890ba1e2aa35deef95e1aad468",
+      "storagePath": "generated/send/send-mode-van.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/gpt-image-2-kie/1794239093962-8n1bx5b0hqu.png",
+      "generatedAt": "2026-11-09T15:45:02.490Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-mode-car",
+      "vertical": "send",
+      "kind": "mode",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. White sedan car with its boot open holding a neatly packed carton, city street in Lagos",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "a75f67f3d31508eb97670087524163b8",
+      "storagePath": "generated/send/send-mode-car.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/a2/a75f67f3d31508eb97670087524163b8_1794239208907.png",
+      "generatedAt": "2026-11-09T15:47:04.318Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-mode-motorcycle",
+      "vertical": "send",
+      "kind": "mode",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. African motorcycle courier in a green delivery vest and helmet, riding with a secured parcel box, side view on a city road",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "d9d27ce23aa47b94304cb258626fa9bb",
+      "storagePath": "generated/send/send-mode-motorcycle.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/a2/d9d27ce23aa47b94304cb258626fa9bb_1794239263973.png",
+      "generatedAt": "2026-11-09T15:47:50.317Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-mode-air",
+      "vertical": "send",
+      "kind": "mode",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Cargo aircraft on the apron at an African airport with freight pallets being loaded by a loader, morning light",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "88abdf47b5c936c1aa76f8a8ffd835f5",
+      "storagePath": "generated/send/send-mode-air.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000f5788212928a1c389306a8c1.png",
+      "generatedAt": "2026-11-09T15:49:07.675Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-mode-sea",
+      "vertical": "send",
+      "kind": "mode",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Container ship alongside a busy African port with gantry cranes and stacked containers",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "35ef5f649a2b46de6bac0c7d81212db9",
+      "storagePath": "generated/send/send-mode-sea.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_0000000013a8824383f72becc82560bb.png",
+      "generatedAt": "2026-11-09T15:50:24.176Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-mode-rail",
+      "vertical": "send",
+      "kind": "mode",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Freight train with container wagons on tracks through open African terrain, side view",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "1e2fd5f5fd163c1957d280c46c0e8c98",
+      "storagePath": "generated/send/send-mode-rail.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_0000000036e881f5866d387a41f28717.png",
+      "generatedAt": "2026-11-09T15:51:25.565Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-mode-warehouse",
+      "vertical": "send",
+      "kind": "mode",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Bright modern warehouse interior with racking, pallets and a forklift, worker checking inventory on a tablet",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "c43429eb6e1bfa8e149f7572213f09df",
+      "storagePath": "generated/send/send-mode-warehouse.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000c0ec81fdac41b3b5694ce61d.png",
+      "generatedAt": "2026-11-09T15:52:26.830Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-cat-farm-produce",
+      "vertical": "send",
+      "kind": "category",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Crates of fresh African tomatoes, yams, plantain and leafy vegetables arranged for shipment, overhead square frame",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "14010a5fef0e5427628416392e55e793",
+      "storagePath": "generated/send/send-cat-farm-produce.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_000000003b6081f58950aab82ccfce1e.png",
+      "generatedAt": "2026-11-09T15:53:43.226Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-cat-food-perishables",
+      "vertical": "send",
+      "kind": "category",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Insulated shipping cartons and cold packs with fresh food produce, set in a refrigerated loading area",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "1a690015a388646ca8dcb58db6f4a51c",
+      "storagePath": "generated/send/send-cat-food-perishables.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_0000000038a481fd8592ba9a6a0f8de1.png",
+      "generatedAt": "2026-11-09T15:54:44.434Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-cat-market-retail",
+      "vertical": "send",
+      "kind": "category",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Stacks of cardboard retail cartons and shrink-wrapped goods on a hand truck",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "3811d0ec452670620b7e2f772d72bf32",
+      "storagePath": "generated/send/send-cat-market-retail.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_000000000cb481f58d0402e43fc825c6.png",
+      "generatedAt": "2026-11-09T15:57:01.342Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-cat-industrial",
+      "vertical": "send",
+      "kind": "category",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Industrial materials: steel pipes, rolls of wire and timber bundles on a flatbed",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "87520157919f3013ad3982bd01eaf8c6",
+      "storagePath": "generated/send/send-cat-industrial.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_0000000098b481f589e24ec30e24b86b.png",
+      "generatedAt": "2026-11-09T15:58:02.599Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-cat-construction",
+      "vertical": "send",
+      "kind": "category",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Cement bags, bricks and sand arranged on a construction site loading area",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "8f9dbbe019501a358941a4ae602d46f8",
+      "storagePath": "generated/send/send-cat-construction.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_000000002ea481f5bf91762b45be0eef.png",
+      "generatedAt": "2026-11-09T15:59:34.132Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-cat-machinery",
+      "vertical": "send",
+      "kind": "category",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Yellow excavator and generator equipment loaded onto a heavy-haul flatbed trailer",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "ec99def9023bacad8677f866ca723aa6",
+      "storagePath": "generated/send/send-cat-machinery.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/a2/ec99def9023bacad8677f866ca723aa6_1794240102810.png",
+      "generatedAt": "2026-11-09T16:01:51.068Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-cat-ecommerce",
+      "vertical": "send",
+      "kind": "category",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. A neat pile of e-commerce parcel boxes with a delivery worker sorting them on a city doorstep",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "9d5d5b4f83e21df0ced6ba13d3f3ec5c",
+      "storagePath": "generated/send/send-cat-ecommerce.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_000000009444822fa09276fd313e537d.png",
+      "generatedAt": "2026-11-09T16:03:07.557Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-cat-household",
+      "vertical": "send",
+      "kind": "category",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Household moving items: wrapped furniture, sealed boxes and mattresses inside a moving van",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "3077d61533374e6c7a72b92ec9ffb5f2",
+      "storagePath": "generated/send/send-cat-household.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/a2/3077d61533374e6c7a72b92ec9ffb5f2_1794240240775.png",
+      "generatedAt": "2026-11-09T16:04:08.690Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-sol-individuals",
+      "vertical": "send",
+      "kind": "solution",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Young African person receiving a wrapped parcel at their front door from a courier",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "9c8c6147b7d93ae3f73e0519ff10e914",
+      "storagePath": "generated/send/send-sol-individuals.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000279c81fd9950ac3b2934ced5.png",
+      "generatedAt": "2026-11-09T16:05:10.004Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-sol-businesses",
+      "vertical": "send",
+      "kind": "solution",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. African shop owner handing a boxed order to a courier across a shop counter",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "d3838ced17cab8dfdc146a57aca45d86",
+      "storagePath": "generated/send/send-sol-businesses.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_0000000037c881f59d1975aeccb27f8b.png",
+      "generatedAt": "2026-11-09T16:06:11.717Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-sol-farmers",
+      "vertical": "send",
+      "kind": "solution",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. African farmer inspecting freshly harvested produce loaded in a truck bed",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "0506767b6716301d6c3999715f8637b7",
+      "storagePath": "generated/send/send-sol-farmers.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_0000000063e08230b29eed5bd7446bbd.png",
+      "generatedAt": "2026-11-09T16:07:13.064Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-sol-manufacturers",
+      "vertical": "send",
+      "kind": "solution",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Manufacturing worker in a hi-vis vest beside stacked finished goods awaiting dispatch",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "2f1258fb7b22eabb65eac6038676817f",
+      "storagePath": "generated/send/send-sol-manufacturers.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000c94c8230a455adc105c51f12.png",
+      "generatedAt": "2026-11-09T16:08:14.461Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-sol-institutions",
+      "vertical": "send",
+      "kind": "solution",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Modern African hospital or school receiving a delivery of supply cartons at its entrance",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "7e897eeca9e55f304eccebac62aa184c",
+      "storagePath": "generated/send/send-sol-institutions.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000648081fb8d671c322b1d4803.png",
+      "generatedAt": "2026-11-09T16:09:15.769Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-step-request",
+      "vertical": "send",
+      "kind": "step",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. African woman using a smartphone to photograph a box for shipment, warm natural light",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "019fd0e0898e06084d7837d12454b1be",
+      "storagePath": "generated/send/send-step-request.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_000000006a588212b0b671774d7a0576.png",
+      "generatedAt": "2026-11-09T16:10:17.087Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-step-match",
+      "vertical": "send",
+      "kind": "step",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. African transport provider in a green vest reviewing orders on a phone outside a truck",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "591502530f955c35835c98c57a8c7a95",
+      "storagePath": "generated/send/send-step-match.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000557c820cace282a0d35cc892.png",
+      "generatedAt": "2026-11-09T16:11:18.490Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-step-pickup",
+      "vertical": "send",
+      "kind": "step",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Warehouse worker operating a forklift loading cartons into a truck",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "a5b9592b089717663b544415b2c8e9b1",
+      "storagePath": "generated/send/send-step-pickup.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_000000005ce481fdbff77723720b9f38.png",
+      "generatedAt": "2026-11-09T16:12:19.960Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-step-track",
+      "vertical": "send",
+      "kind": "step",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Hand holding a smartphone showing an abstract map route, truck visible through a window",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "bb5e8d3080a08635704b69204639a173",
+      "storagePath": "generated/send/send-step-track.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_0000000094a481fd8680be6236a9d48c.png",
+      "generatedAt": "2026-11-09T16:13:21.310Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-step-delivered",
+      "vertical": "send",
+      "kind": "step",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. Courier handing a parcel to a smiling African customer and shaking hands at the door",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "fc226eabc0bf8ad7539910d24325cfe8",
+      "storagePath": "generated/send/send-step-delivered.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000cb248212ae5b86f9f0bedb0b.png",
+      "generatedAt": "2026-11-09T16:14:22.733Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
+      ]
+    },
+    {
+      "id": "send-app-mockup",
+      "vertical": "send",
+      "kind": "scene",
+      "prompt": "Photorealistic editorial logistics photography, bright natural daylight, authentic African operating environment, realistic vehicles and equipment, premium marketplace campaign quality, no text, no words, no watermark, no logos. A smartphone in a hand displaying an abstract logistics app interface (colour blocks and route shapes only, no readable text) with a delivery van behind",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "00b10c35a2666b7e0ae9e13677710433",
+      "storagePath": "generated/send/send-app-mockup.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_0000000088a481f892f291deb274c56c.png",
+      "generatedAt": "2026-11-09T16:15:24.172Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijasend"
       ]
     }
   ]

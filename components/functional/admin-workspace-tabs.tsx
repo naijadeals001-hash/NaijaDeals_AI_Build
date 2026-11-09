@@ -34,6 +34,7 @@ interface WorkspaceTabProps {
   payments: Row[];
   disputes: Row[];
   freight: Row[];
+  logistics: Row[];
   users: Row[];
   vendors: Row[];
   couriers: Row[];
@@ -1765,6 +1766,60 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           }}
         />
       ) : null}
+      </>
+    );
+  }
+
+  if (tab === "logistics") {
+    const rows = filterRows(props.logistics).filter((row) => matches(row, ["name", "providerType", "country", "status"]));
+    const statuses = Array.from(new Set(props.logistics.map((row) => String(row.status)))).sort();
+
+    function act(row: Row, action: "VERIFY" | "REJECT" | "SUSPEND") {
+      const label = text(row.name);
+      void run(String(row.id), () => apiClient.adminSetLogisticsProvider(String(row.id), action), `${label} ${action === "VERIFY" ? "verified" : action === "REJECT" ? "rejected" : "suspended"}.`);
+    }
+
+    return (
+      <>
+      <Panel title="Logistics providers" description="Transporter applications from NaijaSend. Only a verified provider can quote on shipments, so verification is the gate that lets a provider trade. NaijaDrive enrolments arrive pre-verified with their vehicle linked.">
+        <Toolbar query={query} onQuery={setQuery} placeholder="Search provider, type, country…" filters={statuses} filterValue={statusFilter} onFilter={setStatusFilter} onRefresh={onRefresh} />
+        <ActionFeedback message={message} error={error} />
+        <DataTable
+          rows={rows}
+          emptyLabel={props.logistics.length === 0 ? "No logistics providers yet." : "No providers match this filter."}
+          onDetail={setDetail}
+          columns={[
+            { header: "Provider", cell: (row) => <span className="font-bold">{text(row.name)}</span> },
+            { header: "Type", cell: (row) => <span className="text-xs">{text(row.providerType)}</span> },
+            { header: "Source", cell: (row) => <span className="text-xs">{text(row.sourcePlatform)}</span> },
+            { header: "Country", cell: (row) => <span className="text-xs">{text(row.country)}</span> },
+            { header: "Licence", cell: (row) => <span className="text-xs">{text(row.licenceRef, "—")}</span> },
+            { header: "Capacity", cell: (row) => <span className="text-xs">{row.capacityKg ? `${text(row.capacityKg)} kg` : "—"}</span>, className: "text-right" },
+            { header: "Status", cell: (row) => <StatusBadge status={text(row.status)} /> },
+            {
+              header: "Action",
+              cell: (row) => {
+                const status = String(row.status);
+                const busy = busyId === String(row.id);
+                const buttons: Array<{ label: string; action: "VERIFY" | "REJECT" | "SUSPEND" }> = [];
+                if (status === "pending" || status === "rejected") buttons.push({ label: "Verify", action: "VERIFY" });
+                if (status === "pending") buttons.push({ label: "Reject", action: "REJECT" });
+                if (status === "verified") buttons.push({ label: "Suspend", action: "SUSPEND" });
+                if (!buttons.length) return <span className="text-xs text-[#8B949E]">—</span>;
+                return (
+                  <div className="flex flex-wrap gap-1">
+                    {buttons.map((button) => (
+                      <button key={button.action} type="button" disabled={busy} onClick={() => act(row, button.action)} className="rounded border border-[#30363D] px-2 py-0.5 text-[11px] font-semibold disabled:opacity-50">
+                        {button.label}
+                      </button>
+                    ))}
+                  </div>
+                );
+              }
+            }
+          ]}
+        />
+      </Panel>
       </>
     );
   }

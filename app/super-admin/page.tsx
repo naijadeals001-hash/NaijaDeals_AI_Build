@@ -31,6 +31,7 @@ export default async function Page({
         payments={data.payments}
         disputes={data.disputes}
         freight={data.freight}
+      logistics={data.logistics}
         users={data.users}
         rides={data.rides}
         audit={data.audit}

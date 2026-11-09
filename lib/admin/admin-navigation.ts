@@ -19,6 +19,7 @@ export const ADMIN_TABS = [
   "escrow",
   "disputes",
   "freight",
+  "logistics",
   "users",
   "vendors",
   "couriers",
@@ -114,6 +115,7 @@ export const MODULE_TABS: Record<AdminModule, Array<{ id: AdminTab; label: strin
     { id: "deliveries", label: "Deliveries" },
     { id: "couriers", label: "Couriers" },
     { id: "freight", label: "Freight" },
+    { id: "logistics", label: "Logistics providers" },
     { id: "audit", label: "Audit log" }
   ],
   gigs: [{ id: "overview", label: "Overview" }],
@@ -145,6 +147,7 @@ export const TAB_LABELS: Record<AdminTab, string> = {
   escrow: "Escrow",
   disputes: "Disputes",
   freight: "Freight",
+  logistics: "Logistics providers",
   users: "Users",
   vendors: "Vendors",
   couriers: "Couriers",

@@ -435,6 +435,8 @@ export const apiClient = {
   adminApplications: () => requestJson<Array<Record<string, unknown>>>("/api/admin/applications"),
   adminReviewApplication: (id: string, decision: "approve" | "reject", note?: string) =>
     requestJson<Record<string, unknown>>(`/api/admin/applications/${id}`, { method: "POST", body: JSON.stringify({ decision, note }) }),
+  adminSetLogisticsProvider: (providerId: string, action: "VERIFY" | "REJECT" | "SUSPEND") =>
+    requestJson<Record<string, unknown>>("/api/admin/send/providers", { method: "POST", body: JSON.stringify({ providerId, action }) }),
   adminUpdateFreight: (id: string, action: string, payload: Record<string, unknown> = {}) =>
     requestJson<Record<string, unknown>>(`/api/admin/freight/${id}`, { method: "POST", body: JSON.stringify({ action, ...payload }) }),
   adminSetCourierStatus: (id: string, active: boolean, reason?: string) =>

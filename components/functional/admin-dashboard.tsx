@@ -59,6 +59,7 @@ interface AdminDashboardProps {
   payments: Row[];
   disputes: Row[];
   freight: Row[];
+  logistics: Row[];
   users: Row[];
   rides: Row[];
   audit: Row[];
@@ -116,6 +117,7 @@ export function AdminDashboard(props: AdminDashboardProps) {
   const payments = props.payments;
   const disputes = props.disputes;
   const freight = props.freight;
+  const logistics = props.logistics;
   const users = props.users;
   const payouts = props.payouts;
   const products = props.products;
@@ -526,6 +528,7 @@ export function AdminDashboard(props: AdminDashboardProps) {
           payments={payments}
           disputes={disputes}
           freight={freight}
+          logistics={logistics}
           users={users}
           vendors={vendors}
           couriers={couriers}

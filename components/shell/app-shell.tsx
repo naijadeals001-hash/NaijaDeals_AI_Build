@@ -54,6 +54,11 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
     return <>{children}</>;
   }
 
+  // NaijaSend owns its own logistics marketplace chrome on every route.
+  if (pathname?.startsWith("/naijasend")) {
+    return <>{children}</>;
+  }
+
   // NaijaFresh owns its own deep-green header, produce fountains, footer and
   // mobile bottom navigation on every route.
   if (pathname?.startsWith("/naijafresh")) {
