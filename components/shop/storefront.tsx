@@ -230,14 +230,14 @@ export function NaijaShopStorefront() {
       </a>
       {/* ---------- Header ---------- */}
       <header className="bg-[#0f1b2d] text-white">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4">
+        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 lg:flex-nowrap">
           <button
             ref={menuButtonRef}
             type="button"
             onClick={() => setMenuOpen(true)}
             aria-label="Open menu"
             aria-expanded={menuOpen}
-            className="grid h-9 w-9 place-items-center rounded hover:bg-white/10 lg:hidden"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded hover:bg-white/10 lg:hidden"
           >
             <Menu className="h-5 w-5" aria-hidden />
           </button>
@@ -250,7 +250,18 @@ export function NaijaShopStorefront() {
             <span className="sr-only">NaijaDeals</span>
           </Link>
 
-          <Link href="/account#addresses" className="hidden shrink-0 items-start gap-1.5 rounded px-2 text-[11px] leading-tight text-white/80 hover:text-white xl:flex">
+          {/* Delivery location — compact on phones, full block from xl */}
+          <Link
+            href="/account#addresses"
+            className="flex min-w-0 flex-1 items-center gap-1 text-[10.5px] leading-tight text-white/70 hover:text-white xl:hidden"
+          >
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-[#f7b733]" aria-hidden />
+            <span className="min-w-0 truncate">
+              Deliver to <span className="font-bold text-white">{destination}</span>
+            </span>
+          </Link>
+
+          <Link href="/account#addresses" className="hidden shrink-0 items-start gap-1.5 rounded px-2 text-[11px] leading-tight text-white/80 hover:text-white xl:flex" aria-hidden="true">
             <MapPin className="mt-0.5 h-4 w-4 text-[#f7b733]" aria-hidden />
             <span>
               <span className="block text-white/60">Deliver to</span>
@@ -258,7 +269,11 @@ export function NaijaShopStorefront() {
             </span>
           </Link>
 
-          <form action="/naijashop/search" method="get" className="order-last flex w-full min-w-0 items-stretch overflow-hidden rounded-md bg-white sm:max-w-[560px] lg:order-none lg:flex-1">
+          <form
+            action="/naijashop/search"
+            method="get"
+            className="order-last flex min-w-0 items-stretch overflow-hidden rounded-md bg-white max-lg:w-full max-lg:basis-full lg:order-none lg:flex-1"
+          >
             <label htmlFor="shop-q" className="sr-only">
               Search NaijaShop products, brands and categories
             </label>
@@ -267,6 +282,7 @@ export function NaijaShopStorefront() {
               name="q"
               type="search"
               placeholder="Search NaijaShop (products, brands, categories)…"
+              enterKeyHint="search"
               className="min-h-10 w-full min-w-0 flex-1 bg-white px-3 text-[13px] text-[#0f1111] outline-none placeholder:text-[#6b7280]"
             />
             <button type="submit" aria-label="Search" className="grid w-11 place-items-center bg-[#ffb020] text-[#12100a] transition hover:bg-[#f59e0b]">
@@ -274,7 +290,7 @@ export function NaijaShopStorefront() {
             </button>
           </form>
 
-          <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
             <Link href="/account" className="hidden flex-col px-2 text-[11px] leading-tight hover:text-[#f7b733] md:flex">
               <span className="whitespace-nowrap text-white/60">Hello, sign in</span>
               <span className="whitespace-nowrap text-[13px] font-bold">Account &amp; Lists</span>
@@ -456,16 +472,18 @@ export function NaijaShopStorefront() {
         <section aria-labelledby="category-heading" className="mt-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 id="category-heading" className="font-display text-[19px] font-extrabold">Shop by category</h2>
-            <Link href="/naijashop/categories" className="text-[12px] font-semibold text-[#007185] hover:underline">
-              See all categories
+            <Link href="/naijashop/categories" className="text-[11.5px] font-semibold text-[#007185] hover:underline sm:text-[12px]">
+              See all categories ›
             </Link>
           </div>
-          <ul className="-mx-2 flex snap-x gap-2 overflow-x-auto px-2 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 lg:grid-cols-4 xl:grid-cols-8">
+          {/* Two columns on phones so every category image is visible without
+              horizontal scrolling, matching the approved mobile mockup. */}
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
             {categories.map((category) => {
               const override = (category as ApiCategory & { imageUrl?: string | null }).imageUrl;
               const url = override ?? `/generated/shop/category-${category.slug}.webp`;
               return (
-                <li key={category.id} className="w-[104px] shrink-0 snap-start sm:w-auto">
+                <li key={category.id} className="min-w-0">
                   <Link href={`/naijashop/c/${category.slug}`} data-category={category.slug} className="group block overflow-hidden rounded-lg bg-white ring-1 ring-[#e3e6e6] transition hover:shadow-md">
                     <div className="aspect-[4/3] w-full overflow-hidden bg-[#f7f8f8]">
                       {!missingArt[url] ? (
@@ -474,7 +492,7 @@ export function NaijaShopStorefront() {
                         <div className="grid h-full w-full place-items-center bg-[#f0f2f2] text-[11px] font-semibold text-[#565959]">{category.name}</div>
                       )}
                     </div>
-                    <p className="px-1 py-1.5 text-center text-[11px] font-bold leading-tight sm:text-[12px]">{category.name}</p>
+                    <p className="px-1 py-1.5 text-center text-[11.5px] font-bold leading-tight sm:text-[12px]">{category.name}</p>
                   </Link>
                 </li>
               );
@@ -542,13 +560,20 @@ export function NaijaShopStorefront() {
         })()}
 
         {/* Lower promotional banners */}
-        <section aria-label="Promotions" className="mt-4 grid gap-3 lg:grid-cols-3">
+        <section
+          aria-label="Promotions"
+          className="mt-4 grid grid-flow-col auto-cols-[minmax(260px,85%)] snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] md:auto-cols-[minmax(0,1fr)] md:grid-flow-row md:grid-cols-3 md:overflow-visible"
+        >
           {[
             { title: "Electronics hub", body: "Top gadgets and fast delivery.", cta: "Shop electronics", href: "/naijashop/c/phones-tablets", image: "/generated/shop/banner-electronics.webp", tint: "from-[#3b2f7a]" },
             { title: "Fast, reliable delivery", body: "Tracked to all 36 states + FCT.", cta: "How delivery works", href: "/naijashop/help", image: "/generated/shop/banner-delivery.webp", tint: "from-[#0b5c3b]" },
             { title: "Support Nigerian sellers", body: "Shop verified local businesses.", cta: "Shop local sellers", href: "/naijashop/sellers", image: "/generated/shop/banner-sellers.webp", tint: "from-[#7a3b12]" }
           ].map((banner) => (
-            <Link key={banner.title} href={banner.href} className={`relative block min-h-[132px] overflow-hidden rounded-lg bg-gradient-to-r ${banner.tint} to-[#0f1111]`}>
+            <Link
+              key={banner.title}
+              href={banner.href}
+              className={`relative block min-h-[132px] min-w-0 snap-start overflow-hidden rounded-lg bg-gradient-to-r ${banner.tint} to-[#0f1111]`}
+            >
               {!missingArt[banner.image] ? (
                 <img src={banner.image} alt="" loading="lazy" onError={() => markMissing(banner.image)} className="absolute inset-0 h-full w-full object-cover opacity-60" />
               ) : null}

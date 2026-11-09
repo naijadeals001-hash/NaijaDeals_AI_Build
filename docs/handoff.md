@@ -1939,3 +1939,33 @@ baked in (registry scan: 0 matches), so no Kie.ai generation was needed.
 links; `/naijashop/plus` 200 with title "NaijaShop Plus"; admin security 21/21;
 marketplace 10/13 with the same three environment gates as before
 (`ENABLE_TEST_PAYMENTS` off, demo wallet at ₦0).
+
+## NaijaShop — mobile header, promo row and category grid (2026-11-09)
+
+Owner-reported mobile defects, both fixed and locked down by
+`scripts/naijashop-mobile-qa.cjs` (64 checks).
+
+**A. Header** — root cause: the header row was `flex-nowrap`, so a 100%-basis
+search could not wrap to its own line and was crushed to 116px, colliding with
+the cart at 320px. Rows are now explicit:
+menu | logo | delivery | account | cart on line 1, full-width search on line 2,
+swipeable department strip on line 3 (wrapping is enabled below `lg` and disabled
+from `lg`, where the original single-row desktop header is unchanged).
+A breakdown while fixing: `lg:basis-auto` is **not** a Tailwind 3 utility, so the
+first attempt silently kept the search at 100%; `max-lg:` variants are used
+instead. Measured 320/360/375/390/412/430/600px — no overflow at any width.
+
+**B. Promotional banners** — root cause: the track was
+`grid gap-3 lg:grid-cols-3`, i.e. a single column below `lg`, so the three cards
+stacked full-width. It is now a horizontal scroll-snap track
+(`grid-flow-col auto-cols-[minmax(260px,85%)]`, `overscroll-x-contain`) up to
+`md`, and three equal columns from `md` up. Cards keep one height, the next card
+peeks as a swipe cue, and every CTA still navigates.
+
+**C. Mobile Shop by Category** — was a narrow (104px) horizontal strip; now a
+two-column grid of all eight categories with their generated imagery, plus a
+visible "See all categories" link. Verified 8/8 images decode at every width.
+
+Verification: mobile QA 64/64 (7 phone widths, landscape, 768/1024/1440, swipe,
+menu open/Escape, cart count, category links, promo destinations);
+storefront QA 43/43; desktop promo grid measured 3 columns, header 92px.
