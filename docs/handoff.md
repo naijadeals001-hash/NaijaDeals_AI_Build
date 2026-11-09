@@ -2126,3 +2126,8 @@ sum to ₦241.2M. This is why "Paid cancellation refunds" fails with
 
 Also left deliberately: one order `ND-20261109-5382EE` is paid but stuck at
 `vendor_notified`; it needs a refund decision rather than a silent cancel.
+
+**Preview note:** running a second dev server with `NEXT_DIST_DIR=.next-pay`
+overwrites the production bundle in that directory. Use a distinct
+`NEXT_DIST_DIR` (e.g. `.next-dev-3025`) for any extra dev server, or the 3015
+preview will fail with "Could not find a production build".
