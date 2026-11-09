@@ -54,7 +54,9 @@ const check = (name, ok, detail) => {
       // The whole control (input + submit button) is what must fit the viewport.
       const search = document.querySelector('form[action="/naijashop/search"]');
       const cart = document.querySelector('a[aria-label^="Cart"]');
-      const account = document.querySelector('a[aria-label="Account"]');
+      const account = document.querySelector('a[aria-label="Your account"], a[aria-label="Account"]');
+      const orders = document.querySelector('a[aria-label="Returns and orders"]');
+      const delivery = document.querySelector('a[aria-label^="Deliver to"]');
       const menu = document.querySelector('header button[aria-label="Open menu"]');
       const promo = document.querySelector('section[aria-label="Promotions"]');
       const promoChildren = promo ? [...promo.children].map((child) => Math.round(child.getBoundingClientRect().top)) : [];
@@ -66,12 +68,17 @@ const check = (name, ok, detail) => {
         cart: cart ? rectOf(cart) : null,
         account: account ? rectOf(account) : null,
         menu: menu ? rectOf(menu) : null,
+        orders: orders ? rectOf(orders) : null,
+        delivery: delivery ? rectOf(delivery) : null,
+        deliveryHref: delivery ? delivery.getAttribute("href") : null,
+        ordersHref: orders ? orders.getAttribute("href") : null,
         headerTop: header ? Math.round(header.getBoundingClientRect().top) : null,
         promoRows: new Set(promoChildren).size,
         promoScrollable: promo ? promo.scrollWidth > promo.clientWidth + 2 : null,
         promoOverflowX: promo ? getComputedStyle(promo).overflowX : null,
         deptScrollable: deptNav ? deptNav.scrollWidth >= deptNav.clientWidth : null,
         deptSingleRow: deptNav ? Math.max(...[...deptNav.querySelectorAll("a,button")].map((n) => Math.round(n.getBoundingClientRect().top))) - Math.min(...[...deptNav.querySelectorAll("a,button")].map((n) => Math.round(n.getBoundingClientRect().top))) < 40 : null,
+        departmentLabels: deptNav ? [...deptNav.querySelectorAll("a,button")].map((node) => node.innerText.trim()).filter(Boolean) : [],
         categories: document.querySelectorAll("[data-category]").length,
         categoryImages: [...document.querySelectorAll("[data-category] img")].filter((img) => img.naturalWidth > 0).length
       };
@@ -85,9 +92,22 @@ const check = (name, ok, detail) => {
     const m = await measure(width, 800);
     check(`${width}px: no horizontal page overflow`, m.overflow <= 1, JSON.stringify(m.overflow));
     check(`${width}px: menu, account and cart on the first line`, Boolean(m.menu && m.account && m.cart) && Math.abs(m.menu.top - m.cart.top) <= 12 && Math.abs(m.cart.top - m.account.top) <= 12, JSON.stringify({ menu: m.menu?.top, account: m.account?.top, cart: m.cart?.top }));
+    check(
+      `${width}px: Orders is independently reachable`,
+      Boolean(m.orders) && m.ordersHref === "/orders" && Math.abs(m.orders.top - m.cart.top) <= 12,
+      JSON.stringify({ orders: m.orders?.top, cart: m.cart?.top, href: m.ordersHref })
+    );
+    check(
+      `${width}px: delivery row sits above search and opens the address manager`,
+      Boolean(m.delivery) && m.deliveryHref === "/account#addresses" && m.delivery.top < m.search.top,
+      JSON.stringify({ delivery: m.delivery?.top, search: m.search?.top, href: m.deliveryHref })
+    );
     check(`${width}px: search on its own line and inside the viewport`, Boolean(m.search) && m.search.right <= width && m.search.width >= width - 48, JSON.stringify(m.search));
     check(`${width}px: department strip is one swipeable row`, m.deptSingleRow === true && m.deptScrollable === true, JSON.stringify({ row: m.deptSingleRow, scroll: m.deptScrollable }));
     check(`${width}px: promos share one horizontal track`, m.promoRows === 1 && m.promoScrollable === true, JSON.stringify({ rows: m.promoRows, scrollable: m.promoScrollable }));
+    const required = ["All", "Deals", "Phones & Tablets", "Computers", "Home & Kitchen", "Fashion", "Beauty", "Groceries", "Power & Solar", "Gaming"];
+    const missing = required.filter((label) => !m.departmentLabels.some((text) => text.startsWith(label)));
+    check(`${width}px: every desktop department is reachable in the strip`, missing.length === 0, missing.join(", "));
     check(`${width}px: all eight category images render`, m.categories === 8 && m.categoryImages === 8, JSON.stringify({ categories: m.categories, images: m.categoryImages }));
     check(`${width}px: no page errors`, m.errors.length === 0, m.errors.join(" | "));
   }

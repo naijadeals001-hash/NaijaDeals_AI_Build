@@ -242,7 +242,7 @@ export function NaijaShopStorefront() {
             <Menu className="h-5 w-5" aria-hidden />
           </button>
 
-          <Link href="/naijashop" className="flex min-w-0 shrink items-center gap-1.5" aria-label="NaijaShop home">
+          <Link href="/naijashop" className="order-1 flex min-w-0 flex-1 items-center gap-1.5 lg:flex-none" aria-label="NaijaShop home">
             <span className="text-[18px] font-extrabold tracking-tight sm:text-[24px] lg:text-[26px]">
               Naija<span className="text-[#f7b733]">Shop</span>
             </span>
@@ -250,18 +250,20 @@ export function NaijaShopStorefront() {
             <span className="sr-only">NaijaDeals</span>
           </Link>
 
-          {/* Delivery location — compact on phones, full block from xl */}
+          {/* Delivery location — own full-width row below xl, inline control from xl */}
           <Link
             href="/account#addresses"
-            className="flex min-w-0 flex-1 items-center gap-1 text-[10.5px] leading-tight text-white/70 hover:text-white xl:hidden"
+            aria-label={`Deliver to ${destination}. Change delivery location`}
+            className="order-2 flex min-w-0 basis-full items-center gap-1.5 rounded px-0.5 py-1 text-[11px] leading-tight text-white/75 hover:text-white lg:hidden"
           >
-            <MapPin className="h-3.5 w-3.5 shrink-0 text-[#f7b733]" aria-hidden />
+            <MapPin className="h-4 w-4 shrink-0 text-[#f7b733]" aria-hidden />
             <span className="min-w-0 truncate">
               Deliver to <span className="font-bold text-white">{destination}</span>
             </span>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-white/60" aria-hidden />
           </Link>
 
-          <Link href="/account#addresses" className="hidden shrink-0 items-start gap-1.5 rounded px-2 text-[11px] leading-tight text-white/80 hover:text-white xl:flex" aria-hidden="true">
+          <Link href="/account#addresses" className="hidden shrink-0 items-start gap-1.5 rounded px-2 text-[11px] leading-tight text-white/80 hover:text-white xl:flex">
             <MapPin className="mt-0.5 h-4 w-4 text-[#f7b733]" aria-hidden />
             <span>
               <span className="block text-white/60">Deliver to</span>
@@ -269,10 +271,41 @@ export function NaijaShopStorefront() {
             </span>
           </Link>
 
+          <div className="order-1 flex shrink-0 items-center gap-0.5 sm:gap-2 lg:order-3">
+            <Link href="/account" className="hidden flex-col px-2 text-[11px] leading-tight hover:text-[#f7b733] lg:flex">
+              <span className="whitespace-nowrap text-white/60">Hello, sign in</span>
+              <span className="whitespace-nowrap text-[13px] font-bold">Account &amp; Lists</span>
+            </Link>
+            <Link href="/orders" className="hidden flex-col px-2 text-[11px] leading-tight hover:text-[#f7b733] lg:flex">
+              <span className="whitespace-nowrap text-white/60">Returns</span>
+              <span className="whitespace-nowrap text-[13px] font-bold">&amp; Orders</span>
+            </Link>
+            {/* Compact icon controls below lg — same destinations as the desktop labels. */}
+            <Link href="/account" aria-label="Your account" className="grid h-9 w-9 shrink-0 place-items-center rounded hover:bg-white/10 lg:hidden">
+              <User className="h-5 w-5" aria-hidden />
+            </Link>
+            <Link href="/orders" aria-label="Returns and orders" className="grid h-9 w-9 shrink-0 place-items-center rounded hover:bg-white/10 lg:hidden">
+              <Package className="h-5 w-5" aria-hidden />
+            </Link>
+            <Link
+              href="/cart"
+              className="relative flex shrink-0 items-center gap-1.5 rounded px-1 py-1 hover:text-[#f7b733] sm:px-2"
+              aria-label={`Cart, ${cartCount} items`}
+            >
+              <span className="relative">
+                <ShoppingCart className="h-6 w-6" aria-hidden />
+                <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[#f7b733] px-1 text-[10px] font-black text-[#12100a]">
+                  {cartCount}
+                </span>
+              </span>
+              <span className="hidden whitespace-nowrap text-[13px] font-bold lg:inline">Cart</span>
+            </Link>
+          </div>
+
           <form
             action="/naijashop/search"
             method="get"
-            className="order-last flex min-w-0 items-stretch overflow-hidden rounded-md bg-white max-lg:w-full max-lg:basis-full lg:order-none lg:flex-1"
+            className="order-3 flex min-w-0 basis-full items-stretch overflow-hidden rounded-md bg-white lg:order-2 lg:basis-0 lg:flex-1"
           >
             <label htmlFor="shop-q" className="sr-only">
               Search NaijaShop products, brands and categories
@@ -289,27 +322,6 @@ export function NaijaShopStorefront() {
               <Search className="h-4 w-4" aria-hidden />
             </button>
           </form>
-
-          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
-            <Link href="/account" className="hidden flex-col px-2 text-[11px] leading-tight hover:text-[#f7b733] md:flex">
-              <span className="whitespace-nowrap text-white/60">Hello, sign in</span>
-              <span className="whitespace-nowrap text-[13px] font-bold">Account &amp; Lists</span>
-            </Link>
-            <Link href="/orders" className="hidden flex-col px-2 text-[11px] leading-tight hover:text-[#f7b733] lg:flex">
-              <span className="whitespace-nowrap text-white/60">Returns</span>
-              <span className="whitespace-nowrap text-[13px] font-bold">&amp; Orders</span>
-            </Link>
-            <Link href="/account" aria-label="Account" className="grid h-9 w-9 shrink-0 place-items-center rounded hover:bg-white/10 md:hidden">
-              <User className="h-5 w-5" aria-hidden />
-            </Link>
-            <Link href="/cart" className="relative flex shrink-0 items-center gap-1.5 rounded px-2 py-1 hover:text-[#f7b733]" aria-label={`Cart, ${cartCount} items`}>
-              <ShoppingCart className="h-6 w-6" aria-hidden />
-              <span className="absolute -top-0.5 left-4 grid h-4 min-w-4 place-items-center rounded-full bg-[#f7b733] px-1 text-[10px] font-black text-[#12100a]">
-                {cartCount}
-              </span>
-              <span className="hidden whitespace-nowrap text-[13px] font-bold lg:inline">Cart</span>
-            </Link>
-          </div>
         </div>
 
         {/* Department strip */}

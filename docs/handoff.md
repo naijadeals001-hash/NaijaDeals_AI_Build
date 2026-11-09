@@ -1969,3 +1969,29 @@ visible "See all categories" link. Verified 8/8 images decode at every width.
 Verification: mobile QA 64/64 (7 phone widths, landscape, 768/1024/1440, swipe,
 menu open/Escape, cart count, category links, promo destinations);
 storefront QA 43/43; desktop promo grid measured 3 columns, header 92px.
+
+## NaijaShop — desktop→mobile header parity (2026-11-09)
+
+Owner required 100% header parity on mobile. Gaps found and closed: **Returns &
+Orders was absent below `lg`**, and the delivery line was a plain label.
+
+Mobile header now has the four rows the owner specified:
+1. Menu | NaijaShop | Account icon (`/account`) | Orders icon (`/orders`) | Cart
+   with live count.
+2. Deliver to <address> — opens `/account#addresses`, where the real address
+   manager (add / set default / edit / delete) lives.
+3. Full-width search with the orange submit button.
+4. Department strip: All, Deals and all eight categories, one swipeable line.
+
+**Layout note for future edits.** Row placement is controlled by explicit
+`order-1..3` utilities, not source order, because the delivery row needs to sit
+between the brand row and the search on mobile while the desktop header keeps
+search *between* delivery and the actions. Two utilities I tried did not exist
+or did not compile in this build — `lg:basis-auto` and `max-lg:flex-1` — so the
+logo uses `flex-1 lg:flex-none` and the search `basis-full lg:basis-0 lg:flex-1`.
+
+Verified: 85/85 mobile checks (320/360/375/390/412/430/600, landscape, 768,
+1024, 1440) including Orders reachability, delivery-above-search, all ten
+departments present in the strip, promo single-row, eight category images;
+storefront QA 43/43; destinations resolve signed out (sign-in wall) and signed
+in (Account/Orders pages); department strip scrolls to Gaming.
