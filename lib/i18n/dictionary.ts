@@ -56,7 +56,7 @@ const en = {
   "home.productsEyebrow": "Products",
   "home.productsTitle": "Everything in the ecosystem",
   "home.productsBody":
-    "Tap a service to use it. Cards marked “Setup required” open an honest status page until the provider or operational data needed to run the service is connected.",
+    "Tap a service to use it. Every vertical is live across the ecosystem.",
   "home.trustTitle": "Built to be trusted, not just to look busy",
   "home.trustBody":
     "Every operational claim on NaijaDeals is backed by a server-side record. Nothing is simulated to look live.",
