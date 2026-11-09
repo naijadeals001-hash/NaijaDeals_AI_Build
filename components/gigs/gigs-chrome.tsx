@@ -18,7 +18,11 @@ import {
   ShoppingBag,
   UtensilsCrossed,
   Wallet,
-  X
+  X,
+  Sparkles,
+  Bell,
+  ReceiptText,
+  User as UserIcon
 } from "lucide-react";
 
 export type GigsHeaderUser = {
@@ -95,110 +99,33 @@ export function GigsHeader({ user, categories }: { user: GigsHeaderUser; categor
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#E7E2D6] bg-[#FFFDF8]/95 backdrop-blur">
-      <div className="mx-auto flex h-[76px] max-w-[1440px] items-center gap-6 px-4 sm:px-6 lg:px-10">
+    <header className="sticky top-0 z-40 bg-white shadow-sm">
+      <div className="bg-[#0b5c33] text-white">
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-2 px-3 py-2 sm:gap-3 sm:px-6 lg:px-8">
+        <button type="button" onClick={() => setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen} className="grid h-9 w-9 shrink-0 place-items-center rounded text-white hover:bg-white/10 lg:hidden">
+          <Menu className="h-5 w-5" aria-hidden />
+        </button>
         <Link href="/naijagigs" aria-label="NaijaGigs home" className="shrink-0">
-          <GigsLogo />
+          <span className="flex items-center gap-1.5">
+            <Sparkles className="h-6 w-6 text-[#f5b52e]" aria-hidden />
+            <span className="leading-tight">
+              <span className="block text-[19px] font-extrabold leading-none text-white sm:text-[22px]">Naija<span className="text-[#f5b52e]">Gigs</span></span>
+              <span className="hidden text-[8.5px] font-medium text-white/80 sm:block">Skills. Jobs. Gigs. Opportunities Across Africa.</span>
+            </span>
+          </span>
         </Link>
-
-        <nav aria-label="NaijaGigs primary" className="hidden items-center gap-1 lg:flex">
-          <div className="group relative">
-            <button
-              type="button"
-              aria-haspopup="true"
-              className="flex items-center gap-1 rounded-lg px-3 py-2 text-[13.5px] font-semibold text-[#23342C] hover:bg-[#F2F7F3]"
-            >
-              Explore Services
-              <ChevronDown className="h-3.5 w-3.5 text-[#6B7A72]" aria-hidden />
-            </button>
-            <div className="invisible absolute left-0 top-full z-50 w-[520px] translate-y-1 rounded-2xl border border-[#E7E2D6] bg-white p-3 opacity-0 shadow-[0_24px_60px_rgba(20,48,36,0.16)] transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
-              <div className="grid grid-cols-2 gap-1">
-                {categories.map((category) => (
-                  <Link
-                    key={category.slug}
-                    href={`/naijagigs/services?category=${category.slug}`}
-                    className="rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#2C3B33] hover:bg-[#F4F8F4]"
-                  >
-                    {category.name}
-                  </Link>
-                ))}
-              </div>
-              <div className="mt-2 border-t border-[#EEEAE0] pt-2">
-                <Link
-                  href="/naijagigs/services"
-                  className="flex items-center justify-between rounded-xl px-3 py-2.5 text-[13px] font-bold text-[#0F7A4A] hover:bg-[#F4F8F4]"
-                >
-                  Browse all services <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
-              </div>
-            </div>
-          </div>
-          <Link href="/naijagigs/professionals" className="rounded-lg px-3 py-2 text-[13.5px] font-semibold text-[#23342C] hover:bg-[#F2F7F3]">
-            Find Professionals
-          </Link>
-          <Link href="/naijagigs/jobs" className="rounded-lg px-3 py-2 text-[13.5px] font-semibold text-[#23342C] hover:bg-[#F2F7F3]">
-            Post a Job
-          </Link>
-          <Link href="/naijagigs#how-it-works" className="rounded-lg px-3 py-2 text-[13.5px] font-semibold text-[#23342C] hover:bg-[#F2F7F3]">
-            How It Works
-          </Link>
-          <Link href="/naijagigs/pro" className="rounded-lg px-3 py-2 text-[13.5px] font-semibold text-[#23342C] hover:bg-[#F2F7F3]">
-            Become a Pro
-          </Link>
+        <form action="/naijagigs/services" method="get" role="search" className="order-last flex w-full min-w-0 items-stretch overflow-hidden rounded-full bg-white lg:order-none lg:flex-1">
+          <label htmlFor="gigs-q" className="sr-only">Search for skills, services, jobs or opportunities</label>
+          <Search className="ml-3 hidden h-4 w-4 self-center text-[#6b7a70] sm:block" aria-hidden />
+          <input id="gigs-q" name="q" type="search" placeholder="Search for skills, services, jobs or opportunities…" className="min-h-9 w-full min-w-0 bg-transparent px-3 text-[12.5px] text-[#14241b] outline-none" />
+          <button type="submit" aria-label="Search" className="grid w-11 place-items-center bg-[#f26b21] text-white"><Search className="h-4 w-4" aria-hidden /></button>
+        </form>
+        <nav aria-label="Your NaijaGigs account" className="ml-auto flex shrink-0 items-center gap-1 text-[11.5px] font-semibold sm:gap-2.5">
+          <Link href="/naijagigs/notifications" className="hidden items-center gap-1 hover:text-[#f5b52e] sm:flex"><Bell className="h-4 w-4" aria-hidden /> Notifications</Link>
+          <Link href="/naijagigs/bookings" className="flex items-center gap-1 hover:text-[#f5b52e]"><ReceiptText className="h-4 w-4" aria-hidden /> <span className="hidden sm:inline">Orders</span></Link>
+          <Link href="/naijagigs/account" className="flex items-center gap-1 hover:text-[#f5b52e]"><UserIcon className="h-4 w-4" aria-hidden /> <span className="hidden sm:inline">Sign In</span></Link>
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setSearchOpen((open) => !open)}
-            aria-label="Search services"
-            aria-expanded={searchOpen}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E1DCCF] text-[#23342C] hover:bg-[#F4F8F4]"
-          >
-            <Search className="h-4.5 w-4.5" aria-hidden />
-          </button>
-          {user ? (
-            <>
-              <Link
-                href="/naijagigs/account"
-                className="hidden items-center gap-2 rounded-full border border-[#DDE6DD] bg-[#F4F8F4] py-1 pl-1 pr-3 text-[12.5px] font-bold text-[#0B3B2A] hover:border-[#0F7A4A] sm:flex"
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0B3B2A] text-[11px] font-black uppercase text-white">
-                  {user.name.slice(0, 2)}
-                </span>
-                {user.name.split(" ")[0]}
-              </Link>
-              <Link
-                href="/naijagigs/pro"
-                className="hidden rounded-lg bg-[#0F7A4A] px-4 py-2.5 text-[12.5px] font-bold text-white hover:bg-[#0B6540] sm:inline-flex"
-              >
-                Pro dashboard
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/login?next=/naijagigs"
-                className="hidden rounded-lg border border-[#C9D6CD] px-4 py-2.5 text-[12.5px] font-bold text-[#0B3B2A] hover:bg-[#F4F8F4] sm:inline-flex"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/register?next=/naijagigs"
-                className="rounded-lg bg-[#0F7A4A] px-4 py-2.5 text-[12.5px] font-bold text-white shadow-[0_8px_18px_rgba(15,122,74,0.2)] hover:bg-[#0B6540]"
-              >
-                Create Account
-              </Link>
-            </>
-          )}
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-label="Open menu"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E1DCCF] text-[#23342C] lg:hidden"
-          >
-            <Menu className="h-5 w-5" aria-hidden />
-          </button>
         </div>
       </div>
 
@@ -298,6 +225,14 @@ export function GigsHeader({ user, categories }: { user: GigsHeaderUser; categor
           </div>
         </div>
       )}
+      <nav aria-label="NaijaGigs quick actions" className="bg-[#0b5c33]">
+        <div className="mx-auto flex max-w-[1440px] gap-2 overflow-x-auto border-t border-white/10 px-3 py-1.5 text-[11.5px] font-semibold [scrollbar-width:none] sm:px-6 lg:px-8">
+          {[["Browse Services", "/naijagigs/services"], ["Find Jobs", "/naijagigs/jobs"], ["Hire Talent", "/naijagigs/professionals"], ["For Companies", "/naijagigs/post-job"], ["For Government", "/naijagigs/government"], ["How It Works", "/naijagigs/how-it-works"]].map(([label, href]) => (
+            <Link key={href} href={href} className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-white hover:bg-white/20">{label}</Link>
+          ))}
+        </div>
+      </nav>
+
     </header>
   );
 }

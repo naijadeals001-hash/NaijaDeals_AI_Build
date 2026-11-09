@@ -6343,6 +6343,174 @@
       "usageReferences": [
         "app/naijasend"
       ]
+    },
+    {
+      "id": "gigs2-hero-collage",
+      "vertical": "gigs",
+      "kind": "scene",
+      "component": "gigs2-hero-collage",
+      "prompt": "Photorealistic editorial African professional-services photography, bright natural daylight, authentic African workplace context, confident real people at work, premium marketplace campaign quality, no text, no words, no watermark, no logo. Five African professionals standing together and smiling at the camera: a construction engineer in a yellow hard hat and hi-vis vest, a nurse in blue scrubs, a young software developer in a green hoodie holding a laptop, a chef in a white chef jacket and toque, and a mechanic in dark blue overalls. Behind them the Lagos Third Mainland Bridge and city skyline with palm trees and a bright blue sky. Horizontal composition with the group on the right and open sky on the left",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "15a9185d351d022a304011a7374ade46",
+      "storagePath": "generated/gigs/gigs2-hero-collage.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000a79081f5bdfd39e472c57f88.png",
+      "generatedAt": "2026-11-09T17:13:43.342Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijagigs"
+      ]
+    },
+    {
+      "id": "gigs2-cat-plumbing",
+      "vertical": "gigs",
+      "kind": "category",
+      "component": "gigs2-cat-plumbing",
+      "prompt": "Photorealistic editorial African professional-services photography, bright natural daylight, authentic African workplace context, confident real people at work, premium marketplace campaign quality, no text, no words, no watermark, no logo. African plumber in a green work shirt tightening a chrome pipe under a modern kitchen sink, tools laid out beside",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "76a9b9b7ed4b19a1a80e87954a2efb56",
+      "storagePath": "generated/gigs/gigs2-cat-plumbing.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_00000000372081fd893ac3ffab32de6e.png",
+      "generatedAt": "2026-11-09T17:14:44.768Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijagigs"
+      ]
+    },
+    {
+      "id": "gigs2-cat-business",
+      "vertical": "gigs",
+      "kind": "category",
+      "component": "gigs2-cat-business",
+      "prompt": "Photorealistic editorial African professional-services photography, bright natural daylight, authentic African workplace context, confident real people at work, premium marketplace campaign quality, no text, no words, no watermark, no logo. African business consultant in a suit reviewing charts on a laptop with a small business owner in her shop, warm daylight",
+      "model": "gpt-image-2-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "2acbd9a5a4761174a880f1de104308ac",
+      "storagePath": "generated/gigs/gigs2-cat-business.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/images/chatgpt/file_000000006b9c81fd8e03204c8cce2b91.png",
+      "generatedAt": "2026-11-09T17:16:06.438Z",
+      "creditsConsumed": 6,
+      "costUsd": 0.03,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijagigs"
+      ]
+    },
+    {
+      "id": "gigs2-cat-transport",
+      "vertical": "gigs",
+      "kind": "category",
+      "component": "gigs2-cat-transport",
+      "prompt": "Photorealistic editorial African professional-services photography, bright natural daylight, authentic African workplace context, confident real people at work, premium marketplace campaign quality, no text, no words, no watermark, no logo. White box truck with its rear door open and two African workers loading cartons with a hand truck at a loading bay",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "ddf714133095b50ce0e1428c66ca9399",
+      "storagePath": "generated/gigs/gigs2-cat-transport.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/ce67e4281eb5.png",
+      "generatedAt": "2026-11-09T17:16:37.342Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijagigs"
+      ]
+    },
+    {
+      "id": "gigs2-cat-climbing",
+      "vertical": "gigs",
+      "kind": "category",
+      "component": "gigs2-cat-climbing",
+      "prompt": "Photorealistic editorial African professional-services photography, bright natural daylight, authentic African workplace context, confident real people at work, premium marketplace campaign quality, no text, no words, no watermark, no logo. African technician in a harness and helmet climbing a telecom mast, blue sky, safety gear visible",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "aaddfe2607850b7e6b1aac7f72f7037d",
+      "storagePath": "generated/gigs/gigs2-cat-climbing.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/fa7e7964bd9b.png",
+      "generatedAt": "2026-11-09T17:17:08.120Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijagigs"
+      ]
+    },
+    {
+      "id": "gigs2-band-individuals",
+      "vertical": "gigs",
+      "kind": "band",
+      "component": "gigs2-band-individuals",
+      "prompt": "Photorealistic editorial African professional-services photography, bright natural daylight, authentic African workplace context, confident real people at work, premium marketplace campaign quality, no text, no words, no watermark, no logo. Smiling young African woman with a laptop in a bright home office, plants and soft window light, looking confident at the camera",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "8fac520e631eed0d3f3201d95abe87d3",
+      "storagePath": "generated/gigs/gigs2-band-individuals.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/1fc411eeb8e5.png",
+      "generatedAt": "2026-11-09T17:17:39.120Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijagigs"
+      ]
+    },
+    {
+      "id": "gigs2-band-government",
+      "vertical": "gigs",
+      "kind": "band",
+      "component": "gigs2-band-government",
+      "prompt": "Photorealistic editorial African professional-services photography, bright natural daylight, authentic African workplace context, confident real people at work, premium marketplace campaign quality, no text, no words, no watermark, no logo. Modern African government building with columns and a flag in front, professionals in formal wear walking on the steps, clear daylight",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "64cfafbee3d5bbac9660a3c52548fb15",
+      "storagePath": "generated/gigs/gigs2-band-government.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/c237373ad003.png",
+      "generatedAt": "2026-11-09T17:18:10.302Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijagigs"
+      ]
+    },
+    {
+      "id": "gigs2-band-business",
+      "vertical": "gigs",
+      "kind": "band",
+      "component": "gigs2-band-business",
+      "prompt": "Photorealistic editorial African professional-services photography, bright natural daylight, authentic African workplace context, confident real people at work, premium marketplace campaign quality, no text, no words, no watermark, no logo. Modern glass office building with African professionals meeting at a table by the window, city view",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "history": [],
+      "taskId": "70541b09b7ff90c3dfa41388a2c0168a",
+      "storagePath": "generated/gigs/gigs2-band-business.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/01b6c0bcd9fe.png",
+      "generatedAt": "2026-11-09T17:18:41.169Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "app/naijagigs"
+      ]
     }
   ]
 }

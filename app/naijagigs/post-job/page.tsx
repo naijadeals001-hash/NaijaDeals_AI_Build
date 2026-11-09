@@ -14,7 +14,7 @@ export default async function Page() {
   const user = await getSessionUser();
   if (!user) redirect("/login?next=/naijagigs/post-job");
   return (
-    <main className="min-h-screen bg-[#F5F7F6] py-10">
+    <main id="main-content" className="min-h-screen bg-[#F5F7F6] py-10">
       <NaijaGigsPostJobPage />
     </main>
   );

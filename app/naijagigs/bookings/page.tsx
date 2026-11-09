@@ -10,7 +10,7 @@ export default async function Page() {
   const user = await getSessionUser();
   if (!user) redirect("/login?next=/naijagigs/bookings");
   return (
-    <main className="min-h-screen bg-[#F5F7F6] px-4 py-10 sm:px-6">
+    <main id="main-content" className="min-h-screen bg-[#F5F7F6] px-4 py-10 sm:px-6">
       <CustomerBookingsPage />
     </main>
   );

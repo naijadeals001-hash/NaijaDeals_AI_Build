@@ -29,3 +29,5 @@ test-results/
 public/generated/fresh/originals/
 # NaijaSend: PNG originals kept locally for re-encoding; the app serves WebP.
 public/generated/send/originals/
+# NaijaGigs: PNG originals kept locally for re-encoding; the app serves WebP.
+public/generated/gigs/originals/

@@ -261,11 +261,12 @@ export async function getGigProfessional(id: string) {
   return { profile, reviews, rating: ratingOf(reviews), completedBookings: completed };
 }
 
-export async function listOpenGigJobs(input: { q?: string; category?: string; mode?: ServiceMode; countryCode?: string; page?: number; pageSize?: number }) {
+export async function listOpenGigJobs(input: { q?: string; category?: string; mode?: ServiceMode; countryCode?: string; city?: string; page?: number; pageSize?: number }) {
   const page = Math.max(1, input.page ?? 1);
   const pageSize = Math.min(48, Math.max(1, input.pageSize ?? 12));
   const where: Prisma.CustomerJobWhereInput = { status: "OPEN" };
   if (input.mode) where.mode = input.mode;
+  if (input.city) where.city = { contains: input.city, mode: "insensitive" };
   if (input.countryCode) where.countryCode = input.countryCode;
   if (input.category) where.category = { slug: input.category };
   if (input.q) {

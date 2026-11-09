@@ -1,0 +1,29 @@
+{
+  "generatedAt": "2026-11-09T17:20:46.001Z",
+  "assets": {
+    "gigs-hero-electrician": "generated\\gigs\\gigs-hero-electrician.png",
+    "gigs-hero-hairdresser": "generated\\gigs\\gigs-hero-hairdresser.png",
+    "gigs-hero-ac-technician": "generated\\gigs\\gigs-hero-ac-technician.png",
+    "gigs-hero-photographer": "generated\\gigs\\gigs-hero-photographer.png",
+    "gigs-card-ac-installation": "generated\\gigs\\gigs-card-ac-installation.png",
+    "gigs-card-deep-cleaning": "generated\\gigs\\gigs-card-deep-cleaning.png",
+    "gigs-card-generator-repair": "generated\\gigs\\gigs-card-generator-repair.png",
+    "gigs-card-web-development": "generated\\gigs\\gigs-card-web-development.png",
+    "gigs-card-wedding-photography": "generated\\gigs\\gigs-card-wedding-photography.png",
+    "gigs-card-interior-painting": "generated\\gigs\\gigs-card-interior-painting.png",
+    "gigs-band-post-a-job": "generated\\gigs\\gigs-band-post-a-job.png",
+    "gigs-band-become-provider": "generated\\gigs\\gigs-band-become-provider.png",
+    "gigs-spot-solar": "generated\\gigs\\gigs-spot-solar.png",
+    "gigs-spot-wiring": "generated\\gigs\\gigs-spot-wiring.png",
+    "gigs-spot-video": "generated\\gigs\\gigs-spot-video.png",
+    "gigs-spot-catering": "generated\\gigs\\gigs-spot-catering.png",
+    "gigs2-hero-collage": "generated/gigs/gigs2-hero-collage.png",
+    "gigs2-cat-plumbing": "generated/gigs/gigs2-cat-plumbing.png",
+    "gigs2-cat-business": "generated/gigs/gigs2-cat-business.png",
+    "gigs2-cat-transport": "generated/gigs/gigs2-cat-transport.png",
+    "gigs2-cat-climbing": "generated/gigs/gigs2-cat-climbing.png",
+    "gigs2-band-individuals": "generated/gigs/gigs2-band-individuals.png",
+    "gigs2-band-government": "generated/gigs/gigs2-band-government.png",
+    "gigs2-band-business": "generated/gigs/gigs2-band-business.png"
+  }
+}

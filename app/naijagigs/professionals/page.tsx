@@ -30,7 +30,7 @@ export default async function ProfessionalsPage({
   const sampleCount = professionals.filter((profile) => Boolean((profile as { isSample?: boolean }).isSample)).length;
 
   return (
-    <main className="mx-auto max-w-[1440px] px-4 py-9 sm:px-6 lg:px-10">
+    <main id="main-content" className="mx-auto max-w-[1440px] px-4 py-9 sm:px-6 lg:px-10">
       <header className="mb-5">
         <h1 className="font-display text-[28px] font-extrabold tracking-[-0.02em] text-[#0B1F16] sm:text-[34px]">Professionals</h1>
         <p className="mt-1 text-[12.5px] text-[#6B7A72]">
