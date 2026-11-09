@@ -114,30 +114,38 @@ export async function completeOrder(userId: string, orderId: string) {
 
     if (escrow) {
       const platformCut = escrow.amountKobo - payable;
+      const platformWallet = await ensureWallet(tx, { ownerType: "SYSTEM" });
+      // Each branch moves stored balances by exactly what its journal entries say
+      // about that wallet. A stored/journal mismatch here is what previously left
+      // the seller short by the commission and the platform overstating its cut.
+      const entries = [
+        { walletId: vendorWallet.id, direction: "DEBIT" as const, amountKobo: escrow.amountKobo, memo: "Escrow payable cleared" },
+        { walletId: vendorWallet.id, direction: "CREDIT" as const, amountKobo: payable, memo: "Seller net proceeds credited" }
+      ];
+
       if (completedPayment?.provider === "wallet") {
         const buyerRelease = await tx.wallet.updateMany({
           where: { id: buyerWallet.id, heldKobo: { gte: escrow.amountKobo } },
           data: { heldKobo: { decrement: escrow.amountKobo } }
         });
         if (buyerRelease.count !== 1) throw new ApiError(409, "escrow_conflict", "The buyer's escrow hold is no longer available to release.");
-        // The seller's held balance is the escrow total; on release the payable
-        // becomes spendable and the commission leaves the seller for the platform.
+        // Seller: held -> zero for the escrow, payable becomes spendable.
         const sellerRelease = await tx.wallet.updateMany({
           where: { id: vendorWallet.id, heldKobo: { gte: escrow.amountKobo } },
           data: { heldKobo: { decrement: escrow.amountKobo }, availableKobo: { increment: payable } }
         });
         if (sellerRelease.count !== 1) throw new ApiError(409, "escrow_conflict", "The seller's escrow hold is no longer available to release.");
+        // Platform: receives the commission, so both stored and journal credit it.
         if (platformCut > BigInt(0)) {
-          const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
-          await tx.wallet.update({ where: { id: platform.id }, data: { availableKobo: { increment: platformCut } } });
+          await tx.wallet.update({ where: { id: platformWallet.id }, data: { availableKobo: { increment: platformCut } } });
+          entries.push({ walletId: platformWallet.id, direction: "CREDIT" as const, amountKobo: platformCut, memo: "Commission retained by NaijaDeals" });
         }
       } else {
-        const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
-        // The platform already holds the verified external payment. Only the
-        // seller's payable leaves the platform wallet; commission and the
-        // escrow fee stay behind.
+        // External payment: the platform already holds the full amount. Paying the
+        // seller moves `payable` out of the platform wallet; the commission stays
+        // behind, so the platform's stored balance only falls by `payable`.
         const platformDebit = await tx.wallet.updateMany({
-          where: { id: platform.id, availableKobo: { gte: payable } },
+          where: { id: platformWallet.id, availableKobo: { gte: payable } },
           data: { availableKobo: { decrement: payable } }
         });
         if (platformDebit.count !== 1) throw new ApiError(409, "escrow_conflict", "The platform's escrow balance is no longer available to release.");
@@ -145,18 +153,15 @@ export async function completeOrder(userId: string, orderId: string) {
           where: { id: vendorWallet.id },
           data: { heldKobo: { decrement: escrow.amountKobo }, availableKobo: { increment: payable } }
         });
+        // Neutralise the platform's own commission leg: it debits the platform by
+        // the same amount it credits, so the platform's journal matches its stored
+        // balance change of -payable rather than jumping by the commission.
+        if (platformCut > BigInt(0)) {
+          entries.push({ walletId: platformWallet.id, direction: "DEBIT" as const, amountKobo: platformCut, memo: "Commission transfer within platform funds" });
+          entries.push({ walletId: platformWallet.id, direction: "CREDIT" as const, amountKobo: platformCut, memo: "Commission retained by NaijaDeals" });
+        }
       }
-      // The seller's escrow liability is satisfied by paying `payable`; the
-      // commission is the platform's, so it debits the platform wallet rather
-      // than crediting the seller and re-debiting it in the same journal.
-      const platformWallet = await ensureWallet(tx, { ownerType: "SYSTEM" });
-      const entries = [
-        { walletId: vendorWallet.id, direction: "DEBIT" as const, amountKobo: escrow.amountKobo, memo: "Escrow payable cleared" },
-        { walletId: vendorWallet.id, direction: "CREDIT" as const, amountKobo: payable, memo: "Seller net proceeds credited" }
-      ];
-      if (platformCut > BigInt(0)) {
-        entries.push({ walletId: platformWallet.id, direction: "CREDIT" as const, amountKobo: platformCut, memo: "Commission retained by NaijaDeals" });
-      }
+
       await tx.walletTransaction.create({
         data: {
           walletId: vendorWallet.id,

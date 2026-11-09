@@ -35,7 +35,11 @@ export function NaijaPaySendPage() {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState("");
-  const [result, setResult] = useState<{ reference?: string; message?: string }>({});
+  const [result, setResult] = useState<{ reference?: string; message?: string; uncertain?: boolean }>({});
+  // The retry key must identify the INTENT, not the attempt. Generating it per
+  // confirm would let a retry after a timeout post the transfer a second time.
+  const [verifiedRecipient, setVerifiedRecipient] = useState<{ name: string; identifier: string; maskedIdentifier: string } | null>(null);
+  const [checkingRecipient, setCheckingRecipient] = useState(false);
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
@@ -49,8 +53,9 @@ export function NaijaPaySendPage() {
   const currency = wallet?.currency ?? "NGN";
   const kobo = nairaToKobo(amount);
 
-  function startReview() {
+  async function startReview() {
     setFormError("");
+    setVerifiedRecipient(null);
     const parsed = nairaToKobo(amount);
     if (!recipient.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.trim())) {
       setFormError("Enter the recipient's NaijaDeals email address.");
@@ -64,14 +69,39 @@ export function NaijaPaySendPage() {
       setFormError(`That is more than your available balance of ${koboToNaira(String(wallet.availableKobo), currency)}.`);
       return;
     }
-    setStep("review");
+
+    // Confirm who the money is going to before the review screen, so a typo in
+    // the address is caught while it can still be corrected.
+    setCheckingRecipient(true);
+    try {
+      const res = await fetch("/api/pay/transfers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "lookup", identifier: recipient.trim() })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setFormError(body.error ?? "That recipient could not be confirmed.");
+        return;
+      }
+      setVerifiedRecipient(body.recipient);
+      setIdempotencyKey(randomIdempotencyKey());
+      setStep("review");
+    } catch {
+      setFormError("Could not reach the server to confirm the recipient. Nothing was sent.");
+    } finally {
+      setCheckingRecipient(false);
+    }
   }
 
   async function confirmSend() {
     const parsed = nairaToKobo(amount);
     if (!parsed) return;
-    const key = randomIdempotencyKey();
-    setIdempotencyKey(key);
+    // Reuse the key created at review: a retry after a timeout must be the same
+    // attempt as far as the server is concerned.
+    const key = idempotencyKey || randomIdempotencyKey();
+    if (!idempotencyKey) setIdempotencyKey(key);
     setStep("sending");
     try {
       const res = await fetch("/api/pay/transfers", {
@@ -88,8 +118,13 @@ export function NaijaPaySendPage() {
       }
       setResult({ message: body.error ?? `Transfer failed (HTTP ${res.status}).` });
       setStep("failed");
-    } catch (caught) {
-      setResult({ message: caught instanceof Error ? caught.message : "Network error — the transfer was not sent." });
+    } catch {
+      // The request may have reached the server. Retrying with the same key is
+      // safe and returns the original result instead of sending twice.
+      setResult({
+        uncertain: true,
+        message: "The connection dropped before we heard back. Retrying with the same key will not send twice — it returns the original result if it already went through."
+      });
       setStep("failed");
     }
   }
@@ -163,7 +198,15 @@ export function NaijaPaySendPage() {
             onClick={startReview}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-pay-green px-6 py-3.5 text-sm font-bold text-white shadow-lift transition hover:bg-pay-deep"
           >
-            Review transfer <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            {checkingRecipient ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Checking recipient…
+              </>
+            ) : (
+              <>
+                Review transfer <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </>
+            )}
           </button>
         </section>
       )}
@@ -177,7 +220,10 @@ export function NaijaPaySendPage() {
           <dl className="divide-y divide-pay-mint text-sm">
             <div className="flex justify-between py-3">
               <dt className="text-pay-ink-muted">To</dt>
-              <dd className="font-bold text-pay-ink">{recipient.trim()}</dd>
+              <dd className="text-right">
+                <span className="block font-bold text-pay-ink">{verifiedRecipient?.name ?? recipient.trim()}</span>
+                <span className="block text-xs text-pay-ink-muted">{verifiedRecipient?.identifier ?? ""}</span>
+              </dd>
             </div>
             <div className="flex justify-between py-3">
               <dt className="text-pay-ink-muted">Amount</dt>
@@ -261,14 +307,28 @@ export function NaijaPaySendPage() {
           </span>
           <h2 className="mt-4 font-display text-xl font-extrabold text-pay-ink">Not sent</h2>
           <p className="mt-2 text-sm text-pay-ink-muted">{result.message}</p>
-          <p className="mt-1 text-xs text-pay-ink-muted">No money left your wallet for this attempt.</p>
-          <button
-            type="button"
-            onClick={() => setStep("form")}
-            className="mt-5 rounded-full bg-pay-green px-6 py-3 text-sm font-bold text-white transition hover:bg-pay-deep"
-          >
-            Back to form
-          </button>
+          {!result.uncertain && <p className="mt-1 text-xs text-pay-ink-muted">No money left your wallet for this attempt.</p>}
+          <div className="mt-5 flex justify-center gap-3">
+            {result.uncertain && (
+              <button
+                type="button"
+                onClick={() => void confirmSend()}
+                className="rounded-full bg-pay-green px-6 py-3 text-sm font-bold text-white transition hover:bg-pay-deep"
+              >
+                Retry same transfer
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setStep("form");
+                setIdempotencyKey("");
+              }}
+              className="rounded-full border border-black/10 px-6 py-3 text-sm font-bold text-pay-ink transition hover:bg-pay-mint"
+            >
+              Back to form
+            </button>
+          </div>
         </section>
       )}
     </div>

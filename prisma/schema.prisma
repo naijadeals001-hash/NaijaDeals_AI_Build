@@ -442,6 +442,7 @@ model Wallet {
   vendor        Vendor?             @relation(fields: [vendorId], references: [id])
   transactions  WalletTransaction[]
   ledgerEntries LedgerEntry[]
+  topUps        WalletTopUp[]
 }
 
 model WalletTransaction {
@@ -3017,4 +3018,35 @@ model HomeMetric {
 
   @@unique([variantKey, kind, slideSlug, day])
   @@index([variantKey, day])
+}
+
+/// A standalone wallet top-up, separate from order payments.
+///
+/// `Payment` is order-scoped (`orderId` is required), so crediting a wallet
+/// without an order needs its own record. This is additive: nothing existing
+/// changes, and the credit itself still posts through the shared double-entry
+/// ledger via `postBalancedTransaction`.
+model WalletTopUp {
+  id                String        @id @default(cuid())
+  walletId          String
+  provider          String
+  /// Provider's own reference. Unique so a repeated webhook cannot credit twice.
+  providerReference String        @unique
+  /// Caller-supplied key. Unique so a resubmitted form cannot create two top-ups.
+  idempotencyKey    String        @unique
+  status            PaymentStatus @default(PENDING)
+  amountKobo        BigInt
+  currency          String        @default("NGN")
+  /// Set once the wallet has been credited, exactly once.
+  creditedAt        DateTime?
+  failureReason     String?
+  /// Provider payload retained for dispute and reconciliation evidence.
+  raw               Json?
+  verifiedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  wallet            Wallet        @relation(fields: [walletId], references: [id])
+
+  @@index([walletId, status])
+  @@index([status, createdAt])
 }
