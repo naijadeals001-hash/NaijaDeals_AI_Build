@@ -1,5 +1,6 @@
 "use client";
 
+import { ReviewForm } from "./review-form";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -162,7 +163,7 @@ export function ProductDetailClient({ id }: { id: string }) {
             </div>
             <p className="mt-4 whitespace-pre-line text-muted">{product.description}</p>
 
-            <section className="mt-6">
+            <section id="reviews" className="mt-6 scroll-mt-24">
               <h2 className="font-display text-xl font-extrabold">Reviews</h2>
               {!product.reviews || product.reviews.length === 0 ? (
                 <p className="mt-2 text-sm text-muted">This product has no approved reviews yet.</p>
@@ -182,6 +183,7 @@ export function ProductDetailClient({ id }: { id: string }) {
                   ))}
                 </div>
               )}
+              <ReviewForm productId={product.id} productName={product.name} />
             </section>
           </div>
         </section>

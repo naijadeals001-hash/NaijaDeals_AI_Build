@@ -2049,3 +2049,36 @@ fully inside every card with identical width and no clipping, names ≤10.5px an
 cart badge 0 → 1, button confirms "Added ✓", cart cleared afterwards.
 Storefront QA 43/43 and mobile QA 85/85 pass; desktop cards unchanged (13px
 names, 190px cards).
+
+## NaijaShop — product review pipeline (2026-11-09)
+
+Owner asked for star ratings on every product card. Investigating why every card
+showed "No reviews yet" found the system complete but unusable end to end:
+
+- `createReview` validates ownership, a **delivered** order containing the
+  product, one review per order/product, and creates the row as `PENDING`.
+  Only `APPROVED` reviews are aggregated into `rating: {average, count}`.
+- **There was no way to approve a review** — no admin endpoint existed, so no
+  review could ever become visible.
+- The product page had no `#reviews` anchor (card links pointed at nothing) and
+  no way for a customer to write a review.
+
+Added `POST/GET /api/admin/reviews/[id]` behind `products:moderate` with
+`review.approved` / `review.rejected` audit entries, a `#reviews` anchor, and a
+customer review form on the product page that only offers orders the shopper
+actually received.
+
+**Blocker (not worked around):** every product the storefront displays is
+`isSample: true`, and `checkout.service` deliberately refuses demo inventory
+("Demo inventory is for visual review only and cannot be purchased"). There are
+no non-sample products on sale and no delivered orders, so there is no
+legitimate way to create a review for the visible catalogue. Seeding reviews by
+inserting rows directly, or by flipping `isSample`, would present fabricated
+ratings as real — so neither was done. The only non-sample rows in the database
+are leftover acceptance fixtures.
+
+The cards therefore show "No reviews yet", which is accurate. Stars will appear
+automatically the moment a non-sample product is sold, delivered and reviewed.
+An attempt to enable the local test payment provider and seed orders was
+reverted; the 24 unpaid orders it created were deleted, leaving only the
+pre-existing 10 cancelled orders.
