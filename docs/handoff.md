@@ -2289,3 +2289,14 @@ rather than shown an empty queue.
 
 Regression after this slice: delivery E2E 22/22, operator 9/9, customer
 functional 23/23, basket/checkout 13/13, NaijaShop four-card 70/70.
+
+### NaijaEats dispatch failure paths
+`scripts/naijaeats-dispatch-failure.cjs` **6/6**: with every provider offline the
+dispatch is marked `failed` for operations instead of leaving the order waiting;
+an expired offer is refused (409); declining one offer leaves other providers'
+offers open; and a second `FoodDispatch` for the same order is impossible
+(unique `orderId`).
+
+Ledger after all runs: 404 entries, net ₦2,456,000 — unchanged from before the
+NaijaEats work, confirming settlements move money between wallets without
+creating or destroying it.
