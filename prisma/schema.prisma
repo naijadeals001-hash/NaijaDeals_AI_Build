@@ -493,6 +493,14 @@ model Courier {
   phone      String
   active     Boolean    @default(true)
   suspendedReason String?
+  /// NaijaSend food-delivery eligibility. Riders must opt in AND be equipped.
+  foodDeliveryEnabled Boolean @default(false)
+  /// motorcycle | car | van — capacity decides which orders they can carry.
+  vehicleType String    @default("motorcycle")
+  vehiclePlate String?
+  /// Operating zone (city name) used for dispatch matching.
+  serviceZone String?
+  online     Boolean    @default(false)
   createdAt  DateTime   @default(now())
   user       User       @relation(fields: [userId], references: [id])
   deliveries Delivery[]
@@ -763,6 +771,14 @@ model DriverProfile {
   vehiclePlate  String
   active        Boolean      @default(true)
   suspendedReason String?
+  /// NaijaDrive does not enrol every ride driver in food delivery automatically;
+  /// they opt in explicitly and carry an insulated bag.
+  foodDeliveryEnabled Boolean @default(false)
+  /// motorcycle | car — mapped from vehicleClass for dispatch eligibility.
+  foodVehicleType String    @default("car")
+  serviceZone   String?
+  online        Boolean      @default(false)
+  insulatedBag  Boolean      @default(false)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   user          User         @relation(fields: [userId], references: [id])
@@ -1096,6 +1112,54 @@ enum FoodOrderStatus {
   cancelled
 }
 
+enum DispatchOfferStatus {
+  offered
+  accepted
+  declined
+  expired
+  withdrawn
+}
+
+/// One authoritative delivery job per food order. Offers are time-limited and
+/// withdrawn once any provider accepts, so an order can never end up with two
+/// riders or two settlements.
+model FoodDispatch {
+  id           String   @id @default(cuid())
+  orderId      String   @unique
+  status       String   @default("open") // open | assigned | completed | failed
+  vehicleNeed  String   @default("motorcycle")
+  attempts     Int      @default(0)
+  assignedType String?  // courier | driver
+  assignedId   String?
+  pickupPin    String
+  deliveryPin  String
+  pickedUpAt   DateTime?
+  deliveredAt  DateTime?
+  settlementReference String? @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  order        FoodOrder       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  offers       DispatchOffer[]
+
+  @@index([status])
+}
+
+model DispatchOffer {
+  id           String              @id @default(cuid())
+  dispatchId   String
+  /// courier = NaijaSend provider, driver = NaijaDrive provider.
+  providerType String
+  providerId   String
+  status       DispatchOfferStatus @default(offered)
+  earningsKobo BigInt
+  expiresAt    DateTime
+  createdAt    DateTime            @default(now())
+  dispatch     FoodDispatch        @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+
+  @@unique([dispatchId, providerType, providerId])
+  @@index([providerType, providerId, status])
+}
+
 model FoodOrder {
   id             String          @id @default(cuid())
   orderNumber    String          @unique
@@ -1116,6 +1180,7 @@ model FoodOrder {
   customer       User            @relation("CustomerFoodOrders", fields: [customerId], references: [id])
   restaurant     Restaurant      @relation(fields: [restaurantId], references: [id])
   courier        Courier?        @relation(fields: [courierId], references: [id])
+  dispatch       FoodDispatch?
   items          FoodOrderItem[]
   events         FoodOrderEvent[]
 

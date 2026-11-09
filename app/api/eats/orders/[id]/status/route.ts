@@ -4,6 +4,7 @@ import { getFoodOrder, updateFoodOrderStatus } from "@/lib/services/core/eats-or
 import { prisma } from "@/lib/prisma";
 import { ApiError, assertSameOrigin, jsonError, readJson, requireUser } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
+import { openDispatch } from "@/lib/services/eats/dispatch";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       status: status as Parameters<typeof updateFoodOrderStatus>[0]["status"],
       note: typeof body.note === "string" ? body.note : undefined
     });
-    return NextResponse.json(jsonSafe(updated));
+    // Ready-for-pickup opens dispatch immediately so no order waits unattended.
+    let dispatch = null;
+    if (status === "ready_for_pickup" && role === "restaurant") {
+      dispatch = await openDispatch(order.id).catch((error) => ({ error: String(error).slice(0, 120) }));
+    }
+    return NextResponse.json(jsonSafe({ ...updated, dispatch }));
   } catch (error) {
     return jsonError(error);
   }

@@ -2245,3 +2245,36 @@ $1.71**; full coverage is ~280 images ≈ $8.40. **Nothing spent — awaiting
 approval.**
 
 Final suites: functional 23/23, basket/checkout 13/13, operator 9/9.
+
+## NaijaEats — unified delivery dispatch (2026-11-09)
+
+**Baseline correction:** the handed-over report listed cart, checkout, operator
+dashboard and favourites as missing. All four were completed earlier this
+session and verified (13/13 and 9/9); the real gap was courier dispatch.
+
+**Dispatch engine** (`lib/services/eats/dispatch.ts`), additive migration
+`eats_dispatch`:
+- Providers gain `foodDeliveryEnabled`, `vehicleType`, `serviceZone`, `online`
+  and (drivers) `insulatedBag`. A NaijaDrive driver is never auto-enrolled.
+- One `FoodDispatch` per order (unique `orderId`) with pickup and delivery PINs;
+  offers carry `earningsKobo` and a 60-second expiry.
+- Eligibility pulls from **both** NaijaSend couriers and NaijaDrive drivers,
+  filtered by active + online + food-enabled + zone + matching vehicle.
+- Acceptance runs in a transaction with a conditional update, so of two
+  simultaneous acceptances exactly one wins; the rest are withdrawn.
+- Dispatch opens automatically when the kitchen marks the order ready.
+- Delivery requires the customer PIN; that settles the order in one balanced
+  ledger transaction guarded by a unique `EATS-SETTLE-<dispatchId>` reference.
+
+**End-to-end** (`scripts/naijaeats-delivery-e2e.cjs`) **22/22**: order placed and
+paid → kitchen accepts/prepares/ready → offer reaches a NaijaSend rider and a
+NaijaDrive driver while the car providers are excluded → rider accepts →
+competing acceptance 409 → wrong PIN 400 → unassigned provider 403 → pickup PIN
+→ delivery PIN → delivered → repeat confirmation 409. Settlement verified
+balanced: ₦7,700 escrow → ₦6,515 restaurant + ₦800 rider + ₦385 platform.
+
+**Not modelled, by design**: traffic, weather, live ETA and map tracking — no
+data source exists here, so none is invented.
+
+**Demo providers** (`prisma/eats-providers-seed.cjs`): four labelled fixtures
+(motorcycle + car on each platform) under `@naijaeats.demo` accounts.
