@@ -119,6 +119,8 @@ export function NaijaShopStorefront() {
   const [error, setError] = useState("");
   const [cartCount, setCartCount] = useState(0);
   const [addingId, setAddingId] = useState("");
+  /** Product just added, so its button can confirm without a toast-only cue. */
+  const [addedId, setAddedId] = useState("");
   const [destination, setDestination] = useState("Lagos, Nigeria");
   const [menuOpen, setMenuOpen] = useState(false);
   const [notice, setNotice] = useState("");
@@ -213,6 +215,8 @@ export function NaijaShopStorefront() {
       await apiClient.addCartItem(product.id, 1);
       setCartCount((count) => count + 1);
       setNotice(`${product.name} added to cart.`);
+      setAddedId(product.id);
+      window.setTimeout(() => setAddedId(""), 2000);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not add to cart.";
       setNotice(/sign in|unauthor|401/i.test(message) ? "Sign in to add items to your cart." : message);
@@ -443,7 +447,7 @@ export function NaijaShopStorefront() {
             <CardCarousel label="Deals of the day">
               {deals.slice(0, 12).map((product) => (
                 <li key={product.id} className="w-[calc((100%-1.125rem)/4)] shrink-0 snap-start sm:w-[calc((100%-2.5rem)/6)] lg:w-[calc((100%-3.5rem)/7)]">
-                  <ShopProductCard product={product} onAdd={addToCart} adding={addingId === product.id} variant="deal" />
+                  <ShopProductCard product={product} onAdd={addToCart} adding={addingId === product.id} added={addedId === product.id} variant="deal" />
                 </li>
               ))}
               <li className="hidden w-[calc((100%-3.5rem)/7)] shrink-0 snap-start lg:block">
@@ -532,7 +536,7 @@ export function NaijaShopStorefront() {
                   <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                     {items.map((product) => (
                       <li key={product.id}>
-                        <ShopProductCard product={product} onAdd={addToCart} adding={addingId === product.id} />
+                        <ShopProductCard product={product} onAdd={addToCart} adding={addingId === product.id} added={addedId === product.id} />
                       </li>
                     ))}
                   </ul>
@@ -554,7 +558,7 @@ export function NaijaShopStorefront() {
                 <ul className="grid grid-cols-3 gap-2 sm:grid-cols-3 lg:grid-cols-6">
                   {electronics.map((product) => (
                     <li key={product.id}>
-                      <ShopProductCard product={product} onAdd={addToCart} adding={addingId === product.id} />
+                      <ShopProductCard product={product} onAdd={addToCart} adding={addingId === product.id} added={addedId === product.id} />
                     </li>
                   ))}
                 </ul>

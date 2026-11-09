@@ -2022,3 +2022,30 @@ the end, every card linking to a real destination, displayed prices matching the
 API catalogue, no broken images, no page overflow; 768/1024/1440 keep wider
 rows. Storefront QA 43/43, mobile QA 85/85 (the category image count now scrolls
 the lazy track before measuring).
+
+## NaijaShop — compact product card redesign (2026-11-09)
+
+Owner screenshot showed the four-card row breaking: "Add to Cart" wrapped onto
+two lines and overflowed the yellow pill, with oversized names and prices.
+
+**Product card rebuilt** (`components/shop/product-card.tsx`) with a fixed
+vertical rhythm so four cards in a row align: discount badge | square image |
+2-line clamped name | red price (+ struck original) | fixed-height rating row |
+Add to Cart. The button has a set height and `whitespace-nowrap`, so the label
+can never wrap out of the pill; it shows a spinner while adding and "Added ✓"
+briefly on success.
+
+**Ratings**: the review system already exists (`Review` with
+`status: APPROVED`, `verifiedPurchase`, and `ratingSummary` aggregated in
+`/api/products` as `rating: {average, count}`). The database currently holds
+**zero reviews**, so every card shows an explicit "No reviews yet" line at the
+same height. Verified-review data renders orange stars plus the real count and
+links to the product's reviews. No ratings were invented.
+
+**Verified**: `scripts/naijashop-four-card-qa.cjs` now **70/70**, adding card
+structure checks at 320–430px — four cards, equal widths and heights, the button
+fully inside every card with identical width and no clipping, names ≤10.5px and
+≤2 lines, and a rating row on every card. Add to Cart measured end to end:
+cart badge 0 → 1, button confirms "Added ✓", cart cleared afterwards.
+Storefront QA 43/43 and mobile QA 85/85 pass; desktop cards unchanged (13px
+names, 190px cards).

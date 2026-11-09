@@ -155,6 +155,40 @@ const state = () => {
   });
   check("displayed prices match the catalogue", mismatched.length === 0, JSON.stringify(mismatched.slice(0, 2)));
 
+  // ---- Card internal structure (the defect the owner reported) ----
+  const cards = await page.$$eval('[aria-label="Deals of the day"] article', (nodes) =>
+    nodes.filter((node) => {
+      const box = node.getBoundingClientRect();
+      return box.left >= -1 && box.right <= window.innerWidth + 1;
+    }).map((node) => {
+      const box = node.getBoundingClientRect();
+      const button = node.querySelector("button");
+      const label = button?.getBoundingClientRect();
+      const name = node.querySelector("h3");
+      const nameBox = name?.getBoundingClientRect();
+      return {
+        width: Math.round(box.width),
+        height: Math.round(box.height),
+        buttonText: button?.textContent?.trim() ?? "",
+        // A wrapped label pushes its content taller than the button's fixed height.
+        buttonClipped: button ? button.scrollHeight > button.clientHeight + 1 : true,
+        buttonInside: label ? label.left >= box.left - 0.5 && label.right <= box.right + 0.5 && label.bottom <= box.bottom + 0.5 : false,
+        buttonWidth: label ? Math.round(label.width) : 0,
+        nameHeight: nameBox ? Math.round(nameBox.height) : 0,
+        nameFont: name ? parseFloat(getComputedStyle(name).fontSize) : 0,
+        hasRatingRow: /No reviews yet|★/.test(node.textContent ?? "") || Boolean(node.querySelector("p a[href*=\"#reviews\"]"))
+      };
+    })
+  );
+  check("four deal cards are rendered", cards.length === 4, String(cards.length));
+  check("cards have equal widths", new Set(cards.map((card) => card.width)).size === 1, JSON.stringify(cards.map((c) => c.width)));
+  check("cards have equal heights", new Set(cards.map((card) => card.height)).size === 1, JSON.stringify(cards.map((c) => c.height)));
+  check("Add to Cart sits fully inside every card", cards.every((card) => card.buttonInside), JSON.stringify(cards.map((c) => c.buttonInside)));
+  check("Add to Cart has a consistent width", new Set(cards.map((card) => card.buttonWidth)).size === 1, JSON.stringify(cards.map((c) => c.buttonWidth)));
+  check("Add to Cart label fits without clipping", cards.every((card) => card.buttonText === "Add to Cart" && card.buttonClipped === false), JSON.stringify(cards.map((c) => ({ t: c.buttonText, clipped: c.buttonClipped }))));
+  check("product names are compact and clamp to two lines", cards.every((card) => card.nameFont <= 10.5 && card.nameHeight <= 30), JSON.stringify(cards.map((c) => ({ f: c.nameFont, h: c.nameHeight }))));
+  check("every card shows a rating row (verified stars or explicit no-reviews state)", cards.every((card) => card.hasRatingRow));
+
   const brokenImages = await page.$$eval('[aria-label="Shop by category"] img, [aria-label="Deals of the day"] img', (nodes) => nodes.filter((img) => img.complete && img.naturalWidth === 0).length);
   check("no broken card images", brokenImages === 0, String(brokenImages));
 

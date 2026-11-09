@@ -104,8 +104,12 @@ async function login(context) {
   check("category page shows its own department", /fashion/i.test(fashionHead ?? "") && fashionCount > 0, `${fashionHead} / ${fashionCount}`);
   await guest.selectOption("#browse-sort", "price-asc");
   await guest.waitForTimeout(400);
-  const prices = await guest.$$eval("[data-product] p span:first-child", (nodes) =>
-    nodes.map((node) => Number((node.textContent ?? "").replace(/[^0-9]/g, "")))
+  // Read the currency price specifically; the rating row is also a <p>.
+  const prices = await guest.$$eval("[data-product]", (cards) =>
+    cards.map((card) => {
+      const price = [...card.querySelectorAll("p span")].find((node) => /^₦/.test((node.textContent ?? "").trim()));
+      return Number((price?.textContent ?? "").replace(/[^0-9]/g, ""));
+    })
   );
   const sorted = prices.every((value, index) => index === 0 || prices[index - 1] <= value);
   check("price sort orders products ascending", prices.length > 1 && sorted, JSON.stringify(prices));
