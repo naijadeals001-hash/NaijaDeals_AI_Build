@@ -2232,3 +2232,16 @@ migration `eats_cart_favourites`.
 - `scripts/naijaeats-cart-check.cjs` **13/13** and the functional suite **23/23**
   both green; the functional suite's cuisine and ratings assertions were updated
   to the new `/restaurants/cuisine/<slug>` routes rather than loosened.
+
+### NaijaEats scope correction and image plan
+"Explore Nigerian favourites" was pulling every kitchen's dishes (it showed
+Banku and Boerewors); `listFeaturedDishes` now takes a cuisine filter and the
+rail is Nigerian-only.
+
+`docs/naijaeats-image-plan.md` records the image gap: 19 of 298 dishes have
+accurate art and 279 show "Pending photo". Priority 1–4 generation (6 regional
+cuisine cards, 11 dish-category heroes, 40 catalogue dishes) is **57 images ≈
+$1.71**; full coverage is ~280 images ≈ $8.40. **Nothing spent — awaiting
+approval.**
+
+Final suites: functional 23/23, basket/checkout 13/13, operator 9/9.

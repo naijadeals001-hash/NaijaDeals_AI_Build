@@ -28,7 +28,8 @@ export default async function NaijaEatsPage() {
   const [cuisines, categories, dishes] = await Promise.all([
     listCuisineRail(restaurants),
     listDishCategoryRail(),
-    listFeaturedDishes(12)
+    // The rail is specifically Nigerian, so only Nigerian kitchens' dishes.
+    listFeaturedDishes(12, "Nigerian")
   ]);
 
   const rated = restaurants.filter((restaurant) => restaurant.rating);

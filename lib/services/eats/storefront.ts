@@ -140,9 +140,13 @@ export async function listStorefrontRestaurants(): Promise<StorefrontRestaurant[
   }));
 }
 
-export async function listFeaturedDishes(take = 12): Promise<StorefrontDish[]> {
+export async function listFeaturedDishes(take = 12, cuisine?: string): Promise<StorefrontDish[]> {
   const rows = await prisma.menuItem.findMany({
-    where: { published: true, available: true, restaurant: { status: "VERIFIED" } },
+    where: {
+      published: true,
+      available: true,
+      restaurant: { status: "VERIFIED", ...(cuisine ? { cuisine: { contains: cuisine, mode: "insensitive" as const } } : {}) }
+    },
     orderBy: [{ featured: "desc" }, { name: "asc" }],
     take,
     select: {
