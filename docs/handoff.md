@@ -2182,3 +2182,24 @@ overflow at 320/390/430/768/1024/1440/1920.
 dashboard for accepting and progressing orders, delivery courier assignment
 flow, the `naijaeats/orders` customer tracking page, REA research beyond Bolt's
 address gate, and any new Kie.ai imagery (no spend authorised).
+
+## NaijaEats — pan-African dish catalogue (2026-11-09)
+
+**298 documented dishes** across all seven cuisines (targets in brackets):
+Nigerian 68 (60), West African 47 (45), East African 40 (40), North African 36
+(35), Central African 30 (30), Southern African 36 (35), Continental 41 (40).
+Stored in the new `Dish` table (additive migration `eats_dish_catalogue`) with
+local names, country, cuisine, dish category, description, ingredients,
+allergens and search keywords. No duplicate slugs.
+
+**Cuisine pages** at `/naijaeats/restaurants/cuisine/<cuisine>` — all seven
+return 200 and an unknown slug 404s. Each page separates two facts that must
+never be conflated: how many dishes are *documented*, and how many are *served by
+a verified kitchen*. Country filter, dish-category chips, search over name/local
+name/ingredients, sort by "most restaurants serving" or A–Z, and per-dish
+availability badges ("N kitchens serving" or "Catalogue only"). Where no kitchen
+serves a cuisine, the page says so and links to restaurant applications.
+
+**Image reality**: only 19 of 298 dishes have art from the approved set; the
+other 279 show "pending photo". They were not given a jollof photo to fill the
+grid.

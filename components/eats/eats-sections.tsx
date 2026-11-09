@@ -127,7 +127,7 @@ export function TrustStrip() {
 export function CuisineCard({ cuisine }: { cuisine: { slug: string; label: string; blurb: string; imageUrl: string; restaurants: number } }) {
   return (
     <li className="w-[118px] shrink-0 snap-start sm:w-[150px]">
-      <Link href={`/naijaeats/restaurants?cuisine=${cuisine.slug}`} className="block rounded-xl bg-white p-2 text-center ring-1 ring-[#eef1ef] transition hover:shadow-md focus-visible:ring-2 focus-visible:ring-[#f26b21]">
+      <Link href={`/naijaeats/restaurants/cuisine/${cuisine.slug}`} className="block rounded-xl bg-white p-2 text-center ring-1 ring-[#eef1ef] transition hover:shadow-md focus-visible:ring-2 focus-visible:ring-[#f26b21]">
         <span className="block aspect-square w-full overflow-hidden rounded-full">
           <img src={cuisine.imageUrl} alt={cuisine.label} loading="lazy" className="h-full w-full object-cover" />
         </span>

@@ -118,7 +118,7 @@ export function EatsHeader({
           {cuisines.map((cuisine) => (
             <Link
               key={cuisine.slug}
-              href={`/naijaeats/restaurants?cuisine=${cuisine.slug}`}
+              href={`/naijaeats/restaurants/cuisine/${cuisine.slug}`}
               className="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[#33443a] hover:bg-[#f4f6f5] hover:text-[#0b5c33]"
             >
               {cuisine.label}
@@ -136,7 +136,7 @@ export function EatsHeader({
               <li><Link href="/naijaeats/restaurants" onClick={() => setMenuOpen(false)} className="block rounded px-2 py-2 hover:bg-[#f4f6f5]">All restaurants</Link></li>
               {cuisines.map((cuisine) => (
                 <li key={cuisine.slug}>
-                  <Link href={`/naijaeats/restaurants?cuisine=${cuisine.slug}`} onClick={() => setMenuOpen(false)} className="block rounded px-2 py-2 hover:bg-[#f4f6f5]">
+                  <Link href={`/naijaeats/restaurants/cuisine/${cuisine.slug}`} onClick={() => setMenuOpen(false)} className="block rounded px-2 py-2 hover:bg-[#f4f6f5]">
                     {cuisine.label} <span className="text-[11px] text-[#6b7a70]">({cuisine.restaurants})</span>
                   </Link>
                 </li>

@@ -988,6 +988,29 @@ model Restaurant {
   foodOrders FoodOrder[]
 }
 
+/// Documented dish catalogue. A catalogue row describes a real dish; it is not
+/// restaurant inventory. Availability comes from MENU ITEMS on verified kitchens.
+model Dish {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  localNames  String[] @default([])
+  countryCode String
+  /// Cuisine route slug: nigerian | west-african | east-african | north-african
+  /// | central-african | southern-african | continental
+  cuisine     String
+  category    String
+  description String
+  ingredients String[] @default([])
+  allergens   String[] @default([])
+  keywords    String[] @default([])
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  @@index([cuisine, category])
+  @@index([countryCode])
+}
+
 /// Verified customer rating for a restaurant, recorded once per delivered order.
 /// Averages are computed from these rows; nothing is hardcoded on the card.
 model RestaurantRating {
