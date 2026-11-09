@@ -247,23 +247,29 @@ export function StaySteps() {
 }
 
 const SOLUTIONS = [
-  ["For Travelers", "Book hotels, holiday stays and unique places across Africa.", "/naijastay/stays", BedDouble],
-  ["For Tenants", "Find verified homes and apartments for short or long-term rent.", "/naijastay/search?type=rent", KeyRound],
-  ["For Buyers", "Discover houses, land and investment properties across Africa.", "/naijastay/search?type=sale", House],
-  ["For Property Owners", "List your property, manage bookings and earn more.", "/naijastay/host", Sparkles],
-  ["For Businesses & Organizations", "Book corporate stays, long-stay accommodation, event spaces and staff housing.", "/naijastay/search?category=corporate-stays", Users]
+  ["For Travelers", "Book hotels, holiday stays and unique places across Africa.", "/naijastay/stays", "stay-sol-travelers"],
+  ["For Tenants", "Find verified homes and apartments for short or long-term rent.", "/naijastay/search?type=rent", "stay-sol-tenants"],
+  ["For Buyers", "Discover houses, land and investment properties across Africa.", "/naijastay/search?type=sale", "stay-sol-buyers"],
+  ["For Property Owners", "List your property, manage bookings and earn more.", "/naijastay/host", "stay-sol-owners"],
+  ["For Businesses & Organizations", "Book corporate stays, long-stay accommodation, event spaces and staff housing.", "/naijastay/search?category=corporate-stays", "stay-sol-business"]
 ] as const;
 
-export function StaySolutions() {
+export function StaySolutions({ images }: { images: Record<string, string | null> }) {
   return (
-    <StayRail title="Solutions for Everyone" label="Solutions carousel">
-      {SOLUTIONS.map(([title, body, href, Icon]) => (
-        <li key={title} className="w-[200px] shrink-0 snap-start">
-          <Link href={href} className="flex h-full flex-col rounded-xl bg-white p-2.5 ring-1 ring-[#eef1ef] hover:shadow-md">
-            <Icon className="h-5 w-5 text-[#0b5c33]" aria-hidden />
-            <span className="mt-1 text-[11.5px] font-extrabold">{title}</span>
-            <span className="mt-0.5 text-[10px] leading-tight text-[#5d6d64]">{body}</span>
-            <span className="mt-auto pt-1 text-[10px] font-bold text-[#0b5c33]">Explore →</span>
+    <StayRail title="Solutions for Everyone" href="/naijastay/stays" seeAll="See All" label="Solutions carousel">
+      {SOLUTIONS.map(([title, body, href, imageId]) => (
+        <li key={title} className="w-[200px] shrink-0 snap-start sm:w-[230px]">
+          <Link href={href} className="group block overflow-hidden rounded-xl bg-white ring-1 ring-[#e6ebe7] transition hover:shadow-md">
+            <span className="relative block aspect-[4/3] w-full overflow-hidden bg-[#eef2ef]">
+              {images[imageId] ? <img src={images[imageId] ?? undefined} alt="" loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" /> : null}
+              <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                <span className="block text-[12px] font-extrabold text-white">{title}</span>
+              </span>
+            </span>
+            <span className="block p-2">
+              <span className="block text-[10px] leading-tight text-[#5d6d64]">{body}</span>
+              <span className="mt-1 flex items-center justify-end"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#0b8f47] text-white"><ArrowRight className="h-3 w-3" aria-hidden /></span></span>
+            </span>
           </Link>
         </li>
       ))}

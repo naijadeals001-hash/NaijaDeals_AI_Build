@@ -46,7 +46,7 @@ export function StayHeroCarousel({ slides }: { slides: Array<{ src: string; alt:
             loading={i === 0 ? "eager" : "lazy"}
           />
         ))}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#042915]/95 via-[#06301a]/70 to-transparent" aria-hidden />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#042915]/85 via-[#06301a]/45 to-transparent" aria-hidden />
         <div className="absolute inset-0 flex items-center">
           <div className="max-w-[560px] p-4 sm:p-7">
             <p className="flex items-center gap-1.5 font-display text-[18px] font-extrabold text-white"><House className="h-5 w-5 text-[#f5b52e]" aria-hidden /> Naija<span className="text-[#f5b52e]">Stay</span></p>

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { StayBottomNav, StayHeader } from "@/components/stay/stay-shell";
-import { StayAppBanner, StayBenefits, StayFooter, StayPromoBands, StaySearchPanel, StaySolutions, StaySteps, StayRail, PropertyCard, CategoryCards, DestinationCards } from "@/components/stay/stay-home";
-import { DESTINATIONS, STAY_CATEGORIES, listFeatured } from "@/lib/services/stay/discovery";
-import { categoryImage, stayImage } from "@/lib/services/stay/images";
+import { StayAppBanner, StayBenefits, StayFooter, StayPromoBands, StaySearchPanel, StaySolutions, StaySteps, CategoryCards, DestinationCards } from "@/components/stay/stay-home";
+import { FeaturedProperties, SuccessStories, type FeaturedItem } from "@/components/stay/featured-properties";
 import { StayHeroCarousel } from "@/components/stay/stay-hero-carousel";
+import { DESTINATIONS, STAY_CATEGORIES, searchStay } from "@/lib/services/stay/discovery";
+import { categoryImage, stayImage } from "@/lib/services/stay/images";
 
 export const dynamic = "force-dynamic";
 
@@ -14,33 +15,45 @@ export const metadata: Metadata = {
 };
 
 export default async function NaijaStayHomePage() {
-  const featured = await listFeatured();
+  const listings = await searchStay({ take: 40 });
+  const featured: FeaturedItem[] = listings.map((item) => ({
+    id: item.id,
+    slug: item.slug,
+    title: item.title,
+    city: item.city,
+    country: item.country,
+    listingType: item.listingType,
+    nightlyKobo: item.nightlyKobo,
+    salePriceKobo: item.salePriceKobo,
+    imageUrl: item.imageUrl,
+    imageKind: item.imageKind,
+    isDemo: item.isDemo,
+    featured: item.featured,
+    stars: item.rating ?? 0,
+    reviews: item.reviewCount
+  }));
+
   return (
-    <div className="min-h-screen bg-[#f7f9f7] text-[#14241b]">
+    <div className="min-h-screen bg-white text-[#14241b]">
       <StayHeader />
-      <main id="main-content" className="mx-auto max-w-[1440px] px-3 pb-6 sm:px-6">
+      <main id="main-content" className="mx-auto max-w-[1440px] px-3 pb-24 sm:px-6 lg:pb-6">
         <StayHeroCarousel
           slides={[
-            { src: stayImage("stay-hero") ?? "", alt: "Couple walking through a tropical resort garden beside an infinity pool", caption: "Resort stays across Africa" },
             { src: stayImage("stay-hero-2") ?? "", alt: "Beach villa with an infinity pool at sunset", caption: "Beachfront villas" },
-            { src: stayImage("stay-hero-3") ?? "", alt: "Safari lodge deck overlooking the savannah at dusk", caption: "Safari lodges" },
-            { src: stayImage("stay-hero-4") ?? "", alt: "City rooftop apartment terrace with a pool at blue hour", caption: "City apartments" }
-          ].filter((s) => s.src)}
+            { src: stayImage("stay-hero") ?? "", alt: "Couple walking through a tropical resort garden beside an infinity pool", caption: "Resort stays across Africa" },
+            { src: stayImage("stay-hero-3") ?? "", alt: "Safari lodge deck overlooking the savannah", caption: "Safari lodges" },
+            { src: stayImage("stay-hero-4") ?? "", alt: "City rooftop apartment terrace with a pool", caption: "City apartments" }
+          ].filter((slide) => slide.src)}
         />
         <div className="mt-3"><StaySearchPanel /></div>
         <StayBenefits />
         <CategoryCards categories={STAY_CATEGORIES.map((c) => ({ slug: c.slug, label: c.label, imageUrl: categoryImage(c.slug) }))} />
-        {featured.length ? (
-          <StayRail title="Featured Properties" href="/naijastay/stays" seeAll="See More Properties" label="Featured properties">
-            {featured.map((property) => <PropertyCard key={property.id} property={property} />)}
-          </StayRail>
-        ) : (
-          <p className="mt-5 rounded-2xl bg-white p-4 text-[11.5px] text-[#5d6d64] ring-1 ring-[#eef1ef]">No published properties yet.</p>
-        )}
+        <FeaturedProperties items={featured} />
         <DestinationCards destinations={DESTINATIONS.map((d) => ({ slug: d.slug, city: d.city, country: d.country, imageUrl: stayImage(d.image) }))} />
         <StaySteps />
-        <StaySolutions />
+        <StaySolutions images={{ "stay-sol-travelers": stayImage("stay-sol-travelers"), "stay-sol-tenants": stayImage("stay-sol-tenants"), "stay-sol-buyers": stayImage("stay-sol-buyers"), "stay-sol-owners": stayImage("stay-sol-owners"), "stay-sol-business": stayImage("stay-sol-business") }} />
         <StayPromoBands hostImage={stayImage("stay-band-host")} landImage={stayImage("stay-band-land")} />
+        <SuccessStories />
         <StayAppBanner />
       </main>
       <StayFooter />
