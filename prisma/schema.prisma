@@ -964,13 +964,44 @@ model Restaurant {
   status    RestaurantStatus @default(PENDING)
   isSample      Boolean          @default(false)
   applicationId String?          @unique
+  // Editorial fields used by the NaijaEats storefront.
+  coverUrl      String?
+  logoUrl       String?
+  description   String?
+  countryCode   String           @default("NG")
+  /// Cuisine family: West | East | Southern | Central | North | Continental.
+  region        String           @default("West")
+  dishes        String[]         @default([])
+  /// Minutes, shown only when the restaurant sets its own preparation window.
+  prepMinMinutes  Int?
+  prepMaxMinutes  Int?
+  deliveryFeeKobo BigInt         @default(0)
+  highlighted   Boolean          @default(false)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   owner         User             @relation("RestaurantOwner", fields: [ownerId], references: [id])
   menuItems MenuItem[]
+  ratings   RestaurantRating[]
 
   @@index([status, market])
+  @@index([region, countryCode])
   foodOrders FoodOrder[]
+}
+
+/// Verified customer rating for a restaurant, recorded once per delivered order.
+/// Averages are computed from these rows; nothing is hardcoded on the card.
+model RestaurantRating {
+  id           String     @id @default(cuid())
+  restaurantId String
+  orderId      String     @unique
+  orderNumber  String
+  customerName String
+  rating       Int
+  comment      String?
+  createdAt    DateTime   @default(now())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
 }
 
 model MenuItem {
@@ -979,6 +1010,10 @@ model MenuItem {
   name         String
   description  String?
   priceKobo    BigInt
+  imageUrl     String?
+  /// Dish taxonomy slug used by the "Popular Food Categories" rail.
+  category     String?
+  featured     Boolean    @default(false)
   published    Boolean    @default(false)
   available    Boolean    @default(true)
   isSample     Boolean    @default(false)

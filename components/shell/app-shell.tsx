@@ -48,6 +48,12 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
     return <>{children}</>;
   }
 
+  // NaijaEats owns its full storefront chrome (green brand header, cuisine
+  // strip, footer and mobile bottom navigation), matching the approved mockup.
+  if (pathname?.startsWith("/naijaeats")) {
+    return <>{children}</>;
+  }
+
   // The storefront and NaijaEats landing use the full-bleed layout; the ecosystem
   // sidebar starts on the remaining inner routes.
   const isHome = pathname === "/" || pathname === "/naijaeats" || pathname === "/naijashop";
