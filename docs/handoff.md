@@ -2278,3 +2278,14 @@ data source exists here, so none is invented.
 
 **Demo providers** (`prisma/eats-providers-seed.cjs`): four labelled fixtures
 (motorcycle + car on each platform) under `@naijaeats.demo` accounts.
+
+### NaijaEats rider workspace and delivery PIN
+`/naijaeats/courier` gives NaijaSend couriers and NaijaDrive drivers a real
+workspace: live offers (restaurant, zone, vehicle, earnings, expiry), accept or
+decline, then pickup PIN and customer delivery PIN. Customer order tracking now
+shows the delivery PIN once a rider is assigned, so the handoff is verifiable
+from both sides. Non-provider accounts are told plainly they are not registered
+rather than shown an empty queue.
+
+Regression after this slice: delivery E2E 22/22, operator 9/9, customer
+functional 23/23, basket/checkout 13/13, NaijaShop four-card 70/70.

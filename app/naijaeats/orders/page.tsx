@@ -6,6 +6,7 @@ import { EatsBottomNav } from "@/components/eats/eats-bottom-nav";
 import { listCuisineRail, listStorefrontRestaurants } from "@/lib/services/eats/storefront";
 import { getSessionUser } from "@/lib/auth/session";
 import { listFoodOrdersForCustomer } from "@/lib/services/core/eats-order.service";
+import { OrderPins } from "@/components/eats/order-pins";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Your food orders — NaijaEats" };
@@ -68,6 +69,7 @@ export default async function EatsOrdersPage() {
                   <p className="mt-2 text-[10.5px] text-[#8a938d]">
                     {order.deliveryAddress ? `Delivering to ${order.deliveryAddress}` : null}
                   </p>
+                  <OrderPins orderId={order.id} status={String(order.status)} />
                 </li>
               );
             })}
