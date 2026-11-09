@@ -190,9 +190,7 @@ function ModuleRail() {
 
 function EcosystemPulse() {
   const { t } = useLocale();
-  const live = verticals.filter((vertical) => vertical.status === "live").length;
-  const preview = verticals.filter((vertical) => vertical.status === "preview").length;
-  const pending = verticals.length - live - preview;
+  const live = verticals.length;
 
   return (
     <section aria-label={t("home.quickActions")} className="rounded-2xl border border-border-soft bg-canvas px-4 py-3">
@@ -201,16 +199,6 @@ function EcosystemPulse() {
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-primary-live" aria-hidden="true" />
             {live} {t("status.live")}
-          </span>
-          {preview > 0 ? (
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#2563EB]" aria-hidden="true" />
-              {preview} {t("status.preview")}
-            </span>
-          ) : null}
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[#B45309]" aria-hidden="true" />
-            {pending} {t("status.setup")}
           </span>
         </div>
         <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:pb-0" role="list" aria-label={t("home.quickActions")}>
