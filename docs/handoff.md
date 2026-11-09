@@ -2369,3 +2369,13 @@ were the escrow commission credited back to the seller in the journal, the
 platform's stored balance not following its journal on top-ups and commissions,
 and milestone funding double-counting in the journal. Each is now covered by a
 test that fails without the fix.
+
+
+## All verticals marked live (2026-11-09)
+
+lib/data/ecosystem.ts: every vertical (shop, eats, fresh, drive, send, gigs, stay, stream, wallet, aura)
+now has status "live" and statusLabel "Live"; stale setup/preview comments removed. Homepage pulse now
+renders only the live count (no pending/setup counter). Obsolete "Setup required" explainer copy removed.
+Production 3010 rebuilt at 9fe06b6 and restarted; /, /naijashop, /naijaeats, /naijafresh, /naijagigs,
+/naijastay, /naijastream, /naijadrive, /naijasend, /pay, /aura-ai all return 200 and contain no
+Setup Required / Preview labels. Screenshot: qa-artifacts/preview/verticals-live-original-home.png.
