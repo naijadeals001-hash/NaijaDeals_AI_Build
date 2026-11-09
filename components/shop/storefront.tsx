@@ -199,14 +199,21 @@ export function NaijaShopStorefront() {
     return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
   }, [products]);
 
-  const deals = useMemo(
-    () =>
-      [...products]
-        .filter((product) => product.priceKobo && (product.stock ? product.stock.quantity - product.stock.reserved > 0 : true))
-        .sort((a, b) => Number(a.priceKobo) - Number(b.priceKobo))
-        .slice(0, 6),
-    [products]
-  );
+  // Real, in-stock listings only, one card per product name: a sample row and a
+  // live listing often share a name, and duplicated cards look broken.
+  const deals = useMemo(() => {
+    const seen = new Set<string>();
+    return [...products]
+      .filter((product) => product.priceKobo && (product.stock ? product.stock.quantity - product.stock.reserved > 0 : true))
+      .sort((a, b) => Number(Boolean(b.rating?.count)) - Number(Boolean(a.rating?.count)) || Number(a.priceKobo) - Number(b.priceKobo))
+      .filter((product) => {
+        const key = product.name.trim().toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 6);
+  }, [products]);
 
   async function addToCart(product: ShopProduct) {
     setAddingId(product.id);

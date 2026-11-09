@@ -42,6 +42,11 @@ export async function GET(request: NextRequest) {
   if (sort === "price-desc") products = [...products].sort((a, b) => Number(b.priceKobo - a.priceKobo));
   if (sort === "trust") products = [...products].sort((a, b) => b.vendor.trustScore - a.vendor.trustScore);
 
+  // Acceptance-suite rows ("Test checkout …", "Last Unit …") are database rows,
+  // never storefront products, so they are stripped at the API boundary too.
+  const FIXTURE = /^(variant fixture|test |upload test|last unit|product test)/i;
+  products = products.filter((product) => !FIXTURE.test(product.name) && !/mw[0-9a-z]{8,}$/i.test(product.slug));
+
   const saleModes = await saleModesFor(products.map((product) => product.id));
   const payload = products.map((product) => ({
     ...product,

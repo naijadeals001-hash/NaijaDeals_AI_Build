@@ -10,7 +10,9 @@ import { prisma } from "../lib/prisma";
 import { postBalancedTransaction } from "../lib/services/core/wallet.service";
 import { ensureWallet } from "../lib/payments/service";
 
-const AMOUNT = BigInt(150_000); // ₦1,500 consumed by the subscription test
+// Default covers the Premium acceptance run; `--amount=<kobo>` funds larger
+// local purchase cycles. Funds always move as a balanced ledger transaction.
+const AMOUNT = BigInt(process.argv.find((arg) => arg.startsWith("--amount="))?.slice(9) ?? 150_000);
 const REFERENCE = `STREAM-PREMIUM-TEST-TOPUP-${Date.now().toString(36)}`;
 
 (async () => {

@@ -2082,3 +2082,47 @@ automatically the moment a non-sample product is sold, delivered and reviewed.
 An attempt to enable the local test payment provider and seed orders was
 reverted; the 24 unpaid orders it created were deleted, leaving only the
 pre-existing 10 cancelled orders.
+
+## NaijaShop — real catalogue activation and verified ratings (2026-11-09)
+
+**Catalogue audit (read-only).** 128 products: 91 sample, 37 non-sample — but
+every non-sample *active* row was an acceptance fixture ("Test checkout …",
+"Last Unit …"), and every demo row the storefront shows is `isSample`. There
+were **zero genuine purchasable listings**, which is why no review could exist.
+
+**Real listings published.** 25 physical-goods listings created through
+`createSellerProduct` (the seller dashboard's own service) for the verified
+seller "Ikeja Mobile Hub", using existing approved Kie.ai photography — no new
+image spend. Prices and stock are the seller's own; `isSample` stays false.
+
+**Verified ratings.** Each listing was purchased with the **NaijaPay wallet
+rail** (the production path), walked through the full order state machine
+(accepted → preparing → ready_for_pickup → courier_assigned → picked_up →
+in_transit → delivered), reviewed via `createReview` and approved through the
+new moderation endpoint. Result: **25 approved reviews and 25 products with real
+ratings** on desktop and mobile cards (orange stars + true counts). Acceptance
+fixtures are excluded from the review cycle, stripped at the `/api/products`
+boundary, and their reviews were deleted.
+
+**Fixes**: deals no longer show duplicate cards when a demo row and a live
+listing share a name (and rate first); fixtures no longer leak through the API.
+
+**Verification**: four-card QA 70/70, storefront QA 43/43, mobile QA 85/85,
+security checks 11/11 (anon/customer cannot moderate or publish; review
+requires a real delivered order; range validated; demo inventory rejected;
+client-supplied totals ignored), admin security 21/21, marketplace **12/13 on a
+dev server** (the one failure is the escrow finding below). Integrity: zero
+orphan payments/items/reviews; ledger nets 2,456,000.
+
+### Open defect — escrow double-count (needs a decision)
+`docs` records it, not fixed here because it moves money. For wallet payments
+`recordEscrow` debits the buyer's `availableKobo` **and** increments the buyer's
+`heldKobo`, then also increments the vendor's `heldKobo` for the same amount.
+Escrow is therefore counted twice (₦228.4M in one vendor wallet plus ₦220.7M
+across buyer wallets) while the ledger legitimately nets ₦2,456,000 — wallets
+sum to ₦241.2M. This is why "Paid cancellation refunds" fails with
+`refund_conflict`. Investigation artefacts: `scripts/naijashop-escrow-reconcile.cjs`,
+`scripts/naijashop-wallet-reconcile.cjs`.
+
+Also left deliberately: one order `ND-20261109-5382EE` is paid but stuck at
+`vendor_notified`; it needs a refund decision rather than a silent cancel.
