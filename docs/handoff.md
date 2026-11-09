@@ -2300,3 +2300,72 @@ offers open; and a second `FoodDispatch` for the same order is impossible
 Ledger after all runs: 404 entries, net ₦2,456,000 — unchanged from before the
 NaijaEats work, confirming settlements move money between wallets without
 creating or destroying it.
+
+## NaijaPay — payments build (2026-11-05)
+
+### Scope delivered
+Phases 1-4, 6, 9 and 10 of the NaijaPay directive, committed in this order:
+`a8b2feb` ledger correction findings and release fix, `9e935db` landing imagery,
+`a33ab38` wallet pagination, `90c4969` mockup rebuild, `c2d20dc` top-ups and
+transfers, `dafeedd` Add Money flow, `cedd554` milestone escrow, `91b03c1`
+offline outbox, `bbf6ba4` Control Center.
+
+### Ledger — verified, not mutated
+`node scripts/naijapay-reconcile.cjs` on `naijadeals_core`: 184 wallets, 182
+reconcile, 2 exceptions (SYSTEM platform position and the Ikeja Mobile Hub
+vendor), journal difference ₦24,560 offset exactly in `FIXTURE_EQUITY`. The two
+customer "exceptions" in the earlier note were healthy wallets holding 19 open
+escrows; their `availableKobo` reconciled exactly.
+
+The correction package (`--markdown`) lists the affected rows, proposed
+treatment, before/after, audit links and recovery steps. It is **not applied**.
+`naijapay-correction-isolated-verify.cjs` proves it on a throwaway schema copy and
+asserts the shared database is unchanged afterwards — including the arithmetic
+point that a further balanced posting cannot remove an existing difference.
+
+### Tooling
+- REA 6.8.0: verified by `--help` (exit 0) and present in the MCP config.
+- Kie.ai MCP v5.6.2: 39 tools, verified by a stdio initialize handshake.
+- ECC and Soup: **not installed on this host**; recorded, work continued without them.
+
+### Verification
+`node scripts/naijapay-acceptance.cjs` — **14/14 suites passed**:
+
+| Suite | Result |
+|---|---|
+| Reconciliation report | reproduced |
+| Correction preview | rendered |
+| Correction on isolated copy | ALL CHECKS PASSED |
+| Escrow release conservation | ALL CHECKS PASSED |
+| P2P transfer financial safety | 23/23 |
+| Full journey (top-up → transfer → escrow) | 41/41 |
+| Milestone escrow permissions | 32/32 |
+| Offline outbox rules | 19/19 |
+| Browser journey (real UI) | 25/25 |
+| Authenticated wallet | 20/20 |
+| Add Money / outbox UI | 5/5 |
+| Control Center access control | 13/13 |
+| Link and control audit | 418 checks |
+| Landing visual QA | PASSED (390/768/1440) |
+
+Preview: `http://localhost:3015/pay` (task `NaijaDealsPreview3015`, serving
+`NEXT_DIST_DIR=.next-pay`; the served chunk was checked against the build output).
+
+### Outstanding
+1. **Ledger correction** awaits approval of the concrete preview; nothing applied.
+2. **Push blocked**: `git push github-preservation` returns
+   `403 Permission to naijadeals001-hash/NaijaDeals_AI_Build.git denied to BetFuz`.
+   The authenticated GitHub account is not a collaborator on the preservation
+   repo. Local commits are the backup; remote `naijashop-marketplace` remains at
+   `e80a0f9`.
+3. **Paystack / Flutterwave**: no credentials. Add Money offers only the local
+   test provider, which is refused on a LIVE database.
+4. **Payment links, bills, AI assistant, withdrawals**: not built; dependencies
+   recorded in `docs/naijapay-status.md`.
+
+### Defects fixed this increment
+Nine, listed with their effect in `docs/naijapay-status.md`. The most serious
+were the escrow commission credited back to the seller in the journal, the
+platform's stored balance not following its journal on top-ups and commissions,
+and milestone funding double-counting in the journal. Each is now covered by a
+test that fails without the fix.

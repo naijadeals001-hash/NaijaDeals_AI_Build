@@ -1,53 +1,98 @@
 # NaijaPay implementation status
 
 Living register of what is implemented, verified, blocked or not implemented, with
-the exact dependency blocking each unfinished payment workflow. Update on every
-NaijaPay change. Evidence references live in `docs/handoff.md`.
+the exact dependency blocking each unfinished payment workflow.
 
-## Implemented and verified
+**Readiness is reported in the five categories the build directive asks for:**
 
-| Capability | Surface | Engine | Verification |
-|---|---|---|---|
-| NaijaPay landing (approved green-and-gold design) | `/pay` | real photography + generated hero | visual QA 390/768/1440, images 11/11, 0 overflow |
-| Live wallet card (balance, escrow sum, recent tx) | `/pay` | `/api/wallet` (existing ledger) | signed-in browser check, real balance |
-| Full wallet experience (toggle, escrow list, searchable/filterable history) | `/wallet` | same | signed-in mobile+desktop checks, 0 overflow |
-| Add Money panel (honest per-provider state) | `/pay#add-money` | `/api/payments/methods` | runtime: wallet-only env shows unconfigured state |
-| P2P transfer engine | service only | `Wallet`/`WalletTransaction`/`LedgerEntry` via `postBalancedTransaction` | 23/23 financial-safety tests ×2 runs (isolated schema) |
-| Control Center reconciliation tab (wallet vs ledger, unbalanced journals) | `/admin?module=pay&tab=reconciliation` | `/api/admin/finance/reconciliation` | admin 200 + renders 10 wallets; anonymous 401; customer 403 |
-| NaijaPay Business dashboard (earnings, pending settlement, gross sales, wallet activity) | `/pay/business` | `/api/pay/business/overview` (vendor wallet, Payout, EscrowHold, paid orders) | anon 401, customer 403, seller 200 with own vendor only; renders real figures; 0 overflow |
-| Settlements & payouts view (escrow settlements, payout history, open holds) | `/pay/business` settlements tab | same service | renders all three sections; honest empty states |
-| Customer escrow protection dashboard (holds + event timelines) | `/pay/escrow` | `/api/wallet` escrowHolds incl. events | renders protected-total card + timeline; honest empty state |
-| Control Center escrow tab (all holds + latest events, search/filter) | `/admin?module=pay&tab=escrow` | `/api/admin/escrow` (finance:read) | admin renders panel; anon 401 (verified pattern); honest 0-row state on this DB |
-| Send Money screen (form → review → confirm, idempotency key, honest disabled result) | `/pay/send` | `/api/pay/transfers` (gated) | signed-in browser flow verified; confirm returns honest "not active yet", no fake success |
-| Receive Money screen (payment handle, copy/share, coming states) | `/pay/receive` | `/api/auth/me`, `/api/wallet` | verified: handle shown, copy/share present, honest coming section |
-| Scan & Pay (camera BarcodeDetector + manual entry + merchant verification honest state) | `/pay/scan` | none yet (merchant QR not issued) | verified: manual entry → honest "issuance not live", confirm disabled |
-| Security screen (device sessions list + revoke, protection checklist, PIN pending) | `/pay/security` | `/api/account/sessions` (+`/[id]` DELETE) | scripts/sessions-api-test.mjs PASS: anon 401, one current flag, revoke-other 200, revoke-current 400, foreign 404 |
-| Wallet history date filter + transaction receipt view | `/wallet` | `/api/wallet` | verified: range filter applies, receipt modal shows reference/type/ledger note |
+1. **Implemented** — code exists and runs.
+2. **Tested locally** — exercised by a script here, with recorded results.
+3. **Verified with provider sandbox** — confirmed against a real provider.
+4. **Ready for production activation** — every gate met for a live switch.
+5. **Blocked** — with the exact missing dependency.
 
-## Implemented but blocked (built, honestly disabled)
+| Capability | 1 | 2 | 3 | 4 | Blocker / evidence |
+|---|---|---|---|---|---|
+| Reconciliation report (dual-book) | Yes | Yes | n/a | n/a | `scripts/naijapay-reconcile.cjs` |
+| Correction preview + isolated verification | Yes | Yes | n/a | — | `naijapay-correction-preview.cjs`, `naijapay-correction-isolated-verify.cjs`. **Not applied** — shared data untouched pending approval |
+| Add Money — local test provider | Yes | Yes | n/a | **No** | Test money only; never available on a LIVE database |
+| Add Money — Paystack / Flutterwave | Partial (adapter + status only) | No | **No** | **No** | **Blocked:** `PAYSTACK_SECRET_KEY` / `FLUTTERWAVE_SECRET_KEY` absent |
+| Internal P2P transfers | Yes | Yes | n/a | **No** | Needs owner sign-off for real funds |
+| Escrow: order holds (buyer → vendor) | Yes | Yes | n/a | **No** | Same launch decision |
+| Escrow: milestones (customer → customer) | Yes | Yes | n/a | **No** | Same launch decision |
+| Dispute resolution (administrator) | Yes | Yes | n/a | **No** | Requires `finance:escrow:settle` |
+| Offline outbox | Yes | Yes | n/a | — | Client-side; server idempotency underpins it |
+| Control Center — NaijaPay controls | Yes | Yes | n/a | n/a | `finance:read` / `finance:escrow:settle` |
+| Payment links / merchant QR | **No** | No | No | No | **Blocked:** not built — see below |
+| Bills, airtime, data, electricity, TV | **No** | No | No | No | **Blocked:** no provider selected or contracted |
+| Bank withdrawals | Partial (existing payout path) | No | No | No | **Blocked:** no payout credentials |
+| AI assistant financial tools | **No** | No | No | No | **Blocked:** no AI provider configured |
 
-| Workflow | Blocker (exact dependency) |
-|---|---|
-| Send money ACTIVATION (screen is live at /pay/send; posting disabled) | `ENABLE_P2P_TRANSFERS` env flag off by policy. Engine passes idempotency/concurrency/reconciliation tests on the TEST schema; activation additionally requires (a) owner authorisation, (b) a reconciliation pass over the shared development database — the SYSTEM wallet currently shows a −₦25,000 cached-vs-ledger delta that must be investigated first (visible in the admin Reconciliation tab), (c) transaction-PIN/auth requirement decision before real funds move. |
-| Receive: personal QR + amount requests (handle/copy/share is live) | Server-generated signed payment identifiers + request tracking — designed, not yet built; activates with the transfers rollout. |
-| Scan & Pay payment confirmation (screen + manual entry live) | Merchant QR issuance (merchant→payment-token mapping on the shared ledger) — not yet built. |
-| Wallet top-up via card/bank | `PAYSTACK_SECRET_KEY` / `FLUTTERWAVE_SECRET_KEY` not present in this environment; `ENABLE_TEST_PAYMENTS` also unset. UI reports the honest unconfigured state. Note: current `Payment` model is order-scoped (`orderId` required) — standalone top-ups need a reviewed additive migration or a dedicated top-up record before provider keys alone suffice. |
+## Changed in this increment
 
-## Not implemented (dependency noted)
+- **Reconciliation** reproduced and re-interpreted: 184 wallets, 182 reconciled,
+  2 exceptions, journal difference ₦24,560 fully offset in the equity book. Two
+  earlier "exceptions" were healthy wallets with open escrow.
+- **Correction path** prepared and proven on an isolated copy; not applied.
+- **Transfers enabled** for development. The database is classified TEST and the
+  payment boundary blocks live money independently of the flag.
+- **Add Money** built end to end with a new additive `WalletTopUp` model.
+- **Milestone escrow** built with enforced transitions and permissions.
+- **Offline outbox** built with a stable idempotency key and account isolation.
+- **Control Center** NaijaPay tab: provider status, journal integrity, dispute
+  settlement with a recorded reason.
 
-| Workflow | Dependency |
-|---|---|
-| Bills, airtime, data, electricity, TV | No bill-payment provider integration exists anywhere in the codebase. Requires provider selection + credentials + agreement before any UI flow can be enabled. |
-| Payment links | New `reference_type` vocabulary + public payment-link records; depends on Send/Receive design. Business dashboard shows the honest "Coming" state for QR/links/customers/settings tools. |
-| Merchant QR payments | Merchant identifier issuance on the shared ledger. |
-| Transaction PIN + security notifications (session/device controls are live at /pay/security) | Requires product decision on PIN storage (hashing scheme) and challenge flow; notification wiring depends on the Communication engine's outbound channel. |
-| Financial Control Center beyond reconciliation | Payments/payouts/audit views already exist in the unified Control Center; provider status, refunds and risk views are future work under `finance:read`. |
+## Defects found and fixed by these tests
+
+| Defect | Where | Effect if shipped |
+|---|---|---|
+| Commission credited back to the seller in the journal | `order.service.ts` | Seller's stored balance short by the commission |
+| Top-up debited the platform in the journal only | `topup.service.ts` | Platform overstates funds by every top-up it funds |
+| Escrow release credited the platform in the journal only | `order.service.ts` | Stored funds and journal drift apart |
+| Milestone funding credited the payee **and** held the payer's money | `milestone.service.ts` | Journal double-counts every release |
+| A payer could release a disputed milestone | `milestone.service.ts` | Disputes become advisory, not binding |
+| `/api/pay/topups` 500'd once any top-up existed | `app/api/pay/topups/route.ts` | Add Money breaks after first use |
+| Incoming transfers invisible to recipients | `wallet.service.ts` | Recipients see money with no record of it |
+| Outbox prune deleted other accounts' intents | `lib/pay/outbox.ts` | One sign-in could erase another user's queued payments |
+| Admin panel unreadable (light tokens in dark UI) | `admin-naijapay-panel.tsx` | Contrast failure in the Control Center |
+
+## Not implemented, with dependencies
+
+**Payment links and merchant QR.** These need a public identifier that resolves to
+a payee without exposing wallet or account data, plus a signed single-use token
+for amount requests. Deliberately a separate slice: it adds a public surface with
+its own expiry and duplicate-protection rules, and scanning or opening a link
+must never itself authorize payment — the payer still confirms on a
+server-validated screen.
+
+**Bills, airtime, data, electricity, TV.** No provider is selected. Choosing one
+requires comparing Nigeria-first coverage, customer/meter validation, delivery
+status, reversal behaviour, test access and pricing. Writing an adapter before
+choosing would mean guessing at another company's contract.
+
+**AI assistant.** No AI provider is configured for financial tooling. The
+assistant needs permissioned, read-only tools that explain the caller's own
+transactions and draft — never send — payments.
+
+**Bank withdrawals.** The payout path exists but needs provider credentials.
+
+## Verification commands
+
+```
+node scripts/naijapay-acceptance.cjs     # all suites, prints a summary
+node scripts/naijapay-reconcile.cjs      # current ledger position (read-only)
+node scripts/naijapay-correction-preview.cjs --markdown
+```
+
+Last full run: 14/14 suites passed (see `qa-artifacts/naijapay-acceptance.json`).
 
 ## Standing constraints
 
-- One wallet, one ledger, one Control Center — no NaijaPay-specific financial tables
-  beyond additive, reviewed extensions.
-- Live money movement stays impossible on TEST-classified databases
-  (`lib/payments/boundary.ts`) regardless of UI.
-- Push preservation requires GitHub credentials for `naijadeals001-hash` — the
-  stored credential (`BetFuz`) is denied; local commits are the only backup until fixed.
+- One wallet, one ledger, one Control Center. The only new financial tables are
+  `WalletTopUp` and `EscrowMilestone`; both are additive and both settle through
+  `postBalancedTransaction`.
+- Live money movement is impossible on a TEST-classified database regardless of
+  UI or flags.
+- Milestone holds are wallet holds — not provider-held or regulated escrow.
+- Push preservation needs GitHub credentials for `naijadeals001-hash`; the stored
+  credential is denied. Local commits are the only backup until that is fixed.
