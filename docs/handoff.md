@@ -2131,3 +2131,54 @@ Also left deliberately: one order `ND-20261109-5382EE` is paid but stuck at
 overwrites the production bundle in that directory. Use a distinct
 `NEXT_DIST_DIR` (e.g. `.next-dev-3025`) for any extra dev server, or the 3015
 preview will fail with "Could not find a production build".
+
+## NaijaEats — mockup reconstruction foundation (2026-11-09)
+
+**Mockups preserved**: `design-references/approved/NaijaEats/`
+`naijaeats-desktop-approved.png` (1024×1536, sha256 `0b5e9401…`) and
+`naijaeats-mobile-approved.png` (793×1983, sha256 `743bdb8d…`).
+
+**REA**: executed against a dedicated CDP Chrome; evidence saved to
+`qa-artifacts/rea-eats/REA-EVIDENCE.md` with ids `ev_97c03a87…` (Uber Eats —
+blocked by Cloudflare), `ev_8fb0979b…` and `ev_070f1157…` (Bolt Food desktop and
+mobile). Uber Eats could not be inspected at all, and Bolt Food gates discovery
+behind an address dialog whose autocomplete returned nothing here, so cart and
+checkout behaviour was **not** observed. The applied findings are the
+address-first header, persistent utility row and honest labelling of
+unavailable services.
+
+**Schema** (additive migration `naijaeats_storefront`): Restaurant gained
+cover/logo, description, countryCode, region, dishes, prep window, delivery fee
+and `highlighted`; MenuItem gained imageUrl, category and featured;
+`RestaurantRating` (one rating per delivered order) powers real averages.
+
+**Storefront** rebuilt to the mockup's section order — header, cuisine strip,
+hero, trust strip, Browse by cuisine, Popular food categories, Top restaurants,
+three promo banners, Nigerian favourites, local vendors, more ways, app banner,
+full footer and a fixed mobile bottom navigation. NaijaEats is now full-bleed
+(no NaijaDeals shell). Filters (`?cuisine=`, `?category=`, `?q=`) drive the
+restaurant list from real records; restaurant detail shows the real menu,
+ratings and delivery window.
+
+**Assets reused**: the owner-approved NaijaEats artwork (10 images) copied to
+`public/generated/eats` and optimised to WebP (25 MB → 2.6 MB), plus the
+existing demo menus enriched with images that actually depict each dish.
+
+**Honest gaps**: 2 demo kitchens and 6 dishes; no ratings yet (ratings require
+delivered orders); "Favourites" saving and self-serve catering are not part of
+the schema and the pages say so; app-store links are not shown because the app
+is not published.
+
+### NaijaEats functional acceptance
+`scripts/naijaeats-functional-check.cjs` **23/23**: every mockup section
+renders, cuisine and search filters narrow the real list, restaurant pages show
+menu dishes with prices, guests cannot order, a signed-in customer's order is
+created and persisted (NFE-20261109-7B29, ₦4,500, paid), quantity 11 is
+rejected, a customer cannot read kitchen orders, no page errors, and no
+overflow at 320/390/430/768/1024/1440/1920.
+
+**Not yet done** (state these as open, not complete): the cart/checkout UI
+(order currently goes through the API directly), the restaurant operator
+dashboard for accepting and progressing orders, delivery courier assignment
+flow, the `naijaeats/orders` customer tracking page, REA research beyond Bolt's
+address gate, and any new Kie.ai imagery (no spend authorised).
