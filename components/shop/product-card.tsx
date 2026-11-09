@@ -67,7 +67,7 @@ export function ShopProductCard({
             <div className="grid h-full w-full place-items-center text-[11px] font-semibold text-[#565959]">Image unavailable</div>
           )}
         </div>
-        <h3 className="mt-2 line-clamp-2 min-h-[2.5rem] text-[13px] font-semibold leading-5 text-[#0f1111] group-hover:text-[#c45500]">
+        <h3 className="mt-1.5 line-clamp-2 min-h-[2.25rem] text-[11.5px] font-semibold leading-[1.15rem] text-[#0f1111] group-hover:text-[#c45500] sm:mt-2 sm:min-h-[2.5rem] sm:text-[13px] sm:leading-5">
           {product.name}
         </h3>
       </Link>
@@ -81,7 +81,7 @@ export function ShopProductCard({
         </p>
       ) : null}
       <p className="mt-1 flex flex-wrap items-baseline gap-1.5">
-        <span className="text-[16px] font-extrabold text-[#0f1111]">{naira(product.priceKobo)}</span>
+        <span className="text-[14px] font-extrabold text-[#C81919] sm:text-[16px]">{naira(product.priceKobo)}</span>
         {compare ? <span className="text-[11.5px] text-[#565959] line-through">{naira(compare)}</span> : null}
       </p>
       {onAdd ? (
@@ -90,7 +90,7 @@ export function ShopProductCard({
           onClick={() => onAdd(product)}
           disabled={adding}
           aria-label={`Add ${product.name} to cart`}
-          className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-full bg-[#ffd814] px-3 py-1.5 text-[12.5px] font-bold text-[#0f1111] transition hover:bg-[#f7ca00] disabled:opacity-60"
+          className="mt-auto flex w-full items-center justify-center gap-1 rounded-full bg-[#ffd814] px-2 py-1 text-[10.5px] font-bold text-[#0f1111] transition hover:bg-[#f7ca00] disabled:opacity-60 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-[12.5px]"
         >
           {adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <ShoppingCart className="h-3.5 w-3.5" aria-hidden />}
           Add to Cart

@@ -31,6 +31,7 @@ import {
 import { apiClient, type ApiCategory, type ApiProduct } from "@/lib/api-client";
 import type { ShopProduct } from "./product-card";
 import { ShopHeroCarousel, type ShopHeroSlide } from "./hero-carousel";
+import { DepartmentSidebar, PrimePanel } from "./department-sidebar";
 import { ShopProductCard } from "./product-card";
 
 /** Approved launch campaign, used until an operator publishes slides. */
@@ -100,7 +101,7 @@ const BOTTOM_NAV = [
  * "Test checkout …", "Last unit …" and similar. They are real database rows but
  * never part of the storefront, so they must not appear in any shelf or deal.
  */
-const TEST_LISTING = /^(variant fixture|test |upload test|last unit|product test)\b/i;
+const TEST_LISTING = /^(variant fixture|test |upload test|last unit|product test)\b|-mw[0-9a-z]{8,}$/i;
 
 type StorefrontConfig = {
   announcement?: string;
@@ -130,7 +131,7 @@ export function NaijaShopStorefront() {
     Promise.all([apiClient.getProducts(), apiClient.getCategories()])
       .then(([items, cats]) => {
         if (!active) return;
-        setProducts(items.filter((product) => !TEST_LISTING.test(product.name)));
+        setProducts(items.filter((product) => !TEST_LISTING.test(product.name) && !TEST_LISTING.test(product.slug ?? "")));
         setCategories(cats);
         setStatus("ready");
       })
@@ -183,10 +184,22 @@ export function NaijaShopStorefront() {
     return map;
   }, [products]);
 
+  // Real brands only: the mockup's brand strip shows recognisable names, but we
+  // list what the catalogue actually contains rather than implying partnerships.
+  const brands = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const product of products) {
+      const brand = product.brand?.trim();
+      if (!brand || /demo|sample|inventory/i.test(brand)) continue;
+      counts.set(brand, (counts.get(brand) ?? 0) + 1);
+    }
+    return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+  }, [products]);
+
   const deals = useMemo(
     () =>
       [...products]
-        .filter((product) => product.priceKobo)
+        .filter((product) => product.priceKobo && (product.stock ? product.stock.quantity - product.stock.reserved > 0 : true))
         .sort((a, b) => Number(a.priceKobo) - Number(b.priceKobo))
         .slice(0, 6),
     [products]
@@ -352,21 +365,25 @@ export function NaijaShopStorefront() {
           </p>
         ) : null}
 
-        {/* Hero */}
+        {/* Hero band — sidebar | hero + quick access | Prime, as in the mockup */}
         {config.showHero === false ? null : (
-          <div className="pt-2">
-            <ShopHeroCarousel slides={slides} />
+          <div className="flex flex-col gap-2 pt-2 lg:flex-row lg:items-stretch">
+            <DepartmentSidebar categories={categories} />
+            <div className="min-w-0 lg:flex-1">
+              <ShopHeroCarousel slides={slides} />
+            </div>
+            <PrimePanel />
           </div>
         )}
 
-        {/* Service tiles */}
-        <section aria-label="Quick links" className="mt-3 rounded-lg bg-white p-2 ring-1 ring-[#e3e6e6]">
-          <ul className="grid grid-cols-6 gap-0.5 sm:grid-cols-4 lg:grid-cols-8 lg:gap-1">
+        {/* Service tiles — compact strip under the hero */}
+        <section aria-label="Quick links" className="mt-2 rounded-lg bg-white px-1 py-1.5 ring-1 ring-[#e3e6e6]">
+          <ul className="grid grid-cols-6 gap-0.5 lg:grid-cols-12">
             {SERVICE_TILES.map((tile, index) => (
-              <li key={tile.label} className={index >= 8 ? "hidden" : index >= 6 ? "hidden sm:block" : ""}>
-                <Link href={tile.href} className="flex flex-col items-center gap-1 rounded p-1 text-center hover:bg-[#f7f8f8] sm:p-2">
-                  <tile.icon className="h-5 w-5 text-[#005f4b] sm:h-6 sm:w-6" aria-hidden />
-                  <span className="text-[10px] font-semibold leading-tight sm:text-[11.5px]">{tile.label}</span>
+              <li key={tile.label} className={index >= 6 ? "hidden lg:block" : ""}>
+                <Link href={tile.href} className="flex flex-col items-center gap-0.5 rounded px-1 py-1 text-center hover:bg-[#f7f8f8]">
+                  <tile.icon className="h-4 w-4 text-[#005f4b] sm:h-[18px] sm:w-[18px]" aria-hidden />
+                  <span className="text-[9px] font-semibold leading-[1.15] sm:text-[10px]">{tile.label}</span>
                 </Link>
               </li>
             ))}
@@ -394,12 +411,22 @@ export function NaijaShopStorefront() {
                 See all deals
               </Link>
             </div>
-            <ul className="-mx-2 flex snap-x gap-2 overflow-x-auto px-2 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-2 sm:overflow-visible sm:px-0 lg:grid-cols-6">
-              {deals.map((product) => (
-                <li key={product.id} className="w-[42vw] max-w-[190px] shrink-0 snap-start sm:w-auto sm:max-w-none">
+            <ul className="-mx-2 flex snap-x gap-2 overflow-x-auto px-2 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-2 sm:overflow-visible sm:px-0 lg:grid-cols-7">
+              {deals.slice(0, 8).map((product) => (
+                <li key={product.id} className="w-[45vw] max-w-[180px] shrink-0 snap-start sm:w-auto sm:max-w-none">
                   <ShopProductCard product={product} onAdd={addToCart} adding={addingId === product.id} variant="deal" />
                 </li>
               ))}
+              <li className="hidden lg:block">
+                <Link href="/naijashop/sellers" className="relative flex h-full flex-col justify-end overflow-hidden rounded-lg bg-[#0d3b23] p-3 text-white">
+                  <img src="/generated/shop/banner-sellers.webp" alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
+                  <span className="relative">
+                    <span className="block font-display text-[14px] font-extrabold leading-tight">Support Nigerian sellers</span>
+                    <span className="mt-0.5 block text-[10px] text-white/85">Shop from verified local businesses.</span>
+                    <span className="mt-1.5 inline-block rounded bg-[#ffd814] px-2 py-0.5 text-[10px] font-bold text-[#0f1111]">Shop local</span>
+                  </span>
+                </Link>
+              </li>
             </ul>
           </section>
         ) : null}
@@ -482,6 +509,38 @@ export function NaijaShopStorefront() {
               );
             })}
 
+        {/* Trending electronics + fashion banner (mockup: shelf left, promo right) */}
+        {(() => {
+          const electronics = (byCategory.get("phones-tablets") ?? []).concat(byCategory.get("computers") ?? []).slice(0, 6);
+          if (electronics.length === 0) return null;
+          return (
+            <section aria-labelledby="trending-electronics" className="mt-4">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 id="trending-electronics" className="font-display text-[18px] font-extrabold">Trending in Electronics</h2>
+                <Link href="/naijashop/c/phones-tablets" className="text-[12px] font-semibold text-[#007185] hover:underline">See more ›</Link>
+              </div>
+              <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_290px]">
+                <ul className="grid grid-cols-3 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                  {electronics.map((product) => (
+                    <li key={product.id}>
+                      <ShopProductCard product={product} onAdd={addToCart} adding={addingId === product.id} />
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/naijashop/c/fashion" className="relative hidden min-h-[220px] overflow-hidden rounded-lg bg-[#3a2417] xl:block">
+                  <img src="/generated/shop/hero-fashion.webp" alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  <span className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" aria-hidden />
+                  <span className="relative flex h-full flex-col justify-center gap-1 p-4 text-white">
+                    <span className="font-display text-[19px] font-extrabold leading-tight">Fashion for Every Style</span>
+                    <span className="text-[11px] text-white/85">Trendy, authentic and affordable.</span>
+                    <span className="mt-1 w-fit rounded-full bg-[#ffd814] px-3 py-1 text-[11px] font-bold text-[#0f1111]">Shop Fashion</span>
+                  </span>
+                </Link>
+              </div>
+            </section>
+          );
+        })()}
+
         {/* Lower promotional banners */}
         <section aria-label="Promotions" className="mt-4 grid gap-3 lg:grid-cols-3">
           {[
@@ -501,6 +560,25 @@ export function NaijaShopStorefront() {
             </Link>
           ))}
         </section>
+
+        {/* Shop by brand — only brands that exist in the catalogue are listed. */}
+        {brands.length > 0 ? (
+          <section aria-labelledby="brands-heading" className="mt-4 rounded-lg bg-white p-3 ring-1 ring-[#e3e6e6]">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 id="brands-heading" className="font-display text-[17px] font-extrabold">Shop by brand</h2>
+              <Link href="/naijashop/categories" className="text-[12px] font-semibold text-[#007185] hover:underline">See all brands ›</Link>
+            </div>
+            <ul className="flex flex-wrap gap-2">
+              {brands.map((brand) => (
+                <li key={brand.name}>
+                  <Link href={`/naijashop/search?q=${encodeURIComponent(brand.name)}`} className="block rounded border border-[#e3e6e6] px-4 py-2 text-[12.5px] font-bold hover:border-[#007185]">
+                    {brand.name} <span className="font-normal text-[#565959]">({brand.count})</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {/* Trust strip */}
         <section aria-label="Why shop with NaijaShop" className="mt-4 grid gap-2 rounded-lg bg-white p-3 ring-1 ring-[#e3e6e6] sm:grid-cols-2 lg:grid-cols-4">

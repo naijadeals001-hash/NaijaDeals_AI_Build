@@ -140,7 +140,17 @@ async function login(context) {
   await shopper.goto(`${BASE}/naijashop`, { waitUntil: "load" });
   await shopper.waitForTimeout(3500);
   const countBefore = await shopper.evaluate(() => Number(/Cart, (\d+)/.exec(document.querySelector('a[aria-label^="Cart"]')?.getAttribute("aria-label") ?? "Cart, 0")?.[1] ?? 0));
-  const addButton = shopper.locator('button[aria-label^="Add "][aria-label$="to cart"]').first();
+  // Pick a product the server reports as in stock, so the test exercises the
+  // real add path rather than asserting against an out-of-stock listing.
+  const inStock = await shopper.evaluate(async () => {
+    const items = await (await fetch('/api/products')).json();
+    const visible = (p) => !/^(variant fixture|test |upload test|last unit|product test)/i.test(p.name);
+    const ok = items.find((p) => visible(p) && (p.stock?.quantity ?? 0) - (p.stock?.reserved ?? 0) > 0);
+    return ok ? ok.name : null;
+  });
+  const addButton = inStock
+    ? shopper.locator(`button[aria-label="Add ${inStock} to cart"]`).first()
+    : shopper.locator('button[aria-label^="Add "][aria-label$="to cart"]').first();
   const addedName = await addButton.getAttribute("aria-label");
   await addButton.click();
   await shopper.waitForTimeout(3000);

@@ -96,9 +96,13 @@ const HERO_SLIDES = [
     const url = PUBLIC(slug);
     const existing = await prisma.productImage.findFirst({ where: { productId: product.id, url } });
     if (!existing) {
-      await prisma.productImage.create({
-        data: { productId: product.id, url, alt: product.name, sortOrder: Math.min(0, ...product.images.map((image) => image.sortOrder)) - 1 }
-      });
+      // Generated photography is the primary image, so it must sort ahead of
+      // any stock file that was already attached.
+      const prior = await prisma.productImage.findMany({ where: { productId: product.id }, select: { id: true, sortOrder: true } });
+      await prisma.productImage.create({ data: { productId: product.id, url, alt: product.name, sortOrder: -1 } });
+      for (const image of prior) {
+        await prisma.productImage.update({ where: { id: image.id }, data: { sortOrder: image.sortOrder + 1 } });
+      }
     }
     summary.products += 1;
   }

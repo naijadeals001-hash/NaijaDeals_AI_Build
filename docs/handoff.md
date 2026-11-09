@@ -1854,3 +1854,51 @@ Owner approved unlimited Kie.ai image generation for NaijaShop.
   dead links, nine widths 320–1920). Marketplace 10/13 and drive 15/28 — the
   failures are environment gates (`ENABLE_TEST_PAYMENTS` off, demo wallet at
   ₦0), not code; admin security 21/21.
+
+## NaijaShop — REA verification and mockup reconstruction (2026-11-09)
+
+**Correction on REA.** The previous NaijaShop report did not run REA in that
+turn; its Amazon notes came from web research and Playwright. `docs/rea-amazon-research.md`
+records an earlier 2026-11-03 REA session, but no evidence bundle was kept.
+This turn executed REA for real against a dedicated CDP Chrome:
+
+| Tool | Target | Evidence id | Artifact |
+| --- | --- | --- | --- |
+| `list-browser-targets` | `http://127.0.0.1:9444` | `ev_43aa2094…` | JSON in `qa-artifacts/rea-2026-11-09/` |
+| `capture-web-screenshot` | amazon.com (blocked interstitial) | `ev_51af77de…` | `amazon-home-fb5ed321929b.png` |
+| `capture-web-screenshot` | amazon.com desktop 1440×900 | `ev_831647bc…` | `amazon-desktop-acb7ea84af2a.png` |
+| `capture-web-screenshot` | amazon.com `/s?k=wireless+earbuds` | `ev_265d0e2f…` | `amazon-mobile-search-f1ce0bc63df9.png` |
+| `capture-web-screenshot` | amazon.com mobile (500px floor) | `ev_c18a56b3…` | `amazon-mobile-6d6b9feb3ef6.png` |
+
+`capture-browser-scenario` failed inside its Playwright provider (`execution_failure`),
+so navigation was done over the same CDP session and every capture above is
+REA's own. Limitation: headless Chrome clamps page width at 500px, so the
+"mobile" reference is 500px, not 390px.
+
+**Mockups** (copied from the owner's Downloads, hashes in this commit):
+`design-references/approved/NaijaShop/desktop-homepage.png` (1024×1536,
+sha256 `358ab69390a2a1db8b944b9ca885726a7d8b1ac6f33c87ba0ab65779d5cf81da`) and
+`mobile-homepage.png` (887×1774, sha256 `e3f62d2271d64c93422286377cc7f8e586569edaf9aab94f74f9e9c3cf7b2548`).
+
+**Reconstruction driven by measurement** (`scripts/naijashop-fidelity.cjs`):
+the harness found the sidebar, Prime panel and brand strip absent and the hero
+on its own row. Now present: sidebar (15%), hero centre, Prime panel (17%) in
+one band; compact 12-tile quick strip; six deal cards **plus** the seller
+promo card; Trending Electronics shelf with the fashion banner; brand strip
+component gated on real brands.
+
+Region presence, final: **12/13 desktop regions present**. Brand strip renders
+only when the catalogue has real brands — every active listing is currently
+"Demo inventory", so it is intentionally absent rather than faked.
+
+**Other fixes**: generated product photos now sort **first** (stock files were
+ahead of them); zero-stock items excluded from deals; acceptance fixtures
+identified by name prefix *or* slug suffix `-mw…` (a fixture named "Accra
+Security Product" was merchandised with zero stock); hero carousel stops
+rotating once the shopper interacts with it, which had been stealing focus
+mid-typing in QA.
+
+**Verification**: storefront QA 43/43. Build note: incremental `next build`
+reuses a stale CSS chunk in this repo, so **`rm -rf .next-pay` before building**
+is now required when adding arbitrary-value utilities; `npm run prebuild` runs
+`scripts/build-css.mjs` as an additional guard.

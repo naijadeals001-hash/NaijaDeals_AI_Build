@@ -8,7 +8,7 @@ import { ShopProductCard, type ShopProduct } from "./product-card";
 type SortKey = "featured" | "price-asc" | "price-desc" | "name";
 
 /** Acceptance-suite listings are database rows but never storefront products. */
-const TEST_LISTING = /^(variant fixture|test |upload test|last unit|product test)\b/i;
+const TEST_LISTING = /^(variant fixture|test |upload test|last unit|product test)\b|-mw[0-9a-z]{8,}$/i;
 
 /**
  * Category browse / deals / search-result grid. Sorting and filtering run on
@@ -37,7 +37,7 @@ export function CategoryBrowse({
     Promise.all([apiClient.getProducts(), apiClient.getCategories()])
       .then(([items, cats]) => {
         if (!active) return;
-        setProducts(items.filter((product) => !TEST_LISTING.test(product.name)));
+        setProducts(items.filter((product) => !TEST_LISTING.test(product.name) && !TEST_LISTING.test(product.slug ?? "")));
         setCategories(cats);
         setStatus("ready");
       })

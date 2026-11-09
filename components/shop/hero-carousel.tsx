@@ -27,11 +27,18 @@ export type ShopHeroSlide = {
  */
 export function ShopHeroCarousel({ slides, intervalMs = 7000 }: { slides: ShopHeroSlide[]; intervalMs?: number }) {
   const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [touched, setTouched] = useState(false);
+  const paused = hovered || touched;
   const regionRef = useRef<HTMLDivElement | null>(null);
   const count = slides.length;
 
-  const go = useCallback((next: number) => setIndex(((next % count) + count) % count), [count]);
+  // Once the shopper interacts, stop auto-rotating so focus and reading are
+  // never interrupted mid-way through a promotion.
+  const go = useCallback((next: number) => {
+    setTouched(true);
+    setIndex(((next % count) + count) % count);
+  }, [count]);
 
   useEffect(() => {
     if (count < 2 || paused) return;
@@ -54,13 +61,13 @@ export function ShopHeroCarousel({ slides, intervalMs = 7000 }: { slides: ShopHe
       role="region"
       aria-roledescription="carousel"
       aria-label="Featured promotions"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
-      onBlurCapture={() => setPaused(false)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocusCapture={() => setHovered(true)}
+      onBlurCapture={() => setHovered(false)}
       className="relative overflow-hidden rounded-lg bg-[#1a1a1a]"
     >
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid">
         <div className="relative min-h-[240px] sm:min-h-[300px] lg:min-h-[360px]">
           <img
             key={slide.id}
@@ -70,7 +77,7 @@ export function ShopHeroCarousel({ slides, intervalMs = 7000 }: { slides: ShopHe
             fetchPriority="high"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/5" aria-hidden />
-          <div className="relative flex h-full max-w-[calc(100%-5rem)] flex-col justify-center gap-2 p-5 pl-14 sm:max-w-[62%] sm:p-7 sm:pl-7 lg:p-9">
+          <div className="relative flex h-full flex-col justify-center gap-1.5 p-5 pl-11 sm:p-7 sm:pl-12">
             {slide.eyebrow ? (
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#f7c948]">{slide.eyebrow}</p>
             ) : null}
@@ -97,7 +104,7 @@ export function ShopHeroCarousel({ slides, intervalMs = 7000 }: { slides: ShopHe
           </div>
         </div>
         {slide.sideTitle ? (
-          <aside className="hidden flex-col justify-center gap-2 border-l border-white/10 bg-[#f7f8f8] p-5 text-[#0f1111] lg:flex">
+          <aside className="hidden">
             <p className="font-display text-[18px] font-extrabold leading-tight">{slide.sideTitle}</p>
             <p className="text-[12px] leading-5 text-[#565959]">{slide.sideBody}</p>
             {slide.sideCtaLabel && slide.sideCtaHref ? (
@@ -115,7 +122,7 @@ export function ShopHeroCarousel({ slides, intervalMs = 7000 }: { slides: ShopHe
             type="button"
             onClick={() => go(index - 1)}
             aria-label="Previous promotion"
-            className="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white lg:left-3"
+            className="absolute left-1 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <ChevronLeft className="h-5 w-5" aria-hidden />
           </button>
