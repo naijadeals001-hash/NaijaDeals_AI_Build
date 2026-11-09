@@ -31,7 +31,7 @@ import {
 import { apiClient, type ApiCategory, type ApiProduct } from "@/lib/api-client";
 import type { ShopProduct } from "./product-card";
 import { ShopHeroCarousel, type ShopHeroSlide } from "./hero-carousel";
-import { DepartmentSidebar, PrimePanel } from "./department-sidebar";
+import { DepartmentSidebar, PlusPanel } from "./department-sidebar";
 import { ShopProductCard } from "./product-card";
 
 /** Approved launch campaign, used until an operator publishes slides. */
@@ -44,10 +44,10 @@ const LAUNCH_SLIDES: ShopHeroSlide[] = [
     ctaLabel: "Shop the deals",
     ctaHref: "/naijashop/deals",
     imageUrl: "/generated/shop/hero-desktop.webp",
-    sideTitle: "NaijaShop Prime",
-    sideBody: "Faster delivery, Prime-only deals and early access to sales.",
-    sideCtaLabel: "See Prime plans",
-    sideCtaHref: "/naijashop/prime"
+    sideTitle: "NaijaShop Plus",
+    sideBody: "Faster delivery, Plus-only deals and early access to sales.",
+    sideCtaLabel: "See Plus plans",
+    sideCtaHref: "/naijashop/plus"
   },
   {
     id: "electronics",
@@ -81,7 +81,7 @@ const SERVICE_TILES = [
   { label: "Today's Deals", href: "/naijashop/deals", icon: Tag },
   { label: "Flash Sales", href: "/naijashop/deals", icon: Zap },
   { label: "Bestsellers", href: "/naijashop/bestsellers", icon: Sparkles },
-  { label: "NaijaShop Prime", href: "/naijashop/prime", icon: Package },
+  { label: "NaijaShop Plus", href: "/naijashop/plus", icon: Package },
   { label: "Local Sellers", href: "/naijashop/sellers", icon: Store },
   { label: "Electronics", href: "/naijashop/c/phones-tablets", icon: Smartphone },
   { label: "Fashion", href: "/naijashop/c/fashion", icon: Shirt },
@@ -365,14 +365,14 @@ export function NaijaShopStorefront() {
           </p>
         ) : null}
 
-        {/* Hero band — sidebar | hero + quick access | Prime, as in the mockup */}
+        {/* Hero band — sidebar | hero + quick access | Plus, as in the mockup */}
         {config.showHero === false ? null : (
           <div className="flex flex-col gap-2 pt-2 lg:flex-row lg:items-stretch">
             <DepartmentSidebar categories={categories} />
             <div className="min-w-0 lg:flex-1">
               <ShopHeroCarousel slides={slides} />
             </div>
-            <PrimePanel />
+            <PlusPanel />
           </div>
         )}
 
@@ -431,22 +431,22 @@ export function NaijaShopStorefront() {
           </section>
         ) : null}
 
-        {/* Prime card (mobile mockup places it under the deals row) */}
-        <section aria-labelledby="prime-card" className="mt-3 rounded-lg bg-[#eaf2ff] p-3 lg:hidden">
+        {/* Plus membership card (mobile mockup places it under the deals row) */}
+        <section aria-labelledby="plus-card" className="mt-3 rounded-lg bg-[#eaf2ff] p-3 lg:hidden">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p id="prime-card" className="font-display text-[17px] font-extrabold">
-                NaijaShop <span className="text-[#1a4fb4]">Prime</span>
+              <p id="plus-card" className="font-display text-[17px] font-extrabold">
+                NaijaShop <span className="text-[#1a4fb4]">Plus</span>
               </p>
               <p className="mt-0.5 text-[11px] leading-4 text-[#414d63]">Fast delivery, exclusive deals and more benefits</p>
             </div>
-            <Link href="/naijashop/prime" className="shrink-0 rounded-full bg-[#ffc43d] px-3 py-1.5 text-[11.5px] font-bold text-[#12100a]">
-              Join Prime
+            <Link href="/naijashop/plus" className="shrink-0 rounded-full bg-[#ffc43d] px-3 py-1.5 text-[11.5px] font-bold text-[#12100a]">
+              Join Plus
             </Link>
           </div>
           <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10.5px] font-semibold text-[#243049]">
             <li>✓ Free &amp; faster delivery</li>
-            <li>✓ Prime-only deals</li>
+            <li>✓ Plus-only deals</li>
             <li>✓ Early access to sales</li>
             <li>✓ Escrow protection</li>
           </ul>

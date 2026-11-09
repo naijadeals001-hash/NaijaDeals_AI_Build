@@ -1902,3 +1902,40 @@ mid-typing in QA.
 reuses a stale CSS chunk in this repo, so **`rm -rf .next-pay` before building**
 is now required when adding arbitrary-value utilities; `npm run prebuild` runs
 `scripts/build-css.mjs` as an additional guard.
+
+## NaijaShop — membership renamed Prime → Plus (2026-11-09)
+
+Our storefront membership is now **NaijaShop Plus**. The rename is branding only:
+plan codes (`FREE`, `BASIC`, `STANDARD`, `PREMIUM` on NaijaStream — a separate
+vertical, untouched), prices, benefits, entitlements and billing are unchanged.
+No database column, plan id or payment-provider reference contains "Prime".
+
+**Changed**
+- Route `app/naijashop/prime` → `app/naijashop/plus`; `next.config.mjs` adds a
+  permanent redirect so old bookmarks keep working **with their query string**
+  (verified: `/naijashop/prime?plan=annual&ref=nav` → `/naijashop/plus?plan=annual&ref=nav`, 308).
+- `components/shop/department-sidebar.tsx` (`PrimePanel` → `PlusPanel`),
+  `components/shop/storefront.tsx` (hero slide copy, quick-links tile, mobile card).
+- `prisma/naijashop-apply-images.cjs` seed copy, `scripts/naijashop-qa.cjs`
+  route list, `scripts/naijashop-fidelity.cjs` region keys, `docs/naijashop-image-plan.md`.
+- `prisma/naijashop-rename-plus.cjs` renames the **published copy** in
+  `StorefrontConfig.heroSlides` and repoints its CTA to `/naijashop/plus`.
+  Idempotent; config backed up first to
+  `qa-artifacts/storefront-config-backup-plus-rename.json`. A note now states the
+  membership covers NaijaShop only, not the ecosystem.
+
+**No image work.** All "Prime" wording is HTML/CSS; no approved asset has it
+baked in (registry scan: 0 matches), so no Kie.ai generation was needed.
+
+**Remaining "Prime" mentions, all legitimate**
+- `docs/rea-amazon-research.md`, `docs/amazon-observed-behavior.md` — Amazon Prime
+  as observed during REA research.
+- `docs/stitch-*.md` — external Stitch design-folder names (`naijaprime_…`).
+- `docs/handoff.md` earlier entries — historical record of the prior UI.
+- `next.config.mjs` and `prisma/naijashop-rename-plus.cjs` — the redirect and
+  rename script, which must name the old value.
+
+**Verification**: storefront QA 43/43; homepage renders 0 "Prime" and 0 `/prime`
+links; `/naijashop/plus` 200 with title "NaijaShop Plus"; admin security 21/21;
+marketplace 10/13 with the same three environment gates as before
+(`ENABLE_TEST_PAYMENTS` off, demo wallet at ₦0).

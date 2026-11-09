@@ -206,7 +206,7 @@ async function login(context) {
   // ---- Dead-link audit ---------------------------------------------------
   const routes = [
     "/naijashop", "/naijashop/deals", "/naijashop/categories", "/naijashop/c/phones-tablets",
-    "/naijashop/c/fashion", "/naijashop/prime", "/naijashop/sellers", "/naijashop/help",
+    "/naijashop/c/fashion", "/naijashop/plus", "/naijashop/sellers", "/naijashop/help",
     "/naijashop/bestsellers", "/naijashop/search?q=phone"
   ];
   const linkContext = await browser.newContext();

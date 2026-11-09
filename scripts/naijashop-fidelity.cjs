@@ -30,7 +30,7 @@ const DESKTOP_REGIONS = [
   { key: "departments", label: "Secondary department navigation" },
   { key: "sidebar", label: "Left department sidebar" },
   { key: "hero", label: "Hero carousel" },
-  { key: "prime", label: "Prime promotion panel" },
+  { key: "plus", label: "Plus membership panel" },
   { key: "quick", label: "Quick-access service tiles" },
   { key: "deals", label: "Deals of the day row" },
   { key: "categories", label: "Shop by category grid" },
@@ -41,7 +41,7 @@ const DESKTOP_REGIONS = [
   { key: "footer", label: "Footer" }
 ];
 
-const MOBILE_REGIONS = ["header", "categoryTabs", "hero", "serviceTiles", "deals", "primeCard", "categoryRail", "bottomNav", "footer"];
+const MOBILE_REGIONS = ["header", "categoryTabs", "hero", "serviceTiles", "deals", "plusCard", "categoryRail", "bottomNav", "footer"];
 
 (async () => {
   const browser = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
@@ -105,7 +105,7 @@ const MOBILE_REGIONS = ["header", "categoryTabs", "hero", "serviceTiles", "deals
       benefits,
       footer,
       sidebar: rect('nav[aria-label="Shop by category"]'),
-      prime: rect('aside[aria-labelledby="prime-panel"]'),
+      plus: rect('aside[aria-labelledby="plus-panel"]'),
       brands: rect('section[aria-labelledby="brands-heading"]')
     };
   });

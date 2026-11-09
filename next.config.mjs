@@ -7,7 +7,12 @@ const nextConfig = {
   async redirects() {
     // "/drive" was reaching the generic [slug] placeholder; the ride experience
     // lives at /naijadrive, so send visitors to the real service.
-    return [{ source: "/drive", destination: "/naijadrive", permanent: false }];
+    return [
+      { source: "/drive", destination: "/naijadrive", permanent: false },
+      // The NaijaShop membership was renamed Prime -> Plus. Old public URLs keep
+      // working (and keep any query string) rather than 404-ing bookmarks.
+      { source: "/naijashop/prime", destination: "/naijashop/plus", permanent: true }
+    ];
   },
   async headers() {
     return [

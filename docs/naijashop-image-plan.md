@@ -31,7 +31,7 @@ composes its "hero" out of four coloured category cards.
 | 2 | Mobile hero variant | 1 | Tighter crop of the same scene, portrait-safe |
 | 3 | Lower-page banners (electronics, delivery, fashion) | 3 | Wide promo strips |
 | 4 | Category tiles | 8 | Phones & Tablets, Computers, Home & Kitchen, Fashion, Beauty, Groceries, Power & Solar, Gaming |
-| 5 | Service/seller banner | 2 | "Support Nigerian sellers", "Join NaijaShop Prime" |
+| 5 | Service/seller banner | 2 | "Support Nigerian sellers", "Join NaijaShop Plus" |
 | 6 | Product photography | 32 | One image per active listing, matched to its actual product type and attributes |
 
 **Total: 47 images × $0.03 = $1.41.**

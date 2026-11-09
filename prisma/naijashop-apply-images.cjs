@@ -37,10 +37,10 @@ const HERO_SLIDES = [
     ctaLabel: "Shop the deals",
     ctaHref: "/naijashop/deals",
     imageUrl: PUBLIC("hero-desktop"),
-    sideTitle: "NaijaShop Prime",
-    sideBody: "Faster delivery, Prime-only deals and early access to sales.",
-    sideCtaLabel: "See Prime plans",
-    sideCtaHref: "/naijashop/prime"
+    sideTitle: "NaijaShop Plus",
+    sideBody: "Faster delivery, Plus-only deals and early access to sales.",
+    sideCtaLabel: "See Plus plans",
+    sideCtaHref: "/naijashop/plus"
   },
   {
     id: "electronics",

@@ -12,7 +12,7 @@ export type ShopHeroSlide = {
   ctaLabel: string;
   ctaHref: string;
   imageUrl: string;
-  /** Optional right-hand secondary image/panel (mockup shows a Prime card). */
+  /** Optional right-hand secondary image/panel (mockup shows a membership card). */
   sideTitle?: string;
   sideBody?: string;
   sideCtaLabel?: string;
