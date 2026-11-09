@@ -25,6 +25,7 @@ export const ADMIN_TABS = [
   "couriers",
   "drivers",
   "audit",
+  "homepage",
   "settings"
 ] as const;
 
@@ -116,6 +117,7 @@ export const MODULE_TABS: Record<AdminModule, Array<{ id: AdminTab; label: strin
     { id: "couriers", label: "Couriers" },
     { id: "freight", label: "Freight" },
     { id: "logistics", label: "Logistics providers" },
+    { id: "homepage", label: "Homepage designs" },
     { id: "audit", label: "Audit log" }
   ],
   gigs: [{ id: "overview", label: "Overview" }],
@@ -148,6 +150,7 @@ export const TAB_LABELS: Record<AdminTab, string> = {
   disputes: "Disputes",
   freight: "Freight",
   logistics: "Logistics providers",
+  homepage: "Homepage designs",
   users: "Users",
   vendors: "Vendors",
   couriers: "Couriers",

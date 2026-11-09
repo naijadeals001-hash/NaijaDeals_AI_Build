@@ -7061,6 +7061,424 @@
       "usageReferences": [
         "public/manifest.webmanifest"
       ]
+    },
+    {
+      "id": "home-hero-abuja",
+      "vertical": "home",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium editorial photography, natural daylight, accurate white balance, true-to-life colour, no text, no watermark, no logo. Wide panoramic composite illustration of Abuja, Nigeria: Aso Rock granite monolith rising behind the city, the golden domes and minarets of the Abuja National Mosque, the white A-frame spire and cross of the National Christian Centre, and the monumental Abuja City Gate arch, with modern roads, green trees and a bright blue sky. Clearly an artistic composite of landmarks, not a documentary photograph",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-hero-abuja.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/39688175008c.png",
+      "generatedAt": "2026-11-09T20:52:36.614Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-hero-drive",
+      "vertical": "home",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium editorial photography, natural daylight, accurate white balance, true-to-life colour, no text, no watermark, no logo. A premium dark green ride-hailing sedan with a smiling Nigerian driver at the wheel on a clean Lagos bridge at golden hour, city skyline behind, sense of motion",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-hero-drive.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/b00bac6f1ca9.png",
+      "generatedAt": "2026-11-09T20:53:23.159Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-hero-shop",
+      "vertical": "home",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium editorial photography, natural daylight, accurate white balance, true-to-life colour, no text, no watermark, no logo. A busy modern Nigerian marketplace scene: a smiling woman shop owner handing a package across a bright counter filled with electronics, clothing and household goods",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-hero-shop.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/0f09783777cd.png",
+      "generatedAt": "2026-11-09T20:53:54.055Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-hero-eats",
+      "vertical": "home",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium editorial photography, natural daylight, accurate white balance, true-to-life colour, no text, no watermark, no logo. Overhead spread of authentic Nigerian dishes: a large bowl of jollof rice, egusi soup with pounded yam, suya skewers, moi moi and fried plantain, served on a patterned tablecloth",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-hero-eats.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/5cf02cd0a005.png",
+      "generatedAt": "2026-11-09T20:54:25.119Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-hero-fresh",
+      "vertical": "home",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium editorial photography, natural daylight, accurate white balance, true-to-life colour, no text, no watermark, no logo. A smiling Nigerian farmer in a sun hat holding a woven basket of fresh tomatoes, peppers and leafy greens at sunrise on a smallholding",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-hero-fresh.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/e831594c68a7.png",
+      "generatedAt": "2026-11-09T20:54:55.987Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-hero-send",
+      "vertical": "home",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium editorial photography, natural daylight, accurate white balance, true-to-life colour, no text, no watermark, no logo. A large white and green freight truck with its trailer loaded at an African distribution depot, a cargo van beside it, workers in high-visibility vests",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-hero-send.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/cdab38e8c554.png",
+      "generatedAt": "2026-11-09T20:55:27.102Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-hero-gigs",
+      "vertical": "home",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium editorial photography, natural daylight, accurate white balance, true-to-life colour, no text, no watermark, no logo. Three skilled African professionals together — an electrician in a hard hat, a software developer with a laptop, and a chef in white — confident and smiling",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-hero-gigs.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/4d1729f5fe26.png",
+      "generatedAt": "2026-11-09T20:55:57.962Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-hero-stay",
+      "vertical": "home",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium editorial photography, natural daylight, accurate white balance, true-to-life colour, no text, no watermark, no logo. A luxury modern African villa with an infinity pool, palm trees and warm interior lights at dusk",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-hero-stay.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/0e579741b907.png",
+      "generatedAt": "2026-11-09T20:56:29.379Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-hero-stream",
+      "vertical": "home",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium editorial photography, natural daylight, accurate white balance, true-to-life colour, no text, no watermark, no logo. An African singer in a recording studio with headphones and a microphone, purple and teal stage lighting, energetic performance",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-hero-stream.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/42fdb5a0765a.png",
+      "generatedAt": "2026-11-09T20:57:00.596Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-hero-pay",
+      "vertical": "home",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium editorial photography, natural daylight, accurate white balance, true-to-life colour, no text, no watermark, no logo. A young Nigerian woman paying with her phone at a bright market stall, a small digital terminal on the counter, confident and modern",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-hero-pay.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/222bc00b9494.png",
+      "generatedAt": "2026-11-09T20:57:32.897Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-hero-mobility",
+      "vertical": "home",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium editorial photography, natural daylight, accurate white balance, true-to-life colour, no text, no watermark, no logo. An African motorcycle courier and a ride-hailing car together on a bright modern African city street, riders in green uniforms, sense of fast service",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-hero-mobility.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/5390be9eac68.png",
+      "generatedAt": "2026-11-09T20:58:04.477Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-hero-commerce",
+      "vertical": "home",
+      "kind": "hero",
+      "component": "homepage hero carousel",
+      "prompt": "Photorealistic premium editorial photography, natural daylight, accurate white balance, true-to-life colour, no text, no watermark, no logo. Rich African lifestyle montage: a market stall with colourful fabrics and fresh produce, a woman shopping, warm inviting light",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-hero-commerce.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/7f8621400346.png",
+      "generatedAt": "2026-11-09T20:58:35.971Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-card-shop",
+      "vertical": "home",
+      "kind": "card",
+      "component": "dashboard vertical card",
+      "prompt": "Photorealistic premium editorial photography, bright natural daylight, accurate white balance, true-to-life colour, no text, no watermark. A stack of kraft shopping boxes and a red NaijaDeals-style paper bag on a warm wooden counter, a few folded garments beside them",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-card-shop.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/b2949eccb0f1.png",
+      "generatedAt": "2026-11-09T21:15:06.415Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-card-eats",
+      "vertical": "home",
+      "kind": "card",
+      "component": "dashboard vertical card",
+      "prompt": "Photorealistic premium editorial photography, bright natural daylight, accurate white balance, true-to-life colour, no text, no watermark. A takeaway bowl of Nigerian jollof rice with grilled chicken and fried plantain, steam rising, dark table",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-card-eats.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/7c338555f53b.png",
+      "generatedAt": "2026-11-09T21:15:37.369Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-card-fresh",
+      "vertical": "home",
+      "kind": "card",
+      "component": "dashboard vertical card",
+      "prompt": "Photorealistic premium editorial photography, bright natural daylight, accurate white balance, true-to-life colour, no text, no watermark. A woven basket overflowing with tomatoes, peppers, yams, plantains and leafy greens on a farm table",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-card-fresh.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/4df567b0c7f8.png",
+      "generatedAt": "2026-11-09T21:16:08.356Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-card-drive",
+      "vertical": "home",
+      "kind": "card",
+      "component": "dashboard vertical card",
+      "prompt": "Photorealistic premium editorial photography, bright natural daylight, accurate white balance, true-to-life colour, no text, no watermark. A shiny green sedan car parked on a sunny African city street, three-quarter front view",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-card-drive.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/0cb95f71ef16.png",
+      "generatedAt": "2026-11-09T21:16:39.334Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-card-send",
+      "vertical": "home",
+      "kind": "card",
+      "component": "dashboard vertical card",
+      "prompt": "Photorealistic premium editorial photography, bright natural daylight, accurate white balance, true-to-life colour, no text, no watermark. A large white and green box truck parked at a logistics depot with stacked pallets",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-card-send.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/069810a87056.png",
+      "generatedAt": "2026-11-09T21:17:10.492Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-card-gigs",
+      "vertical": "home",
+      "kind": "card",
+      "component": "dashboard vertical card",
+      "prompt": "Photorealistic premium editorial photography, bright natural daylight, accurate white balance, true-to-life colour, no text, no watermark. A confident African electrician in a yellow hard hat and hi-vis vest, arms folded, smiling",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-card-gigs.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/a90603375995.png",
+      "generatedAt": "2026-11-09T21:17:42.053Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-card-stay",
+      "vertical": "home",
+      "kind": "card",
+      "component": "dashboard vertical card",
+      "prompt": "Photorealistic premium editorial photography, bright natural daylight, accurate white balance, true-to-life colour, no text, no watermark. A modern multistorey hotel building with lit balconies at dusk",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-card-stay.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/154e724ad523.png",
+      "generatedAt": "2026-11-09T21:18:12.979Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-card-stream",
+      "vertical": "home",
+      "kind": "card",
+      "component": "dashboard vertical card",
+      "prompt": "Photorealistic premium editorial photography, bright natural daylight, accurate white balance, true-to-life colour, no text, no watermark. A smiling young African woman wearing purple headphones, listening to music, bright purple background",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-card-stream.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/13a0346ec3fe.png",
+      "generatedAt": "2026-11-09T21:18:28.773Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-card-pay",
+      "vertical": "home",
+      "kind": "card",
+      "component": "dashboard vertical card",
+      "prompt": "Photorealistic premium editorial photography, bright natural daylight, accurate white balance, true-to-life colour, no text, no watermark. A hand holding a smartphone showing an abstract green payment screen with a QR code, market background",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-card-pay.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/89e6f0cfdcc1.png",
+      "generatedAt": "2026-11-09T21:18:59.633Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
+    },
+    {
+      "id": "home-card-aura",
+      "vertical": "home",
+      "kind": "card",
+      "component": "dashboard vertical card",
+      "prompt": "Photorealistic premium editorial photography, bright natural daylight, accurate white balance, true-to-life colour, no text, no watermark. A friendly white and green humanoid AI robot assistant with expressive eyes, purple gradient background, friendly and welcoming",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/home/home-card-aura.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/6e29a97135e6.png",
+      "generatedAt": "2026-11-09T21:19:30.578Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "lib/home/designs.ts"
+      ]
     }
   ]
 }

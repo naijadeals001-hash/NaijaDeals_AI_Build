@@ -32,6 +32,7 @@ export default async function Page({
         disputes={data.disputes}
         freight={data.freight}
       logistics={data.logistics}
+      homepage={data.homepage}
         users={data.users}
         rides={data.rides}
         audit={data.audit}

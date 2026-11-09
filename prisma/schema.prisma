@@ -2939,3 +2939,82 @@ model LocationPing {
   @@index([sessionRef, capturedAt])
   @@index([userId, capturedAt])
 }
+
+// ---------------------------------------------------------------------------
+// Homepage experience system
+//
+// Four dashboard designs share one platform. A visitor is assigned one variant
+// by a stable first-party identifier and keeps it; a manual choice always wins.
+// Admins control which variants are live, their allocation and the hero slides.
+// ---------------------------------------------------------------------------
+
+model HomeVariant {
+  id          String   @id @default(cuid())
+  /// original | africa-super-app | mobility | commerce
+  key         String   @unique
+  name        String
+  description String
+  enabled     Boolean  @default(true)
+  /// Share of new visitors, in whole percent. Enabled variants must total 100.
+  allocation  Int      @default(25)
+  sortOrder   Int      @default(0)
+  /// Bumped on every admin save so concurrent edits cannot silently overwrite.
+  revision    Int      @default(1)
+  slides      HomeHeroSlide[]
+  updatedAt   DateTime @updatedAt
+}
+
+model HomeHeroSlide {
+  id          String   @id @default(cuid())
+  variantKey  String
+  /// Identifies the slide in code so imagery and copy can be edited independently.
+  slug        String
+  headline    String
+  body        String
+  ctaLabel    String
+  ctaHref     String
+  secondaryLabel String?
+  secondaryHref  String?
+  imageId     String?
+  /// Alt text is required; a slide without it cannot be published.
+  alt         String
+  sortOrder   Int      @default(0)
+  enabled     Boolean  @default(true)
+  /// Optional campaign window (ISO dates, inclusive).
+  startsAt    DateTime?
+  endsAt      DateTime?
+  variant     HomeVariant @relation(fields: [variantKey], references: [key], onDelete: Cascade)
+
+  @@unique([variantKey, slug])
+  @@index([variantKey, enabled, sortOrder])
+}
+
+/// Pins a visitor to a variant so refreshes are stable across restarts.
+model HomeAssignment {
+  id         String   @id @default(cuid())
+  /// Anonymous first-party id from an httpOnly cookie.
+  visitorId  String   @unique
+  variantKey String
+  /// true when the visitor chose this design themselves.
+  manual     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([variantKey])
+}
+
+/// Aggregate counters only: no personal data, no per-visitor profiles.
+model HomeMetric {
+  id        String   @id @default(cuid())
+  variantKey String
+  /// impression | hero_impression | hero_click | card_click | search | cta_click
+  kind      String
+  /// Empty string when the event is not slide-scoped: NULL would defeat the
+  /// unique index, since Postgres treats NULLs as distinct.
+  slideSlug String   @default("")
+  day       DateTime @default(now())
+  count     Int      @default(0)
+
+  @@unique([variantKey, kind, slideSlug, day])
+  @@index([variantKey, day])
+}

@@ -5,6 +5,8 @@ import { isRtl } from "@/lib/i18n/dictionary";
 import { LocaleProvider } from "@/lib/i18n/locale-provider";
 import { PlatformProvider } from "@/components/platform/platform-provider";
 import { PlatformBanner } from "@/components/platform/platform-banner";
+import { HomeVariantProvider } from "@/lib/home/variant-context";
+import { resolveVariant } from "@/lib/home/assignment";
 import { readLocale } from "@/lib/i18n/server";
 import "./globals.css";
 
@@ -48,6 +50,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const sessionUser = await getSessionUser();
   const user = sessionUser ? await toPublicSessionUser(sessionUser) : null;
   const locale = readLocale();
+  // Only the homepage renders a design variant; other routes pass null.
+  const homeVariant = await resolveVariant().then((row) => row.variant).catch(() => null);
 
   return (
     <html lang={locale.language} dir={isRtl(locale.language) ? "rtl" : "ltr"}>
@@ -55,7 +59,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <PlatformProvider>
           <LocaleProvider initial={locale}>
             <PlatformBanner />
-            <AppShell user={user}>{children}</AppShell>
+            <HomeVariantProvider variant={homeVariant}>
+              <AppShell user={user}>{children}</AppShell>
+            </HomeVariantProvider>
           </LocaleProvider>
         </PlatformProvider>
       </body>

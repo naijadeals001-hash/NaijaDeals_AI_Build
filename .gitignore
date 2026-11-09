@@ -38,3 +38,5 @@ public/generated/stay/originals/
 android/keystore.properties
 *.jks
 *.keystore
+# Homepage hero originals kept locally; the app serves WebP.
+public/generated/home/originals/

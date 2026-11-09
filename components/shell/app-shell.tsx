@@ -19,16 +19,24 @@ import { verticals } from "@/lib/data/ecosystem";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { LocaleSwitcher } from "@/components/shell/locale-switcher";
 import type { SessionUser } from "@/lib/api-client";
+import { useHomeVariant } from "@/lib/home/variant-context";
 
 export function AppShell({ children, user }: { children: React.ReactNode; user: SessionUser | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const homeVariant = useHomeVariant();
 
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
   const { t } = useLocale();
+
+  // The three new homepage designs ship their own header, footer and bottom nav.
+  // Dashboard 1 ("original" or no variant) keeps the established shell.
+  if (pathname === "/" && homeVariant && homeVariant !== "original") {
+    return <>{children}</>;
+  }
 
   // Skip AppShell for admin routes - they use AdminShell
   if (pathname?.startsWith("/admin") || pathname?.startsWith("/super-admin")) {

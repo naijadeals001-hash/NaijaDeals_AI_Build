@@ -10,6 +10,8 @@ import { roleNames } from "./session";
  */
 export const PERMISSIONS = [
   "dashboard:read",
+  /// Homepage design variants and hero slides (Control Center → Homepage).
+  "homepage:write",
   "orders:read",
   "orders:write",
   "deliveries:read",

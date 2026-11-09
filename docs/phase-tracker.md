@@ -436,3 +436,22 @@ Verified: `scripts/mobile-foundation-e2e.cjs` **26/26**,
 
 OPEN: physical-device acceptance; push (no VAPID keys); operations UI; Android
 developer verification; production scheduling of the retention job.
+
+### Homepage experiences — four dashboard designs (2026-11-09)
+
+Four homepage designs on one platform: `original` (the untouched EcosystemHome),
+`africa-super-app` (approved mockup, Abuja landmarks), `mobility` and `commerce`.
+Every design links all ten services. New models: `HomeVariant`, `HomeHeroSlide`,
+`HomeAssignment`, `HomeMetric`. Stable assignment via the `nd_visitor` middleware
+cookie; manual choice via `nd_design` always wins. Shared hero carousel with
+8-10 slides per design, reduced-motion support and an explicit pause control.
+Control Center → Homepage designs (new `homepage:write` permission).
+
+Imagery: 22 Kie.ai assets (12 heroes incl. the Abuja composite, 10 vertical cards).
+
+Verified: `home-dashboards-e2e.cjs` **40/40**, `home-responsive-qa.cjs` **120/120**
+(4 designs x 10 widths), link audit **235/235**.
+
+OPEN: no inline slide editor UI; no image upload for slides; region/interest
+assignment strategies not built; Dashboard 1 keeps a single hero.
+See `docs/homepage-experiences.md`.
