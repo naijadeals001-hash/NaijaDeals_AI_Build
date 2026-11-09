@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { searchGigServices, listGigCategories } from "@/lib/services/gigs/service";
 import { GigFilters, ServiceCard, EmptyState, SampleBanner } from "@/components/gigs/discovery-shared";
+import { GigsFooter, GigsHeader, GigsPageShell } from "@/components/gigs/gigs-chrome";
+import { getSessionUser, toPublicSessionUser } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Browse services — NaijaGigs",
@@ -24,7 +26,11 @@ export default async function ServicesPage({ searchParams }: { searchParams?: Se
   const services = result.items ?? [];
   const sampleCount = services.filter((listing) => listing.isSample).length;
 
+  const session = await getSessionUser();
+  const user = session ? await toPublicSessionUser(session) : null;
   return (
+    <GigsPageShell>
+      <GigsHeader user={user} categories={categories.map((c) => ({ slug: c.slug, name: c.name }))} />
     <main id="main-content" className="mx-auto max-w-[1440px] px-4 py-9 sm:px-6 lg:px-10">
       <header className="mb-5">
         <h1 className="font-display text-[28px] font-extrabold tracking-[-0.02em] text-[#0B1F16] sm:text-[34px]">
@@ -63,5 +69,7 @@ export default async function ServicesPage({ searchParams }: { searchParams?: Se
         )}
       </div>
     </main>
+      <GigsFooter />
+    </GigsPageShell>
   );
 }

@@ -49,6 +49,9 @@ export function SendHeader() {
             <button type="submit" aria-label="Search" className="grid w-11 place-items-center bg-[#f26b21] text-white hover:bg-[#dd5f18]"><Search className="h-4 w-4" aria-hidden /></button>
           </form>
           <nav aria-label="Your account" className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2.5 text-[11.5px] font-semibold">
+            <Link href="/" aria-label="Back to the NaijaDeals dashboard" className="mr-1 hidden items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 hover:bg-white/20 md:flex">
+              <Home className="h-3.5 w-3.5" aria-hidden /> NaijaDeals
+            </Link>
             <Link href="/naijasend/ship" className="hidden items-center gap-1 hover:text-[#8ed14b] sm:flex"><Truck className="h-4 w-4" aria-hidden /> Ship Now</Link>
             <Link href="/naijasend/orders" className="flex items-center gap-1 hover:text-[#8ed14b]"><Package className="h-4 w-4" aria-hidden /> <span className="hidden sm:inline">Orders</span></Link>
             <Link href="/naijasend/notifications" className="relative grid h-8 w-8 place-items-center rounded hover:bg-white/10" aria-label="Notifications">
@@ -84,6 +87,7 @@ export function SendHeader() {
               <li><Link href="/naijasend/driver/jobs" onClick={() => setOpen(false)} className="block rounded px-2 py-2 hover:bg-[#f2f9f0]">My jobs &amp; navigation</Link></li>
               <li><Link href="/naijasend/track" onClick={() => setOpen(false)} className="block rounded px-2 py-2 hover:bg-[#f2f9f0]">Track by number</Link></li>
               <li><Link href="/account" onClick={() => setOpen(false)} className="block rounded px-2 py-2 hover:bg-[#f2f9f0]">Account</Link></li>
+              <li className="border-t border-[#eef1ef] pt-1"><Link href="/" onClick={() => setOpen(false)} className="block rounded px-2 py-2 font-bold text-[#0b5c33] hover:bg-[#f2f9f0]">← Back to NaijaDeals dashboard</Link></li>
             </ul>
           </div>
         </div>

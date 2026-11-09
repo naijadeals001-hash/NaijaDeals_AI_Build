@@ -121,6 +121,9 @@ export function GigsHeader({ user, categories }: { user: GigsHeaderUser; categor
           <button type="submit" aria-label="Search" className="grid w-11 place-items-center bg-[#f26b21] text-white"><Search className="h-4 w-4" aria-hidden /></button>
         </form>
         <nav aria-label="Your NaijaGigs account" className="ml-auto flex shrink-0 items-center gap-1 text-[11.5px] font-semibold sm:gap-2.5">
+          <Link href="/" aria-label="Back to the NaijaDeals dashboard" className="mr-1 hidden items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 hover:bg-white/20 md:flex">
+            <LayoutGrid className="h-3.5 w-3.5" aria-hidden /> NaijaDeals
+          </Link>
           <Link href="/naijagigs/notifications" className="hidden items-center gap-1 hover:text-[#f5b52e] sm:flex"><Bell className="h-4 w-4" aria-hidden /> Notifications</Link>
           <Link href="/naijagigs/bookings" className="flex items-center gap-1 hover:text-[#f5b52e]"><ReceiptText className="h-4 w-4" aria-hidden /> <span className="hidden sm:inline">Orders</span></Link>
           <Link href="/naijagigs/account" className="flex items-center gap-1 hover:text-[#f5b52e]"><UserIcon className="h-4 w-4" aria-hidden /> <span className="hidden sm:inline">Sign In</span></Link>
@@ -204,6 +207,7 @@ export function GigsHeader({ user, categories }: { user: GigsHeaderUser; categor
             <div className="mt-auto grid gap-2 pt-6">
               {user ? (
                 <>
+                  <Link href="/" onClick={() => setMenuOpen(false)} className="rounded-xl border border-[#C9D6CD] px-4 py-3 text-center text-sm font-bold text-[#0B3B2A]">NaijaDeals dashboard</Link>
                   <Link href="/naijagigs/account" onClick={() => setMenuOpen(false)} className="rounded-xl border border-[#C9D6CD] px-4 py-3 text-center text-sm font-bold text-[#0B3B2A]">
                     My dashboard
                   </Link>
@@ -289,7 +293,7 @@ export function GigsFooter() {
           </ul>
         </div>
         <div>
-          <h3 className="text-[12px] font-bold uppercase tracking-[0.16em] text-white/50">Ecosystem</h3>
+          <h3 className="text-[12px] font-bold uppercase tracking-[0.16em] text-white/50"><Link href="/" className="hover:text-white">Ecosystem →</Link></h3>
           <ul className="mt-3 space-y-2 text-[13px] text-white/75">
             {ecosystem.slice(0, 5).map((item) => (
               <li key={item.label}><Link href={item.href} className="hover:text-white">{item.label}</Link></li>

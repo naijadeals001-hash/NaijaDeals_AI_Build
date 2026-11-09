@@ -16,7 +16,7 @@ type Db = Prisma.TransactionClient;
  * "true" — the default in production, where only real approved professionals
  * and published services may appear.
  */
-const showSamples = process.env.NAIJA_GIGS_SHOW_SAMPLES === "true";
+export const showSamples = process.env.NAIJA_GIGS_SHOW_SAMPLES === "true";
 const professionalPublic = { status: "VERIFIED" as const, published: true, ...(showSamples ? {} : { isSample: false }) };
 
 function slugify(value: string) {

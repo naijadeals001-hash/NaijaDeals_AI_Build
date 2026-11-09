@@ -3,6 +3,8 @@ import Link from "next/link";
 import { BadgeCheck, MapPin } from "lucide-react";
 import { listGigCategories, listGigProfessionals } from "@/lib/services/gigs/service";
 import { GigFilters, EmptyState, SampleBanner } from "@/components/gigs/discovery-shared";
+import { GigsFooter, GigsHeader, GigsPageShell } from "@/components/gigs/gigs-chrome";
+import { getSessionUser, toPublicSessionUser } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Professionals — NaijaGigs",
@@ -29,7 +31,11 @@ export default async function ProfessionalsPage({
   const professionals = result.items ?? [];
   const sampleCount = professionals.filter((profile) => Boolean((profile as { isSample?: boolean }).isSample)).length;
 
+  const session = await getSessionUser();
+  const user = session ? await toPublicSessionUser(session) : null;
   return (
+    <GigsPageShell>
+      <GigsHeader user={user} categories={categories.map((c) => ({ slug: c.slug, name: c.name }))} />
     <main id="main-content" className="mx-auto max-w-[1440px] px-4 py-9 sm:px-6 lg:px-10">
       <header className="mb-5">
         <h1 className="font-display text-[28px] font-extrabold tracking-[-0.02em] text-[#0B1F16] sm:text-[34px]">Professionals</h1>
@@ -124,5 +130,7 @@ export default async function ProfessionalsPage({
         )}
       </div>
     </main>
+      <GigsFooter />
+    </GigsPageShell>
   );
 }

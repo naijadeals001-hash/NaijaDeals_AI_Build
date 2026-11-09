@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { listGigCategories, listOpenGigJobs, listGigProfessionals } from "@/lib/services/gigs/service";
+import { listGigCategories, listOpenGigJobs, listGigProfessionals, showSamples } from "@/lib/services/gigs/service";
 import { gigsCategoryImage, gigsImage } from "@/lib/services/gigs/images";
 import { GigsAppBanner, GigsBottomNav, GigsAudienceBands, GigsBenefits, GigsCategories, GigsFeaturedServices, GigsHero, GigsJobCategories, GigsLatestJobs, GigsStartCard, GigsSteps, GigsStories, GigsTopProfessionals, type JobRow, type ProRow, type ServiceRow, type Story } from "@/components/gigs/gigs-home";
 import { GigsHeader, GigsFooter, GigsPageShell, EcosystemBar } from "@/components/gigs/gigs-chrome";
@@ -28,7 +28,8 @@ export default async function NaijaGigsHomePage() {
     listOpenGigJobs({ page: 1, pageSize: 5 }),
     listGigProfessionals({ page: 1, pageSize: 5 }),
     prisma.serviceListing.findMany({
-      where: { status: "ACTIVE", professional: { status: "VERIFIED", published: true } },
+      // Same visibility rule as the detail page, so a card never links to a 404.
+      where: { status: "ACTIVE", professional: { status: "VERIFIED", published: true }, ...(showSamples ? {} : { isSample: false }) },
       orderBy: { createdAt: "desc" },
       take: 4,
       include: { images: { take: 1, orderBy: { sortOrder: "asc" } }, category: { select: { name: true } }, professional: { select: { displayName: true } } }

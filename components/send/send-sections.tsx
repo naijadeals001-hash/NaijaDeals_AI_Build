@@ -376,7 +376,7 @@ export function SendFooter() {
         <div>
           <p className="text-[11px] font-extrabold text-[#8ed14b]">NaijaDeals Ecosystem</p>
           <ul className="mt-1.5 space-y-1 text-[10.5px] text-white/80">
-            {[["NaijaPay", "/naijapay"], ["NaijaFresh", "/naijafresh"], ["NaijaDrive", "/naijadrive"], ["NaijaEats", "/naijaeats"], ["NaijaShop", "/naijashop"]].map(([label, href]) => (
+            {[["NaijaDeals dashboard", "/"], ["NaijaPay", "/naijapay"], ["NaijaFresh", "/naijafresh"], ["NaijaDrive", "/naijadrive"], ["NaijaEats", "/naijaeats"], ["NaijaShop", "/naijashop"]].map(([label, href]) => (
               <li key={href}><Link href={href} className="hover:text-white hover:underline">{label}</Link></li>
             ))}
           </ul>
