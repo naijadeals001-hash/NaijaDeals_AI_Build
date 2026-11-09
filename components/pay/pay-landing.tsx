@@ -22,6 +22,7 @@ import {
   Zap
 } from "lucide-react";
 import { apiClient, ApiRequestError, koboToNaira } from "@/lib/api-client";
+import { readBalanceVisibility, writeBalanceVisibility } from "@/lib/pay/balance-visibility";
 
 type WalletData = {
   availableKobo?: string | number;
@@ -37,8 +38,6 @@ type WalletData = {
  * pills. Signed-out visitors get a sign-in card; empty wallets and API
  * failures show honest states — nothing is fabricated.
  */
-const BALANCE_VISIBILITY_KEY = "naijapay.balanceVisible";
-
 function WalletCard() {
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error" | "signed-out">("loading");
@@ -48,22 +47,14 @@ function WalletCard() {
   const [balanceVisible, setBalanceVisible] = useState(true);
 
   useEffect(() => {
-    try {
-      if (window.localStorage.getItem(BALANCE_VISIBILITY_KEY) === "hidden") setBalanceVisible(false);
-    } catch {
-      // Private browsing can deny storage; the default visible balance still works.
-    }
+    const stored = readBalanceVisibility();
+    if (stored !== null) setBalanceVisible(stored);
   }, []);
 
   function toggleBalance() {
     setBalanceVisible((visible) => {
-      const next = !visible;
-      try {
-        window.localStorage.setItem(BALANCE_VISIBILITY_KEY, next ? "shown" : "hidden");
-      } catch {
-        // Preference is a convenience, not a requirement.
-      }
-      return next;
+      writeBalanceVisibility(!visible);
+      return !visible;
     });
   }
 

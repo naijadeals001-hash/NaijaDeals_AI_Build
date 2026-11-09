@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Banknote, Eye, EyeOff, QrCode, Search, Send, ShieldCheck, Smartphone, Wallet } from "lucide-react";
 import { apiClient, ApiRequestError, koboToNaira } from "@/lib/api-client";
+import { readBalanceVisibility, writeBalanceVisibility } from "@/lib/pay/balance-visibility";
 
 type Tx = { id: string; description: string; type: string; reference: string; amountKobo: string | number; createdAt?: string };
 type Hold = { id: string; amountKobo: string | number; status: string; reason: string; order?: { orderNumber?: string } | null };
@@ -15,15 +16,22 @@ type WalletData = { availableKobo?: string | number; heldKobo?: string | number;
  * with visibility toggle, escrow section, and a searchable/filterable real
  * transaction history. Empty and error states are honest.
  */
+const HISTORY_PAGE_SIZE = 25;
+
 export function NaijaPayWalletPage() {
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error" | "signed-out">("loading");
   const [error, setError] = useState("");
+  // Privacy preference is shared with the landing wallet card and survives a
+  // reload; read after mount so the first render matches the server.
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [rangeFilter, setRangeFilter] = useState("all");
   const [receipt, setReceipt] = useState<Tx | null>(null);
+  // History is long; render a page at a time so the screen stays scrollable and
+  // linkable on a phone instead of dumping every row at once.
+  const [visibleCount, setVisibleCount] = useState(HISTORY_PAGE_SIZE);
 
   function loadWallet() {
     setStatus("loading");
@@ -44,9 +52,27 @@ export function NaijaPayWalletPage() {
 
   useEffect(loadWallet, []);
 
+  useEffect(() => {
+    const stored = readBalanceVisibility();
+    if (stored !== null) setBalanceVisible(stored);
+  }, []);
+
+  function toggleBalance() {
+    setBalanceVisible((visible) => {
+      writeBalanceVisibility(!visible);
+      return !visible;
+    });
+  }
+
   const currency = wallet?.currency ?? "NGN";
   const transactions = useMemo(() => wallet?.transactions ?? [], [wallet]);
   const types = useMemo(() => ["all", ...Array.from(new Set(transactions.map((tx) => String(tx.type))))], [transactions]);
+  // A new filter starts at the first page; keeping the old window would show a
+  // slice that no longer corresponds to what the customer just asked for.
+  useEffect(() => {
+    setVisibleCount(HISTORY_PAGE_SIZE);
+  }, [query, typeFilter, rangeFilter]);
+
   const filtered = useMemo(() => {
     const now = Date.now();
     const ranges: Record<string, number> = { "7d": 7, "30d": 30, "90d": 90 };
@@ -120,7 +146,7 @@ export function NaijaPayWalletPage() {
               </p>
               <button
                 type="button"
-                onClick={() => setBalanceVisible((visible) => !visible)}
+                onClick={toggleBalance}
                 aria-label={balanceVisible ? "Hide balance" : "Show balance"}
                 className="rounded-lg p-1.5 text-white/60 transition hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-gold"
               >
@@ -220,8 +246,9 @@ export function NaijaPayWalletPage() {
         ) : filtered.length === 0 ? (
           <p className="mt-3 text-sm text-pay-ink-muted">No transactions match this filter.</p>
         ) : (
+          <>
           <ul className="mt-3 divide-y divide-pay-mint">
-            {filtered.map((tx) => (
+            {filtered.slice(0, visibleCount).map((tx) => (
               <li key={tx.id}>
                 <button
                   type="button"
@@ -243,6 +270,19 @@ export function NaijaPayWalletPage() {
               </li>
             ))}
           </ul>
+          {filtered.length > visibleCount && (
+            <button
+              type="button"
+              onClick={() => setVisibleCount((count) => count + HISTORY_PAGE_SIZE)}
+              className="mt-4 w-full rounded-xl border border-pay-green/30 px-4 py-2.5 text-sm font-bold text-pay-green transition hover:bg-pay-mint focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
+            >
+              Show {Math.min(HISTORY_PAGE_SIZE, filtered.length - visibleCount)} more
+              <span className="ml-1 font-normal text-pay-ink-muted">
+                ({filtered.length - visibleCount} remaining)
+              </span>
+            </button>
+          )}
+          </>
         )}
       </section>
       {receipt && (
