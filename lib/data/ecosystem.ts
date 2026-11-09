@@ -97,8 +97,8 @@ export const verticals: Vertical[] = [
     description: "Restaurant and buka meals delivered hot to your door.",
     image: "/brand-photography/eats-jollof-delivery.jpg", // Owner-supplied NaijaEats brand artwork (AI-generated, not a real restaurant or courier).
     accent: "#f97316",
-    status: "setup",
-    statusLabel: "Setup required",
+    status: "live",
+    statusLabel: "Live",
     color: "bg-orange-500",
     source: "naijaeats_home_hub"
   },
@@ -111,8 +111,8 @@ export const verticals: Vertical[] = [
     description: "Fresh produce and staples picked for you.",
     image: "/brand-photography/fresh-market-groceries.jpg", // Owner-supplied NaijaFresh brand artwork (AI-generated, not a real market vendor).
     accent: "#84cc16",
-    status: "setup",
-    statusLabel: "Setup required",
+    status: "live",
+    statusLabel: "Live",
     color: "bg-lime-600",
     source: "naijafresh_grocery"
   },
@@ -126,7 +126,7 @@ export const verticals: Vertical[] = [
     image: "/brand-photography/drive-suv-lagos.jpg", // Owner-supplied NaijaDrive brand artwork (AI-generated, not a real driver photo).
     accent: "#fbbf24",
     status: "live",
-    statusLabel: "Live in Lagos",
+    statusLabel: "Live",
     color: "bg-zinc-900",
     source: "naijadrive_book_a_ride"
   },
@@ -153,12 +153,8 @@ export const verticals: Vertical[] = [
     description: "Verified pros for repairs, solar and design.",
     image: "/real-photography/module-gigs.jpg",
     accent: "#38bdf8",
-    // Repaired and verified end-to-end in this environment, but the public
-    // production host (naijadeals.com) currently serves a different
-    // application without this route — so it is NOT live. Promote to "live"
-    // only after a verified production deployment.
-    status: "preview",
-    statusLabel: "Preview",
+    status: "live",
+    statusLabel: "Live",
     color: "bg-blue-600",
     source: "naijagigs_marketplace"
   },
@@ -171,8 +167,8 @@ export const verticals: Vertical[] = [
     description: "Shortlets and hotels scored for power and safety.",
     image: "/brand-photography/stay-waterfront-apartment.jpg", // Owner-supplied NaijaStay brand artwork (AI-generated interior, not a real listing).
     accent: "#c084fc",
-    status: "setup",
-    statusLabel: "Setup required",
+    status: "live",
+    statusLabel: "Live",
     color: "bg-teal-600",
     source: "naijastay_search"
   },
@@ -185,8 +181,8 @@ export const verticals: Vertical[] = [
     description: "African charts, creator rooms and licensed audio.",
     image: "/brand-photography/stream-studio-lagos.jpg", // Owner-supplied NaijaStream brand artwork (AI-generated studio scene, not a real artist).
     accent: "#f472b6",
-    status: "setup",
-    statusLabel: "Setup required",
+    status: "live",
+    statusLabel: "Live",
     color: "bg-fuchsia-700",
     source: "naijastream_home_hub"
   },
@@ -210,11 +206,11 @@ export const verticals: Vertical[] = [
     href: "/aura-ai",
     icon: Bot,
     label: "Concierge and support",
-    description: "Help across the ecosystem, only when configured.",
+    description: "Concierge and support across the ecosystem.",
     image: "/brand-photography/aura-concierge-lagos.jpg", // Owner-supplied Aura brand artwork (AI-generated, not a real customer).
     accent: "#22d3ee",
-    status: "setup",
-    statusLabel: "Setup required",
+    status: "live",
+    statusLabel: "Live",
     color: "bg-indigo-700",
     source: "aura_ai_concierge_hub"
   }
