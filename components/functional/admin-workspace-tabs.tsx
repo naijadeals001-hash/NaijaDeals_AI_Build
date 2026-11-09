@@ -4,6 +4,7 @@ import { AdminKitchenApplications } from "./admin-kitchen-applications";
 import { AdminFoodOrders } from "./admin-food-orders";
 import { AdminStorefrontPanel } from "./admin-storefront-panel";
 import { AdminReconciliationPanel } from "./admin-reconciliation-panel";
+import { AdminNaijaPayPanel } from "./admin-naijapay-panel";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -35,6 +36,7 @@ interface WorkspaceTabProps {
   disputes: Row[];
   freight: Row[];
   logistics: Row[];
+  homepage: Record<string, unknown> | null;
   users: Row[];
   vendors: Row[];
   couriers: Row[];
@@ -1403,6 +1405,10 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     return <AdminReconciliationPanel />;
   }
 
+  if (tab === "naijapay") {
+    return <AdminNaijaPayPanel />;
+  }
+
   if (tab === "payments") {
     const rows = filterRows(props.payments).filter((row) => matches(row, ["reference", "provider", "providerReference", "status", "order.orderNumber"]));
     const statuses = Array.from(new Set(props.payments.map((row) => String(row.status)))).sort();
@@ -1767,6 +1773,108 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
         />
       ) : null}
       </>
+    );
+  }
+
+  if (tab === "homepage") {
+    const config = props.homepage ?? {};
+    const variants = Array.isArray(config.variants) ? (config.variants as Row[]) : [];
+    const slides = Array.isArray(config.slides) ? (config.slides as Row[]) : [];
+    const metrics = Array.isArray(config.metrics) ? (config.metrics as Row[]) : [];
+    const enabledTotal = variants.filter((row) => row.enabled).reduce((sum, row) => sum + Number(row.allocation ?? 0), 0);
+
+    async function saveAllocation(next: Row[]) {
+      void run("homepage", async () => {
+        const response = await fetch("/api/admin/home", {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ variants: next.map((row) => ({ key: row.key, enabled: row.enabled, allocation: row.allocation, revision: row.revision })) })
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error ?? "Could not save.");
+        return body;
+      }, "Homepage designs updated.");
+    }
+
+    function toggle(row: Row, enabled: boolean) {
+      void saveAllocation(variants.map((v) => (v.key === row.key ? { ...v, enabled } : v)));
+    }
+    function setAllocation(row: Row, allocation: number) {
+      void saveAllocation(variants.map((v) => (v.key === row.key ? { ...v, allocation } : v)));
+    }
+
+    return (
+      <Panel title="Homepage designs" description="Four homepage designs share one platform. Allocation applies to first-time visitors; a visitor who chooses a design keeps it.">
+        <ActionFeedback message={message} error={error} />
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px] text-left text-xs">
+            <thead className="text-[#8B949E]">
+              <tr><th className="py-1">Design</th><th>Enabled</th><th>Allocation</th><th>Revision</th></tr>
+            </thead>
+            <tbody>
+              {variants.map((row) => (
+                <tr key={String(row.key)} className="border-t border-[#30363D]">
+                  <td className="py-1.5 font-bold">{text(row.name)}</td>
+                  <td>
+                    <button type="button" onClick={() => toggle(row, !row.enabled)} className="rounded border border-[#30363D] px-2 py-0.5 text-[11px] font-semibold">
+                      {row.enabled ? "Enabled" : "Disabled"}
+                    </button>
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      defaultValue={Number(row.allocation ?? 0)}
+                      onBlur={(event) => {
+                        const value = Number(event.target.value);
+                        if (Number.isInteger(value) && value !== Number(row.allocation)) setAllocation(row, value);
+                      }}
+                      className="w-16 rounded border border-[#30363D] bg-transparent px-1.5 py-0.5 text-[11px]"
+                      aria-label={`${text(row.name)} allocation percent`}
+                    />
+                  </td>
+                  <td className="text-[11px] text-[#8B949E]">{text(row.revision)}</td>
+                </tr>
+              ))}
+              {!variants.length ? <tr><td colSpan={4} className="py-2 text-[11px] text-[#8B949E]">No variants loaded.</td></tr> : null}
+            </tbody>
+          </table>
+        </div>
+        <p className={`mt-2 text-[11px] font-semibold ${enabledTotal === 100 ? "text-[#3FB950]" : "text-[#F85149]"}`}>Enabled allocations total {enabledTotal}% (must be 100%).</p>
+
+        <p className="mt-4 text-xs font-bold">Hero slides</p>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px] text-left text-xs">
+            <thead className="text-[#8B949E]"><tr><th className="py-1">Design</th><th>Headline</th><th>CTA</th><th>Images</th></tr></thead>
+            <tbody>
+              {slides.length ? slides.map((row) => (
+                <tr key={String(row.id)} className="border-t border-[#30363D]">
+                  <td className="py-1.5">{text(row.variantKey)}</td>
+                  <td className="max-w-[280px] truncate">{text(row.headline)}</td>
+                  <td className="text-[11px]">{text(row.ctaLabel)} → {text(row.ctaHref)}</td>
+                  <td className="text-[11px] text-[#8B949E]">{text(row.imageId, "—")}</td>
+                </tr>
+              )) : <tr><td colSpan={4} className="py-2 text-[11px] text-[#8B949E]">No slide overrides yet. The built-in slides in lib/home/designs.ts are live.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="mt-4 text-xs font-bold">Aggregate engagement</p>
+        <table className="w-full text-left text-xs">
+          <thead className="text-[#8B949E]"><tr><th className="py-1">Design</th><th>Event</th><th className="text-right">Count</th></tr></thead>
+          <tbody>
+            {metrics.length ? metrics.map((row, index) => (
+              <tr key={index} className="border-t border-[#30363D]">
+                <td className="py-1">{text(row.variantKey)}</td>
+                <td>{text(row.kind)}</td>
+                <td className="text-right font-bold">{Number((row._sum as Row | undefined)?.count ?? 0).toLocaleString()}</td>
+              </tr>
+            )) : <tr><td colSpan={3} className="py-2 text-[11px] text-[#8B949E]">No metrics recorded yet.</td></tr>}
+          </tbody>
+        </table>
+      </Panel>
     );
   }
 

@@ -25,6 +25,7 @@ export const PERMISSIONS = [
   "users:read",
   "finance:read",
   "finance:payouts:write",
+  "finance:escrow:settle",
   "audit:read",
   "roles:write",
   "countries:write",
@@ -71,6 +72,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "deliveries:read",
     "finance:read",
     "finance:payouts:write",
+    "finance:escrow:settle",
     "audit:read",
     "gigs:read",
     "stream:read"

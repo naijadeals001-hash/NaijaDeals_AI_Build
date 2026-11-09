@@ -18,6 +18,7 @@ export const ADMIN_TABS = [
   "reconciliation",
   "escrow",
   "disputes",
+  "naijapay",
   "freight",
   "logistics",
   "users",
@@ -130,6 +131,7 @@ export const MODULE_TABS: Record<AdminModule, Array<{ id: AdminTab; label: strin
     { id: "reconciliation", label: "Reconciliation" },
     { id: "escrow", label: "Escrow" },
     { id: "disputes", label: "Disputes" },
+    { id: "naijapay", label: "NaijaPay controls" },
     { id: "audit", label: "Audit log" }
   ],
   fresh: [{ id: "overview", label: "Overview" }],
@@ -148,6 +150,7 @@ export const TAB_LABELS: Record<AdminTab, string> = {
   reconciliation: "Reconciliation",
   escrow: "Escrow",
   disputes: "Disputes",
+  naijapay: "NaijaPay controls",
   freight: "Freight",
   logistics: "Logistics providers",
   homepage: "Homepage designs",
