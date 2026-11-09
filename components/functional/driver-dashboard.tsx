@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { apiClient, koboToNaira, type ApiDriverBoard, type ApiRide } from "@/lib/api-client";
 import { ReceiptCard } from "@/components/functional/drive-page";
+import { DriverTrackingPanel } from "@/components/platform/driver-tracking-panel";
 
 const activeStatuses = ["driver_assigned", "driver_arriving", "in_progress"];
 
@@ -160,6 +161,13 @@ export function DriverDashboard() {
             {board.active.length}
           </span>
         </div>
+
+        {board.active[0] ? (
+          <div className="mt-3">
+            {/* Location sharing is bound to the assigned ride, so it cannot be run without work. */}
+            <DriverTrackingPanel sessionRef={`drive:${board.active[0].id}`} label={`ride ${board.active[0].id.slice(-6)}`} />
+          </div>
+        ) : null}
 
         {board.active.length === 0 ? (
           <p className="mt-3 rounded-2xl border border-border-soft bg-canvas p-4 text-sm text-muted">

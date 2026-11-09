@@ -7042,6 +7042,25 @@
       "usageReferences": [
         "components/stay/stay-home.tsx"
       ]
+    },
+    {
+      "id": "platform-app-icon",
+      "vertical": "platform",
+      "kind": "icon",
+      "component": "PWA + Android app icon",
+      "prompt": "Flat vector app icon, deep green (#006d38) rounded square background, a bold stylised white letter N formed from two upward chevrons, a small amber (#f2a41a) sun dot at the top right, centred composition with generous padding, crisp edges, no text, no letters other than the N mark, no gradients, no shadows, high contrast, 1:1",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "icons/icon-source.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/e0d271f0c100.png",
+      "generatedAt": "2026-11-09T20:10:23.441Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "public/manifest.webmanifest"
+      ]
     }
   ]
 }

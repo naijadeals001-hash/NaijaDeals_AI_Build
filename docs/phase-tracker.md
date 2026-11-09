@@ -393,3 +393,22 @@ straight-line distance, labelled as such — **no turn-by-turn routing exists**,
 Open: live carrier milestone integration (air/sea/rail remain operator-recorded and flagged);
 map routing/turn-by-turn is not implemented; NaijaShop order → shipment wiring is available through
 the API but not yet triggered from the seller fulfilment screen.
+
+### Platform foundation — PWA, install and shared location (2026-11-09)
+
+Not a vertical: one shared foundation for all verticals. Adds the web app manifest,
+original icons (Kie.ai FLUX 3 Klein), a service worker whose cache policy excludes
+every private and financial route, an offline page, an install/update banner, an
+`/install` page with live capability detection, and a shared capability + location
+layer (`lib/platform/*`) used by NaijaDrive and NaijaSend driver workspaces.
+
+Location uploads are session-scoped (`drive:<rideId>`, `send:<shipmentId>`),
+authorised server-side, idempotent per `(deviceId, clientId)`, ordered by capture
+time, and flagged stale after 90 s. New models: `DeviceRegistration`, `LocationPing`.
+
+Verified: `node scripts/platform-pwa-e2e.cjs` **27/27**.
+
+BLOCKED / OPEN: Android APK (no Android SDK or Gradle on this machine; no signing
+key), push notifications (no provider configured), dispatch-side location
+endpoint, and location retention job. iOS background tracking is unsupported by
+the platform — documented, not worked around. See `docs/mobile-foundation.md`.

@@ -82,7 +82,7 @@ Evidence columns name the code path and the execution that proved it. Last verif
 | Design tokens | PARTIAL | `tailwind.config.ts` tokens; no documented component system |
 | Accessible shells | PARTIAL | App shell + QA markers; no screen-reader/contrast audit |
 | Original imagery | PARTIAL | 17 module images present, 0 broken; provenance not registered |
-| PWA installability | NOT STARTED | No manifest or service worker |
+| PWA installability | PARTIAL | Manifest, icons, service worker, offline page and install guidance shipped and tested (scripts/platform-pwa-e2e.cjs, 27/27). Physical-device install not yet verified. Android APK blocked: no SDK on build machine. iOS background location unsupported by platform. See docs/mobile-foundation.md. |
 | Native Android/iOS | NOT STARTED | No mobile project |
 
 ## Engineering gates

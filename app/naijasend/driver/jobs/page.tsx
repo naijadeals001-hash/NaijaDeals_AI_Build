@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { STATE_LABELS } from "@/lib/services/send/state-machine";
 import { SendEmpty, SendHeading, SendPage } from "@/components/send/send-page";
+import { DriverTrackingPanel } from "@/components/platform/driver-tracking-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,12 @@ export default async function DriverJobsPage() {
   return (
     <SendPage>
       <SendHeading eyebrow="Transporter" title="My jobs" description={`Assigned to ${provider.name}. A job appears here only because NaijaSend recorded an assignment from a paid booking.`} action={<Link href="/naijasend/transporter/dashboard" className="rounded-full px-4 py-1.5 text-[11.5px] font-extrabold text-[#0b5c33] ring-1 ring-[#cfe3ca]">Quote queue</Link>} />
+      {active[0] ? (
+        <div className="mb-3">
+          {/* Bound to the first live assignment: tracking cannot run without work. */}
+          <DriverTrackingPanel sessionRef={`send:${active[0].shipment.id}`} label={`shipment ${active[0].shipment.trackingNumber ?? active[0].shipment.id.slice(-6)}`} />
+        </div>
+      ) : null}
       {active.length ? (
         <ul className="grid gap-2 sm:grid-cols-2">
           {active.map((row) => (

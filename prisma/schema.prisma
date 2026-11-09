@@ -171,6 +171,7 @@ model User {
   bulkQuotes BulkQuoteRequest[] @relation("BulkQuoteBuyer")
   logisticsShipments LogisticsShipment[] @relation("LogisticsShipments")
   stayHost StayHost? @relation("StayHostOwner")
+  devices DeviceRegistration[] @relation("UserDevices")
   stayReservations StayReservation[] @relation("StayGuest")
   logisticsProviders LogisticsProvider[] @relation("LogisticsProviderOwner")
   freshCart FreshCartItem[] @relation("FreshCartOwner")
@@ -2883,4 +2884,58 @@ model StayMessage {
 
   @@index([propertyId, createdAt])
   @@index([reservationId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// NaijaDeals platform — shared mobile/PWA foundation
+//
+// A registered device belongs to exactly one signed-in user and carries the
+// capabilities it actually reported. Location fixes are captured only while a
+// tracked work session is active, are de-duplicated per device, and are readable
+// only by the owning user and authorised operations staff.
+// ---------------------------------------------------------------------------
+
+model DeviceRegistration {
+  id           String   @id @default(cuid())
+  userId       String
+  /// web | android | ios
+  platform     String
+  /// FCM/push token when a push provider is configured; null otherwise.
+  pushToken    String?
+  appVersion   String?
+  /// JSON capability report captured at registration (location, wakeLock, push…).
+  capabilities String?
+  lastSeenAt   DateTime @default(now())
+  revokedAt    DateTime?
+  createdAt    DateTime @default(now())
+  user         User     @relation("UserDevices", fields: [userId], references: [id], onDelete: Cascade)
+  pings        LocationPing[]
+
+  @@index([userId, platform])
+}
+
+/// One recorded position. `clientId` makes uploads idempotent, so a retried
+/// queue entry can never create a duplicate row.
+model LocationPing {
+  id          String   @id @default(cuid())
+  deviceId    String
+  userId      String
+  /// Session this fix belongs to: "drive:<rideId>", "send:<shipmentId>".
+  sessionRef  String
+  latitude    Float
+  longitude   Float
+  accuracyM   Float?
+  speedMps    Float?
+  headingDeg  Float?
+  /// Device-side capture time; ordering always uses this, never arrival time.
+  capturedAt  DateTime
+  /// Client-generated unique id for idempotent upload.
+  clientId    String
+  source      String   @default("browser") // browser | native
+  createdAt   DateTime @default(now())
+  device      DeviceRegistration @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, clientId])
+  @@index([sessionRef, capturedAt])
+  @@index([userId, capturedAt])
 }

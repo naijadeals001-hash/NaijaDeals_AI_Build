@@ -1,8 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { AppShell } from "@/components/shell/app-shell";
 import { getSessionUser, toPublicSessionUser } from "@/lib/auth/session";
 import { isRtl } from "@/lib/i18n/dictionary";
 import { LocaleProvider } from "@/lib/i18n/locale-provider";
+import { PlatformProvider } from "@/components/platform/platform-provider";
+import { PlatformBanner } from "@/components/platform/platform-banner";
 import { readLocale } from "@/lib/i18n/server";
 import "./globals.css";
 
@@ -20,7 +22,26 @@ export const metadata: Metadata = {
     url: "https://naijadeals.com",
     siteName: "NaijaDeals",
     type: "website"
+  },
+  manifest: "/manifest.webmanifest",
+  applicationName: "NaijaDeals",
+  appleWebApp: { capable: true, title: "NaijaDeals", statusBarStyle: "black-translucent" },
+  icons: {
+    icon: [
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }]
   }
+};
+
+export const viewport: Viewport = {
+  themeColor: "#006d38",
+  width: "device-width",
+  initialScale: 1,
+  // Pinch-zoom stays enabled: blocking it breaks accessibility.
+  maximumScale: 5,
+  viewportFit: "cover"
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -31,9 +52,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale.language} dir={isRtl(locale.language) ? "rtl" : "ltr"}>
       <body>
-        <LocaleProvider initial={locale}>
-          <AppShell user={user}>{children}</AppShell>
-        </LocaleProvider>
+        <PlatformProvider>
+          <LocaleProvider initial={locale}>
+            <PlatformBanner />
+            <AppShell user={user}>{children}</AppShell>
+          </LocaleProvider>
+        </PlatformProvider>
       </body>
     </html>
   );
