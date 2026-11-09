@@ -1,40 +1,173 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
-import { recordAudit } from "@/lib/services/core/audit.service";
 
 /**
- * Reconciliation exceptions and their audited correction path.
+ * Reconciliation for the NaijaPay books.
  *
- * A discrepancy is never resolved by editing a balance. The correction posts a
- * *balanced* ledger transaction whose entries name both sides, so the ledger
- * remains the single source of truth and the change is visible in history.
+ * ## The invariant
  *
- * Two exception classes are recognised:
- *  - `unbalanced_transaction`: a posted transaction whose entries do not sum to
- *    zero (a correction record that should never have been written as a posting);
- *  - `wallet_delta`: a wallet whose cached balance differs from its ledger net.
+ * A wallet holds two balances that mean different things, and each reconciles
+ * against its own slice of the journal:
  *
- * Both are reported by `walletReconciliation()`; neither is auto-fixed. An
- * operator must supply a reason code, and the platform records who decided.
+ *  - `availableKobo` — reconciles against the FULL journal net for the wallet.
+ *    Held money still belongs to the wallet, so it is not removed from the
+ *    wallet's position; it is only removed from what the wallet may spend.
+ *  - `heldKobo` — reconciles against the magnitude of the wallet's net across
+ *    escrow movements. A buyer is debited into escrow (negative), and the
+ *    magnitude of that debit is what it has on hold.
+ *
+ *        availableKobo == journal net (all movements)
+ *        heldKobo      == |journal net over escrow movements|
+ *
+ * Comparing `availableKobo + heldKobo` against the full journal net — which the
+ * earlier report did — reports every wallet holding an open escrow as broken.
+ * That is exactly what produced the two "customer exceptions" in the previous
+ * note. They were not exceptions: their `heldKobo` equalled their open escrows
+ * to the kobo, and their `availableKobo` reconciled exactly.
+ *
+ * ## The equity book
+ *
+ * Money recognised from outside the customer pool (test funding, opening equity)
+ * books its counterparty in `LedgerAccount`/`AccountPosting`, keyed to the
+ * transaction by `transactionId` with no relation in the schema. Joining the two
+ * books closes the journal difference exactly. See docs/naijapay-ledger-forensics.md.
  */
 
-export type ExceptionClass = "unbalanced_transaction" | "wallet_delta";
+export type IssueSeverity = "broken" | "unexplained" | "info";
 
-export type ReconciliationException = {
-  kind: ExceptionClass;
-  /** Transaction reference for unbalanced rows, wallet id for wallet deltas. */
+export type IssueClass =
+  | "wallet_available_delta"
+  | "wallet_held_delta"
+  | "journal_unbalanced"
+  | "account_drift"
+  | "documentation_posted_as_money";
+
+export type ReconciliationIssue = {
+  severity: IssueSeverity;
+  kind: IssueClass;
   subject: string;
-  owner: string;
+  /** Signed difference that gives rise to this issue. */
   deltaKobo: string;
   detail: string;
-  /** True when the difference is explained by test fixtures rather than customer money. */
-  fixtureRelated: boolean;
+  evidence: string[];
+  /** True only where the rows themselves establish test provenance. */
+  fixtureProvenance: boolean;
+  /** True where the two books together still sum to zero. */
+  balancedAcrossBooks?: boolean;
+  remediation: string;
 };
 
-const FIXTURE_REFERENCE = /^(ADJ-PHASE07|GIGS-E2E|SHOP-REVIEW-FUNDING|SEED-|RIDE-.*-HOLD)/i;
+const NGN = (kobo: bigint) =>
+  "NGN " + (Number(kobo) / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-/** Every exception, classified and attributed. Read-only. */
-export async function listExceptions(): Promise<ReconciliationException[]> {
+/**
+ * `$queryRaw` returns a NUMERIC aggregate as a Decimal object, never a bigint.
+ * Casting to text in SQL and converting here keeps every comparison on one type;
+ * comparing a Decimal to BigInt(0) is silently false and hides defects.
+ */
+const toBigInt = (value: unknown): bigint => BigInt(String(value ?? 0));
+
+const isEscrowMovement = (reference: string) => /ESCROW-HOLD|RELEASE-/i.test(reference);
+
+export async function journalTotals() {
+  const rows = await prisma.ledgerEntry.groupBy({ by: ["direction"], _sum: { amountKobo: true }, _count: { _all: true } });
+  const credit = rows.find((r) => r.direction === "CREDIT")?._sum.amountKobo ?? BigInt(0);
+  const debit = rows.find((r) => r.direction === "DEBIT")?._sum.amountKobo ?? BigInt(0);
+  return {
+    creditKobo: credit.toString(),
+    debitKobo: debit.toString(),
+    differenceKobo: (credit - debit).toString(),
+    entryCount: rows.reduce((sum, r) => sum + r._count._all, 0)
+  };
+}
+
+export async function reconcile(): Promise<{ totals: Awaited<ReturnType<typeof journalTotals>>; issues: ReconciliationIssue[] }> {
+  const issues: ReconciliationIssue[] = [];
+
+  // ---- journal integrity: entries that do not sum to zero ------------------
+  const unbalanced = await prisma.$queryRaw<Array<{ id: string; reference: string; net: string; entries: number }>>`
+    SELECT t.id, t.reference,
+      SUM(CASE WHEN l.direction = 'CREDIT' THEN l."amountKobo" ELSE -l."amountKobo" END)::text AS net,
+      COUNT(l.id)::int AS entries
+    FROM "WalletTransaction" t
+    JOIN "LedgerEntry" l ON l."transactionId" = t.id
+    GROUP BY t.id, t.reference, t."createdAt"
+    HAVING SUM(CASE WHEN l.direction = 'CREDIT' THEN l."amountKobo" ELSE -l."amountKobo" END) <> 0
+    ORDER BY t."createdAt"`;
+
+  const postings = await prisma.accountPosting.findMany({ include: { account: { select: { code: true } } } });
+  const postingsByTransaction = new Map<string, typeof postings>();
+  for (const posting of postings) {
+    const list = postingsByTransaction.get(posting.transactionId) ?? [];
+    list.push(posting);
+    postingsByTransaction.set(posting.transactionId, list);
+  }
+
+  for (const raw of unbalanced) {
+    const walletNet = toBigInt(raw.net);
+    const entries = await prisma.ledgerEntry.findMany({
+      where: { transactionId: raw.id },
+      include: { wallet: { select: { ownerType: true, user: { select: { email: true } }, vendor: { select: { name: true } } } } }
+    });
+    const linked = postingsByTransaction.get(raw.id) ?? [];
+    const equityNet = linked.reduce((sum, p) => sum + (p.direction === "CREDIT" ? p.amountKobo : -p.amountKobo), BigInt(0));
+    const combined = walletNet + equityNet;
+    const documentation = entries.some((e) => /not applied/i.test(e.memo));
+
+    issues.push({
+      severity: combined === BigInt(0) ? "info" : "broken",
+      kind: combined === BigInt(0) ? "documentation_posted_as_money" : "journal_unbalanced",
+      subject: raw.reference,
+      deltaKobo: walletNet.toString(),
+      detail:
+        combined === BigInt(0)
+          ? `The wallet journal line does not balance (${NGN(walletNet)}), but the equity book carries the equal and opposite ${NGN(equityNet)} on the same transaction, so both books together sum to zero.`
+          : `The wallet journal does not balance (${NGN(walletNet)}); the equity book adds ${NGN(equityNet)}, leaving ${NGN(combined)} unaccounted in both books.`,
+      evidence: [
+        `${raw.entries} wallet entries, net ${NGN(walletNet)}`,
+        `${linked.length} equity postings, net ${NGN(equityNet)}`,
+        ...entries.map((e) => `${e.direction} ${NGN(e.amountKobo)} ${e.wallet.user?.email ?? e.wallet.vendor?.name ?? e.wallet.ownerType} — ${e.memo}`),
+        ...linked.map((p) => `${p.account.code} ${p.direction} ${NGN(p.amountKobo)}`)
+      ],
+      fixtureProvenance: documentation || linked.some((p) => /fixture/i.test(p.account.code)),
+      balancedAcrossBooks: combined === BigInt(0),
+      remediation:
+        combined === BigInt(0)
+          ? "No money is missing. Replace the journal line with documentation so single-book reports are not misleading."
+          : "An operator must establish the counterparty from original evidence; never invent an amount to close the gap."
+    });
+  }
+
+  // ---- equity accounts must agree with their own postings ------------------
+  for (const account of await prisma.ledgerAccount.findMany({ include: { postings: true } })) {
+    const derived = account.postings.reduce((sum, p) => sum + (p.direction === "CREDIT" ? p.amountKobo : -p.amountKobo), BigInt(0));
+    if (derived === account.balanceKobo) continue;
+    issues.push({
+      severity: "broken",
+      kind: "account_drift",
+      subject: account.code,
+      deltaKobo: (account.balanceKobo - derived).toString(),
+      detail: `Cached balance ${NGN(account.balanceKobo)} differs from the sum of its postings (${NGN(derived)}).`,
+      evidence: account.postings.map((p) => `${p.direction} ${NGN(p.amountKobo)} — ${p.memo}`),
+      fixtureProvenance: /fixture/i.test(account.code),
+      remediation: "Postings are the source of truth; the cached projection may only be rebuilt from them."
+    });
+  }
+
+  // ---- the invariant, per wallet -------------------------------------------
+  const journals = await prisma.ledgerEntry.findMany({
+    select: { walletId: true, direction: true, amountKobo: true, transaction: { select: { reference: true, createdAt: true } } }
+  });
+  const journalNet = new Map<string, bigint>();
+  const escrowNetByWallet = new Map<string, bigint>();
+  for (const entry of journals) {
+    const signed = entry.direction === "CREDIT" ? entry.amountKobo : -entry.amountKobo;
+    journalNet.set(entry.walletId, (journalNet.get(entry.walletId) ?? BigInt(0)) + signed);
+    if (isEscrowMovement(entry.transaction.reference)) {
+      escrowNetByWallet.set(entry.walletId, (escrowNetByWallet.get(entry.walletId) ?? BigInt(0)) + signed);
+    }
+  }
+
   const wallets = await prisma.wallet.findMany({
     select: {
       id: true,
@@ -42,100 +175,78 @@ export async function listExceptions(): Promise<ReconciliationException[]> {
       availableKobo: true,
       heldKobo: true,
       user: { select: { email: true } },
-      vendor: { select: { name: true } },
-      ledgerEntries: { select: { direction: true, amountKobo: true, transaction: { select: { reference: true } } } }
+      vendor: { select: { name: true } }
     }
   });
 
-  const exceptions: ReconciliationException[] = [];
   for (const wallet of wallets) {
-    const net = wallet.ledgerEntries.reduce((sum, entry) => sum + (entry.direction === "CREDIT" ? entry.amountKobo : -entry.amountKobo), BigInt(0));
-    const cached = wallet.availableKobo + wallet.heldKobo;
-    if (cached === net) continue;
-    const fixtureRelated = wallet.ledgerEntries.some((entry) => FIXTURE_REFERENCE.test(entry.transaction?.reference ?? ""));
-    exceptions.push({
-      kind: "wallet_delta",
-      subject: wallet.id,
-      owner: wallet.user?.email ?? wallet.vendor?.name ?? wallet.ownerType,
-      deltaKobo: (cached - net).toString(),
-      detail: `Cached balance ${cached} differs from ledger net ${net}.`,
-      fixtureRelated
-    });
+    const expectedAvailable = journalNet.get(wallet.id) ?? BigInt(0);
+    const escrowNet = escrowNetByWallet.get(wallet.id) ?? BigInt(0);
+    const label = `${wallet.user?.email ?? wallet.vendor?.name ?? wallet.ownerType} (${wallet.id.slice(-8)})`;
+    const testIdentity = wallet.user?.email?.endsWith(".local") === true || wallet.user?.email?.endsWith(".demo") === true;
+    const recent = journals
+      .filter((e) => e.walletId === wallet.id)
+      .sort((a, b) => b.transaction.createdAt.getTime() - a.transaction.createdAt.getTime())
+      .slice(0, 6)
+      .map((e) => `${e.transaction.createdAt.toISOString()} ${e.transaction.reference}`);
+
+    const availableDelta = wallet.availableKobo - expectedAvailable;
+    if (availableDelta !== BigInt(0)) {
+      issues.push({
+        severity: "broken",
+        kind: "wallet_available_delta",
+        subject: wallet.id,
+        deltaKobo: availableDelta.toString(),
+        detail: `availableKobo ${NGN(wallet.availableKobo)} differs from the journal net ${NGN(expectedAvailable)} by ${NGN(availableDelta)} (wallet ${label}).`,
+        evidence: recent,
+        fixtureProvenance: testIdentity,
+        remediation: "Identify the posting that changed the stored balance without a matching journal entry, or vice versa. Requires an operator decision."
+      });
+    }
+
+    // A buyer is debited into escrow, so its escrow net is negative and heldKobo
+    // is that net's magnitude; a seller is credited, so its escrow net is the
+    // payable itself and it holds no escrow of its own. Compare magnitudes.
+    const escrowMagnitude = escrowNet < BigInt(0) ? -escrowNet : escrowNet;
+    const heldDelta = wallet.heldKobo - escrowMagnitude;
+    if (heldDelta !== BigInt(0)) {
+      issues.push({
+        severity: "unexplained",
+        kind: "wallet_held_delta",
+        subject: wallet.id,
+        deltaKobo: heldDelta.toString(),
+        detail: `heldKobo ${NGN(wallet.heldKobo)} differs from the escrow journal position ${NGN(escrowMagnitude)} by ${NGN(heldDelta)} (wallet ${label}).`,
+        evidence: recent,
+        fixtureProvenance: testIdentity,
+        remediation: "Escrow holds and releases must move heldKobo and the journal together. Reconcile per order."
+      });
+    }
   }
 
-  const unbalanced = await prisma.$queryRaw<Array<{ id: string; reference: string; type: string; net: bigint; amountKobo: bigint }>>`
-    SELECT t.id, t.reference, t.type::text AS type, t."amountKobo",
-      SUM(CASE WHEN l.direction = 'CREDIT' THEN l."amountKobo" ELSE -l."amountKobo" END) AS net
-    FROM "WalletTransaction" t
-    JOIN "LedgerEntry" l ON l."transactionId" = t.id
-    GROUP BY t.id, t.reference, t.type, t."amountKobo"
-    HAVING SUM(CASE WHEN l.direction = 'CREDIT' THEN l."amountKobo" ELSE -l."amountKobo" END) <> 0`;
-  for (const row of unbalanced) {
-    exceptions.push({
-      kind: "unbalanced_transaction",
-      subject: row.reference,
-      owner: "SYSTEM",
-      deltaKobo: row.net.toString(),
-      detail: `Transaction ${row.reference} (${row.type}) has entries summing to ${row.net}, not zero.`,
-      fixtureRelated: FIXTURE_REFERENCE.test(row.reference)
-    });
-  }
-  return exceptions;
+  return { totals: await journalTotals(), issues };
 }
 
 /**
- * Posts the compensating entries for one exception so the ledger balances.
+ * There is no automatic correction, deliberately.
  *
- * The correction is itself a balanced transaction: the offsetting entry is
- * written against the opposite side, so total debits again equal total credits.
- * A unique reference makes the correction idempotent.
+ * The previous implementation was rejected during review for three independent
+ * reasons, each of which would have written a false record:
+ *
+ *  1. It moved money wallet<->SYSTEM even where the equity book already carried
+ *     the offset, double-counting a discrepancy that did not exist.
+ *  2. It claimed a balanced posting would "restore total debits equal to total
+ *     credits". It cannot: equal additions on both sides leave the difference
+ *     unchanged. `differenceKobo` is invariant under any balanced posting.
+ *  3. It collapsed a multi-entry correction into a single net and posted that
+ *     against one wallet, discarding which account was actually wrong.
+ *
+ * Deciding which record is wrong, and who bears the difference, is an operator
+ * judgement. It is not a safe default.
  */
-export async function correctException(input: { actorId: string; exception: ReconciliationException; reasonCode: string; note?: string }) {
-  if (!/^[a-z0-9_]{3,40}$/.test(input.reasonCode)) throw new ApiError(400, "reason_required", "A reason code is required.");
-  const reference = `RECON-CORRECTION-${input.exception.kind.toUpperCase()}-${input.exception.subject.slice(-12)}`;
-  const existing = await prisma.walletTransaction.findUnique({ where: { reference }, select: { id: true } });
-  if (existing) return { reference, alreadyApplied: true };
-  if (input.exception.kind !== "unbalanced_transaction") {
-    // A wallet delta needs a human decision about direction; refuse to guess.
-    throw new ApiError(409, "manual_review_required", "Wallet deltas require a documented decision, not an automatic correction.");
-  }
-
-  const transaction = await prisma.walletTransaction.findFirst({ where: { reference: input.exception.subject }, include: { ledger: true } });
-  if (!transaction) throw new ApiError(404, "transaction_not_found", "That transaction no longer exists.");
-
-  const net = transaction.ledger.reduce((sum, entry) => sum + (entry.direction === "CREDIT" ? entry.amountKobo : -entry.amountKobo), BigInt(0));
-  if (net === BigInt(0)) return { reference, alreadyApplied: true };
-
-  const walletId = transaction.walletId;
-  const { postBalancedTransaction } = await import("@/lib/services/core/wallet.service");
-  const magnitude = net > BigInt(0) ? net : -net;
-  // The unbalanced posting credited the wallet without a counterparty. The
-  // correction removes exactly that amount from the wallet and books it against
-  // a SYSTEM account, so total debits and credits are equal again.
-  await prisma.$transaction(async (tx) => {
-    const system = await tx.wallet.findFirstOrThrow({ where: { ownerType: "SYSTEM" }, select: { id: true } });
-    await tx.wallet.update({ where: { id: walletId }, data: { availableKobo: { decrement: net } } });
-    await tx.wallet.update({ where: { id: system.id }, data: { availableKobo: { increment: net } } });
-    await postBalancedTransaction({
-      tx,
-      actorId: input.actorId,
-      walletId,
-      type: "fee", // booked as a fee-class correction; the audit row carries the real reason
-      amountKobo: magnitude,
-      reference,
-      description: `Reconciliation correction for ${input.exception.subject} (${input.reasonCode})`,
-      entries: [
-        { walletId, direction: "DEBIT", amountKobo: magnitude, memo: `Offset unbalanced posting ${input.exception.subject}` },
-        { walletId: system.id, direction: "CREDIT", amountKobo: magnitude, memo: "Counterparty for the offset posting" }
-      ]
-    });
-  });
-  await recordAudit({
-    actorId: input.actorId,
-    action: "reconciliation.corrected",
-    entity: "WalletTransaction",
-    entityId: transaction.id,
-    metadata: { reference, exception: input.exception.subject, netKobo: net.toString(), reasonCode: input.reasonCode, note: input.note ?? null }
-  });
-  return { reference, alreadyApplied: false, netKobo: net.toString() };
+export async function correctException(): Promise<never> {
+  throw new ApiError(
+    409,
+    "manual_review_required",
+    "Ledger corrections are not automatic. Statements document a decision; they never re-post money."
+  );
 }

@@ -113,33 +113,49 @@ export async function completeOrder(userId: string, orderId: string) {
     const payable = order.subtotalKobo - order.commissionKobo + order.deliveryFeeKobo;
 
     if (escrow) {
+      const platformCut = escrow.amountKobo - payable;
       if (completedPayment?.provider === "wallet") {
-        await tx.wallet.update({
-          where: { id: buyerWallet.id },
+        const buyerRelease = await tx.wallet.updateMany({
+          where: { id: buyerWallet.id, heldKobo: { gte: escrow.amountKobo } },
           data: { heldKobo: { decrement: escrow.amountKobo } }
         });
-        await tx.wallet.update({
-          where: { id: vendorWallet.id },
+        if (buyerRelease.count !== 1) throw new ApiError(409, "escrow_conflict", "The buyer's escrow hold is no longer available to release.");
+        // The seller's held balance is the escrow total; on release the payable
+        // becomes spendable and the commission leaves the seller for the platform.
+        const sellerRelease = await tx.wallet.updateMany({
+          where: { id: vendorWallet.id, heldKobo: { gte: escrow.amountKobo } },
           data: { heldKobo: { decrement: escrow.amountKobo }, availableKobo: { increment: payable } }
         });
-        const platformCut = escrow.amountKobo - payable;
+        if (sellerRelease.count !== 1) throw new ApiError(409, "escrow_conflict", "The seller's escrow hold is no longer available to release.");
         if (platformCut > BigInt(0)) {
           const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
-          await tx.wallet.update({
-            where: { id: platform.id },
-            data: { availableKobo: { increment: platformCut } }
-          });
+          await tx.wallet.update({ where: { id: platform.id }, data: { availableKobo: { increment: platformCut } } });
         }
       } else {
         const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
         // The platform already holds the verified external payment. Only the
         // seller's payable leaves the platform wallet; commission and the
         // escrow fee stay behind.
-        await tx.wallet.update({ where: { id: platform.id }, data: { availableKobo: { decrement: payable } } });
+        const platformDebit = await tx.wallet.updateMany({
+          where: { id: platform.id, availableKobo: { gte: payable } },
+          data: { availableKobo: { decrement: payable } }
+        });
+        if (platformDebit.count !== 1) throw new ApiError(409, "escrow_conflict", "The platform's escrow balance is no longer available to release.");
         await tx.wallet.update({
           where: { id: vendorWallet.id },
           data: { heldKobo: { decrement: escrow.amountKobo }, availableKobo: { increment: payable } }
         });
+      }
+      // The seller's escrow liability is satisfied by paying `payable`; the
+      // commission is the platform's, so it debits the platform wallet rather
+      // than crediting the seller and re-debiting it in the same journal.
+      const platformWallet = await ensureWallet(tx, { ownerType: "SYSTEM" });
+      const entries = [
+        { walletId: vendorWallet.id, direction: "DEBIT" as const, amountKobo: escrow.amountKobo, memo: "Escrow payable cleared" },
+        { walletId: vendorWallet.id, direction: "CREDIT" as const, amountKobo: payable, memo: "Seller net proceeds credited" }
+      ];
+      if (platformCut > BigInt(0)) {
+        entries.push({ walletId: platformWallet.id, direction: "CREDIT" as const, amountKobo: platformCut, memo: "Commission retained by NaijaDeals" });
       }
       await tx.walletTransaction.create({
         data: {
@@ -149,13 +165,7 @@ export async function completeOrder(userId: string, orderId: string) {
           amountKobo: payable,
           reference: `RELEASE-${order.id}`,
           description: `Escrow released for ${order.orderNumber}`,
-          ledger: {
-            create: [
-              { walletId: vendorWallet.id, direction: "DEBIT", amountKobo: escrow.amountKobo, memo: "Escrow payable cleared" },
-              { walletId: vendorWallet.id, direction: "CREDIT", amountKobo: payable, memo: "Seller net proceeds credited" },
-              { walletId: vendorWallet.id, direction: "CREDIT", amountKobo: escrow.amountKobo - payable, memo: "Commission retained by NaijaDeals" }
-            ]
-          }
+          ledger: { create: entries }
         }
       });
       await tx.escrowHold.update({
