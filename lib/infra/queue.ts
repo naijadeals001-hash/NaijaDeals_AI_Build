@@ -13,6 +13,16 @@ import { infraMetrics, recordOperation } from "./metrics";
  * blocking commands.
  */
 
+/**
+ * BullMQ key namespace. Development keeps `nd`; an isolated test environment
+ * sets QUEUE_PREFIX=nd-test so its worker cannot see or claim development jobs
+ * (and vice versa). Every Queue, Worker and scheduler must use this value.
+ */
+export function queuePrefix(): string {
+  const value = process.env.QUEUE_PREFIX?.trim();
+  return value ? value : "nd";
+}
+
 export const QUEUE_NAMES = {
   driveExpiry: "drive-expiry",
   searchIndex: "search-index",
@@ -63,7 +73,7 @@ export function getQueue(name: QueueName): Queue | null {
 
   const queue = new Queue(name, {
     connection: { ...connection, maxRetriesPerRequest: null },
-    prefix: "nd"
+    prefix: queuePrefix()
   });
   scope().queues.set(name, queue);
   return queue;
@@ -112,7 +122,7 @@ export function startWorker(
 
   const worker = new Worker(name, processor, {
     connection: { ...connection, maxRetriesPerRequest: null },
-    prefix: "nd",
+    prefix: queuePrefix(),
     concurrency: options.concurrency ?? 2
   });
 

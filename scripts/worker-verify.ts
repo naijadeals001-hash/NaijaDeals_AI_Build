@@ -17,6 +17,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { Queue } from "bullmq";
 import { prisma } from "../lib/prisma";
 import { readHeartbeat } from "../lib/infra/heartbeat";
+import { queuePrefix } from "../lib/infra/queue";
 import { closeCache } from "../lib/infra/cache";
 
 const runId = randomUUID().slice(0, 8);
@@ -125,7 +126,7 @@ async function main() {
     await check("concurrent sweeps release each ride exactly once", async () => {
       const parsed = new URL(process.env.VALKEY_URL!);
       const queue = new Queue("drive-expiry", {
-        prefix: "nd",
+        prefix: queuePrefix(),
         connection: {
           host: parsed.hostname,
           port: Number(parsed.port || 6379),
