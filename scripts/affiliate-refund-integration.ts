@@ -184,7 +184,9 @@ async function main() {
       const snap = async () => {
         const ops = await prisma.affiliateReversalOperation.findMany({ where: { conversionId: conversion.id } });
         const debts = await prisma.affiliateRecovery.findMany({ where: { conversionId: conversion.id } });
-        const wallet = await prisma.wallet.findFirstOrThrow({ where: { userId: customer.id } });
+        // The reversal debits the AFFILIATE's wallet. Measuring the customer's
+        // account, as this did, asserts nothing about the flow under test.
+        const wallet = await prisma.wallet.findFirstOrThrow({ where: { userId: affiliateUser.id, ownerType: "CUSTOMER" } });
         return {
           operations: ops.length,
           cumulative: ops.reduce((sum, op) => sum + op.requestedKobo, 0n),
@@ -205,17 +207,62 @@ async function main() {
       return `ops ${after.operations}, cumulative ${after.cumulative}, debt ${after.debt}, collected ${after.collected}, wallet ${after.wallet} — all unchanged`;
     });
 
+    await check("a funded reversal debits the affiliate and balances the journal", async () => {
+      const wallet = await prisma.wallet.update({
+        where: { id: (await prisma.wallet.findFirstOrThrow({ where: { userId: affiliateUser.id } })).id },
+        data: { availableKobo: { increment: 500_000n } }
+      });
+      assert(wallet.availableKobo === 500_000n, `affiliate wallet ${wallet.availableKobo}, expected 500000`);
+      const { reverseConversion } = await import("../lib/services/affiliate/settlement");
+      // The refund-driven conversion is already fully reversed, so this uses its own
+      // conversion with headroom: the case under test is the ledger path, not the
+      // refund trigger, which the other checks already cover.
+      const fundedEntity = `funded-order-${runId}`;
+      const fundedConversion = await prisma.affiliateConversion.create({
+        data: {
+          dedupeKey: `Order:${fundedEntity}`, affiliateId: profile.id, campaignId: campaign.id,
+          entityType: "Order", entityId: fundedEntity, ruleVersion: 1, commissionBps: 500,
+          basisKobo: 5_000_000n, amountKobo: 250_000n, state: "PAID", ledgerReference: `AFF-COMM-${fundedEntity}`
+        }
+      });
+      const opsBefore = await prisma.affiliateReversalOperation.count({ where: { conversionId: fundedConversion.id } });
+      const result = await reverseConversion({
+        actorId: null, conversionId: fundedConversion.id, amountKobo: 100_000n, reason: "funded recovery",
+        idempotencyKey: `funded-${runId}`
+      });
+      assert(result.reversed, `not reversed: ${"reason" in result ? result.reason : ""}`);
+      const after = await prisma.wallet.findUniqueOrThrow({ where: { id: wallet.id } });
+      assert(after.availableKobo === 400_000n, `wallet ${after.availableKobo}, expected 400000 after a 100000 debit`);
+      const ops = await prisma.affiliateReversalOperation.count({ where: { conversionId: fundedConversion.id } });
+      assert(ops === opsBefore + 1, `operations ${opsBefore} -> ${ops}`);
+      const op = await prisma.affiliateReversalOperation.findFirstOrThrow({ where: { conversionId: fundedConversion.id }, orderBy: { createdAt: "desc" } });
+      assert(op.recoveredKobo === 100_000n, `recovered ${op.recoveredKobo}`);
+      assert(op.debtKobo === 0n, `debt ${op.debtKobo}, expected 0 when fully covered`);
+      const tx = await prisma.walletTransaction.findFirstOrThrow({ where: { reference: op.ledgerReference ?? "" }, include: { ledger: true } });
+      const debit = tx.ledger.filter((e) => e.direction === "DEBIT").reduce((sum, e) => sum + e.amountKobo, 0n);
+      const credit = tx.ledger.filter((e) => e.direction === "CREDIT").reduce((sum, e) => sum + e.amountKobo, 0n);
+      assert(debit === credit && debit === 100_000n, `journal debit ${debit} credit ${credit}`);
+      return `wallet 500000 -> ${after.availableKobo}, recovered 100000, debt 0, journal ${debit}=${credit}`;
+    });
+
     await check("a failure after the ledger write rolls back every effect", async () => {
       const { reverseConversion } = await import("../lib/services/affiliate/settlement");
-      const opsBefore = await prisma.affiliateReversalOperation.count({ where: { conversionId: conversion.id } });
-      const debtsBefore = await prisma.affiliateRecovery.aggregate({ where: { conversionId: conversion.id }, _sum: { amountKobo: true } });
+      const rollbackConversion = await prisma.affiliateConversion.create({
+        data: {
+          dedupeKey: `Order:rollback-${runId}`, affiliateId: profile.id, campaignId: campaign.id,
+          entityType: "Order", entityId: `rollback-order-${runId}`, ruleVersion: 1, commissionBps: 500,
+          basisKobo: 5_000_000n, amountKobo: 250_000n, state: "PAID", ledgerReference: `AFF-COMM-rollback-${runId}`
+        }
+      });
+      const opsBefore = await prisma.affiliateReversalOperation.count({ where: { conversionId: rollbackConversion.id } });
+      const debtsBefore = await prisma.affiliateRecovery.aggregate({ where: { conversionId: rollbackConversion.id }, _sum: { amountKobo: true } });
       const walletBefore = (await prisma.wallet.findFirstOrThrow({ where: { userId: customer.id } })).availableKobo;
       const ledgerBefore = await prisma.ledgerEntry.count({});
 
       let threw = "";
       try {
         await reverseConversion({
-          actorId: null, conversionId: conversion.id, amountKobo: 1_000n, reason: "rollback probe",
+          actorId: null, conversionId: rollbackConversion.id, amountKobo: 1_000n, reason: "rollback probe",
           idempotencyKey: `rollback-${runId}`,
           testHooks: { failAfterLedgerWrite: true }
         });
@@ -224,8 +271,8 @@ async function main() {
       }
       assert(threw === "injected_failure_after_ledger_write", `did not fail as intended: ${threw}`);
 
-      const opsAfter = await prisma.affiliateReversalOperation.count({ where: { conversionId: conversion.id } });
-      const debtsAfter = await prisma.affiliateRecovery.aggregate({ where: { conversionId: conversion.id }, _sum: { amountKobo: true } });
+      const opsAfter = await prisma.affiliateReversalOperation.count({ where: { conversionId: rollbackConversion.id } });
+      const debtsAfter = await prisma.affiliateRecovery.aggregate({ where: { conversionId: rollbackConversion.id }, _sum: { amountKobo: true } });
       const walletAfter = (await prisma.wallet.findFirstOrThrow({ where: { userId: customer.id } })).availableKobo;
       const ledgerAfter = await prisma.ledgerEntry.count({});
 
