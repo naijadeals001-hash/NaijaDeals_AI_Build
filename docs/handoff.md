@@ -2534,3 +2534,37 @@ cross-account open and delete isolation, and mobile composer placement.
 4. Cancellation policy is asserted only as "Stop returns", not that rendering halts and
    persistence follows the documented rule.
 5. The parent runner does not yet retain per-child sanitized artifacts.
+
+## Incident — unauthorised paid model call during provider verification (2026-11-10)
+
+While verifying the deterministic test provider over HTTP, the server on port 3017 was started
+from `.next-test`, whose `BUILD_ID` is `-evMgMa8tvG8HulTi6uZq`. That bundle was built **before**
+the test provider existed (`grep -c streamTestCompletion` on the chat route chunk returned `0`).
+`AURA_TEST_PROVIDER=1` was therefore set on a process with no test provider compiled in, and the
+request reached the live DeepSeek model. One paid call was made without authorisation.
+
+The output proves it: the stream contained ordinary prose (`"I"` `"'ll"` `" check"` `" Na"ijo`…),
+not the seven known chunks the test provider emits. The server was stopped immediately.
+
+Consequences recorded:
+
+1. That run is **not** evidence for the deterministic provider. It must not be cited as such.
+2. It is also not evidence of persistence: the `done` event carried a `conversationId`, but no
+   stored record was checked.
+3. What it does establish, narrowly: `/api/aura/chat` returned 200 `text/event-stream`, framed 75
+   `data:` events, and terminated with a `done` event — with auth, origin check and rate limiting
+   active on a real signed-in session.
+
+### Guard added
+
+`streamCompletion` now fails closed: if `AURA_TEST_PROVIDER=1` but the deployment refuses it, the
+generator yields `test_provider_refused` and returns. Previously such a request fell through to
+the live provider, which is how a misconfiguration becomes spending.
+
+### Trust boundary, stated plainly
+
+`AURA_TEST_PROVIDER` plus `AURA_TEST_ALLOW_PRODUCTION_BUILD` is configuration, not isolation. Any
+process carrying both variables can activate the provider. A marker file or a second flag is not
+a security boundary. Real isolation requires the process to be unable to reach a paid endpoint at
+all — no `DEEPSEEK_API_KEY` in its effective environment, including values loaded from project
+dotenv files, and outbound denial to the provider host at the process or network boundary.

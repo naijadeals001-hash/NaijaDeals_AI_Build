@@ -105,7 +105,13 @@ export async function* streamCompletion(options: StreamOptions): AsyncGenerator<
   // Deterministic provider for isolated tests. Configuration-only: no header,
   // query parameter or session can select it, and a production build refuses
   // unless the deployment is explicitly marked as the local test build.
-  if (testProviderEnabled()) {
+  // Fail closed: a request for the deterministic provider that cannot be honoured
+  // must never fall through to the live provider.
+  if (process.env.AURA_TEST_PROVIDER === "1") {
+    if (!testProviderEnabled()) {
+      yield { type: "error", code: "test_provider_refused", message: "The deterministic test provider was requested but is not permitted in this deployment." };
+      return;
+    }
     yield* streamTestCompletion(options);
     return;
   }
