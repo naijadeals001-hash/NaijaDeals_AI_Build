@@ -2900,3 +2900,83 @@ in the gitignored `qa-artifacts/affiliate-campaigns/`.
   by the number of rows in the table.
 - Migration preflight still validates counts, not migration identity/status.
 - Publication: the preservation remote still rejects the stored credential (above).
+
+---
+
+## 2026-11-05 — Guest attribution and financial acceptance (27f2be5, d9e9ffb)
+
+### Implemented
+
+- **`OrderAttribution`** (migration `20261111030000_order_attribution`): immutable scalar snapshot
+  of `touchId`, `linkId`, `affiliateId`, `campaignId`, `expiresAt`, one row per order.
+- **Checkout resolution** (`resolveCheckoutAttribution`): the signed-in user's touches first, then
+  the middleware-issued `nd_visitor` cookie, so a guest who signs up mid-session keeps the touch.
+  Every candidate must be consented, unexpired, from an ACTIVE campaign that has not expired, from
+  an APPROVED affiliate, and must not belong to the purchasing user. No affiliate id is read from
+  the request.
+- **Payment-time commission**: after the payment transaction commits, `recordConversion` runs from
+  the frozen touch only, with the campaign's snapshotted basis rule (`SUBTOTAL` uses the order
+  subtotal, `TOTAL` the total). The payment row lock and `dedupeKey = Order:<orderId>` make a
+  duplicate confirmation inert.
+- **Discovery pagination**: `GET /api/affiliate/links` now returns `{ rows, nextCursor }` with
+  `take` 1–50; the affiliate page has a "Load more campaigns" control.
+- **Migration identity preflight** (`scripts/migration-identity-check.ts`): compares local
+  `prisma/migrations` names with applied, non-rolled-back `_prisma_migrations` rows, checks the
+  latest applied matches the last local folder and that applied rows carry checksums and steps.
+- **Aura tool** `get_affiliate_summary`: read-only, session-scoped, no affiliate id argument. It is
+  registered in `TOOLS`, `TOOL_SPECS` and `TOOL_STATUS`.
+
+### Verified
+
+All runs against `naijadeals_affiliate_test`, guarded by `current_database()`, with no paid calls.
+
+| Suite | Result |
+|-------|--------|
+| `scripts/affiliate-guest-journey.cjs` (browser, 3 checks) | Guest lands via `/r/<code>`, signs up, checks out attributed, pays, and exactly one 5,000-kobo conversion is created; a duplicate confirm adds nothing. No consent → `attributed:false` and zero conversions. Signed-in visitor attributed; affiliate buying their own link refused. |
+| `scripts/affiliate-financial-acceptance.ts` (6 checks) | Unconfigured providers: test 503 `provider_unconfigured`, paystack 403 `test_funds_boundary`, zero payment rows, order still pending. Concurrent unsettled reversals: one 3,000 reversal applied, the other refused `exceeds_original`. Settlement racing a reversal: settlement won, wallet delta exactly 5,000, reversal refused `state_not_reversible`. Audit actor is the session admin despite a spoofed body `actorId`. Expired touch and PAUSED campaign both resolve to null. |
+| `scripts/affiliate-campaign-journey.ts` (9 checks) | Previous eight plus cursor pagination: `take=2` returns two rows, the next page repeats none. |
+| `scripts/migration-identity-check.ts` | `{localCount:63, appliedCount:63, latest:"20261111030000_order_attribution", status:"PASS"}`; the guard refuses `naijadeals_core` with exit 2. |
+| `scripts/aura-affiliate-tool-verify.ts` (4 checks) | Tool registered; affiliate sees own 1 link and 5,000 pending; non-affiliate gets `enrolled:false` with no leaked id or amount; `userId`/`affiliateId` arguments cannot change the identity. Deterministic, no provider call. |
+| Real worker | `node scripts/worker-test-launch.mjs` against the isolated DB; the notification sweep claimed 14 reversal intents and finished 14. The fixture intent moved `PENDING → DONE` (attempts 1), recording a 2,000-kobo partial reversal as debt against a PAID conversion. Worker stopped afterwards. |
+| Build/typecheck | `npx tsc --noEmit` exit 0; `next build` into `.next-pay` exit 0; 3017 serves the final build. |
+
+**Payment note.** The local `test` provider is correctly disabled by
+`isTestPaymentsEnabled()` because `next start` compiles `NODE_ENV` as production, so it cannot be
+enabled without weakening a payment-safety guard. The authoritative payment in the browser journey
+is therefore the **wallet** provider: a real server-verified ledger debit that holds funds in
+escrow. The disabled test provider is retained as fail-closed evidence.
+
+### Checklist
+
+Implemented and verified:
+- guest → referral → consent → signup → checkout → paid order → one commission
+- guest-to-account continuity via the server-issued visitor cookie
+- absent consent, expired touch, paused campaign, self-referral
+- duplicate payment confirmation
+- unconfigured-provider refusal
+- concurrent unsettled reversal bound
+- settlement-versus-reversal contention
+- session-derived audit identity
+- cursor pagination
+- migration identity/status preflight
+- deterministic Aura affiliate summary with argument-identity refusal
+- real worker sweep processing a reversal intent
+
+Implemented but not fully verified:
+- commission creation covers shop `Order` rows only; NaijaStay, rides and gigs have their own
+  settlement paths and are not attributed.
+- Aura assistance is a single read tool; it is not yet routed in a conversational journey.
+
+Still remaining:
+- mid-flight provider outage (as opposed to an unconfigured provider) needs a fault-injected adapter.
+- more than two simultaneous unsettled reversals, and reversal compounding across several refunds.
+- worker background identity propagation beyond the reversal processor.
+- The worker sweep consumed the PENDING review fixtures created by earlier suites; the review queue
+  now contains only `FAILED` review-required rows.
+- Publication remains blocked on repository credentials.
+
+## Preservation — off-repository bundle (2026-11-05)
+
+`git bundle create C:\Users\User\Documents\naijadeals-backup-20261105.bundle --all`, then
+`git bundle verify` reported "The bundle records a complete history." The file is 456 MB and lives
+outside the repository; it is a backup, not a remote publication.
