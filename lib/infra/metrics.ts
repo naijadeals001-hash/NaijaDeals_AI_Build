@@ -1,4 +1,5 @@
 import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from "prom-client";
+import { backupStatus } from "./backup-status";
 
 /**
  * One Prometheus registry for the whole process.
@@ -17,6 +18,10 @@ type InfraMetrics = {
   cacheHits: Counter<string>;
   queueDepth: Gauge<"queue">;
   queueJobs: Counter<"queue" | "event">;
+  backupLastSuccess: Gauge<string>;
+  backupAge: Gauge<string>;
+  backupObjects: Gauge<string>;
+  backupRemote: Gauge<string>;
 };
 
 const globalKey = "__naijadealsInfraMetrics" as const;
@@ -69,6 +74,26 @@ function build(): InfraMetrics {
       help: "Queue job lifecycle events.",
       labelNames: ["queue", "event"] as const,
       registers: [registry]
+    }),
+    backupLastSuccess: new Gauge({
+      name: "naijadeals_backup_last_success_timestamp",
+      help: "Unix timestamp of the last successful PostgreSQL backup.",
+      registers: [registry]
+    }),
+    backupAge: new Gauge({
+      name: "naijadeals_backup_age_seconds",
+      help: "Seconds since the last successful backup. Alert when this exceeds the retention window.",
+      registers: [registry]
+    }),
+    backupObjects: new Gauge({
+      name: "naijadeals_backup_objects_count",
+      help: "Objects captured in the last SeaweedFS archive.",
+      registers: [registry]
+    }),
+    backupRemote: new Gauge({
+      name: "naijadeals_backup_remote_configured",
+      help: "1 when an off-site backup destination is configured, 0 otherwise.",
+      registers: [registry]
     })
   };
 
@@ -102,5 +127,11 @@ export function recordCache(result: "hit" | "miss" | "error"): void {
 
 export async function metricsText(): Promise<{ body: string; contentType: string }> {
   const m = infraMetrics();
+  // Refreshed on every scrape so the alert reflects the file, not process start.
+  const backup = backupStatus();
+  m.backupLastSuccess.set(backup.lastSuccessAt ? Math.floor(backup.lastSuccessAt.getTime() / 1000) : 0);
+  m.backupAge.set(backup.ageSeconds ?? -1);
+  m.backupObjects.set(backup.objects);
+  m.backupRemote.set(backup.remoteConfigured ? 1 : 0);
   return { body: await m.registry.metrics(), contentType: m.registry.contentType };
 }
