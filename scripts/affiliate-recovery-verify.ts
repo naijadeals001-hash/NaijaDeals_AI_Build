@@ -71,7 +71,7 @@ async function main() {
     const first = await paidConversion(`o1-${runId}`, 5_000n);
 
     await check("a reversal beyond the wallet balance creates a receivable", async () => {
-      const result = await reverseConversion({ actorId: admin.id, conversionId: first.id, amountKobo: 5_000n, reason: "refund" });
+      const result = await reverseConversion({ actorId: admin.id, conversionId: first.id, amountKobo: 5_000n, reason: "refund", idempotencyKey: `t-${randomUUID()}` });
       assert(result.reversed, `not reversed: ${"reason" in result ? result.reason : ""}`);
       const rec = await prisma.affiliateRecovery.findFirst({ where: { conversionId: first.id } });
       assert(rec, "no recovery record");
@@ -155,7 +155,7 @@ async function main() {
     await check("write-off closes a receivable without moving money", async () => {
       const second = await paidConversion(`o2-${runId}`, 4_000n);
       await prisma.wallet.update({ where: { id: wallet.id }, data: { availableKobo: 0n } });
-      const reverse = await reverseConversion({ actorId: admin.id, conversionId: second.id, amountKobo: 4_000n, reason: "refund 2" });
+      const reverse = await reverseConversion({ actorId: admin.id, conversionId: second.id, amountKobo: 4_000n, reason: "refund 2", idempotencyKey: `t-${randomUUID()}` });
       assert(reverse.reversed, "second reversal failed");
       const rec = await prisma.affiliateRecovery.findFirst({ where: { conversionId: second.id } });
       assert(rec, "no recovery for the second shortfall");

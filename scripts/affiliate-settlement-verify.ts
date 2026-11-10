@@ -136,7 +136,7 @@ async function main() {
       const third = await accrual(`ord-pre-${runId}`);
       const campaignBefore = await prisma.affiliateCampaign.findUniqueOrThrow({ where: { id: campaign.id } });
       const walletBefore = await balance(affiliateWalletId);
-      const result = await reverseConversion({ actorId: admin.id, conversionId: third.id, amountKobo: 5_000n, reason: "order refunded before settlement" });
+      const result = await reverseConversion({ actorId: admin.id, conversionId: third.id, amountKobo: 5_000n, reason: "order refunded before settlement", idempotencyKey: `test-${randomUUID()}` });
       assert(result.reversed, `not reversed: ${"reason" in result ? result.reason : ""}`);
       const campaignAfter = await prisma.affiliateCampaign.findUniqueOrThrow({ where: { id: campaign.id } });
       const walletAfter = await balance(affiliateWalletId);
@@ -150,13 +150,17 @@ async function main() {
     await check("reversal after settlement debits the wallet with a balanced entry", async () => {
       const walletBefore = await balance(affiliateWalletId);
       const platformBeforeRev = await balance(platform.id);
-      const result = await reverseConversion({ actorId: admin.id, conversionId: first.id, amountKobo: 5_000n, reason: "order refunded after settlement" });
+      const result = await reverseConversion({ actorId: admin.id, conversionId: first.id, amountKobo: 5_000n, reason: "order refunded after settlement", idempotencyKey: `test-${randomUUID()}` });
       assert(result.reversed, `not reversed: ${"reason" in result ? result.reason : ""}`);
       const walletAfter = await balance(affiliateWalletId);
       assert(walletBefore - walletAfter === 5_000n, `wallet moved ${walletBefore - walletAfter}`);
       assert(await balance(platform.id) - platformBeforeRev === 5_000n, "platform not credited");
+      // The ledger reference is now the caller's idempotency key, not a generated
+      // AFF-REV- prefix, so the transaction is looked up by what was returned.
+      const reference = "ledgerReference" in result ? result.ledgerReference : null;
+      assert(reference, "reversal returned no ledger reference");
       const tx = await prisma.walletTransaction.findFirst({
-        where: { reference: { startsWith: `AFF-REV-${first.id}` } }, include: { ledger: true }
+        where: { reference: reference as string }, include: { ledger: true }
       });
       assert(tx, "no reversal transaction");
       const debit = tx!.ledger.filter((e) => e.direction === "DEBIT").reduce((s, e) => s + e.amountKobo, 0n);
@@ -166,7 +170,7 @@ async function main() {
     });
 
     await check("reversal cannot exceed the original commission", async () => {
-      const over = await reverseConversion({ actorId: admin.id, conversionId: first.id, amountKobo: 100_000n, reason: "over-reversal attempt" });
+      const over = await reverseConversion({ actorId: admin.id, conversionId: first.id, amountKobo: 100_000n, reason: "over-reversal attempt", idempotencyKey: `test-${randomUUID()}` });
       assert(!over.reversed, "over-reversal accepted");
       return `refused: ${"reason" in over ? over.reason : ""}`;
     });

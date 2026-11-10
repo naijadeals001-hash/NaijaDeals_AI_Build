@@ -163,13 +163,14 @@ export async function reverseConversion(input: {
   // Cumulative reversal is the sum of committed operations. A partial reversal
   // leaves the conversion PAID, so a state-derived total would read zero and
   // permit over-reversal.
-  // Identity must survive a retry. A random per-call key looked like protection
-  // but was not: a resubmitted manual request produced a second operation. When
-  // no key is supplied, derive one from the request itself so the same request
-  // retried maps to the same key, and a genuinely different request does not.
-  const opKey =
-    input.idempotencyKey ??
-    `manual:${conversion.id}:${input.amountKobo.toString()}:${createHash("sha256").update(input.reason).digest("hex").slice(0, 16)}`;
+  // The caller must supply the identity of the action. A content-derived key would
+  // collapse two genuinely separate actions that happen to share a conversion,
+  // amount and reason into one operation, which is wrong; a random per-call key
+  // is not retry protection at all. Both fallbacks are therefore removed.
+  if (!input.idempotencyKey) {
+    throw new ApiError(400, "idempotency_key_required", "A reversal needs a stable request identity supplied by the caller.");
+  }
+  const opKey = input.idempotencyKey;
   const prior = await prisma.affiliateReversalOperation.findUnique({ where: { opKey } });
   if (prior) {
     // A reused key that does not describe the same request is a caller bug, not a
