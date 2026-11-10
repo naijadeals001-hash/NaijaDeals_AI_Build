@@ -3622,3 +3622,30 @@ model AffiliatePayout {
 
   @@index([affiliateId, state, requestedAt])
 }
+
+enum RecoveryState {
+  OUTSTANDING
+  COLLECTED
+  WRITTEN_OFF
+}
+
+/// Commission that was clawed back but could not be recovered because the
+/// affiliate had already spent or withdrawn it. A shortfall is a receivable, not
+/// a silent loss: it stays on the books until collected or explicitly written
+/// off by an administrator.
+model AffiliateRecovery {
+  id              String        @id @default(cuid())
+  conversionId    String
+  affiliateId     String
+  amountKobo      BigInt
+  collectedKobo   BigInt        @default(0)
+  state           RecoveryState @default(OUTSTANDING)
+  ledgerReference String?
+  note            String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([affiliateId, state])
+  @@index([state, createdAt])
+  @@index([conversionId])
+}

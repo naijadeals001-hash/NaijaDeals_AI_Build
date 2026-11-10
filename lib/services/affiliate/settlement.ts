@@ -227,6 +227,31 @@ export async function reverseConversion(input: {
       data: { state: remaining === 0n ? "REVERSED" : conversion.state, reason: input.reason.slice(0, 300), ledgerReference: transaction.reference }
     });
 
+    // Shortfall becomes a receivable rather than a silent loss. One open record
+    // per conversion: a second partial reversal tops it up instead of creating a
+    // duplicate receivable that could be collected twice.
+    const shortfall = input.amountKobo - recoverable;
+    if (shortfall > 0n) {
+      const open = await tx.affiliateRecovery.findFirst({
+        where: { conversionId: conversion.id, state: "OUTSTANDING" }
+      });
+      if (open) {
+        await tx.affiliateRecovery.update({
+          where: { id: open.id },
+          data: { amountKobo: { increment: shortfall } }
+        });
+      } else {
+        await tx.affiliateRecovery.create({
+          data: {
+            conversionId: conversion.id,
+            affiliateId: conversion.affiliateId,
+            amountKobo: shortfall,
+            note: input.reason.slice(0, 300)
+          }
+        });
+      }
+    }
+
     return { ok: true as const, reference: transaction.reference, recovered: recoverable };
   });
 
