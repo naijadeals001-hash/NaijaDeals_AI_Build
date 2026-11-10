@@ -109,15 +109,33 @@ async function main() {
       data: { opKey: `existing-${runId}`, conversionId: both.id, requestedKobo: 500n, recoveredKobo: 0n, debtKobo: 500n }
     });
 
-    await check("dry run reports reconstructable and ambiguous without writing", async () => {
+    await check("dry run classifies each fixture exactly, ignoring unrelated rows", async () => {
       const before = await prisma.affiliateReversalOperation.count({ where: { conversionId: { in: made.conversions } } });
       const out = reconcile("--dry-run");
       const after = await prisma.affiliateReversalOperation.count({ where: { conversionId: { in: made.conversions } } });
       assert(after === before, `dry run wrote ${after - before} operations`);
-      assert(/reconstructable: 3/.test(out), `expected 3 reconstructable, output: ${out.match(/reconstructable: \d+/)?.[0]}`);
-      assert(/not subtracted\): 1/.test(out), `expected 1 blocked overlap; full output:
-${out}`);
-      return "4 reconstructable, 1 ambiguous, nothing written";
+      assert(out.includes("Dry run: nothing written"), "dry run did not report writing nothing");
+
+      // The reconciler scans the whole database, so totals are not stable across
+      // runs. Classification of THIS run's fixtures is what the test owns.
+      const sections = out.split(String.fromCharCode(10,10));
+      const find = (label: string) => sections.find((part) => part.includes(label)) ?? "";
+      const reconstructable = find("reconstructable:");
+      const overlap = find("ambiguous overlap");
+      const ambiguousSection = find("ambiguous (blocked, not inferred)");
+      const short = (id: string) => id.slice(0, 10);
+
+      for (const [name, row] of [["cash-only", cashOnly], ["debt-only", debtOnly], ["mixed", mixed]] as const) {
+        assert(reconstructable.includes(short(row.id)), `${name} fixture ${short(row.id)} is not in the reconstructable section`);
+      }
+      assert(overlap.includes(short(both.id)), `mixed-history fixture ${short(both.id)} is not in the overlap section`);
+      assert(ambiguousSection.includes(short(ambiguous.id)), `ambiguous fixture ${short(ambiguous.id)} is not flagged`);
+
+      // No fixture may appear in a section it does not belong to.
+      assert(!reconstructable.includes(short(both.id)), "mixed-history fixture was reconstructed, not blocked");
+      assert(!reconstructable.includes(short(ambiguous.id)), "ambiguous fixture was reconstructed");
+
+      return `cash/debt/mixed reconstructable, overlap and ambiguous blocked, nothing written`;
     });
 
     await check("apply writes historical operations without moving money", async () => {
