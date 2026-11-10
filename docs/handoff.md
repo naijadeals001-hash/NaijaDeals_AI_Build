@@ -2760,7 +2760,47 @@ The last row confirms authorization is resolved from the database on every reque
 existing session on its next request; no session invalidation is needed and no stale authority is
 cached in the cookie.
 
-**Still open in this slice:** invalid-allocation and zero-allocation HTTP cases, two reviewers
-resolving different intents on one conversion, and the populated browser walk of the queue. The
-reviewer HTTP 200 that originally revealed the defect is not reproducible; the intent it mutated
-remains in the isolated database as `PENDING`.
+**Allocation and contention evidence.** `npx tsx scripts/affiliate-review-allocation.ts`, same
+isolated preview and database guard; two consecutive runs, 0 failures, exit 0:
+
+| Case | Result |
+|------|--------|
+| Basis above the recorded basis | 400 `invalid_basis`; intent and audit unchanged |
+| Non-numeric basis | 400 `invalid_evidence` |
+| Evidence shorter than five characters | 400; intent and audit unchanged |
+| Zero eligible share (1 kobo on a half basis) | 200 `requeued:false`, `eligibleKobo=0`; intent closed `FAILED`/`review_resolved:no_adjustment`; exactly one `affiliate.reversal_review_closed_no_adjustment` audit row |
+| Two intents (800,000 each) resolved concurrently on one 1,000,000 basis | both 200; allocations 800,000 + 200,000 = 1,000,000, so the shared frozen basis is respected |
+
+Replay is covered in the authorization suite: a second identical resolution returns 409
+`not_reviewable` and leaves one audit row and one allocation.
+
+**Still open in this slice:** the populated browser walk of the queue and the Control Center
+campaign-management surface. The reviewer HTTP 200 that originally revealed the defect is not
+reproducible; the intent it mutated remains in the isolated database as `PENDING`.
+
+## 2026-11-05 — Push gate: preservation remote refuses the stored credential
+
+`git push github-preservation HEAD:naijashop-marketplace` failed; the remote is unchanged at
+`e80a0f97`. Exact error:
+
+```
+remote: Permission to naijadeals001-hash/NaijaDeals_AI_Build.git denied to BetFuz.
+fatal: unable to access 'https://github.com/naijadeals001-hash/NaijaDeals_AI_Build.git/': The requested URL returned error: 403
+```
+
+The credential helper (`store`/`manager`) holds a GitHub identity without write access to the
+preservation repository, and `gh auth status` reports no logged-in host. This is an external
+authorization gate, not a code defect; no force-push, alternate remote or credential probing was
+attempted. CI (`ci.yml`) runs type-check, lint, build and migration tests on this branch and has no
+deployment step, so the push itself would not deploy.
+
+Verified locally: `npx tsc --noEmit` exit 0; both review suites pass twice with 0 failures.
+Commits waiting to be published, newest first: `b30e275`, `3a9ace1`, `53f562f` (plus the earlier
+unpublished backlog; the branch was 174 commits ahead of `e80a0f97`).
+
+Recovery once credentials with write access exist:
+
+1. `git ls-remote --heads github-preservation naijashop-marketplace` — confirm the remote is still
+   `e80a0f97` and a fast-forward is possible.
+2. `git push github-preservation HEAD:naijashop-marketplace` (never `--force`).
+3. `git ls-remote --heads github-preservation naijashop-marketplace` must equal local `git rev-parse HEAD`.
