@@ -206,7 +206,14 @@ services:
     volumes:
       - ./osrm-data:/data:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- 'http://localhost:5000/route/v1/driving/3.3792,6.5244;3.3515,6.6018?overview=false' | grep -q '\"code\":\"Ok\"'"]
+      # The image ships bash but no curl, wget or nc, so the probe uses bash's
+      # /dev/tcp and checks that the routing API actually answers with code Ok.
+      test:
+        - CMD-SHELL
+        - >-
+          bash -c 'exec 3<>/dev/tcp/127.0.0.1/5000;
+          printf "GET /nearest/v1/driving/3.3792,6.5244?number=1 HTTP/1.0\r\n\r\n" >&3;
+          head -c 400 <&3 | grep -q "code.*Ok"'
       interval: 30s
       timeout: 10s
       retries: 5
