@@ -489,6 +489,55 @@ async function main() {
     return "intents, operations, wallet and debt unchanged";
   });
 
+  await check("campaign edit does not move the frozen rule", async () => {
+    // Snapshot 500 bps / SUBTOTAL, then edit the campaign to 900 bps / TOTAL
+    // BEFORE the refund. Editing after the reversal would not test invariance.
+    const invOrder = await prisma.order.create({
+      data: {
+        orderNumber: `INV-${runId}`, customerId: customer.id, vendorId: vendor.id,
+        status: "completed", paymentStatus: "paid",
+        subtotalKobo: 5_000_000n, deliveryFeeKobo: 2_000n, totalKobo: 5_002_000n,
+        commissionKobo: 250_000n, escrowFeeKobo: 0n,
+        deliveryAddress: "12 Broad Street, Lagos", contactName: "Invariance", contactPhone: "08012345678",
+        items: { create: [{ productId: product.id, quantity: 1, unitKobo: 5_000_000n, totalKobo: 5_000_000n, productName: `Inv ${runId}` }] }
+      }
+    });
+    await prisma.payment.create({
+      data: { orderId: invOrder.id, provider: "test", providerReference: `TEST-INV-${runId}`, idempotencyKey: `inv-pay-${runId}`, amountKobo: 5_002_000n, currency: "NGN", status: "COMPLETED" }
+    });
+    const invVendorWallet = await prisma.wallet.findFirstOrThrow({ where: { vendorId: vendor.id } });
+    await prisma.wallet.update({ where: { id: invVendorWallet.id }, data: { heldKobo: { increment: 5_002_000n } } });
+    await prisma.wallet.update({ where: { id: platform.id }, data: { availableKobo: { increment: 5_002_000n } } });
+    await prisma.escrowHold.create({
+      data: { orderId: invOrder.id, buyerWalletId: customerWallet.id, vendorWalletId: invVendorWallet.id, amountKobo: 5_002_000n, status: "held", reason: "invariance fixture" }
+    });
+    const invConversion = await prisma.affiliateConversion.create({
+      data: {
+        dedupeKey: `Order:${invOrder.id}`, affiliateId: profile.id, campaignId: campaign.id,
+        entityType: "Order", entityId: invOrder.id, ruleVersion: 1, basisType: "SUBTOTAL",
+        commissionBps: 500, basisKobo: 5_000_000n, amountKobo: 250_000n, state: "PAID",
+        ledgerReference: `AFF-COMM-${invOrder.id}`
+      }
+    });
+
+    await prisma.affiliateCampaign.update({ where: { id: campaign.id }, data: { commissionBps: 900, commissionBasis: "TOTAL" } });
+
+    await refundPayment({ orderId: invOrder.id, actorId: customer.id, reason: "invariance", amountKobo: 2_000_000n, idempotencyKey: `inv-refund-${runId}` });
+    const intent = await prisma.affiliateReversalIntent.findFirstOrThrow({ where: { orderId: invOrder.id } });
+    // SUBTOTAL snapshot: delivery excluded, so 2,000,000 x 5,000,000 / 5,002,000.
+    assert(intent.eligibleKobo === 1_999_200n, `eligible ${intent.eligibleKobo}, expected 1999200 from the SUBTOTAL snapshot`);
+    assert(intent.allocationPolicy === "proportional_subtotal_v1", `policy ${intent.allocationPolicy}`);
+    await processReversalIntents("invariance", 50);
+    const op = await prisma.affiliateReversalOperation.findFirstOrThrow({ where: { conversionId: invConversion.id } });
+    // 5% of 1,999,200, not 9% of the full refund.
+    assert(op.requestedKobo === 99_960n, `commission ${op.requestedKobo}, expected 99960 at the frozen 500 bps`);
+    const wallet = await prisma.wallet.findFirstOrThrow({ where: { userId: affiliateUser.id } });
+    const debt = await prisma.affiliateRecovery.aggregate({ where: { conversionId: invConversion.id }, _sum: { amountKobo: true } });
+    assert((debt._sum.amountKobo ?? 0n) + op.recoveredKobo === op.requestedKobo, "wallet recovery plus debt does not equal the adjustment");
+    await prisma.affiliateCampaign.update({ where: { id: campaign.id }, data: { commissionBps: 500, commissionBasis: "SUBTOTAL" } });
+    return `eligible 1999200 and commission 99960 unchanged after the campaign moved to 900 bps / TOTAL`;
+  });
+
   const width = Math.max(...rows.map((row) => row.name.length));
   for (const row of rows) console.log(`${row.status.padEnd(4)} ${row.name.padEnd(width)}  ${row.detail}`);
   const failed = rows.filter((row) => row.status === "FAIL").length;
