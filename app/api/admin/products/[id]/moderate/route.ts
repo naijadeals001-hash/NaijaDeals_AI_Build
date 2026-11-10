@@ -3,6 +3,7 @@ import { moderateProduct } from "@/lib/services/core/admin.service";
 import { assertSameOrigin, jsonError, readJson, requireAdminPermission, requireString } from "@/lib/auth/guard";
 import { assertProductRegion } from "@/lib/auth/scope";
 import { jsonSafe } from "@/lib/services/core/serialize";
+import { requestProductSync } from "@/lib/infra/search-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       status,
       note: typeof body.note === "string" ? body.note : undefined
     });
+    await requestProductSync(params.id);
     return NextResponse.json(jsonSafe(product));
   } catch (error) {
     return jsonError(error);

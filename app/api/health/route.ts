@@ -6,6 +6,7 @@ import { searchHealth } from "@/lib/infra/search";
 import { storageHealth } from "@/lib/infra/storage";
 import { vectorsHealth } from "@/lib/infra/vectors";
 import { routingHealth } from "@/lib/infra/routing";
+import { workerIsAlive } from "@/lib/infra/heartbeat";
 
 /**
  * Liveness and readiness for the application and its optional infrastructure.
@@ -55,6 +56,12 @@ export async function GET() {
 
   const configured: Array<Promise<Check>> = [databaseCheck()];
   if (config.valkeyUrl) configured.push(cacheHealth().then((ok) => ({ name: "valkey", ok, critical: false })));
+  if (config.valkeyUrl) {
+    // A healthy queue backend says nothing about whether anything consumes it.
+    configured.push(
+      workerIsAlive().then(({ alive }) => ({ name: "worker", ok: alive, critical: false }))
+    );
+  }
   if (config.meilisearch) configured.push(searchHealth().then((ok) => ({ name: "meilisearch", ok, critical: false })));
   if (config.s3) configured.push(storageHealth().then((ok) => ({ name: "seaweedfs", ok, critical: false })));
   if (config.vectors) configured.push(vectorsHealth().then((ok) => ({ name: "pgvector", ok, critical: false })));

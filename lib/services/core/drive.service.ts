@@ -11,6 +11,8 @@ import {
 import { ensureWallet } from "@/lib/payments/service";
 import { recordAudit } from "./audit.service";
 import { startDriveSweeper } from "./drive-sweeper";
+import { isQueueConfigured } from "@/lib/infra/queue";
+import { notifyRideAssigned, notifyRideExpired } from "@/lib/notifications/domain-events";
 import { recordSystemEvent } from "./event.service";
 import { postBalancedTransaction } from "./wallet.service";
 
@@ -424,7 +426,7 @@ export async function acceptRide(input: { userId: string; rideId: string }) {
       driver.suspendedReason ? `Driver account suspended: ${driver.suspendedReason}` : "Driver account is not approved to accept new rides."
     );
   }
-  return prisma.$transaction(async (tx) => {
+  const loaded = await prisma.$transaction(async (tx) => {
     const ride = await tx.ride.findUnique({ where: { id: input.rideId } });
     if (!ride) throw new ApiError(404, "ride_not_found", "Ride not found.");
     if (ride.status === "cancelled") throw new ApiError(409, "ride_cancelled", "This ride was cancelled by the rider.");
@@ -479,6 +481,16 @@ export async function acceptRide(input: { userId: string; rideId: string }) {
 
     return loadRide(tx, ride.id);
   });
+
+  // Post-commit: the rider learns who took the ride.
+  await notifyRideAssigned({
+    id: loaded.id,
+    rideNumber: loaded.rideNumber,
+    riderId: loaded.riderId,
+    driverName: null
+  });
+
+  return loaded;
 }
 
 async function releaseHoldToDriver(
@@ -785,7 +797,7 @@ export async function releaseExpiredAssignments(now: Date = new Date()) {
       status: { in: ["driver_assigned", "driver_arriving"] },
       assignmentExpiresAt: { lt: now }
     },
-    select: { id: true, rideNumber: true, status: true, driverId: true },
+    select: { id: true, rideNumber: true, status: true, driverId: true, riderId: true },
     orderBy: { assignmentExpiresAt: "asc" },
     take: 25
   });
@@ -794,7 +806,12 @@ export async function releaseExpiredAssignments(now: Date = new Date()) {
   for (const ride of stale) {
     try {
       const changed = await prisma.$transaction((tx) => releaseExpiredRide(tx, ride, now));
-      if (changed) released.push(changed);
+      if (changed) {
+        released.push(changed);
+        // Post-commit and outside the race guard: a notification must not turn
+        // a successful release into a retried one.
+        await notifyRideExpired({ id: ride.id, rideNumber: ride.rideNumber, riderId: ride.riderId });
+      }
     } catch {
       // Another sweep or the driver won the race. The ride is already moving on.
     }
@@ -965,8 +982,15 @@ export async function deleteSavedPlace(input: { userId: string; id: string }) {
 }
 
 /*
- * Start the background expiry sweeper the first time this module is loaded by a Node
- * server. Read-time sweeps still exist; this is what guarantees an idle ride returns
- * even when no client polls. The timer is unref'd and guarded once per process.
+ * The durable sweeper lives in the worker: lib/infra/schedules.ts registers a
+ * BullMQ job every 30s and scripts/infra-worker.ts runs releaseExpiredAssignments
+ * through the same conditional update used here.
+ *
+ * The in-process timer is a fallback for environments with no queue backend
+ * (CI, a developer without Docker), where it is the only thing that can return
+ * an idle ride to the queue. Where a queue exists the timer is not started, so
+ * two web processes cannot both sweep and no timer is left unmanaged.
  */
-startDriveSweeper(releaseExpiredAssignments);
+if (!isQueueConfigured()) {
+  startDriveSweeper(releaseExpiredAssignments);
+}

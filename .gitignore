@@ -52,3 +52,6 @@ deploy/dev-infra/osrm-data/
 
 # Playwright MCP scratch output
 .playwright-mcp/
+
+# Backups (encrypted dumps and object archives)
+backups/

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { updateSellerProduct } from "@/lib/services/core/seller.service";
 import { assertSameOrigin, jsonError, optionalString, readJson, requireActiveVendor } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
+import { requestProductSync } from "@/lib/infra/search-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       quantity: body.quantity === undefined ? undefined : Number(body.quantity),
       lowStockLevel: body.lowStockLevel === undefined ? undefined : Number(body.lowStockLevel)
     });
+    await requestProductSync(product.id);
     return NextResponse.json(jsonSafe(product));
   } catch (error) {
     if (error instanceof Error && /kobo|integer/.test(error.message)) {

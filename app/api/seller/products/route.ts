@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSellerProduct } from "@/lib/services/core/seller.service";
 import { assertSameOrigin, jsonError, optionalString, readJson, requireString, requireActiveVendor } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
+import { requestProductSync } from "@/lib/infra/search-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
       quantity,
       lowStockLevel: body.lowStockLevel ? Number(body.lowStockLevel) : 3
     });
+    await requestProductSync(product.id);
     return NextResponse.json(jsonSafe(product), { status: 201 });
   } catch (error) {
     if (error instanceof Error && /kobo|integer/.test(error.message)) {

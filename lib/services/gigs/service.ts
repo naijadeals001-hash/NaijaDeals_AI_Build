@@ -6,6 +6,7 @@ import { assertRegion } from "@/lib/auth/scope";
 import type { SessionUser } from "@/lib/auth/session";
 import { recordAudit } from "@/lib/services/core/audit.service";
 import { postBalancedTransaction } from "@/lib/services/core/wallet.service";
+import { notifyProposalAccepted } from "@/lib/notifications/domain-events";
 import { ensureWallet } from "@/lib/payments/service";
 
 type Db = Prisma.TransactionClient;
@@ -740,6 +741,13 @@ export async function acceptProposal(userId: string, proposalId: string) {
     entityId: proposal.id,
     metadata: { jobId: proposal.jobId, bookingId: booking.id, amountKobo: proposal.amountKobo.toString() }
   });
+
+  // Post-commit: the professional learns the job is theirs.
+  await notifyProposalAccepted(proposal.professional.user.id, {
+    id: proposal.jobId,
+    title: proposal.job.title
+  });
+
   return booking;
 }
 

@@ -208,6 +208,8 @@ model User {
   gigDisputesOpened ServiceDispute[] @relation("GigDisputeOpener")
   auraConversations AuraConversation[]
   auraPreferences   AuraPreference?
+  notifications Notification[] @relation("UserNotifications")
+  notificationPreferences NotificationPreference[] @relation("UserNotificationPreferences")
 }
 
 model Role {
@@ -3251,4 +3253,157 @@ model AuraUsage {
 
   @@index([createdAt])
   @@index([status, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Notifications (shared engine)
+// ---------------------------------------------------------------------------
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  SUPPRESSED
+}
+
+enum NotificationCategory {
+  ORDERS
+  PAYMENTS
+  DISPATCH
+  BOOKINGS
+  SHIPMENTS
+  ACCOUNT
+  MARKETING
+  SYSTEM
+}
+
+/// Operator-editable override of the code-defined default templates. A row
+/// exists only when someone changed the wording; the defaults live in
+/// lib/notifications/templates.ts so a missing row is never an error.
+model NotificationTemplate {
+  id        String              @id @default(cuid())
+  key       String
+  channel   NotificationChannel
+  locale    String              @default("en-NG")
+  subject   String?
+  body      String
+  active    Boolean             @default(true)
+  version   Int                 @default(1)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@unique([key, channel, locale])
+  @@index([key, active])
+}
+
+/// One row per message, whatever the channel. `dedupeKey` is unique so a
+/// replayed webhook or a retried request cannot produce a second message.
+model Notification {
+  id                String               @id @default(cuid())
+  userId            String?
+  user              User?                @relation("UserNotifications", fields: [userId], references: [id], onDelete: SetNull)
+  channel           NotificationChannel
+  category          NotificationCategory @default(SYSTEM)
+  templateKey       String
+  eventType         String
+  entityType        String?
+  entityId          String?
+  title             String
+  body              String
+  data              Json?
+  status            NotificationStatus   @default(QUEUED)
+  attempts          Int                  @default(0)
+  maxAttempts       Int                  @default(4)
+  lastError         String?
+  provider          String?
+  providerMessageId String?
+  dedupeKey         String               @unique
+  scheduledFor      DateTime             @default(now())
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  attemptsLog       NotificationAttempt[]
+
+  @@index([userId, status, createdAt])
+  @@index([status, scheduledFor])
+  @@index([entityType, entityId])
+}
+
+model NotificationAttempt {
+  id             String       @id @default(cuid())
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  attempt        Int
+  provider       String
+  ok             Boolean
+  retryable      Boolean      @default(false)
+  error          String?
+  at             DateTime     @default(now())
+
+  @@index([notificationId, at])
+}
+
+/// Absence of a row means "enabled": a new category ships on by default and a
+/// user opts out, which is safer than silently dropping a message because no
+/// preference row was ever written.
+model NotificationPreference {
+  id        String               @id @default(cuid())
+  userId    String
+  user      User                 @relation("UserNotificationPreferences", fields: [userId], references: [id], onDelete: Cascade)
+  channel   NotificationChannel
+  category  NotificationCategory
+  enabled   Boolean              @default(true)
+  updatedAt DateTime             @updatedAt
+
+  @@unique([userId, channel, category])
+}
+
+// ---------------------------------------------------------------------------
+// Search synchronisation outbox
+// ---------------------------------------------------------------------------
+
+enum SearchEntityType {
+  PRODUCT
+  RESTAURANT
+  PRODUCE
+  PROFESSIONAL
+  SERVICE
+  JOB
+  PROPERTY
+  TRANSPORT_PARTNER
+}
+
+enum SearchSyncOp {
+  UPSERT
+  DELETE
+}
+
+/// Durable outbox for index maintenance. One pending row per entity: repeated
+/// changes collapse into the same row, and the worker deletes it only after the
+/// index accepted the write. Postgres remains the source of truth.
+model SearchSyncEvent {
+  id          String          @id @default(cuid())
+  dedupeKey   String          @unique
+  entityType  SearchEntityType
+  entityId    String
+  op          SearchSyncOp    @default(UPSERT)
+  attempts    Int             @default(0)
+  lastError   String?
+  processedAt DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([processedAt, createdAt])
 }

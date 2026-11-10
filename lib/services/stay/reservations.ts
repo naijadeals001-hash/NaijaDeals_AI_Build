@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { recordAudit } from "@/lib/services/core/audit.service";
+import { notifyBookingConfirmed } from "@/lib/notifications/domain-events";
 
 /**
  * NaijaStay reservations.
@@ -166,7 +167,7 @@ export async function createHold(input: { guestId: string; propertyId: string; c
 
 /** Guest pays from the NaijaPay wallet; funds are held on the platform until check-in. */
 export async function payReservation(input: { guestId: string; reservationId: string }) {
-  return prisma.$transaction(async (tx) => {
+  const outcome = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT id FROM "StayReservation" WHERE id = ${input.reservationId} FOR UPDATE`;
     const reservation = await tx.stayReservation.findUnique({ where: { id: input.reservationId }, include: { property: { select: { host: { select: { ownerId: true } } } } } });
     if (!reservation) throw new ApiError(404, "reservation_not_found", "Reservation not found.");
@@ -206,6 +207,18 @@ export async function payReservation(input: { guestId: string; reservationId: st
     await recordAudit({ tx, actorId: input.guestId, action: "stay.reservation.confirmed", entity: "StayReservation", entityId: reservation.id, metadata: { reference: reservation.reference, totalKobo: reservation.totalKobo.toString() } });
     return { alreadyPaid: false, reference: updated.reference };
   });
+
+  // Post-commit: the guest gets the confirmation, not a message written from
+  // inside a transaction that could still roll back.
+  if (!outcome.alreadyPaid) {
+    const reserved = await prisma.stayReservation.findUnique({
+      where: { id: input.reservationId },
+      select: { id: true, reference: true, checkIn: true }
+    });
+    if (reserved) await notifyBookingConfirmed(input.guestId, reserved);
+  }
+
+  return outcome;
 }
 
 /** Releases an expired hold so the dates go back on sale. Safe to call repeatedly. */

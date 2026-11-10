@@ -15,7 +15,9 @@ import { infraMetrics, recordOperation } from "./metrics";
 
 export const QUEUE_NAMES = {
   driveExpiry: "drive-expiry",
-  searchIndex: "search-index"
+  searchIndex: "search-index",
+  notifications: "notifications",
+  deadLetter: "dead-letter"
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

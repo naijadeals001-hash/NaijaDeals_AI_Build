@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { postBalancedTransaction } from "./wallet.service";
 import { getDatabaseClassification } from "@/lib/payments/boundary";
+import { notifyTopUpCredited } from "@/lib/notifications/domain-events";
 
 export const TOP_UP_MIN_KOBO = 10_000n; // ₦100
 export const TOP_UP_MAX_KOBO = 50_000_000n; // ₦500,000
@@ -131,7 +132,7 @@ export async function creditTopUp(
     throw new ApiError(409, "topup_failed", "That top-up was marked failed and cannot be credited.");
   }
 
-  return client.$transaction(async (tx) => {
+  const result = await client.$transaction(async (tx) => {
     // Exactly-once claim: only one caller can move PENDING -> COMPLETED.
     const claimed = await tx.walletTopUp.updateMany({
       where: { id: topUp.id, status: { in: ["PENDING", "AUTHORIZED"] } },
@@ -170,6 +171,19 @@ export async function creditTopUp(
 
     return { status: "credited" as const, topUpId: topUp.id, transactionId: transaction.id, reference: transaction.reference };
   });
+
+  // Post-commit: the wallet holder is told the money arrived.
+  if (result.status === "credited") {
+    const owner = await client.wallet.findUnique({
+      where: { id: topUp.walletId },
+      select: { userId: true }
+    });
+    if (owner?.userId) {
+      await notifyTopUpCredited(owner.userId, topUp.amountKobo, topUp.id);
+    }
+  }
+
+  return result;
 }
 
 export async function failTopUp(client: PrismaClient, input: { providerReference: string; reason: string }) {

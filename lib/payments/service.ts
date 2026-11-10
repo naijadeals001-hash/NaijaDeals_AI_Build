@@ -9,6 +9,7 @@ import { updateOrderStatus } from "@/lib/services/core/order.service";
 import { recordAudit } from "@/lib/services/core/audit.service";
 import { recordSystemEvent } from "@/lib/services/core/event.service";
 import { createDelivery } from "@/lib/services/core/delivery.service";
+import { notifyOrderPaid } from "@/lib/notifications/domain-events";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -483,6 +484,14 @@ export async function confirmPayment(input: { reference: string; provider: Adapt
     if (error instanceof ApiError) throw error;
     throw error;
   }
+
+  // Post-commit: a notification failure must never undo a verified payment.
+  await notifyOrderPaid({
+    id: payment.orderId,
+    orderNumber: payment.order.orderNumber,
+    totalKobo: payment.order.totalKobo,
+    customerId: payment.order.customerId
+  });
 
   return { status: "COMPLETED" as const, orderId: payment.orderId, duplicate: false };
 }

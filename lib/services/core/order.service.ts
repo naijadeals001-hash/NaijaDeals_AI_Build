@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { recordAudit } from "./audit.service";
 import { notifyVendorOwner } from "./notification.service";
+import { notifyEscrowReleased, notifyOrderStatus } from "@/lib/notifications/domain-events";
 import { recordSystemEvent } from "./event.service";
 import { assertOrderTransition } from "./state-machines";
 import { ensureWallet } from "@/lib/payments/service";
@@ -105,7 +106,7 @@ export async function completeOrder(userId: string, orderId: string) {
   if (order.customerId !== userId) throw new ApiError(403, "forbidden", "This order belongs to another account.");
   if (order.status !== "delivered") throw new ApiError(409, "not_delivered", "Only delivered orders can be completed.");
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const escrow = order.escrowHolds[0];
     const completedPayment = order.payments.find((payment) => payment.status === "COMPLETED");
     const buyerWallet = await ensureWallet(tx, { userId: order.customerId, ownerType: "CUSTOMER" });
@@ -190,6 +191,18 @@ export async function completeOrder(userId: string, orderId: string) {
     });
     return { orderId: order.id, status: "completed", payableKobo: payable.toString() };
   });
+
+  // Post-commit: the customer is told the escrow moved and the order closed.
+  const facts = {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    totalKobo: order.totalKobo,
+    customerId: order.customerId
+  };
+  await notifyEscrowReleased(facts, BigInt(result.payableKobo));
+  await notifyOrderStatus(facts, "completed");
+
+  return result;
 }
 
 export async function requestReturn(input: { userId: string; orderId: string; reason: string; detail?: string }) {

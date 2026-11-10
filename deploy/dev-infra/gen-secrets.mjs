@@ -108,7 +108,8 @@ const appVars = {
   PROMETHEUS_URL: "http://127.0.0.1:9091",
   GRAFANA_URL: "http://127.0.0.1:3002",
   OSRM_URL: "http://127.0.0.1:5000",
-  METRICS_TOKEN: readFileSync(join(runtimeDir, "metrics-token"), "utf8").trim()
+  METRICS_TOKEN: readFileSync(join(runtimeDir, "metrics-token"), "utf8").trim(),
+  BACKUP_ENCRYPTION_KEY: token(32)
 };
 
 if (existsSync(rootEnvPath)) {
