@@ -2689,3 +2689,37 @@ Still unproven, in priority order:
 4. Crash replay between posting and DONE.
 5. Concurrent unsettled reversals; settlement racing a reversal.
 6. Caller-side identity through real refund and retry entry points.
+
+## Refund integration blocker — root cause measured (2026-11-10, HEAD 67c9480)
+
+The escrow guard was not failing on wallet identity. Measured from the database:
+
+```
+SYSTEM wallets: 1
+cmvzwmxzx0  available=-1776097200  held=82080000
+```
+
+There is exactly one platform wallet and its available balance is **-1,776,097,200 kobo**.
+`ensureWallet` resolves by `findFirst({ ownerType: "SYSTEM" })` and the fixture resolves the
+same way, so setup and service agree on the row — the row itself is overdrawn by accumulated
+test activity.
+
+Two consequences:
+
+1. `availableKobo >= platformShare` can never hold, so every refund on `naijadeals_core` fails at
+   that guard regardless of fixture correctness.
+2. The fixture's cleanup subtracted the 5,000,000 it added, which is only correct when the refund
+   did not consume it. On failure it deducts anyway, making the shared balance worse on each run.
+   Compensation-by-delta against shared funds is precisely the guessing the brief forbids.
+
+The guard should not be weakened. The environment is wrong: refund integration must run against
+an isolated database with its own SYSTEM wallet, not the shared development one.
+
+Next actions:
+1. Point the integration suite at `naijadeals_test` (it has been migrated to head) and let that
+   database create its own platform wallet through the normal flow.
+2. Assert the platform balance before and after, and require it to be unchanged when the refund
+   is rejected.
+3. Do not repair `naijadeals_core`'s negative balance as part of this work — that is a separate
+   decision about shared development data, and the number itself shows earlier test activity has
+   been corrupting it.
