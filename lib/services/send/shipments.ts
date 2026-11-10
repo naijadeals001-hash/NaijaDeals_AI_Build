@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { recordAudit } from "@/lib/services/core/audit.service";
 import { pinHash } from "@/lib/services/send/state-machine";
+import { enqueueIntent } from "@/lib/notifications/intent.service";
 
 /**
  * NaijaSend shipment lifecycle.
@@ -325,6 +326,14 @@ export async function bookShipment(input: { customerId: string; shipmentId: stri
     });
     await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status: "assigned", label: "Transporter assigned", note: `${quote.provider.name} booked at ₦${(Number(quote.amountKobo) / 100).toLocaleString("en-NG")}.`, actorId: input.customerId } });
     await recordAudit({ tx, actorId: input.customerId, action: "shipment.booked", entity: "LogisticsShipment", entityId: shipment.id, metadata: { quoteId: quote.id, providerId: quote.providerId, amountKobo: quote.amountKobo.toString(), modes: quote.modes } });
+    await enqueueIntent(tx, {
+      dedupeKey: `shipment:${shipment.id}:booked`,
+      eventType: "shipment.booked",
+      entityType: "LogisticsShipment",
+      entityId: shipment.id,
+      recipientUserId: shipment.customerId,
+      payload: { reference: shipment.reference, label: "booked" }
+    });
     return { shipmentId: shipment.id, reference: shipment.reference, trackingNumber, amountKobo: quote.amountKobo.toString(), providerName: quote.provider.name, modes: quote.modes, pickupPin: firstPin.pickupPin, deliveryPin: firstPin.deliveryPin };
   });
 }
@@ -335,7 +344,7 @@ export type ShipmentActor = { id: string; role: "customer" | "provider" | "admin
 export async function advanceLeg(input: { actorId: string; shipmentId: string; legId: string; status: string; note?: string; simulated?: boolean; pin?: string }) {
   const leg = await prisma.shipmentLeg.findUnique({
     where: { id: input.legId },
-    include: { shipment: { select: { id: true, status: true, reference: true } } }
+    include: { shipment: { select: { id: true, status: true, reference: true, customerId: true } } }
   });
   if (!leg || leg.shipmentId !== input.shipmentId) throw new ApiError(404, "leg_not_found", "Shipment leg not found.");
   const allowed: Record<string, string[]> = { assigned: ["in_transit"], pending: ["in_transit"], in_transit: ["arrived"], arrived: [] };
@@ -364,6 +373,26 @@ export async function advanceLeg(input: { actorId: string; shipmentId: string; l
       await tx.shipmentEvent.create({ data: { shipmentId: leg.shipmentId, status: "delivered", label: "Delivered", note: "Every leg is complete.", actorId: input.actorId } });
     }
     await recordAudit({ tx, actorId: input.actorId, action: "shipment.leg_advanced", entity: "LogisticsShipment", entityId: leg.shipmentId, metadata: { legId: leg.id, mode: leg.mode, status: input.status, simulated: Boolean(input.simulated) } });
+    if (input.status === "in_transit") {
+      await enqueueIntent(tx, {
+        dedupeKey: `shipment:${leg.shipmentId}:leg:${leg.id}:in_transit`,
+        eventType: "shipment.in_transit",
+        entityType: "LogisticsShipment",
+        entityId: leg.shipmentId,
+        recipientUserId: leg.shipment.customerId,
+        payload: { reference: leg.shipment.reference, label: `in transit (leg ${leg.sequence})` }
+      });
+    }
+    if (allArrived && legs.length > 0) {
+      await enqueueIntent(tx, {
+        dedupeKey: `shipment:${leg.shipmentId}:delivered`,
+        eventType: "shipment.delivered",
+        entityType: "LogisticsShipment",
+        entityId: leg.shipmentId,
+        recipientUserId: leg.shipment.customerId,
+        payload: { reference: leg.shipment.reference, label: "delivered" }
+      });
+    }
     return { legId: leg.id, status: input.status, shipmentDelivered: allArrived };
   });
 }
@@ -386,6 +415,14 @@ export async function confirmShipmentDelivery(input: { customerId: string; shipm
     const settled = await settleShipment(tx, shipment.id, shipment.reference, accepted.amountKobo, accepted.providerId, input.customerId);
     await tx.logisticsShipment.update({ where: { id: shipment.id }, data: { status: "completed" } });
     await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status: "completed", label: "Delivery confirmed", note: "Delivery PIN verified and funds settled.", actorId: input.customerId } });
+    await enqueueIntent(tx, {
+      dedupeKey: `shipment:${shipment.id}:completed`,
+      eventType: "shipment.completed",
+      entityType: "LogisticsShipment",
+      entityId: shipment.id,
+      recipientUserId: shipment.customerId,
+      payload: { reference: shipment.reference, label: "completed" }
+    });
     return { completed: true, settlementReference: settled.reference };
   });
 }
