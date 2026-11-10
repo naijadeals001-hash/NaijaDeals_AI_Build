@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/prisma";
+import { requireIsolatedDatabase } from "./lib/require-isolated-database";
 import { reverseConversion } from "../lib/services/affiliate/settlement";
 import { collectRecovery, writeOffRecovery, recoverySummary } from "../lib/services/affiliate/recovery";
 
@@ -34,6 +35,7 @@ async function check(name: string, run: () => Promise<string>) {
 async function main() {
   const db = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
   console.log("database:", db[0].db);
+  requireIsolatedDatabase(db[0].db);
 
   const user = await prisma.user.create({ data: { email: `rec-${runId}@example.test`, name: "Recovery Test", actorType: "CUSTOMER" } });
   const admin = await prisma.user.create({ data: { email: `rec-ad-${runId}@example.test`, name: "Recovery Admin", actorType: "ADMIN" } });

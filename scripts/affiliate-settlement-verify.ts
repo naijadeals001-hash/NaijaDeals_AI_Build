@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/prisma";
+import { requireIsolatedDatabase } from "./lib/require-isolated-database";
 import { applyAffiliate, decideAffiliate, createLink, resolveTouch, recordConversion, updateConversionState } from "../lib/services/affiliate/service";
 import { settleConversion, reverseConversion } from "../lib/services/affiliate/settlement";
 
@@ -33,6 +34,7 @@ async function balance(walletId: string) {
 async function main() {
   const db = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
   console.log("database:", db[0].db);
+  requireIsolatedDatabase(db[0].db);
 
   const user = await prisma.user.create({ data: { email: `affset-${runId}@example.test`, name: "Settlement Test", actorType: "CUSTOMER" } });
   const admin = await prisma.user.create({ data: { email: `affset-admin-${runId}@example.test`, name: "Settlement Admin", actorType: "ADMIN" } });
