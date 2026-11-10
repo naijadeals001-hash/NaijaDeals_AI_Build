@@ -568,3 +568,21 @@ The parent run surfaced a failure that had not been reported: **Browser journey 
 passed. So the current preview does not satisfy the browser journey, and that is a real
 acceptance gap, not a test artefact. It must be diagnosed against the running build before any
 further "4/4" claim is made.
+
+## Gate waiver — Affiliate authorised to start (2026-11-10)
+
+The owner has explicitly waived the Aura acceptance gate and authorised Affiliate work to begin
+while Aura remains PARTIAL. This is recorded rather than silently dropped, so that anyone
+reading the Affiliate build knows what it started on top of.
+
+**What the waiver does and does not change**
+
+- It authorises Affiliate implementation. It does not mean Aura is complete, and no Aura claim in
+  this repository should be read as met.
+- Section 6 of the Affiliate brief depends on Aura's permission-scoped tools, quotas and
+  auditability. Those are unverified. The Affiliate assistant must therefore be built so that a
+  weak Aura boundary cannot become a financial boundary: no AI path may approve affiliates,
+  alter commission rules or release funds, and that must be enforced server-side rather than by
+  prompt.
+- Owner visual approval of Aura remains outstanding and is still required for Aura's own
+  acceptance.
