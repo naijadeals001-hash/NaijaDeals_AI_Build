@@ -10,6 +10,18 @@ type Profile = {
   suspendedReason: string | null;
 };
 
+type Campaign = {
+  id: string;
+  slug: string;
+  name: string;
+  vertical: string;
+  commissionBps: number;
+  commissionFlatKobo: string | null;
+  commissionBasis: string;
+  attributionDays: number;
+  budgetRemainingKobo: string;
+};
+
 type Conversion = {
   id: string;
   entityId: string;
@@ -55,6 +67,12 @@ export function AffiliateHome() {
   const [error, setError] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignPhase, setCampaignPhase] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [selectedCampaign, setSelectedCampaign] = useState("");
+  const [destination, setDestination] = useState("/");
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [linkNotice, setLinkNotice] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -75,6 +93,49 @@ export function AffiliateHome() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const isApproved = me !== null && me.enrolled === true && me.profile.status === "APPROVED";
+
+  useEffect(() => {
+    if (!isApproved) return;
+    let cancelled = false;
+    setCampaignPhase("loading");
+    fetch("/api/affiliate/links", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Could not load campaigns (${response.status}).`);
+        return (await response.json()) as Campaign[];
+      })
+      .then((rows) => {
+        if (cancelled) return;
+        setCampaigns(rows);
+        setCampaignPhase("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setCampaignPhase("error");
+      });
+    return () => { cancelled = true; };
+  }, [isApproved]);
+
+  async function createLink(campaign: Campaign) {
+    setLinkBusy(true); setError(""); setLinkNotice("");
+    try {
+      const response = await fetch("/api/affiliate/links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ campaignId: campaign.id, destination })
+      });
+      const body = (await response.json().catch(() => ({}))) as { error?: string; path?: string };
+      if (!response.ok) throw new Error(body.error ?? `Could not create the link (${response.status}).`);
+      setLinkNotice(`Link created: ${body.path} — share it and clicks will be attributed to ${campaign.name}.`);
+      setSelectedCampaign(""); setDestination("/");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create the link.");
+    } finally {
+      setLinkBusy(false);
+    }
+  }
 
   async function apply() {
     setBusy(true);
@@ -108,7 +169,7 @@ export function AffiliateHome() {
           Sign in to join. Joining is free, and commission is earned only when someone you refer completes a paid,
           fulfilled order.
         </p>
-        <Link href="/login?next=/affiliate" className="inline-block rounded-xl bg-brand px-5 py-3 font-bold text-white">
+        <Link href="/login?next=/affiliate" className="inline-block rounded-xl bg-primary px-5 py-3 font-bold text-white">
           Sign in to continue
         </Link>
       </div>
@@ -156,7 +217,7 @@ export function AffiliateHome() {
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
               maxLength={80}
-              className="mt-1 w-full rounded-xl border border-border-soft bg-white px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-border-soft bg-white px-3 py-2 text-ink"
               placeholder="How you want to appear"
             />
           </label>
@@ -171,7 +232,7 @@ export function AffiliateHome() {
           <button
             onClick={() => void apply()}
             disabled={busy || !accepted}
-            className="rounded-xl bg-brand px-5 py-3 font-bold text-white disabled:opacity-50"
+            className="rounded-xl bg-primary px-5 py-3 font-bold text-white disabled:opacity-50"
           >
             {busy ? "Submitting…" : "Submit application"}
           </button>
@@ -222,6 +283,68 @@ export function AffiliateHome() {
         ))}
       </section>
 
+      {isApproved ? (
+        <section className="space-y-3 rounded-2xl border border-border-soft bg-canvas p-6">
+          <h2 className="font-display text-xl font-extrabold">Campaigns open to you</h2>
+          {linkNotice ? <p className="rounded-xl border border-primary/40 bg-primary-soft p-3 text-sm font-bold">{linkNotice}</p> : null}
+          {campaignPhase === "loading" ? <p className="text-sm text-muted">Loading campaigns…</p> : null}
+          {campaignPhase === "error" ? <p className="text-sm font-bold text-crimson">Campaigns could not be loaded. Refresh to try again.</p> : null}
+          {campaignPhase === "ready" && campaigns.length === 0 ? (
+            <p className="text-sm text-muted">No campaign is open right now. New campaigns appear here as soon as they are activated.</p>
+          ) : null}
+          {campaigns.length > 0 ? (
+            <ul className="space-y-2 text-sm">
+              {campaigns.map((campaign) => (
+                <li key={campaign.id} className="space-y-2 rounded-xl border border-border-soft p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-bold">{campaign.name}</p>
+                      <p className="text-xs text-muted">{campaign.vertical} · {campaign.attributionDays}-day attribution</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold">
+                        {campaign.commissionBps > 0 ? `${campaign.commissionBps / 100}%` : naira(campaign.commissionFlatKobo ?? "0")}
+                      </p>
+                      <p className="text-xs text-muted">of {campaign.commissionBasis}</p>
+                    </div>
+                    <button
+                      onClick={() => { setSelectedCampaign(campaign.id); setDestination("/"); setLinkNotice(""); }}
+                      className="rounded-xl border border-border-soft px-4 py-2 font-bold"
+                    >
+                      Create link
+                    </button>
+                  </div>
+                  {selectedCampaign === campaign.id ? (
+                    <div className="flex flex-wrap items-end gap-2 rounded-xl bg-surface-low p-3">
+                      <label className="min-w-48 flex-1 text-sm font-bold">
+                        Destination path
+                        <input
+                          value={destination}
+                          onChange={(event) => setDestination(event.target.value)}
+                          placeholder="/product/example"
+                          className="mt-1 w-full rounded-lg border border-border-soft bg-white px-3 py-2 text-ink"
+                        />
+                      </label>
+                      <button
+                        onClick={() => void createLink(campaign)}
+                        disabled={linkBusy || !destination.startsWith("/")}
+                        className="rounded-lg bg-primary px-4 py-2 font-bold text-white disabled:opacity-50"
+                      >
+                        {linkBusy ? "Creating…" : "Create tracked link"}
+                      </button>
+                      <button onClick={() => setSelectedCampaign("")} className="rounded-lg border border-border-soft px-4 py-2 font-bold">
+                        Cancel
+                      </button>
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="text-xs text-muted">The destination must be an internal path. A link can never redirect off NaijaDeals.</p>
+        </section>
+      ) : null}
+
       <section className="space-y-3 rounded-2xl border border-border-soft bg-canvas p-6">
         <h2 className="font-display text-xl font-extrabold">Your links</h2>
         {links.length === 0 ? (
@@ -237,7 +360,7 @@ export function AffiliateHome() {
               >
                 <code className="font-mono text-xs">/r/{link.code}</code>
                 <span className="text-muted">→ {link.destination}</span>
-                <span className={link.active ? "font-bold text-brand" : "font-bold text-muted"}>
+                <span className={link.active ? "font-bold text-primary" : "font-bold text-muted"}>
                   {link.active ? "Active" : "Inactive"}
                 </span>
               </li>

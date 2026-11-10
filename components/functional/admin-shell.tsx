@@ -26,6 +26,8 @@ import {
   ChevronRight,
   RefreshCw,
   Store,
+  Megaphone,
+  Link2,
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { normalizeTab, TAB_LABELS, type AdminTab } from "@/lib/admin/admin-navigation";
@@ -86,6 +88,16 @@ const adminNavItems: NavItem[] = [
     children: [
       { id: "payments", label: "Payments", icon: <CreditCard className="h-4 w-4" />, href: "/admin?tab=payments" },
       { id: "payouts-finance", label: "Payouts", icon: <DollarSign className="h-4 w-4" />, href: "/admin?tab=payouts" },
+    ],
+  },
+  {
+    id: "affiliates",
+    label: "Affiliates",
+    icon: <Megaphone className="h-5 w-5" />,
+    href: "#",
+    children: [
+      { id: "affiliate-campaigns", label: "Campaigns", icon: <Link2 className="h-4 w-4" />, href: "/admin/affiliate-campaigns" },
+      { id: "affiliate-reviews", label: "Reversal review", icon: <ClipboardList className="h-4 w-4" />, href: "/admin/affiliate-reviews" },
     ],
   },
   {
