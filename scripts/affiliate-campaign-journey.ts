@@ -118,7 +118,7 @@ async function main() {
 
     const discovery = await http("GET", "/api/affiliate/links", { cookie: affiliate.cookie });
     assert(discovery.status === 200, `discovery returned ${discovery.status}`);
-    assert(!discovery.body.some((row: { id: string }) => row.id === campaignId), "draft campaign is already discoverable");
+    assert(!discovery.body.rows.some((row: { id: string }) => row.id === campaignId), "draft campaign is already discoverable");
 
     const early = await http("POST", "/api/affiliate/links", { cookie: affiliate.cookie, body: { campaignId, destination: "/" } });
     assert(early.status === 409 && early.body.code === "campaign_inactive", `draft link creation returned ${early.status}: ${JSON.stringify(early.body)}`);
@@ -148,7 +148,7 @@ async function main() {
     assert((audit.metadata as any)?.from === "DRAFT" && (audit.metadata as any)?.to === "ACTIVE", `unexpected audit metadata ${JSON.stringify(audit.metadata)}`);
 
     const discovery = await http("GET", "/api/affiliate/links", { cookie: affiliate.cookie });
-    assert(discovery.body.some((row: { id: string }) => row.id === campaignId), "active campaign is missing from discovery");
+    assert(discovery.body.rows.some((row: { id: string }) => row.id === campaignId), "active campaign is missing from discovery");
     return `ACTIVE, audit DRAFT->ACTIVE, campaign listed with commission and remaining budget`;
   });
 
@@ -189,7 +189,7 @@ async function main() {
     assert(paused.status === 200 && paused.body.status === "PAUSED", `pause returned ${paused.status}: ${JSON.stringify(paused.body)}`);
 
     const discovery = await http("GET", "/api/affiliate/links", { cookie: affiliate.cookie });
-    assert(!discovery.body.some((row: { id: string }) => row.id === campaignId), "paused campaign still discoverable");
+    assert(!discovery.body.rows.some((row: { id: string }) => row.id === campaignId), "paused campaign still discoverable");
 
     const before = await prisma.attributionTouch.count();
     const visitor = `paused-visitor-${runId}`;
@@ -225,6 +225,21 @@ async function main() {
     const audits = await prisma.auditLog.count({ where: { entityId: created.body.id, action: "affiliate.campaign_status_changed" } });
     assert(audits === 1, `expected one transition audit row, found ${audits}`);
     return `one 200 and one 409 contended; exactly one audit row`;
+  });
+
+  await check("9. Discovery is paginated with a stable cursor", async () => {
+    const first = await http("GET", "/api/affiliate/links?take=2", { cookie: affiliate.cookie });
+    assert(first.status === 200, `first page returned ${first.status}`);
+    assert(Array.isArray(first.body.rows) && first.body.rows.length <= 2, `first page shape ${JSON.stringify(first.body).slice(0, 200)}`);
+    assert(first.body.rows.length === 2, `expected two rows on the first page, got ${first.body.rows.length}`);
+    assert(first.body.nextCursor, "first page did not expose a next cursor");
+
+    const second = await http("GET", `/api/affiliate/links?take=2&cursor=${encodeURIComponent(first.body.nextCursor)}`, { cookie: affiliate.cookie });
+    assert(second.status === 200, `second page returned ${second.status}`);
+    const firstIds = first.body.rows.map((row: { id: string }) => row.id);
+    const secondIds = second.body.rows.map((row: { id: string }) => row.id);
+    assert(secondIds.every((id: string) => !firstIds.includes(id)), "cursor repeated a row from the previous page");
+    return `take=2 pages: ${firstIds.length} then ${secondIds.length}, no overlap, cursor ${first.body.nextCursor}`;
   });
 
   console.log(JSON.stringify({ runId, base: BASE, database: actual, checks: rows, failures }, null, 2));

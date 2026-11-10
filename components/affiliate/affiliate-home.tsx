@@ -69,6 +69,7 @@ export function AffiliateHome() {
   const [displayName, setDisplayName] = useState("");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignPhase, setCampaignPhase] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState("");
   const [destination, setDestination] = useState("/");
   const [linkBusy, setLinkBusy] = useState(false);
@@ -103,11 +104,12 @@ export function AffiliateHome() {
     fetch("/api/affiliate/links", { credentials: "include" })
       .then(async (response) => {
         if (!response.ok) throw new Error(`Could not load campaigns (${response.status}).`);
-        return (await response.json()) as Campaign[];
+        return (await response.json()) as { rows: Campaign[]; nextCursor: string | null };
       })
-      .then((rows) => {
+      .then((page) => {
         if (cancelled) return;
-        setCampaigns(rows);
+        setCampaigns(page.rows);
+        setNextCursor(page.nextCursor);
         setCampaignPhase("ready");
       })
       .catch(() => {
@@ -115,6 +117,20 @@ export function AffiliateHome() {
       });
     return () => { cancelled = true; };
   }, [isApproved]);
+
+  async function loadMoreCampaigns() {
+    if (!nextCursor) return;
+    setLinkNotice("");
+    try {
+      const response = await fetch(`/api/affiliate/links?cursor=${encodeURIComponent(nextCursor)}`, { credentials: "include" });
+      if (!response.ok) throw new Error(`Could not load more campaigns (${response.status}).`);
+      const page = (await response.json()) as { rows: Campaign[]; nextCursor: string | null };
+      setCampaigns((current) => [...current, ...page.rows]);
+      setNextCursor(page.nextCursor);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load more campaigns.");
+    }
+  }
 
   async function createLink(campaign: Campaign) {
     setLinkBusy(true); setError(""); setLinkNotice("");
@@ -340,6 +356,11 @@ export function AffiliateHome() {
                 </li>
               ))}
             </ul>
+          ) : null}
+          {nextCursor ? (
+            <button onClick={() => void loadMoreCampaigns()} className="rounded-xl border border-border-soft px-4 py-2 text-sm font-bold">
+              Load more campaigns
+            </button>
           ) : null}
           <p className="text-xs text-muted">The destination must be an internal path. A link can never redirect off NaijaDeals.</p>
         </section>

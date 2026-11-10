@@ -230,5 +230,11 @@ export const TOOL_SPECS: ToolSpec[] = [
       },
       required: ["recipientEmail", "amountNaira"]
     }
+  },
+  {
+    name: "get_affiliate_summary",
+    description:
+      "Read the signed-in account's own affiliate status, tracked links, clicks and commission totals. Never returns another account's affiliate data.",
+    parameters: { type: "object", properties: {}, required: [] }
   }
 ];

@@ -509,6 +509,64 @@ async function prepareTransfer(ctx: ToolContext, args: Record<string, unknown>):
   };
 }
 
+/**
+ * The signed-in account's own affiliate position.
+ *
+ * The affiliate id is never an argument: it comes from the session context, so
+ * the model cannot ask about someone else's earnings. A user who has not joined
+ * gets an explicit `enrolled: false`, not an error and not another account's data.
+ */
+async function getAffiliateSummary(ctx: ToolContext, _args: Record<string, unknown>): Promise<ToolResult> {
+  const profile = await prisma.affiliateProfile.findUnique({
+    where: { userId: ctx.userId },
+    select: { id: true, status: true, displayName: true }
+  });
+  if (!profile) {
+    return { data: { enrolled: false }, summary: "This account has not joined the affiliate programme.", cards: [] };
+  }
+
+  const [links, clicks, byState, activeCampaigns] = await Promise.all([
+    prisma.affiliateLink.count({ where: { affiliateId: profile.id } }),
+    prisma.attributionTouch.count({ where: { link: { affiliateId: profile.id } } }),
+    prisma.affiliateConversion.groupBy({
+      by: ["state"],
+      where: { affiliateId: profile.id },
+      _sum: { amountKobo: true },
+      _count: { _all: true }
+    }),
+    prisma.affiliateCampaign.count({ where: { status: "ACTIVE" } })
+  ]);
+
+  const totals: Record<string, { count: number; amountKobo: string }> = {};
+  for (const row of byState) {
+    totals[row.state] = { count: row._count._all, amountKobo: (row._sum.amountKobo ?? 0n).toString() };
+  }
+  const settled = BigInt(totals.PAID?.amountKobo ?? "0");
+  const pending = ["TRACKED", "VALIDATING", "APPROVED", "PAYABLE"].reduce(
+    (sum, state) => sum + BigInt(totals[state]?.amountKobo ?? "0"),
+    0n
+  );
+
+  return {
+    data: {
+      enrolled: true,
+      status: profile.status,
+      displayName: profile.displayName,
+      links,
+      clicks,
+      activeCampaigns,
+      settledKobo: settled.toString(),
+      pendingKobo: pending.toString(),
+      byState: totals
+    },
+    summary:
+      profile.status === "APPROVED"
+        ? `Enrolled and approved with ${links} tracked link(s), ${clicks} recorded click(s), ${naira(pending)} pending and ${naira(settled)} settled.`
+        : `Affiliate application status is ${profile.status}. No links can be created until it is approved.`,
+    cards: [{ kind: "wallet", title: "Affiliate commission", subtitle: profile.status, priceNaira: naira(settled), href: "/affiliate" }]
+  };
+}
+
 export const TOOLS: Record<string, (ctx: ToolContext, args: Record<string, unknown>, conversationId: string) => Promise<ToolResult>> = {
   search_stays: searchStays,
   search_meals: searchMeals,
@@ -521,7 +579,8 @@ export const TOOLS: Record<string, (ctx: ToolContext, args: Record<string, unkno
   explain_transaction: explainTransaction,
   track_order: trackOrder,
   save_plan: savePlan,
-  prepare_transfer: prepareTransfer
+  prepare_transfer: prepareTransfer,
+  get_affiliate_summary: getAffiliateSummary
 };
 
 /** Human-readable progress text shown while a tool runs (no hidden reasoning). */
@@ -537,5 +596,6 @@ export const TOOL_STATUS: Record<string, string> = {
   explain_transaction: "Reading your transaction",
   track_order: "Checking your order",
   save_plan: "Saving your draft plan",
-  prepare_transfer: "Preparing your transfer"
+  prepare_transfer: "Preparing your transfer",
+  get_affiliate_summary: "Checking your affiliate position"
 };

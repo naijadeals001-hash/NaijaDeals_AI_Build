@@ -9,27 +9,36 @@ import { jsonSafe } from "@/lib/services/core/serialize";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await requireUser();
     const now = new Date();
+    const take = Math.min(Math.max(Number(request.nextUrl.searchParams.get("take") ?? 20), 1), 50);
+    const cursor = request.nextUrl.searchParams.get("cursor");
     const campaigns = await prisma.affiliateCampaign.findMany({
       where: { status: "ACTIVE", OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }] },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: take + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       select: {
         id: true, slug: true, name: true, vertical: true, commissionBps: true,
         commissionFlatKobo: true, commissionBasis: true, attributionDays: true,
         budgetKobo: true, spentKobo: true
       }
     });
-    return NextResponse.json(jsonSafe(campaigns.map((row) => ({
-      id: row.id, slug: row.slug, name: row.name, vertical: row.vertical,
-      commissionBps: row.commissionBps,
-      commissionFlatKobo: row.commissionFlatKobo ? row.commissionFlatKobo.toString() : null,
-      commissionBasis: row.commissionBasis,
-      attributionDays: row.attributionDays,
-      budgetRemainingKobo: (row.budgetKobo - row.spentKobo).toString()
-    }))));
+    const hasMore = campaigns.length > take;
+    const page = hasMore ? campaigns.slice(0, take) : campaigns;
+    return NextResponse.json(jsonSafe({
+      rows: page.map((row) => ({
+        id: row.id, slug: row.slug, name: row.name, vertical: row.vertical,
+        commissionBps: row.commissionBps,
+        commissionFlatKobo: row.commissionFlatKobo ? row.commissionFlatKobo.toString() : null,
+        commissionBasis: row.commissionBasis,
+        attributionDays: row.attributionDays,
+        budgetRemainingKobo: (row.budgetKobo - row.spentKobo).toString()
+      })),
+      nextCursor: hasMore ? page[page.length - 1].id : null
+    }));
   } catch (error) {
     return jsonError(error);
   }
