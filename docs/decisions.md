@@ -111,3 +111,30 @@ is ledger mechanics, not an approved fee policy. A business decision is required
   stash@{0} ("naijagigs WIP isolated for clean production build"); restore with
   `git stash pop stash@{0}`. Verified after isolation: full `tsc --noEmit`
   clean and `npm run build` clean (qa-artifacts/pay-build-clean.log).
+
+## Decision: Aura AI uses a single provider abstraction with declared capabilities
+
+- **Context:** Aura must be useful without claiming abilities it lacks. Different
+  models differ on streaming, tool calling, image and audio support.
+- **Decision:** `lib/aura/provider.ts` is the only place a model is called. It
+  exposes streaming, tool calls, cancellation, timeouts and bounded retries, and
+  publishes a `capabilities` object that the UI and admin panel read. Anything
+  false there is never advertised. Tools are server-validated and derive identity
+  from the session, never from model output.
+- **Impact:** Adding a provider means implementing one function. The product
+  cannot advertise a capability that was not implemented and tested.
+- **Verification:** `scripts/aura-orchestration-test.ts` asserts `webAccess`,
+  `imageInput` and `streaming` flags, and exercises the live model.
+
+## Decision: consequential Aura actions are bound to a reviewed proposal hash
+
+- **Context:** An assistant that can prepare payments is a prompt-injection target;
+  a conversational "yes" must not authorise money.
+- **Decision:** `prepare_transfer` stores the proposal and an input hash. The
+  review card carries that hash; `/api/aura/confirm` requires it back. Mismatch,
+  expiry or a different user is refused, and the underlying transfer uses one
+  idempotency key for the proposal's lifetime.
+- **Impact:** The model cannot approve its own action, and a proposal cannot be
+  silently altered between review and execution.
+- **Verification:** orchestration suite — wrong hash, wrong user, correct hash,
+  repeat confirm.

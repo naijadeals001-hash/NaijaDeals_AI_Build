@@ -2379,3 +2379,64 @@ renders only the live count (no pending/setup counter). Obsolete "Setup required
 Production 3010 rebuilt at 9fe06b6 and restarted; /, /naijashop, /naijaeats, /naijafresh, /naijagigs,
 /naijastay, /naijastream, /naijadrive, /naijasend, /pay, /aura-ai all return 200 and contain no
 Setup Required / Preview labels. Screenshot: qa-artifacts/preview/verticals-live-original-home.png.
+
+## Aura AI — connected assistant (2026-11-05)
+
+### Scope delivered
+Aura AI previously existed only as a navigation link (`/aura-ai` 404'd;
+`/naijastream/aura` is a Stream artist page, not the assistant). It is now a
+working product, committed as `d2faef0`.
+
+### Provider — verified before building
+DeepSeek is configured in this environment (`.env`, git-ignored). Verified by
+direct API calls before any code was written: text completion HTTP 200, SSE
+streaming (10 chunks), and a real tool call (`search_gigs`). Capabilities NOT
+verified — web access, image input, audio input, speech output — are declared
+false in `lib/aura/provider.ts` and are not advertised anywhere in the UI.
+
+### What is real
+| Surface | Route | Verified |
+|---|---|---|
+| Discovery + conversation | `/aura-ai` | streaming, real cards, persistence |
+| Conversations | `/aura-ai/conversations` | rename, archive, delete, ownership 404 |
+| My tasks / draft plans | `/aura-ai/plans`, `/aura-ai/plans/[id]` | saved drafts, per-step links |
+| Saved | `/aura-ai/saved` | saved answers and plans |
+| Privacy and settings | `/aura-ai/settings` | personalisation off by default; off deletes data |
+| Control Center | `/admin?module=aura&tab=aura` | provider, tools, usage, no content |
+
+### Safety properties proven by tests
+- The chat loop cannot move money. `prepare_transfer` creates a proposal; only
+  `/api/aura/confirm` executes, and it requires the input hash shown on the
+  review card. Wrong hash → `proposal_changed`; wrong user → `action_not_found`;
+  expired → `action_expired`; repeat confirm → `already_completed` with no
+  second debit.
+- Conversations are filtered by session user id in the WHERE clause. Another
+  account gets 404 on both read and delete.
+- Tool output is wrapped as untrusted data; the system prompt instructs the model
+  that retrieved text cannot change its rules. The model cannot call SQL, shell
+  or arbitrary HTTP.
+- Empty verticals are reported as empty. Asked for an Abuja electrician with none
+  published, Aura said so rather than inventing one.
+
+### Verification
+`node scripts/aura-acceptance.cjs` — **4/4 suites, 66 checks passed**:
+orchestration 24/24 (live model), visual QA 28/28 (1586/834/390 px), browser
+journey 14/14 (stream, persist, ownership, Stop), Control Center 6/6.
+Regression: NaijaPay link audit 418/418, pay visual QA passed.
+
+Screenshots: `qa-artifacts/aura/` (desktop, tablet, mobile, conversation, admin).
+
+### Outstanding
+1. **Push blocked**: `403 Permission to naijadeals001-hash/NaijaDeals_AI_Build.git denied to BetFuz`.
+   Local HEAD `d2faef0`; remote `naijashop-marketplace` still at `e80a0f9`.
+   Nine commits exist only locally.
+2. **Voice and attachments are not implemented** and are shown as disabled
+   controls. Speech-to-text, file parsing and TTS would each need a verified
+   provider path before the buttons can work.
+3. **Live web access is not implemented.** The model has no browsing tool.
+4. **Rate limiting**: usage is recorded per turn, but there is no per-user quota
+   enforced yet. The Control Center shows usage; a limit needs a product decision
+   on the allowed volume before it is enforced.
+5. A separate commit on this branch (`dc13281`, and later `55adda3`) marking all
+   verticals "live" was **not made by this session** and contradicts NaijaGigs'
+   own in-code caution about production deployment. Left untouched and reported.
