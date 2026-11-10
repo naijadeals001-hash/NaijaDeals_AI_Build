@@ -1,4 +1,4 @@
-import { cacheGetJson, cacheSetJson } from "./cache";
+import { cacheGetJson, cacheIncrement, cacheSetJson } from "./cache";
 import { infraConfig } from "./config";
 
 /**
@@ -12,7 +12,19 @@ import { infraConfig } from "./config";
 const KEY = "worker:heartbeat";
 const TTL_SECONDS = 90;
 
-export type Heartbeat = { at: string; pid: number; host: string; queues: string[] };
+export type Heartbeat = { at: string; pid: number; host: string; queues: string[]; starts: number };
+
+const STARTS_KEY = "worker:starts";
+
+/** Counts worker boots. A restart is visible as a higher value, not as a gap. */
+export async function recordWorkerStart(): Promise<number> {
+  return (await cacheIncrement(STARTS_KEY)) ?? 0;
+}
+
+export async function workerStartCount(): Promise<number> {
+  const value = await cacheGetJson<number>(STARTS_KEY);
+  return typeof value === "number" ? value : 0;
+}
 
 export async function writeHeartbeat(queues: string[]): Promise<boolean> {
   if (!infraConfig().valkeyUrl) return false;
@@ -20,7 +32,8 @@ export async function writeHeartbeat(queues: string[]): Promise<boolean> {
     at: new Date().toISOString(),
     pid: process.pid,
     host: process.env.COMPUTERNAME ?? "local",
-    queues
+    queues,
+    starts: await workerStartCount()
   };
   return cacheSetJson(KEY, beat, TTL_SECONDS);
 }

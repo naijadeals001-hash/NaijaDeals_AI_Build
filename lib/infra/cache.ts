@@ -82,6 +82,16 @@ export async function cacheSetJson(key: string, value: unknown, ttlSeconds: numb
   return result === "OK";
 }
 
+/** Atomic counter, used for worker start/restart accounting. */
+export async function cacheIncrement(key: string, ttlSeconds?: number): Promise<number | null> {
+  const value = await run("incr", async (redis) => {
+    const next = await redis.incr(key);
+    if (ttlSeconds) await redis.expire(key, ttlSeconds);
+    return next;
+  });
+  return value;
+}
+
 export async function cacheDelete(key: string): Promise<boolean> {
   const result = await run("del", (redis) => redis.del(key));
   return result !== null;

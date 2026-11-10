@@ -18,7 +18,7 @@ import "dotenv/config";
 import type { Job } from "bullmq";
 import { QUEUE_NAMES, enqueue, startWorker } from "../lib/infra/queue";
 import { ensureSchedules } from "../lib/infra/schedules";
-import { writeHeartbeat } from "../lib/infra/heartbeat";
+import { recordWorkerStart, writeHeartbeat } from "../lib/infra/heartbeat";
 import { log } from "../lib/infra/logger";
 import { closeCache } from "../lib/infra/cache";
 import { closeVectors } from "../lib/infra/vectors";
@@ -151,7 +151,7 @@ const heartbeat = setInterval(() => {
   });
 }, 15_000);
 heartbeat.unref();
-void writeHeartbeat(PROCESSED);
+void recordWorkerStart().then(() => writeHeartbeat(PROCESSED));
 
 log.info("worker.started", { queues: PROCESSED, pid: process.pid });
 
