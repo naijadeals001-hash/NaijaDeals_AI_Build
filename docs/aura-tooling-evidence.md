@@ -82,3 +82,46 @@ Sampled from the approved reference files rather than guessed:
 
 Reference files preserved with hashes in `design-references/approved/AuraAI/`:
 `aura-desktop-dark.png` `e13f2830bdf594d8`, `aura-mobile-dark.png` `94b288ed89a1cd30`.
+
+## DeepSeek harness — verified capability limits (2026-11-10)
+
+The `deepseek` MCP server is registered in the ZCode config. Its tools are not
+exposed to this agent session, so `scripts/deepseek-mcp.cjs` speaks the same
+stdio JSON-RPC protocol directly. Findings are empirical, not from documentation.
+
+**Works**
+
+| Item | Result |
+|---|---|
+| Server | `deepseek-mcp-server` v1.0.1, stdio handshake OK |
+| Balance | USD 12.71 available |
+| Models | `deepseek-flash` (1,048,576 context, 393,216 max output), `deepseek-v4-pro` |
+| Tools | `chat_completion`, `create_response`, `completion` (FIM), `list_models`, `get_user_balance`, `upload_file`/`list_files`/`retrieve_file`/`delete_file`, `reset_conversation`, `list_conversations` |
+| Text generation | Reliable at 38, 168, 678, 1,200, 2,500 and 5,000 character prompts |
+
+**Limits found by testing**
+
+1. **`chat_completion` strips images.** A 64x64 solid-red PNG came back as
+   "unsupported image" in the model's own reasoning.
+2. **`create_response` does forward images**, but only small ones. Bracketed by
+   test: a 64x64 PNG works, a 260px-wide JPEG (8.9 KB) works, a 300px-wide JPEG
+   (11.5 KB) is dropped. Practical ceiling is roughly 12 KB of base64.
+3. **The Files API does not solve it.** `upload_file` returns a valid `file_id`,
+   but `create_response` with `input_image: { file_id }` is blind.
+4. **`deepseek-v4-pro` times out** on multi-kilobyte payloads with reasoning
+   enabled; `deepseek-flash` handles the same text.
+
+**Consequence for this project**
+
+Vision through the harness caps at a ~260px screenshot, which is too coarse to
+judge typography, spacing or card geometry — exactly what the Aura work needs.
+A text-only review was tried instead: `scripts/aura-deepseek-code-review.cjs`
+sent the hero code plus the measured reference geometry and received seven
+specific line-level CSS suggestions. **Applied and measured, they made the
+result worse** (whole-screen difference 30.0% → 31.6%; composer 28% → 38.6%),
+because the model was inferring from source without seeing the render. They were
+reverted. The script is kept as a documented tool, not as an acceptance step.
+
+Conclusion: the harness is sound for text work and available at low cost, but it
+cannot substitute for Playwright + Pixelmatch on visual fidelity. Aura's own live
+model already uses this same API through `lib/aura/provider.ts`.
