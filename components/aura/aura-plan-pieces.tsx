@@ -46,7 +46,7 @@ export function AuraHeroCard({
         <Icon className="h-3.5 w-3.5 text-aura-mint" aria-hidden="true" /> {label}
       </span>
       <span className="absolute inset-x-3 bottom-2.5 flex items-center justify-between gap-2">
-        <span className="text-[13px] font-bold leading-tight text-white drop-shadow">{title}</span>
+        <span className="line-clamp-2 text-[12.5px] font-bold leading-[1.2] text-white drop-shadow">{title}</span>
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-aura-gold/70 bg-black/30">
           <ArrowRight className="h-3.5 w-3.5 text-aura-gold" aria-hidden="true" />
         </span>
@@ -54,7 +54,7 @@ export function AuraHeroCard({
     </>
   );
 
-  const className = "group relative block h-[104px] overflow-hidden rounded-[10px] border border-aura-gold/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aura-mint";
+  const className = "group relative block h-[132px] overflow-hidden rounded-[12px] border border-aura-gold/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aura-mint";
 
   return href ? (
     <Link href={href} className={className} onClick={onClick}>

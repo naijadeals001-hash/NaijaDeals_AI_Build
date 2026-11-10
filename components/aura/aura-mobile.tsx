@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowUp, Bookmark, Car, Compass, ListChecks, Menu, MessageCircle, Paperclip, Mic, MoreHorizontal, ShoppingBag, UtensilsCrossed } from "lucide-react";
+import { ArrowUp, Bookmark, Car, Compass, Grid2x2, ListChecks, Menu, MessageCircle, Paperclip, Mic, ShoppingBag, UtensilsCrossed } from "lucide-react";
 import { useAura } from "@/lib/aura/client";
 import { AuraHeroCard, AuraPlanCard, AuraRideStrip } from "./aura-plan-pieces";
 import { AuraComposer } from "./aura-composer";
@@ -23,7 +23,7 @@ const TILES = [
   { key: "shop", label: "Shop", icon: ShoppingBag, href: "/naijashop", prompt: "Show me what's available on NaijaShop." },
   { key: "eats", label: "Eats", icon: UtensilsCrossed, href: "/naijaeats", prompt: "Show me food available on NaijaEats." },
   { key: "drive", label: "Drive", icon: Car, href: "/naijadrive", prompt: "Help me estimate a ride with NaijaDrive." },
-  { key: "more", label: "More", icon: MoreHorizontal, href: "/products", prompt: "What else can you help me with across NaijaDeals?" }
+  { key: "more", label: "More", icon: Grid2x2, href: "/products", prompt: "What else can you help me with across NaijaDeals?" }
 ];
 
 export function AuraMobile({
@@ -86,12 +86,12 @@ export function AuraMobile({
         </Link>
       </header>
 
-      <div className="overflow-x-clip px-4 pb-[206px]">
+      <div className="overflow-x-clip px-4 pb-[248px]">
         {/* ---------- discovery ---------- */}
         {!active ? (
           <section data-aura="hero" className="relative mt-[8px]">
             <div
-              className="pointer-events-none absolute -right-10 -top-8 h-[230px] w-[230px]"
+              className="pointer-events-none absolute -right-4 -top-6 h-[176px] w-[176px]"
               style={{ background: "radial-gradient(circle at 55% 45%, rgba(16,92,64,0.55) 0%, rgba(8,40,28,0.32) 42%, rgba(6,21,18,0) 74%)" }}
               aria-hidden="true"
             />
@@ -102,7 +102,7 @@ export function AuraMobile({
               alt=""
               width={190}
               height={190}
-              className="pointer-events-none absolute -right-12 -top-8 h-[206px] w-[206px] object-contain"
+              className="pointer-events-none absolute -right-6 -top-6 h-[150px] w-[150px] object-contain"
               style={{
                 maskImage: "radial-gradient(circle at 50% 50%, #000 46%, rgba(0,0,0,0.55) 64%, transparent 78%)",
                 WebkitMaskImage: "radial-gradient(circle at 50% 50%, #000 46%, rgba(0,0,0,0.55) 64%, transparent 78%)"
@@ -134,7 +134,7 @@ export function AuraMobile({
               key={tile.key}
               type="button"
               onClick={() => (tile.key === "more" ? (window.location.href = tile.href) : void aura.send(tile.prompt))}
-              className="flex h-[46px] flex-col items-center justify-center gap-[3px] rounded-[8px] border border-aura-border bg-aura-surface/55 transition active:scale-[0.98]"
+              className="flex h-[46px] flex-col items-center justify-center gap-[3px] rounded-[8px] border border-aura-border bg-[#0A2018] transition active:scale-[0.98]"
             >
               <tile.icon className="h-[15px] w-[15px] text-aura-gold" aria-hidden="true" />
               <span className="text-[10.5px] font-semibold text-white/90">{tile.label}</span>

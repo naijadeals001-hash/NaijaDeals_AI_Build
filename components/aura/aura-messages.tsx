@@ -36,9 +36,12 @@ export function AuraMessages({
   const bottomRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
+  const lastMessageContent = messages[messages.length - 1]?.content ?? "";
+  const lastMessageId = messages[messages.length - 1]?.id ?? "";
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length, messages[messages.length - 1]?.content]);
+  }, [messages.length, lastMessageId, lastMessageContent]);
 
   return (
     <div className="space-y-5">
