@@ -91,9 +91,10 @@ async function main() {
   });
 
   await check("5. production build is refused without explicit authorisation", async () => {
-    const saved = process.env.NODE_ENV;
+    const env = process.env as Record<string, string | undefined>;
+    const saved = env.NODE_ENV;
     try {
-      process.env.NODE_ENV = "production";
+      env.NODE_ENV = "production";
       delete process.env.AURA_TEST_ALLOW_PRODUCTION_BUILD;
       assert(!testProviderEnabled(), "enabled in a production build");
       assert(testProviderRefusal() === "production_build_not_authorised", `refusal ${testProviderRefusal()}`);
@@ -101,7 +102,7 @@ async function main() {
       assert(testProviderEnabled(), "not enabled for the authorised local test build");
       return "refused in production, allowed with the explicit build flag";
     } finally {
-      if (saved === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = saved;
+      if (saved === undefined) delete env.NODE_ENV; else env.NODE_ENV = saved;
       delete process.env.AURA_TEST_ALLOW_PRODUCTION_BUILD;
     }
   });
