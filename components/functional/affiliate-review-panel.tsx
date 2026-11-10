@@ -58,17 +58,17 @@ export function AffiliateReviewPanel({ canManage }: { canManage: boolean }) {
     }
   }
 
-  if (phase === "loading") return <p className="font-bold text-muted">Loading the review queue…</p>;
-  if (phase === "error") return <p className="rounded-xl border border-border-soft bg-canvas p-4 font-bold text-danger">{error}</p>;
-  if (rows.length === 0) return <p className="rounded-xl border border-border-soft bg-canvas p-4 text-sm text-muted">Nothing is awaiting review.</p>;
+  if (phase === "loading") return <p className="font-bold text-[#8B949E]">Loading the review queue…</p>;
+  if (phase === "error") return <p className="rounded-xl border border-border-soft bg-canvas p-4 font-bold text-crimson">{error}</p>;
+  if (rows.length === 0) return <p className="rounded-xl border border-border-soft bg-canvas p-4 text-sm text-ink">Nothing is awaiting review.</p>;
 
   return (
     <div className="space-y-4">
-      {notice ? <p className="rounded-xl border border-brand/40 bg-canvas p-3 text-sm font-bold">{notice}</p> : null}
-      {error ? <p className="rounded-xl border border-border-soft bg-canvas p-3 text-sm font-bold text-danger">{error}</p> : null}
+      {notice ? <p className="rounded-xl border border-primary/40 bg-canvas p-3 text-sm font-bold text-ink">{notice}</p> : null}
+      {error ? <p className="rounded-xl border border-border-soft bg-canvas p-3 text-sm font-bold text-crimson">{error}</p> : null}
       <ul className="space-y-2">
         {rows.map((row) => (
-          <li key={row.id} className="rounded-xl border border-border-soft bg-canvas p-3">
+          <li key={row.id} className="rounded-xl border border-border-soft bg-canvas p-3 text-ink">
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span className="font-bold">Order {row.orderId.slice(0, 12)}…</span>
               <span>{naira(row.amountKobo)} refunded</span>
@@ -82,7 +82,7 @@ export function AffiliateReviewPanel({ canManage }: { canManage: boolean }) {
         ))}
       </ul>
       {selected ? (
-        <section className="space-y-3 rounded-xl border border-border-soft bg-canvas p-4">
+        <section className="space-y-3 rounded-xl border border-border-soft bg-canvas p-4 text-ink">
           <h2 className="font-display text-lg font-extrabold">Intent {selected.id.slice(0, 10)}…</h2>
           <p className="text-sm text-muted">Refund {selected.refundId.slice(0, 12)}… · no frozen basis recorded</p>
           {canManage ? (
@@ -108,7 +108,7 @@ export function AffiliateReviewPanel({ canManage }: { canManage: boolean }) {
           )}
           <div className="flex gap-2">
             {canManage ? (
-              <button onClick={() => void resolve()} disabled={busy} className="rounded-lg bg-brand px-4 py-2 font-bold text-white disabled:opacity-50">
+              <button onClick={() => void resolve()} disabled={busy} className="rounded-lg bg-primary px-4 py-2 font-bold text-white disabled:opacity-50">
                 {busy ? "Submitting…" : "Resolve with evidence"}
               </button>
             ) : null}

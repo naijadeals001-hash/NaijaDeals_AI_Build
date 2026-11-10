@@ -19,7 +19,7 @@ export default async function Page() {
     <main className="mx-auto max-w-5xl space-y-5 p-6">
       <header>
         <h1 className="font-display text-2xl font-extrabold">Affiliate reversal review</h1>
-        <p className="text-sm text-muted">
+        <p className="text-sm text-[#8B949E]">
           Refunds whose historical commission basis is not recorded. Nothing is adjusted until the basis and its evidence are stated.
         </p>
       </header>
