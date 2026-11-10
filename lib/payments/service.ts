@@ -10,6 +10,7 @@ import { recordAudit } from "@/lib/services/core/audit.service";
 import { recordSystemEvent } from "@/lib/services/core/event.service";
 import { createDelivery } from "@/lib/services/core/delivery.service";
 import { notifyOrderPaid } from "@/lib/notifications/domain-events";
+import { recordConversion } from "@/lib/services/affiliate/service";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 

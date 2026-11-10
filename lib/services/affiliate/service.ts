@@ -138,11 +138,21 @@ export async function findAttribution(visitorKey: string, at = new Date()) {
   });
 }
 
+/** Latest non-expired touch recorded while this user was signed in. */
+export async function findAttributionForUser(userId: string, at = new Date()) {
+  return prisma.attributionTouch.findFirst({
+    where: { userId, consent: true, expiresAt: { gt: at } },
+    orderBy: { landedAt: "desc" },
+    include: { link: { include: { campaign: true, affiliate: true } } }
+  });
+}
+
 export type ConversionInput = {
   entityType: string;
   entityId: string;
   basisKobo: bigint;
-  visitorKey: string;
+  visitorKey?: string;
+  userId?: string;
   now?: Date;
 };
 
@@ -163,7 +173,9 @@ export async function recordConversion(input: ConversionInput): Promise<
   const existing = await prisma.affiliateConversion.findUnique({ where: { dedupeKey } });
   if (existing) return { created: false, reason: "duplicate" };
 
-  const touch = await findAttribution(input.visitorKey, now);
+  const touch = input.userId
+    ? await findAttributionForUser(input.userId, now)
+    : await findAttribution(input.visitorKey ?? "", now);
   if (!touch || !touch.consent) return { created: false, reason: "no_attribution" };
   const campaign = touch.link.campaign;
   if (campaign.status !== "ACTIVE") return { created: false, reason: "campaign_inactive" };
