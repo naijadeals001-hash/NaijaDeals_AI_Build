@@ -455,3 +455,43 @@ Verified: `home-dashboards-e2e.cjs` **40/40**, `home-responsive-qa.cjs` **120/12
 OPEN: no inline slide editor UI; no image upload for slides; region/interest
 assignment strategies not built; Dashboard 1 keeps a single hero.
 See `docs/homepage-experiences.md`.
+
+## Dependency record — NaijaDeals Affiliate (2026-11-10)
+
+**Status:** BLOCKED on Aura AI acceptance. Not started. No Affiliate code, schema or
+migration exists.
+
+### Aura AI acceptance — verified against source documents, not assumed
+
+Evidence in this repository (handoff, "Aura AI — connected assistant", 2026-11-05):
+`node scripts/aura-acceptance.cjs` reported **4/4 suites, 66 checks** — orchestration 24/24,
+visual QA 28/28, browser journey 14/14, Control Center 6/6.
+
+That evidence is real but the milestone is **not fully met**. Still outstanding, as recorded
+in the same handoff section:
+
+1. **Voice input and file attachments were shown as disabled controls.** A later change made
+   them functional, but no acceptance run has re-verified them since.
+2. **Live web access is not implemented.** The model has no browsing tool.
+3. **Per-user rate limiting is not enforced.** Usage is recorded; no quota is applied.
+4. **Visual fidelity was never accepted by the owner.** Whole-screen pixel difference sat
+   around 31% (desktop) and 38% (mobile) against the approved mockups, and the owner's last
+   word on it was that the presentation was not close enough.
+
+Therefore Aura is **PARTIAL**, not complete.
+
+### Gate for starting Affiliate
+
+Affiliate work may begin only when all four of these are recorded as met:
+
+- voice/attachment acceptance re-run and passing;
+- a decision recorded on live web access (implemented, or explicitly deferred with the UI
+  stating it is unavailable);
+- rate limiting enforced per user, or an explicit product decision to defer it;
+- visual acceptance of the desktop and mobile Aura surfaces by the owner.
+
+Until then this entry stands as the dependency record. The Affiliate specification itself —
+attribution, commission accounting on the shared ledger, fraud controls, merchant and Control
+Center surfaces, Aura integration — is held ready and must not be built against an unverified
+assistant, because Affiliate depends on Aura's permission-scoped tools and its explanations of
+commission state.
