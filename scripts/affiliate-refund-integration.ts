@@ -586,6 +586,65 @@ async function main() {
     return `snapshot TOTAL on ${conversion.basisKobo}; eligible 2000000; commission 100000`;
   });
 
+  await check("null historical basis parks the intent for review", async () => {
+    const histOrder = await prisma.order.create({
+      data: {
+        orderNumber: `HIS-${runId}`, customerId: customer.id, vendorId: vendor.id,
+        status: "completed", paymentStatus: "paid",
+        subtotalKobo: 5_000_000n, deliveryFeeKobo: 0n, totalKobo: 5_000_000n,
+        commissionKobo: 250_000n, escrowFeeKobo: 0n,
+        deliveryAddress: "12 Broad Street, Lagos", contactName: "Historic", contactPhone: "08012345678",
+        items: { create: [{ productId: product.id, quantity: 1, unitKobo: 5_000_000n, totalKobo: 5_000_000n, productName: `His ${runId}` }] }
+      }
+    });
+    await prisma.payment.create({
+      data: { orderId: histOrder.id, provider: "test", providerReference: `TEST-HIS-${runId}`, idempotencyKey: `his-pay-${runId}`, amountKobo: 5_000_000n, currency: "NGN", status: "COMPLETED" }
+    });
+    const hisVendorWallet = await prisma.wallet.findFirstOrThrow({ where: { vendorId: vendor.id } });
+    await prisma.wallet.update({ where: { id: hisVendorWallet.id }, data: { heldKobo: { increment: 5_000_000n } } });
+    await prisma.wallet.update({ where: { id: platform.id }, data: { availableKobo: { increment: 5_000_000n } } });
+    await prisma.escrowHold.create({
+      data: { orderId: histOrder.id, buyerWalletId: customerWallet.id, vendorWalletId: hisVendorWallet.id, amountKobo: 5_000_000n, status: "held", reason: "historic fixture" }
+    });
+    // Historical row: no frozen basis, as conversions created before the snapshot did.
+    const histConversion = await prisma.affiliateConversion.create({
+      data: {
+        dedupeKey: `Order:${histOrder.id}`, affiliateId: profile.id, campaignId: campaign.id,
+        entityType: "Order", entityId: histOrder.id, ruleVersion: 1, basisType: null,
+        commissionBps: 500, basisKobo: 5_000_000n, amountKobo: 250_000n, state: "PAID",
+        ledgerReference: `AFF-COMM-${histOrder.id}`
+      }
+    });
+
+    await refundPayment({ orderId: histOrder.id, actorId: customer.id, reason: "historic refund", amountKobo: 1_000_000n, idempotencyKey: `his-refund-${runId}` });
+    const refund = await prisma.refund.findFirstOrThrow({ where: { orderId: histOrder.id }, orderBy: { createdAt: "desc" } });
+    assert(refund.status === "COMPLETED", `customer refund is ${refund.status}`);
+
+    const intent = await prisma.affiliateReversalIntent.findFirstOrThrow({ where: { orderId: histOrder.id } });
+    assert(intent.eligibleKobo === null, `eligible ${intent.eligibleKobo}, expected null`);
+    assert(intent.allocationPolicy === null, `policy ${intent.allocationPolicy}, expected null`);
+
+    await processReversalIntents("historic", 50);
+    await processReversalIntents("historic-retry", 50);
+    const parked = await prisma.affiliateReversalIntent.findUniqueOrThrow({ where: { id: intent.id } });
+    assert(parked.state === "FAILED", `intent state ${parked.state}`);
+    assert((parked.lastError ?? "").includes("review_required:missing_allocation"), `lastError ${parked.lastError}`);
+    assert(parked.attempts === 1, `attempts ${parked.attempts}, expected one — a parked intent must not be retried`);
+
+    const ops = await prisma.affiliateReversalOperation.count({ where: { conversionId: histConversion.id } });
+    const debt = await prisma.affiliateRecovery.aggregate({ where: { conversionId: histConversion.id }, _sum: { amountKobo: true } });
+    assert(ops === 0, `${ops} operations created for an unallocated refund`);
+    assert((debt._sum.amountKobo ?? 0n) === 0n, "debt created for an unallocated refund");
+
+    // The administrator review query: FAILED intents carrying a review reason.
+    const reviewable = await prisma.affiliateReversalIntent.findMany({
+      where: { state: "FAILED", lastError: { startsWith: "review_required:" } },
+      select: { id: true, refundId: true, orderId: true, amountKobo: true, lastError: true }
+    });
+    assert(reviewable.some((row) => row.id === intent.id), "the parked intent is not discoverable for review");
+    return `refund COMPLETED, no adjustment, intent FAILED after 1 attempt and discoverable for review`;
+  });
+
   const width = Math.max(...rows.map((row) => row.name.length));
   for (const row of rows) console.log(`${row.status.padEnd(4)} ${row.name.padEnd(width)}  ${row.detail}`);
   const failed = rows.filter((row) => row.status === "FAIL").length;
