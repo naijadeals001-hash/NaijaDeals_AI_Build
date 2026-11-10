@@ -53,6 +53,7 @@ async function main() {
 
   const plans: Plan[] = [];
   const ambiguous: typeof candidates = [];
+  const overlapAmbiguous: typeof candidates = [];
 
   for (const conversion of candidates) {
     // AffiliateReversalOperation.conversionId is a bare scalar, so existing
@@ -89,6 +90,32 @@ async function main() {
       // State says reversed, but nothing records how much. Do not guess zero.
       ambiguous.push(conversion);
       continue;
+    }
+
+    // A conversion already reconciled by this tool has a legacy: operation; it is
+    // not ambiguous on a rerun, it is done.
+    const alreadyReconciled = await prisma.affiliateReversalOperation.count({
+      where: { conversionId: conversion.id, opKey: `legacy:${conversion.id}` }
+    });
+    if (alreadyReconciled > 0) continue;
+
+    if (recordedKobo > 0n && requestedKobo > 0n) {
+      // Proven overlap only: an existing operation whose ledger reference is one
+      // of these very transactions. Otherwise the two histories may describe the
+      // same money, and subtracting would under-report the true total. Flag it.
+      const opRefs = new Set(
+        (
+          await prisma.affiliateReversalOperation.findMany({
+            where: { conversionId: conversion.id, ledgerReference: { not: null } },
+            select: { ledgerReference: true }
+          })
+        ).map((row) => row.ledgerReference)
+      );
+      const proven = cash.filter((row) => opRefs.has(row.reference)).length;
+      if (proven === 0) {
+        overlapAmbiguous.push(conversion);
+        continue;
+      }
     }
 
     const unrecorded = requestedKobo - recordedKobo;
@@ -148,7 +175,7 @@ async function main() {
   }
 
   let flagged = 0;
-  for (const row of ambiguous) {
+  for (const row of [...ambiguous, ...overlapAmbiguous]) {
     const result = await prisma.affiliateConversion.updateMany({
       where: { id: row.id, reconciliationRequired: false },
       data: { reconciliationRequired: true }

@@ -114,8 +114,8 @@ async function main() {
       const out = reconcile("--dry-run");
       const after = await prisma.affiliateReversalOperation.count({ where: { conversionId: { in: made.conversions } } });
       assert(after === before, `dry run wrote ${after - before} operations`);
-      assert(/reconstructable: 4/.test(out), `expected 4 reconstructable, output: ${out.match(/reconstructable: \d+/)?.[0]}`);
-      assert(/ambiguous \(blocked, not inferred\): 1/.test(out), `expected 1 ambiguous, output: ${out.match(/ambiguous[^:]*: \d+/)?.[0]}`);
+      assert(/reconstructable: 3/.test(out), `expected 3 reconstructable, output: ${out.match(/reconstructable: \d+/)?.[0]}`);
+      assert(/ambiguous overlap .*: 1/.test(out), `expected 1 ambiguous overlap, output: ${out.match(/ambiguous overlap[^:]*: \d+/)?.[0]}`);
       return "4 reconstructable, 1 ambiguous, nothing written";
     });
 
@@ -151,11 +151,15 @@ async function main() {
       return `cash 1200, debt 900, mixed 1000 (700 cash + 300 debt)`;
     });
 
-    await check("a conversion with existing operations records only the unrecorded remainder", async () => {
+    await check("legacy evidence plus an operation is flagged, not subtracted", async () => {
+      // Independence cannot be proven from amounts alone, so the conversion is
+      // blocked for review rather than having a guessed remainder written.
+      const row = await prisma.affiliateConversion.findUniqueOrThrow({ where: { id: both.id } });
+      assert(row.reconciliationRequired, "mixed history was not flagged");
       const ops = await prisma.affiliateReversalOperation.findMany({ where: { conversionId: both.id } });
       const total = ops.reduce((sum, op) => sum + op.requestedKobo, 0n);
-      assert(total === 2_000n, `total ${total}, expected 2000 (500 existing + 1500 legacy remainder)`);
-      return `existing 500 + legacy 1500 = ${total}, no double counting`;
+      assert(total === 500n, `total ${total}, expected the existing 500 only, nothing guessed`);
+      return `flagged, no operation written beyond the existing 500`;
     });
 
     await check("ambiguous history is flagged and financially blocked", async () => {
