@@ -2774,9 +2774,29 @@ isolated preview and database guard; two consecutive runs, 0 failures, exit 0:
 Replay is covered in the authorization suite: a second identical resolution returns 409
 `not_reviewable` and leaves one audit row and one allocation.
 
-**Still open in this slice:** the populated browser walk of the queue and the Control Center
-campaign-management surface. The reviewer HTTP 200 that originally revealed the defect is not
-reproducible; the intent it mutated remains in the isolated database as `PENDING`.
+**Browser walk.** `node scripts/affiliate-review-ui-check.cjs` drives real Chrome against the
+rebuilt `.next-pay` preview on 3017 with the isolated database; two consecutive final runs, 0
+failures, exit 0:
+
+| Case | Result |
+|------|--------|
+| Reviewer opens the populated queue | 48 rows, each showing order, refund amount, attempts and error |
+| Reviewer selects a row | "Inspect" opens the detail with the read-only notice; no resolve button and no basis inputs are rendered |
+| Reviewer posts from the page itself | 403; the intent stays `FAILED` with no allocation and no audit row |
+| Manager opens a row through "Review" | basis type/amount, evidence and reason inputs render |
+| Manager submits | "Queued for processing with ₦5,000.00 eligible."; intent `PENDING`, one audit row, row leaves the queue after reload |
+
+The first screenshot exposed a real defect the HTTP suites could not see: queue rows and detail
+cards used `bg-canvas` (white) while inheriting the shell's near-white text, so order labels,
+amounts and the Inspect/Close controls were effectively invisible. `border-brand`, `bg-brand` and
+`text-danger` were also referenced but are not defined tokens, so the resolve button and error
+state had no styling. `text-ink` is now scoped to the light surfaces, the defined `primary`,
+`crimson` tokens replace the missing ones, and the page description uses the shell's `#8B949E`
+muted colour. Screenshots are written to the gitignored `qa-artifacts/affiliate-review/`.
+
+**Still open in this slice:** the Control Center campaign-management surface. The reviewer HTTP 200
+that originally revealed the defect is not reproducible; the intent it mutated remains in the
+isolated database as `PENDING`.
 
 ## 2026-11-05 — Push gate: preservation remote refuses the stored credential
 
@@ -2794,9 +2814,10 @@ authorization gate, not a code defect; no force-push, alternate remote or creden
 attempted. CI (`ci.yml`) runs type-check, lint, build and migration tests on this branch and has no
 deployment step, so the push itself would not deploy.
 
-Verified locally: `npx tsc --noEmit` exit 0; both review suites pass twice with 0 failures.
-Commits waiting to be published, newest first: `b30e275`, `3a9ace1`, `53f562f` (plus the earlier
-unpublished backlog; the branch was 174 commits ahead of `e80a0f97`).
+Verified locally: `npx tsc --noEmit` exit 0; both HTTP review suites pass twice with 0 failures;
+the browser walk passes twice on the final build. Commits waiting to be published, newest first:
+`dbac36d`, `ebbcbd1`, `b30e275`, `3a9ace1`, `53f562f` (plus the earlier unpublished backlog; the
+branch was 174 commits ahead of `e80a0f97` before these).
 
 Recovery once credentials with write access exist:
 
