@@ -142,6 +142,8 @@ export async function reverseConversion(input: {
   amountKobo: bigint;
   reason: string;
   releaseBudget?: boolean;
+  /** Stable reference so a replayed reversal collides instead of double-posting. */
+  idempotencyKey?: string;
 }): Promise<ReversalResult> {
   const conversion = await prisma.affiliateConversion.findUnique({
     where: { id: input.conversionId },
@@ -195,7 +197,7 @@ export async function reverseConversion(input: {
     };
   }
 
-  const reference = `AFF-REV-${conversion.id}-${randomUUID().slice(0, 8)}`;
+  const reference = input.idempotencyKey ?? `AFF-REV-${conversion.id}-${randomUUID().slice(0, 8)}`;
   const outcome = await prisma.$transaction(async (tx) => {
     const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
     const affiliateWallet = await ensureWallet(tx, { userId: conversion.affiliate.userId, ownerType: "CUSTOMER" });

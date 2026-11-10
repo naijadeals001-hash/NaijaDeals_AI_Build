@@ -31,6 +31,7 @@ import {
   recoverStuckSending
 } from "../lib/services/core/notification-delivery.service";
 import { processIntents } from "../lib/notifications/intent.service";
+import { processReversalIntents } from "../lib/services/affiliate/reversal-processor";
 
 const PROCESSED: string[] = [];
 
@@ -86,8 +87,9 @@ const notificationWorker = startWorker(
       const recovered = await recoverStuckSending();
       const delivered = await flushDueNotifications();
       const intents = await processIntents(`worker:${process.pid}`, 25);
-      structured("notification.sweep", job, { recovered, delivered, intents });
-      return { recovered, delivered, intents };
+      const reversals = await processReversalIntents(`worker:${process.pid}`, 25);
+      structured("notification.sweep", job, { recovered, delivered, intents, reversals });
+      return { recovered, delivered, intents, reversals };
     }
     throw new Error(`unknown_job:${job.name}`);
   },
