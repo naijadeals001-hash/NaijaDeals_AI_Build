@@ -52,8 +52,11 @@ const VIEWPORTS = [
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     check(`${vp.name}: no horizontal overflow`, overflow <= 0, `${overflow}px`);
 
-    const composer = await page.locator("#aura-composer-mobile, #aura-composer-desktop").count();
-    check(`${vp.name}: composer present`, composer === 1);
+    // Both layouts are in the DOM; exactly one is visible at any width.
+    const composerVisible = await page.locator("#aura-composer-mobile, #aura-composer-desktop").evaluateAll((els) =>
+      els.filter((el) => el.offsetParent !== null).length
+    );
+    check(`${vp.name}: composer present`, composerVisible === 1, `${composerVisible} visible`);
 
     if (vp.name === "mobile") {
       const bottomNav = await page.evaluate(() => /Chat[\s\S]{0,40}Explore[\s\S]{0,40}Tasks[\s\S]{0,40}Saved/.test(document.body.innerText));

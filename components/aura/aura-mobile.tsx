@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ArrowUp, Bookmark, Car, Compass, ListChecks, Menu, MessageCircle, Paperclip, Mic, MoreHorizontal, ShoppingBag, UtensilsCrossed } from "lucide-react";
 import { useAura } from "@/lib/aura/client";
 import { AuraHeroCard, AuraPlanCard, AuraRideStrip } from "./aura-plan-pieces";
+import { AuraComposer } from "./aura-composer";
+import { AuraLanguageSelect } from "./aura-language-select";
 import { AuraMessages } from "./aura-messages";
 
 /**
@@ -72,16 +74,19 @@ export function AuraMobile({
             <span className="block text-[12px] text-white/75">by NaijaDeals</span>
           </span>
         </Link>
+        <div className="flex items-center gap-1.5">
+          <AuraLanguageSelect compact />
+        </div>
         <Link
           href={user ? "/account" : "/login?next=/aura-ai"}
-          aria-label={user ? "Your account" : "Sign in"}
-          className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-aura-gold/70 bg-aura-highlight text-sm font-bold text-aura-mint"
+          aria-label={user ? `Your account, ${user.name}` : "Sign in"}
+          className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-aura-gold/70 bg-aura-highlight text-[13px] font-bold text-aura-mint"
         >
           {user ? user.name.slice(0, 1).toUpperCase() : "?"}
         </Link>
       </header>
 
-      <div className="overflow-x-clip px-4 pb-[190px]">
+      <div className="overflow-x-clip px-4 pb-[206px]">
         {/* ---------- discovery ---------- */}
         {!active ? (
           <section data-aura="hero" className="relative mt-[8px]">
@@ -123,7 +128,7 @@ export function AuraMobile({
         )}
 
         {/* ---------- four service tiles ---------- */}
-        <div data-aura="tiles" className="mt-[8px] grid grid-cols-4 gap-[5px]">
+        <div data-aura="tiles" className="mt-[8px] grid w-full grid-cols-4 gap-[5px]">
           {TILES.map((tile) => (
             <button
               key={tile.key}
@@ -273,55 +278,14 @@ export function AuraMobile({
 
       {/* ---------- composer ---------- */}
       <div className="fixed inset-x-0 bottom-[74px] px-4 pb-2">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit();
-          }}
-          className="flex h-[40px] items-center gap-2 rounded-[12px] border border-aura-mint/45 bg-aura-composer px-3"
-        >
-          <button type="button" aria-label="Attach a file (not available yet)" aria-disabled="true" className="p-1 text-white/40" onClick={() => setNotice("Attachments are not supported yet.")}>
-            <Paperclip className="h-5 w-5" aria-hidden="true" />
-          </button>
-          <span className="h-6 w-px bg-aura-border" aria-hidden="true" />
-          <label className="sr-only" htmlFor="aura-mobile-input">
-            Ask Aura anything
-          </label>
-          <input
-            id="aura-composer-mobile"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Ask Aura anything..."
-            className="min-w-0 flex-1 bg-transparent text-[15px] text-white placeholder:text-white/55 focus:outline-none"
-          />
-          <button type="button" aria-label="Voice input (not available yet)" aria-disabled="true" className="p-1 text-white/40" onClick={() => setNotice("Voice input is not available yet — typing works as usual.")}>
-            <Mic className="h-5 w-5" aria-hidden="true" />
-          </button>
-          {aura.streaming ? (
-            <button type="button" onClick={aura.stop} aria-label="Stop generating" className="flex h-10 w-10 items-center justify-center rounded-full bg-aura-mint text-aura-canvas">
-              <span className="block h-3 w-3 rounded-[2px] bg-aura-canvas" aria-hidden="true" />
-            </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={!draft.trim()}
-              aria-label="Send message"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-aura-mint text-aura-canvas disabled:opacity-50"
-            >
-              <ArrowUp className="h-5 w-5" aria-hidden="true" />
-            </button>
-          )}
-        </form>
+        <AuraComposer
+          variant="mobile"
+          onSend={(text) => void aura.send(text)}
+          onStop={aura.stop}
+          streaming={aura.streaming}
+          placeholder="Ask Aura anything…"
+        />
       </div>
-
-      {notice && (
-        <p className="fixed inset-x-4 bottom-[150px] rounded-lg bg-aura-surface px-3 py-2 text-[12px] text-white/85" role="status">
-          {notice}{" "}
-          <button type="button" onClick={() => setNotice("")} className="underline">
-            Dismiss
-          </button>
-        </p>
-      )}
 
       {/* ---------- bottom nav ---------- */}
       <nav className="fixed inset-x-0 bottom-0 border-t border-aura-border bg-aura-canvas pb-[env(safe-area-inset-bottom)]" aria-label="Aura">

@@ -58,8 +58,11 @@ const CONVERSATIONS = ["Abuja weekend", "Find a solar installer", "Dinner for th
     await prisma.wallet.create({ data: { ownerType: "CUSTOMER", userId: user.id } });
   }
 
-  // Rebuild history so repeat runs stay deterministic.
+  // Rebuild history so repeat runs stay deterministic. Repeated comparison runs
+  // previously accumulated dozens of identical conversations and buried the
+  // intended entries in the sidebar.
   await prisma.auraConversation.deleteMany({ where: { userId: user.id } });
+  await prisma.auraPlan.deleteMany({ where: { userId: user.id } });
   for (const title of CONVERSATIONS) {
     await prisma.auraConversation.create({ data: { userId: user.id, title } });
   }

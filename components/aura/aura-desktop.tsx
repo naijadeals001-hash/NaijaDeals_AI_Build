@@ -10,6 +10,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Clock,
   Compass,
   ListChecks,
   Plus,
@@ -29,6 +30,7 @@ import {
 import { useAura, type AuraCard } from "@/lib/aura/client";
 import { AuraOrb } from "./aura-visuals";
 import { AuraAfricaMark } from "./aura-africa-mark";
+import { AuraLanguageSelect } from "./aura-language-select";
 import { AuraEmptyCard, AuraHeroCard, AuraPlanCard } from "./aura-plan-pieces";
 import { AuraComposer } from "./aura-composer";
 import { AuraMessages } from "./aura-messages";
@@ -81,6 +83,19 @@ export function AuraDesktop({
       .then((b) => b?.preferences && setPrefs({ personalised: Boolean(b.preferences.personalised), useSavedPreferences: Boolean(b.preferences.useSavedPreferences) }))
       .catch(() => {});
   }, []);
+
+  // The two "Make it yours" switches write to the same preferences the settings
+  // page uses, so the panel is not decorative.
+  async function togglePreference(key: "personalised" | "useSavedPreferences") {
+    const next = { ...prefs, [key]: !prefs[key] };
+    setPrefs(next);
+    await fetch("/api/aura/preferences", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(next)
+    }).catch(() => {});
+  }
 
   const lastUser = [...aura.messages].reverse().find((m) => m.role === "user");
   // The mockup's row is exactly three cards. Take the first of each kind from the
@@ -140,11 +155,11 @@ export function AuraDesktop({
               <button
                 type="button"
                 onClick={() => aura.openConversation(c.id)}
-                className={`flex w-full items-center gap-2 truncate rounded-md px-2.5 py-1.5 text-left text-[12.5px] transition hover:bg-white/[0.05] ${
-                  aura.conversationId === c.id ? "text-aura-mint" : "text-white/75"
+                className={`flex w-full items-center gap-2.5 truncate rounded-md px-2 py-2 text-left text-[13px] transition hover:bg-white/[0.05] ${
+                  aura.conversationId === c.id ? "text-aura-mint" : "text-white/80"
                 }`}
               >
-                <span className="h-1 w-1 shrink-0 rounded-full bg-white/30" aria-hidden="true" />
+                <Clock className="h-3.5 w-3.5 shrink-0 text-white/45" aria-hidden="true" />
                 {c.title}
               </button>
             </li>
@@ -188,9 +203,7 @@ export function AuraDesktop({
             <Link href="/" className="text-[13px] text-white/60 hover:text-aura-mint">
               ← NaijaDeals
             </Link>
-            <span className="flex items-center gap-1.5 text-[13px] text-white/85">
-              English <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
-            </span>
+            <AuraLanguageSelect />
             <span className="h-5 w-px bg-white/20" aria-hidden="true" />
             <Link
               href={user ? "/account" : "/login?next=/aura-ai"}
@@ -403,16 +416,27 @@ export function AuraDesktop({
             <h3 className="text-[17px] font-extrabold leading-tight">Today&apos;s plan</h3>
             <span className="shrink-0 rounded-full border border-aura-gold px-2.5 py-[3px] text-[11px] font-bold text-aura-gold">Draft</span>
           </div>
-          <ol className="mt-3 space-y-3">
+          <ol className="mt-3 space-y-1">
             {[
-              { label: "Choose a stay", done: Boolean(stay) },
-              { label: "Pick a meal", done: Boolean(meal) },
-              { label: "Arrange a ride", done: Boolean(ride) }
+              { label: "Choose a stay", done: Boolean(stay), prompt: "Find me a stay for a weekend in Abuja." },
+              { label: "Pick a meal", done: Boolean(meal), prompt: "Find Nigerian food I can order this weekend." },
+              { label: "Arrange a ride", done: Boolean(ride), prompt: "Help me arrange a ride to the airport." }
             ].map((step, index, all) => (
-              <li key={step.label} className="relative flex items-center gap-2.5">
-                {index < all.length - 1 && <span className="absolute left-[6px] top-4 h-3.5 w-px bg-white/20" aria-hidden="true" />}
-                <span className={`h-3 w-3 shrink-0 rounded-full border ${step.done ? "border-aura-mint bg-aura-mint" : "border-white/40"}`} aria-hidden="true" />
-                <span className="text-[13.5px] text-white/90">{step.label}</span>
+              <li key={step.label} className="relative">
+                {index < all.length - 1 && <span className="absolute left-[6px] top-[26px] h-3 w-px bg-white/20" aria-hidden="true" />}
+                <button
+                  type="button"
+                  onClick={() => void aura.send(step.prompt)}
+                  className="flex w-full items-center gap-2.5 rounded-lg py-1.5 text-left transition hover:bg-white/[0.04]"
+                >
+                  <span
+                    className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border ${step.done ? "border-aura-mint bg-aura-mint" : "border-white/45"}`}
+                    aria-hidden="true"
+                  >
+                    {step.done && <Check className="h-2.5 w-2.5 text-aura-canvas" />}
+                  </span>
+                  <span className={`text-[13.5px] ${step.done ? "text-white/60 line-through" : "text-white/90"}`}>{step.label}</span>
+                </button>
               </li>
             ))}
           </ol>
@@ -425,19 +449,22 @@ export function AuraDesktop({
           <h3 className="text-[17px] font-extrabold">Make it yours</h3>
           <div className="mt-2.5 space-y-2.5">
             {[
-              { label: "Personalised suggestions", on: prefs.personalised },
-              { label: "Use saved preferences", on: prefs.useSavedPreferences }
+              { label: "Personalised suggestions", key: "personalised" as const },
+              { label: "Use saved preferences", key: "useSavedPreferences" as const }
             ].map((row) => (
-              <Link key={row.label} href="/aura-ai/settings" className="flex items-center justify-between gap-2 text-[13.5px] text-white/90">
+              <div key={row.label} className="flex items-center justify-between gap-2 text-[13.5px] text-white/90">
                 {row.label}
-                <span
-                  className={`flex h-5 w-9 items-center rounded-full px-0.5 ${row.on ? "justify-end bg-aura-mint" : "justify-start bg-white/25"}`}
-                  aria-hidden="true"
-                  data-state={row.on ? "on" : "off"}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={prefs[row.key]}
+                  aria-label={row.label}
+                  onClick={() => void togglePreference(row.key)}
+                  className={`flex h-5 w-9 shrink-0 items-center rounded-full px-0.5 transition ${prefs[row.key] ? "justify-end bg-aura-mint" : "justify-start bg-white/25"}`}
                 >
                   <span className="h-4 w-4 rounded-full bg-aura-canvas" />
-                </span>
-              </Link>
+                </button>
+              </div>
             ))}
           </div>
           <Link href="/aura-ai/settings" className="mt-3 flex items-center justify-between border-t border-white/15 pt-2.5 text-[13.5px] font-semibold text-white underline decoration-white/40">
