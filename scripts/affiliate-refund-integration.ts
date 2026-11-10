@@ -393,6 +393,79 @@ async function main() {
   // compensated — the previous version subtracted a hardcoded delta from a shared
   // balance, which is exactly how the development wallet was driven negative.
 
+  await check("mixed component: three refunds allocate cumulatively", async () => {
+    // subtotal 5,000,000 + delivery 2,000 = 5,002,000 paid, SUBTOTAL basis.
+    const mixedOrderNumber = `MIX-${runId}`;
+    const mixedOrder = await prisma.order.create({
+      data: {
+        orderNumber: mixedOrderNumber, customerId: customer.id, vendorId: vendor.id,
+        status: "completed", paymentStatus: "paid",
+        subtotalKobo: 5_000_000n, deliveryFeeKobo: 2_000n, totalKobo: 5_002_000n,
+        commissionKobo: 250_000n, escrowFeeKobo: 0n,
+        deliveryAddress: "12 Broad Street, Lagos", contactName: "Mixed Customer", contactPhone: "08012345678",
+        items: { create: [{ productId: product.id, quantity: 1, unitKobo: 5_000_000n, totalKobo: 5_000_000n, productName: `Mixed ${runId}` }] }
+      }
+    });
+    await prisma.payment.create({
+      data: {
+        orderId: mixedOrder.id, provider: "test", providerReference: `TEST-MIX-${runId}`,
+        idempotencyKey: `mix-pay-${runId}`, amountKobo: 5_002_000n, currency: "NGN", status: "COMPLETED"
+      }
+    });
+    // ensureWallet resolves a vendor wallet by vendorId, so a second row for the same
+    // vendor would make the service and the fixture disagree about which one holds
+    // the escrow. Reuse the existing row and fund it.
+    const mixedVendorWallet = await prisma.wallet.update({
+      where: { id: (await prisma.wallet.findFirstOrThrow({ where: { vendorId: vendor.id } })).id },
+      data: { heldKobo: { increment: 5_002_000n } }
+    });
+    await prisma.escrowHold.create({
+      data: {
+        orderId: mixedOrder.id, buyerWalletId: customerWallet.id, vendorWalletId: mixedVendorWallet.id,
+        amountKobo: 5_002_000n, status: "held", reason: "mixed fixture"
+      }
+    });
+    // The branch taken for a non-wallet provider debits the platform's available
+    // balance and the vendor's held balance.
+    await prisma.wallet.update({ where: { id: platform.id }, data: { availableKobo: { increment: 5_002_000n } } });
+
+    const mixedConversion = await prisma.affiliateConversion.create({
+      data: {
+        dedupeKey: `Order:${mixedOrder.id}`, affiliateId: profile.id, campaignId: campaign.id,
+        entityType: "Order", entityId: mixedOrder.id, ruleVersion: 1, basisType: "SUBTOTAL",
+        commissionBps: 500, basisKobo: 5_000_000n, amountKobo: 250_000n, state: "PAID",
+        ledgerReference: `AFF-COMM-${mixedOrder.id}`
+      }
+    });
+
+    const expected = [1_999_200n, 1_999_200n, 1_001_600n];
+    const amounts = [2_000_000n, 2_000_000n, 1_002_000n];
+    const deltas: bigint[] = [];
+
+    for (let index = 0; index < amounts.length; index += 1) {
+      await refundPayment({
+        orderId: mixedOrder.id, actorId: customer.id, reason: `mixed partial ${index + 1}`,
+        amountKobo: amounts[index], idempotencyKey: `mix-refund-${index}-${runId}`
+      });
+      const intent = await prisma.affiliateReversalIntent.findFirstOrThrow({
+        where: { orderId: mixedOrder.id }, orderBy: { createdAt: "desc" }
+      });
+      assert(intent.eligibleKobo === expected[index], `refund ${index + 1} eligible ${intent.eligibleKobo}, expected ${expected[index]}`);
+      deltas.push(intent.eligibleKobo!);
+      await processReversalIntents(`mixed-${index}`, 50);
+    }
+
+    const intents = await prisma.affiliateReversalIntent.count({ where: { orderId: mixedOrder.id } });
+    assert(intents === 3, `${intents} intents for three refunds`);
+    const cumulative = deltas.reduce((sum, value) => sum + value, 0n);
+    assert(cumulative === 5_000_000n, `cumulative eligible ${cumulative}, expected 5000000`);
+
+    const ops = await prisma.affiliateReversalOperation.findMany({ where: { conversionId: mixedConversion.id } });
+    const reversed = ops.reduce((sum, op) => sum + op.requestedKobo, 0n);
+    assert(reversed === 250_000n, `commission reversed ${reversed}, expected the original 250000`);
+    return `deltas ${deltas.join("+")} = ${cumulative}; commission reversed ${reversed}`;
+  });
+
   const width = Math.max(...rows.map((row) => row.name.length));
   for (const row of rows) console.log(`${row.status.padEnd(4)} ${row.name.padEnd(width)}  ${row.detail}`);
   const failed = rows.filter((row) => row.status === "FAIL").length;
