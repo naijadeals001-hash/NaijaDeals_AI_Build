@@ -52,7 +52,7 @@ const VIEWPORTS = [
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     check(`${vp.name}: no horizontal overflow`, overflow <= 0, `${overflow}px`);
 
-    const composer = await page.locator("#aura-composer-input").count();
+    const composer = await page.locator("#aura-composer-mobile, #aura-composer-desktop").count();
     check(`${vp.name}: composer present`, composer === 1);
 
     if (vp.name === "mobile") {

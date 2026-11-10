@@ -18,7 +18,9 @@ export function AuraMessages({
   onRetry,
   onSave,
   onConfirmAction,
-  actionState
+  actionState,
+  variant = "mobile",
+  hideCards = false
 }: {
   messages: ChatMessage[];
   status: string | null;
@@ -26,6 +28,10 @@ export function AuraMessages({
   onSave: (messageId: string, saved: boolean) => void;
   onConfirmAction: (action: PendingAction) => void;
   actionState: { id: string; state: "idle" | "confirming" | "done" | "failed" } | null;
+  /** Desktop renders a smaller avatar and tighter type to fit the mockup's density. */
+  variant?: "desktop" | "mobile";
+  /** When the surface already shows the results as cards, suppress the inline row. */
+  hideCards?: boolean;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -45,7 +51,7 @@ export function AuraMessages({
           </div>
         ) : (
           <div key={message.id} className="flex gap-3">
-            <AuraOrb size={30} className="mt-0.5 shrink-0" />
+            <AuraOrb size={variant === "desktop" ? 24 : 30} className="mt-0.5 shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-aura-muted">Aura</p>
               {message.streaming && status && (
@@ -55,7 +61,7 @@ export function AuraMessages({
                 </p>
               )}
               <div
-                className="mt-1 space-y-2 text-[15px] leading-relaxed text-aura-text/90"
+                className={`mt-1 space-y-2 leading-relaxed text-aura-text/90 ${variant === "desktop" ? "text-[14.5px]" : "text-[15px]"}`}
                 aria-live={message.streaming ? "off" : "polite"}
               >
                 {message.content.split("\n").filter(Boolean).map((line, lineIndex) => {
@@ -85,7 +91,7 @@ export function AuraMessages({
                 )}
               </div>
 
-              {message.cards && message.cards.length > 0 && <AuraCardRow cards={message.cards} />}
+              {!hideCards && message.cards && message.cards.length > 0 && <AuraCardRow cards={message.cards} />}
 
               {message.action && (
                 <AuraActionCard

@@ -51,7 +51,7 @@ async function signIn(browser, viewport) {
   await page.waitForTimeout(1000);
 
   // --- real conversation ---
-  await page.fill("#aura-composer-input", "What stays are available in Abuja?");
+  await page.fill("#aura-composer-mobile, #aura-composer-desktop", "What stays are available in Abuja?");
   await page.click('button[aria-label="Send message"]');
 
   // The user's message appears immediately.
@@ -124,7 +124,7 @@ async function signIn(browser, viewport) {
   // --- stop generation ---
   const stopPage = await ctx.newPage();
   await stopPage.goto(`${BASE}/aura-ai`, { waitUntil: "networkidle" });
-  await stopPage.fill("#aura-composer-input", "Write a long description of Nigerian street food culture, at least 400 words.");
+  await stopPage.fill("#aura-composer-mobile, #aura-composer-desktop", "Write a long description of Nigerian street food culture, at least 400 words.");
   await stopPage.click('button[aria-label="Send message"]');
   await stopPage.waitForTimeout(2500);
   const stopVisible = await stopPage.getByRole("button", { name: /stop generating/i }).count();
@@ -143,7 +143,7 @@ async function signIn(browser, viewport) {
   await mobile.page.waitForTimeout(800);
   const overflow = await mobile.page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   check("mobile has no horizontal overflow", overflow <= 0, `${overflow}px`);
-  const composerVisible = await mobile.page.locator("#aura-composer-input").isVisible();
+  const composerVisible = await mobile.page.locator("#aura-composer-mobile, #aura-composer-desktop").isVisible();
   check("mobile composer is visible above the bottom bar", composerVisible);
   await mobile.page.screenshot({ path: path.join(OUT, "aura-conversation-mobile.png"), fullPage: false });
   await mobile.ctx.close();

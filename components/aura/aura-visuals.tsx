@@ -10,11 +10,11 @@ export function AuraOrb({ size = 40, className = "" }: { size?: number; classNam
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/generated/aura/aura-orb.webp"
+      src="/generated/aura/aura-orb-exact.webp"
       alt=""
       width={size}
       height={size}
-      className={`rounded-full object-cover ${className}`}
+      className={`object-contain ${className}`}
       style={{ width: size, height: size }}
       aria-hidden="true"
     />

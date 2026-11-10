@@ -1,10 +1,15 @@
 {
-  "generatedAt": "2026-11-09T23:51:46.598Z",
+  "generatedAt": "2026-11-10T01:52:49.965Z",
   "assets": {
     "aura-abuja-city": "generated/aura/aura-abuja-city.webp",
     "aura-abuja-meal": "generated/aura/aura-abuja-meal.webp",
     "aura-abuja-ride": "generated/aura/aura-abuja-ride.webp",
     "aura-abuja-stay": "generated/aura/aura-abuja-stay.webp",
+    "aura-hero-wash": "generated/aura/aura-hero-wash.webp",
+    "aura-mockup-abuja-stay": "generated/aura/aura-mockup-abuja-stay.webp",
+    "aura-mockup-jollof": "generated/aura/aura-mockup-jollof.webp",
+    "aura-mockup-ride": "generated/aura/aura-mockup-ride.webp",
+    "aura-orb-v2": "generated/aura/aura-orb-v2.webp",
     "aura-orb": "generated/aura/aura-orb.webp",
     "aura-orbit-backdrop": "generated/aura/aura-orbit-backdrop.webp",
     "aura-professional": "generated/aura/aura-professional.webp",

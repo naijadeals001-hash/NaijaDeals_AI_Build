@@ -38,6 +38,25 @@ was executed and what was observed.
 - Used here for reference research and inspecting the approved mockups (a Playwright
   canvas sampler reads their real colours — see `scripts/aura-mockup-palette.cjs`).
 
+### Correction to an earlier claim about REA browser capture
+
+Earlier I wrote that REA "only handles binaries, bundles and firmware". That
+over-generalised from this host's configuration. The verified facts:
+
+- `rea --help` lists `capture-web-screenshot`, `capture-browser-scenario`,
+  `analyze-web-bundle` and `compare`, so those capabilities exist in REA.
+- `rea capabilities` on this host reports **37 available / 16 unavailable
+  operations across 8 providers**: `rea-artifact-graph`, `rea-dotnet-static`,
+  `sqlite`, `ghidra`, `hopper`, `ida`, `kuna`, `native-macos`.
+- **No browser or web-capture provider is enabled in this installation**, so the
+  web-capture commands are not usable here (the native ones additionally require
+  macOS).
+
+Conclusion, stated narrowly: REA is installed and functional for artifact and
+code analysis on this machine, but browser screenshot capture is not available
+through it *in this configuration*. Screen capture and pixel comparison are done
+with Playwright + Pixelmatch, which is what this directive asks for regardless.
+
 ## ECC — not installed
 
 - No ECC skill, binary or MCP entry on this host. Recorded as unavailable; the

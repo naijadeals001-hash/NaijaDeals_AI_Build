@@ -73,7 +73,39 @@ const ASSETS = [
     kind: "vertical",
     component: "Shop recommendation card / Explore",
     prompt: `${STYLE}. A Nigerian woman comparing two smartphones in a bright modern electronics shop in Lagos, warm wood shelves, natural light, candid and editorial`
-  }
+  },
+  {
+    id: "aura-mockup-abuja-stay",
+    kind: "vertical",
+    component: "Aura mobile/desktop stay card (mockup subject)",
+    prompt: `${STYLE}. A serene Abuja boutique hotel courtyard at dusk: cream two-storey colonial-style building with arched balconies, tall palm trees, warm lanterns, cushioned wicker lounge chairs and a small lit fountain, lush tropical planting, cosy golden evening light`
+  },
+  {
+    id: "aura-mockup-jollof",
+    kind: "vertical",
+    component: "Aura mobile/desktop meal card (mockup subject)",
+    prompt: `${STYLE}. Close overhead shot of a large plate of Nigerian jollof rice with charred beef suya skewers on top, a small bowl of red pepper sauce and sliced red onions, fried plantain at the edge, dark rustic table, rich warm colour, appetising steam`
+  },
+  {
+    id: "aura-mockup-ride",
+    kind: "vertical",
+    component: "Aura desktop ride card (mockup subject)",
+    prompt: `${STYLE}. A dark grey executive sedan parked on a tree-lined Abuja boulevard, the golden National Mosque dome and slender minarets visible in the background, wide clean road, bright late-afternoon light, three-quarter front view`
+  },
+  {
+    id: "aura-hero-wash",
+    kind: "brand",
+    component: "Aura hero background wash (mobile + desktop)",
+    prompt:
+      "An abstract very dark forest-green gradient background with a faint soft emerald light bloom in the upper right and subtle diagonal silk-like folds, almost black at the edges, no objects, no text, cinematic and subtle, wide"
+  },
+  {
+    id: "aura-orb-v3",
+    kind: "brand",
+    component: "Aura AI orb — matched to the owner's reference image",
+    prompt:
+      "A glossy abstract orb built from only THREE wide, thick, flat ribbon bands that loop around it in broad sweeping arcs, vivid luminous emerald green ribbons with bright mint highlights on their inner curves, dark near-black gaps between the bands, thin warm golden light spilling along a few ribbon edges near the top-left and lower-right, translucent glassy material, soft green glow halo behind the orb, plain very dark green background with no texture, gently organic slightly irregular silhouette rather than a perfect sphere, square composition with generous margin, premium 3D render, no text"
+  },
 ];
 
 const reg = fs.existsSync(REGISTRY_PATH) ? JSON.parse(fs.readFileSync(REGISTRY_PATH, "utf8")) : { assets: [] };

@@ -90,7 +90,7 @@ async function searchStays(_ctx: ToolContext, args: Record<string, unknown>): Pr
       maxGuests: true,
       images: { take: 1, orderBy: { sortOrder: "asc" }, select: { url: true } }
     },
-    take: 6,
+    take: 3,
     orderBy: { nightlyKobo: "asc" }
   });
 
@@ -149,7 +149,7 @@ async function searchMeals(_ctx: ToolContext, args: Record<string, unknown>): Pr
       dishes: true,
       menuItems: { where: { published: true, available: true }, take: 3, orderBy: { priceKobo: "asc" }, select: { name: true, priceKobo: true } }
     },
-    take: 6
+    take: 3
   });
 
   const cards: AuraCard[] = restaurants.map((r) => {
@@ -178,7 +178,7 @@ async function searchMeals(_ctx: ToolContext, args: Record<string, unknown>): Pr
 async function searchProducts(_ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
   const query = asString(args.query, 80);
   if (!query) throw new ApiError(400, "invalid_argument", "A search term is required.");
-  const take = asNumber(args.take, 1, 8, 5) ?? 5;
+  const take = asNumber(args.take, 1, 6, 4) ?? 4;
   const max = asNumber(args.maxPriceNaira, 0, 50_000_000);
 
   const products = await prisma.product.findMany({
@@ -322,7 +322,7 @@ async function recommendListening(_ctx: ToolContext, args: Record<string, unknow
       ...(query ? { OR: [{ title: { contains: query, mode: "insensitive" } }, { genre: { contains: query, mode: "insensitive" } }] } : {})
     },
     select: { title: true, slug: true, genre: true, artist: { select: { name: true } } },
-    take: 4
+    take: 2
   });
 
   const shows = ["podcast", "any"].includes(kind)
