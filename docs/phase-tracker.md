@@ -540,3 +540,31 @@ a named scenario passing.
 3. Full `node scripts/aura-acceptance.cjs` against the current preview has not been re-run.
 4. Owner visual acceptance of the desktop and mobile Aura surfaces is still outstanding and is
    not something a test runner can supply.
+
+### Correction to the correction — visual QA executed count (2026-11-10)
+
+The previous entry said `aura-visual-qa.cjs` had "12 check sites" and that the handoff's 28 was
+wrong. That was itself wrong. Twelve is the number of `check()` call sites in the source; the
+loop runs three viewports, so a clean run executes **28 checks**. The historical **28/28 was
+accurate**; only the total of 72 and the admin suite's 6 were unsound.
+
+Verified today with the refactored script:
+
+| Command | Result | Exit |
+|---|---|---|
+| `node scripts/aura-visual-qa.cjs` | 28 passed, 0 failed | **0** |
+| `AURA_VISUAL_FORCE_FAIL="no horizontal overflow" …` | 27 passed, 1 failed (forced) | **1** |
+| `AURA_VISUAL_THROW=1 …` | 1 passed, 1 failed (injected exception) | **1** |
+| `AURA_VISUAL_FORCE_FAIL=… node scripts/aura-acceptance.cjs` | 2/4 suites passed | **1** |
+
+Browser cleanup: Chrome process count was 151 before and 151 after the parent run — the browser
+closed on a failing path. Resource lifecycle now uses `try/finally` per context and per browser,
+and the exit status is set after cleanup.
+
+### Current full-runner state — 2/4 suites
+
+The parent run surfaced a failure that had not been reported: **Browser journey FAILED**
+(35s, exit non-zero), alongside the injected Visual QA failure. Orchestration and Control Center
+passed. So the current preview does not satisfy the browser journey, and that is a real
+acceptance gap, not a test artefact. It must be diagnosed against the running build before any
+further "4/4" claim is made.
