@@ -68,35 +68,61 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "basisKobo must be positive and no greater than the recorded basis.", code: "invalid_basis" }, { status: 400 });
     }
     const paid = body.basisType === "TOTAL" ? basisKobo : conversion.basisKobo;
-    const priorEligible = await prisma.affiliateReversalIntent.aggregate({
-      where: { orderId: intent.orderId, eligibleKobo: { not: null }, id: { not: intent.id } },
-      _sum: { eligibleKobo: true }
-    });
-    const alreadyAllocated = priorEligible._sum.eligibleKobo ?? 0n;
-    const remaining = conversion.basisKobo - alreadyAllocated;
-    const share = paid > 0n ? (intent.amountKobo * basisKobo) / paid : 0n;
-    const eligibleKobo = share < remaining ? share : remaining;
-    if (eligibleKobo <= 0n) {
-      return NextResponse.json({ error: "Computed allocation is zero.", code: "invalid_allocation" }, { status: 400 });
-    }
 
-    const claimed = await prisma.affiliateReversalIntent.updateMany({
-      where: { id: intent.id, state: "FAILED", lastError: { startsWith: "review_required:" } },
-      data: { eligibleKobo, allocationPolicy: `review_${body.basisType.toLowerCase()}_v1`, state: "PENDING", attempts: 0, lastError: null }
+    // Claim, allocation and audit are one transaction that locks the conversion.
+    // Claiming a single intent does not protect the shared cumulative limit: two
+    // reviewers resolving DIFFERENT intents on the same conversion would each read
+    // the same "already allocated" figure and jointly exceed the basis.
+    const outcome = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "AffiliateConversion" WHERE id = ${conversion.id} FOR UPDATE`;
+
+      const priorEligible = await tx.affiliateReversalIntent.aggregate({
+        where: { orderId: intent.orderId, eligibleKobo: { not: null }, id: { not: intent.id } },
+        _sum: { eligibleKobo: true }
+      });
+      const alreadyAllocated = priorEligible._sum.eligibleKobo ?? 0n;
+      const remaining = conversion.basisKobo - alreadyAllocated;
+      const share = paid > 0n ? (intent.amountKobo * basisKobo) / paid : 0n;
+      const eligibleKobo = share < remaining ? share : remaining;
+
+      const claimed = await tx.affiliateReversalIntent.updateMany({
+        where: { id: intent.id, state: "FAILED", lastError: { startsWith: "review_required:" } },
+        // A legitimately zero eligible share closes the intent with an audited
+        // no-adjustment outcome rather than rejecting it forever. It is left FAILED
+        // so the processor never picks it up, which is correct: nothing is owed.
+        data: eligibleKobo <= 0n
+          ? { eligibleKobo: 0n, allocationPolicy: `review_${body.basisType!.toLowerCase()}_v1`, state: "FAILED", lastError: "review_resolved:no_adjustment" }
+          : { eligibleKobo, allocationPolicy: `review_${body.basisType!.toLowerCase()}_v1`, state: "PENDING", attempts: 0, lastError: null }
+      });
+      if (claimed.count === 0) return { ok: false as const, code: "contended" };
+
+      return { ok: true as const, eligibleKobo };
     });
-    if (claimed.count === 0) {
+
+    if (!outcome.ok) {
       return NextResponse.json({ error: "Another reviewer resolved this intent.", code: "contended" }, { status: 409 });
     }
 
     await recordAudit({
       actorId: admin.id,
-      action: "affiliate.reversal_review_resolved",
+      action: outcome.eligibleKobo <= 0n ? "affiliate.reversal_review_closed_no_adjustment" : "affiliate.reversal_review_resolved",
       entity: "AffiliateReversalIntent",
       entityId: intent.id,
-      metadata: { basisType: body.basisType, basisKobo: basisKobo.toString(), eligibleKobo: eligibleKobo.toString(), evidenceRef: body.evidenceRef, reason: body.reason }
+      metadata: {
+        basisType: body.basisType,
+        basisKobo: basisKobo.toString(),
+        eligibleKobo: outcome.eligibleKobo.toString(),
+        evidenceRef: body.evidenceRef,
+        reason: body.reason
+      }
     });
 
-    return NextResponse.json({ id: intent.id, eligibleKobo: eligibleKobo.toString(), policy: `review_${body.basisType.toLowerCase()}_v1`, requeued: true });
+    return NextResponse.json({
+      id: intent.id,
+      eligibleKobo: outcome.eligibleKobo.toString(),
+      policy: `review_${body.basisType.toLowerCase()}_v1`,
+      requeued: outcome.eligibleKobo > 0n
+    });
   } catch (error) {
     return jsonError(error);
   }
