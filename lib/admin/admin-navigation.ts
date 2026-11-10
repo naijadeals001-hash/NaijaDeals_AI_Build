@@ -19,6 +19,7 @@ export const ADMIN_TABS = [
   "escrow",
   "disputes",
   "naijapay",
+  "aura",
   "freight",
   "logistics",
   "users",
@@ -135,7 +136,10 @@ export const MODULE_TABS: Record<AdminModule, Array<{ id: AdminTab; label: strin
     { id: "audit", label: "Audit log" }
   ],
   fresh: [{ id: "overview", label: "Overview" }],
-  aura: [{ id: "overview", label: "Overview" }]
+  aura: [
+    { id: "overview", label: "Overview" },
+    { id: "aura", label: "Aura AI" }
+  ]
 };
 
 export const TAB_LABELS: Record<AdminTab, string> = {
@@ -151,6 +155,7 @@ export const TAB_LABELS: Record<AdminTab, string> = {
   escrow: "Escrow",
   disputes: "Disputes",
   naijapay: "NaijaPay controls",
+  aura: "Aura AI",
   freight: "Freight",
   logistics: "Logistics providers",
   homepage: "Homepage designs",

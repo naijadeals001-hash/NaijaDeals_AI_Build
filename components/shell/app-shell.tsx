@@ -43,6 +43,13 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
     return <>{children}</>;
   }
 
+  // Aura AI ships its own full-height dark shell (sidebar, composer, bottom nav)
+  // per the approved mockup. Wrapping it in the light ecosystem chrome would
+  // break that layout and duplicate navigation.
+  if (pathname?.startsWith("/aura-ai")) {
+    return <>{children}</>;
+  }
+
   // NaijaStream is a full-bleed music app with its own sidebar, player and
   // mobile navigation (components/stream/stream-shell.tsx).
   if (pathname?.startsWith("/naijastream")) {

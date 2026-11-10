@@ -69,6 +69,21 @@ const config: Config = {
           mint: "#F5F8F6",
           ink: "#13231C",
           "ink-muted": "#64736A"
+        },
+        // Aura AI — measured from the approved dark mockups, not guessed.
+        aura: {
+          canvas: "#081410",
+          sidebar: "#041814",
+          surface: "#0C201C",
+          composer: "#182C28",
+          highlight: "#104430",
+          mint: "#78F8CC",
+          "mint-deep": "#0B3A2C",
+          gold: "#D9BC63",
+          text: "#F5F8F6",
+          muted: "#9DB0A6",
+          border: "#1B2F28",
+          danger: "#F87171"
         }
       },
       fontFamily: {

@@ -42,3 +42,5 @@ android/keystore.properties
 public/generated/home/originals/
 # NaijaPay: PNG originals kept locally for re-encoding; the app serves WebP.
 public/generated/pay/originals/
+# Aura AI: PNG originals kept locally; the app serves WebP.
+public/generated/aura/originals/

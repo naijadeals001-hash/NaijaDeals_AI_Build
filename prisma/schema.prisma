@@ -206,6 +206,8 @@ model User {
   gigReviewsWritten ServiceReview[] @relation("GigReviewAuthor")
   gigReviewsReceived ServiceReview[] @relation("GigReviewProfessional")
   gigDisputesOpened ServiceDispute[] @relation("GigDisputeOpener")
+  auraConversations AuraConversation[]
+  auraPreferences   AuraPreference?
 }
 
 model Role {
@@ -3096,4 +3098,157 @@ model EscrowMilestone {
 
   @@index([payerUserId, status])
   @@index([payeeUserId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Aura AI
+//
+// Conversations belong to one user and are only ever read back through a
+// session-derived user id. Messages store the rendered content plus a
+// structured attachments payload (tool results, cards, plan references), so a
+// refresh reconstructs the conversation exactly as it appeared.
+// ---------------------------------------------------------------------------
+
+enum AuraRole {
+  user
+  assistant
+  tool
+}
+
+enum AuraActionStatus {
+  proposed
+  awaiting_confirmation
+  executing
+  completed
+  failed
+  cancelled
+  expired
+}
+
+model AuraConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String   @default("New conversation")
+  /// Archived conversations stay readable but leave the active list.
+  archived  Boolean  @default(false)
+  /// A short rolling summary used to bound the context sent to the model.
+  summary   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  messages  AuraMessage[]
+  actions   AuraAction[]
+
+  @@index([userId, archived, updatedAt])
+}
+
+model AuraMessage {
+  id             String          @id @default(cuid())
+  conversationId String
+  role           AuraRole
+  content        String
+  /// Tool results, recommendation cards and plan references rendered under the
+  /// message. JSON so the UI can restore without re-running anything.
+  attachments    Json?
+  /// Names of tools the model called for this turn, for the status trail.
+  toolNames      String[]        @default([])
+  /// Saved items appear in the user's Saved view.
+  saved          Boolean         @default(false)
+  /// Token usage reported by the provider for this turn, when available.
+  promptTokens   Int?
+  completionTokens Int?
+  createdAt      DateTime        @default(now())
+  conversation   AuraConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([saved])
+}
+
+/// A consequential action Aura prepared and the user must confirm.
+///
+/// The row freezes the exact proposal (recipient/service, options, amount) so a
+/// confirmation can be checked against what was shown. If anything material
+/// changed between proposal and confirmation, execution is refused and a new
+/// proposal is required.
+model AuraAction {
+  id             String           @id @default(cuid())
+  conversationId String
+  userId         String
+  tool           String
+  status         AuraActionStatus @default(proposed)
+  /// Human-readable summary of exactly what will happen.
+  summary        String
+  /// Frozen tool input, hashed so the confirmed request must match it.
+  input          Json
+  inputHash      String
+  /// Price/recipient snapshot shown on the review card.
+  reviewSnapshot Json
+  /// Set when executed; the authoritative service's reference.
+  resultReference String?
+  resultPayload  Json?
+  failureReason  String?
+  /// Caller-supplied key so a repeated confirm cannot execute twice.
+  idempotencyKey String           @unique
+  expiresAt      DateTime
+  confirmedAt    DateTime?
+  executedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  conversation   AuraConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([conversationId])
+}
+
+/// A saved cross-vertical plan (for example a Saturday in Abuja).
+model AuraPlan {
+  id             String      @id @default(cuid())
+  userId         String
+  conversationId String?
+  title          String
+  city           String?
+  status         String      @default("draft")
+  /// Ordered components: stay, meal, ride, with their chosen records and status.
+  components     Json
+  notes          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([userId, updatedAt])
+}
+
+/// Personalisation and privacy choices. Every field defaults to off/empty:
+/// Aura does not remember anything the user did not ask it to remember.
+model AuraPreference {
+  userId              String    @id
+  personalised        Boolean   @default(false)
+  useSavedPreferences Boolean   @default(false)
+  /// Free-form preferences the user typed or approved, nothing inferred.
+  savedPreferences    Json?
+  /// City/area the user selected manually; device location is never stored.
+  preferredCity       String?
+  preferredArea       String?
+  updatedAt           DateTime  @updatedAt
+  user                User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+/// Per-turn usage and failure record for the Control Center. Stores counts and
+/// latency only — never message content.
+model AuraUsage {
+  id            String   @id @default(cuid())
+  userId        String?
+  conversationId String?
+  provider      String
+  model         String
+  status        String
+  promptTokens  Int      @default(0)
+  completionTokens Int   @default(0)
+  latencyMs     Int      @default(0)
+  toolCalls     Int      @default(0)
+  errorCode     String?
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status, createdAt])
 }

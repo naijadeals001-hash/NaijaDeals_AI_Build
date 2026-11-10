@@ -7659,6 +7659,223 @@
       "usageReferences": [
         "components/pay/pay-landing.tsx"
       ]
+    },
+    {
+      "id": "pay-hero-phone",
+      "vertical": "pay",
+      "kind": "hero",
+      "component": "NaijaPay hero — subject holding a phone with a payment confirmation",
+      "prompt": "Photorealistic premium Nigerian fintech brand photography, natural soft daylight, editorial advertising quality, rich saturated greens and warm gold accents, shallow depth of field, no text, no words, no letters, no watermark, no logo, no user interface. Portrait hero: a smiling Nigerian woman with long braided hair in a plain green blouse, holding a black smartphone in both hands and looking down at it warmly, standing on Lagos waterfront with the Third Mainland Bridge and skyline behind her, soft golden-hour light, shallow depth of field, generous headroom above her",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/pay/pay-hero-phone.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/cfeda946d47b.png",
+      "generatedAt": "2026-11-09T22:28:37.156Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/pay/pay-landing.tsx"
+      ]
+    },
+    {
+      "id": "pay-bills-woman",
+      "vertical": "pay",
+      "kind": "feature",
+      "component": "Pay Bills card in the home screen preview",
+      "prompt": "Photorealistic premium Nigerian fintech brand photography, natural soft daylight, editorial advertising quality, rich saturated greens and warm gold accents, shallow depth of field, no text, no words, no letters, no watermark, no logo, no user interface. A Nigerian woman with braided hair in a mustard-yellow top smiling at her phone in a bright modern interior with green plants and a doorway, warm natural light, portrait crop, friendly and relaxed",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/pay/pay-bills-woman.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/331c79b605e5.png",
+      "generatedAt": "2026-11-09T22:29:08.165Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/pay/pay-landing.tsx"
+      ]
+    },
+    {
+      "id": "pay-phone-bills",
+      "vertical": "pay",
+      "kind": "feature",
+      "component": "Pay Bills preview tile",
+      "prompt": "Photorealistic premium Nigerian fintech brand photography, natural soft daylight, editorial advertising quality, rich saturated greens and warm gold accents, shallow depth of field, no text, no words, no letters, no watermark, no logo, no user interface. A Nigerian woman smiling while using her phone outdoors on a bright street, green foliage behind her, portrait crop, cheerful everyday moment",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/pay/pay-phone-bills.png",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/bdc55eade68f.png",
+      "generatedAt": "2026-11-09T22:29:39.125Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/pay/pay-landing.tsx"
+      ]
+    },
+    {
+      "id": "aura-orb",
+      "vertical": "aura",
+      "kind": "brand",
+      "component": "Aura AI ribbon orb (hero, desktop and mobile)",
+      "prompt": "A luminous abstract sphere made of interwoven emerald-green glass ribbons edged in polished gold, floating against a near-black forest-green background, soft rim light, subtle glow, premium 3D render, centred, generous negative space around it, elegant and modern brand mark",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-orb.png",
+      "taskId": "fb6fb19f0def8a47f2b0f6942cf1e7ac",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/ef25743df8e8.png",
+      "generatedAt": "2026-11-09T23:48:07.480Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/aura"
+      ]
+    },
+    {
+      "id": "aura-orbit-backdrop",
+      "vertical": "aura",
+      "kind": "brand",
+      "component": "Discover hero backdrop",
+      "prompt": "An abstract dark background of fine concentric arcs and concentric rings in very dark emerald green, with two thin glowing mint and gold light trails, minimal, cinematic, no subject, wide landscape",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-orbit-backdrop.png",
+      "taskId": "746fd5f43236b8bdf0c688d28687c5fe",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/08fe03fdc5d6.png",
+      "generatedAt": "2026-11-09T23:48:23.257Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/aura"
+      ]
+    },
+    {
+      "id": "aura-abuja-stay",
+      "vertical": "aura",
+      "kind": "vertical",
+      "component": "Abuja stay recommendation card",
+      "prompt": "Photorealistic premium Nigerian editorial photography, natural light, rich saturated colour, shallow depth of field, no text, no words, no letters, no watermark, no logo, no user interface. A peaceful upscale short-let terrace in Abuja with tall palms, warm outdoor lounge seating, lanterns and a lit pool at dusk, elegant cream-coloured architecture with arched balconies",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-abuja-stay.png",
+      "taskId": "8fa6b9eff70a23bd70b09dc40ee50b52",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/7e3bfb5d6bed.png",
+      "generatedAt": "2026-11-09T23:48:54.749Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/aura"
+      ]
+    },
+    {
+      "id": "aura-abuja-meal",
+      "vertical": "aura",
+      "kind": "vertical",
+      "component": "Nigerian meal recommendation card",
+      "prompt": "Photorealistic premium Nigerian editorial photography, natural light, rich saturated colour, shallow depth of field, no text, no words, no letters, no watermark, no logo, no user interface. Overhead close shot of Nigerian party jollof rice with grilled suya skewers, red onion rings and fried plantain on a dark ceramic plate, rich orange and red tones, steam rising, restaurant-quality plating",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-abuja-meal.png",
+      "taskId": "66856df7131ae14fd82ba3a04e215aa2",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/3b6bc4736ad7.png",
+      "generatedAt": "2026-11-09T23:49:25.791Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/aura"
+      ]
+    },
+    {
+      "id": "aura-abuja-ride",
+      "vertical": "aura",
+      "kind": "vertical",
+      "component": "Ride recommendation card",
+      "prompt": "Photorealistic premium Nigerian editorial photography, natural light, rich saturated colour, shallow depth of field, no text, no words, no letters, no watermark, no logo, no user interface. A clean dark sedan parked on a wide Abuja road with the National Mosque's golden dome and minarets softly visible in the background under warm late-afternoon light, palm trees along the road",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-abuja-ride.png",
+      "taskId": "ef0e197f8464585bf39aa06f08793fc8",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/e8e873371a26.png",
+      "generatedAt": "2026-11-09T23:49:56.690Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/aura"
+      ]
+    },
+    {
+      "id": "aura-abuja-city",
+      "vertical": "aura",
+      "kind": "vertical",
+      "component": "Explore Abuja discovery panel",
+      "prompt": "Photorealistic premium Nigerian editorial photography, natural light, rich saturated colour, shallow depth of field, no text, no words, no letters, no watermark, no logo, no user interface. Abuja skyline at golden hour with the Aso Rock outcrop in the background, wide avenues, greenery and modern buildings, warm light, cinematic wide landscape",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-abuja-city.png",
+      "taskId": "663bc36cbdfede45351df73b487d3612",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/471a0c8892d3.png",
+      "generatedAt": "2026-11-09T23:50:27.546Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/aura"
+      ]
+    },
+    {
+      "id": "aura-professional",
+      "vertical": "aura",
+      "kind": "vertical",
+      "component": "Gigs professional card",
+      "prompt": "Photorealistic premium Nigerian editorial photography, natural light, rich saturated colour, shallow depth of field, no text, no words, no letters, no watermark, no logo, no user interface. A confident Nigerian electrician in a clean navy work shirt holding tools outside a modern Lagos home, friendly expression, bright daylight, portrait crop",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-professional.png",
+      "taskId": "5fc066c608030417f5cfd461400b2a1d",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/6b930271ea53.png",
+      "generatedAt": "2026-11-09T23:50:58.402Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/aura"
+      ]
+    },
+    {
+      "id": "aura-shopping",
+      "vertical": "aura",
+      "kind": "vertical",
+      "component": "Shop recommendation card / Explore",
+      "prompt": "Photorealistic premium Nigerian editorial photography, natural light, rich saturated colour, shallow depth of field, no text, no words, no letters, no watermark, no logo, no user interface. A Nigerian woman comparing two smartphones in a bright modern electronics shop in Lagos, warm wood shelves, natural light, candid and editorial",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-shopping.png",
+      "taskId": "320ab98b8a103803460dee44e2104190",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/8c6be3e5dc7f.png",
+      "generatedAt": "2026-11-09T23:51:29.313Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/aura"
+      ]
     }
   ]
 }

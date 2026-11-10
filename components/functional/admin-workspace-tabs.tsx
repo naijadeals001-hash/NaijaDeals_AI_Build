@@ -5,6 +5,7 @@ import { AdminFoodOrders } from "./admin-food-orders";
 import { AdminStorefrontPanel } from "./admin-storefront-panel";
 import { AdminReconciliationPanel } from "./admin-reconciliation-panel";
 import { AdminNaijaPayPanel } from "./admin-naijapay-panel";
+import { AdminAuraPanel } from "./admin-aura-panel";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -1407,6 +1408,10 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
 
   if (tab === "naijapay") {
     return <AdminNaijaPayPanel />;
+  }
+
+  if (tab === "aura") {
+    return <AdminAuraPanel />;
   }
 
   if (tab === "payments") {

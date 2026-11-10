@@ -112,7 +112,7 @@ const moduleConfigs: Record<AdminModule, {
   aura: {
     icon: <Sparkles className="h-6 w-6" />,
     title: "Aura AI Admin",
-    description: "AI assistant roadmap. No model provider or workflow is configured.",
+    description: "Aura AI: provider status, tool registry and usage. Private conversation content is never shown here.",
     accentColor: "text-[#A855F7]",
     bgColor: "bg-[#A855F7]/10",
     geographyOptions: GEO_OPTIONS
