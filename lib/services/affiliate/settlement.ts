@@ -183,34 +183,51 @@ export async function reverseConversion(input: {
 
   if (!settled) {
     const updated = await prisma.$transaction(async (tx) => {
+      // Same protection as the settled path: lock the conversion, then re-read
+      // state and cumulative inside the transaction so concurrent unsettled
+      // reversals cannot each pass the bound.
+      await tx.$queryRaw`SELECT id FROM "AffiliateConversion" WHERE id = ${conversion.id} FOR UPDATE`;
+      const current = await tx.affiliateConversion.findUniqueOrThrow({ where: { id: conversion.id } });
+      const lockedSum = await tx.affiliateReversalOperation.aggregate({
+        where: { conversionId: conversion.id },
+        _sum: { requestedKobo: true }
+      });
+      const alreadyReversedKobo = lockedSum._sum.requestedKobo ?? 0n;
+      if (alreadyReversedKobo + input.amountKobo > conversion.amountKobo) return "exceeds_original" as const;
+      if (!["TRACKED", "VALIDATING", "APPROVED", "PAYABLE", "DISPUTED"].includes(current.state)) return "state_not_reversible" as const;
+
       const claimed = await tx.affiliateConversion.updateMany({
         where: { id: conversion.id, state: { in: ["TRACKED", "VALIDATING", "APPROVED", "PAYABLE", "DISPUTED"] } },
         data: {
-          state: remaining === 0n ? "REVERSED" : conversion.state,
+          state: remaining === 0n ? "REVERSED" : current.state,
           reason: input.reason.slice(0, 300)
         }
       });
-      if (claimed.count === 0) return false;
+      if (claimed.count === 0) return "state_not_reversible" as const;
+
       if (input.releaseBudget !== false) {
         await tx.affiliateCampaign.update({
           where: { id: conversion.campaignId },
           data: { spentKobo: { decrement: input.amountKobo } }
         });
       }
-      return true;
+
+      // The operation row belongs inside the transaction: outside it, a crash
+      // between update and insert would leave a reversal with no record.
+      await tx.affiliateReversalOperation.create({
+        data: {
+          opKey,
+          conversionId: conversion.id,
+          intentId: input.idempotencyKey ?? null,
+          requestedKobo: input.amountKobo,
+          recoveredKobo: 0n,
+          debtKobo: input.amountKobo,
+          actorId: input.actorId
+        }
+      });
+      return "ok" as const;
     });
-    if (!updated) return { reversed: false, reason: "state_not_reversible" };
-    await prisma.affiliateReversalOperation.create({
-      data: {
-        opKey,
-        conversionId: conversion.id,
-        intentId: input.idempotencyKey ?? null,
-        requestedKobo: input.amountKobo,
-        recoveredKobo: 0n,
-        debtKobo: input.amountKobo,
-        actorId: input.actorId
-      }
-    });
+    if (updated !== "ok") return { reversed: false, reason: updated };
     await recordAudit({
       actorId: input.actorId,
       action: "affiliate.commission_reversed_unsettled",
