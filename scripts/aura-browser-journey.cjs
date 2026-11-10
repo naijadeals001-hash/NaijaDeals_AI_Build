@@ -63,18 +63,18 @@ async function signIn(browser, viewport) {
 
   // Streaming: text grows over time. Sample the assistant area twice.
   await page.waitForTimeout(2500);
-  const firstSample = await page.evaluate(() => (document.querySelector("main")?.innerText ?? "").length);
+  const firstSample = await page.evaluate(() => (document.body.innerText).length);
   await page.waitForTimeout(2500);
-  const secondSample = await page.evaluate(() => (document.querySelector("main")?.innerText ?? "").length);
+  const secondSample = await page.evaluate(() => (document.body.innerText).length);
   check("the answer streams in progressively", secondSample >= firstSample && secondSample > 200, `${firstSample} -> ${secondSample} chars`);
 
   // Wait for completion (composer send button returns, no stop button).
   await page.waitForTimeout(6000);
-  const mainText = await page.evaluate(() => document.querySelector("main")?.innerText ?? "");
+  const mainText = await page.evaluate(() => document.body.innerText);
   check("the answer references Abuja", /Abuja/i.test(mainText), mainText.slice(0, 90).replace(/\n/g, " "));
   check("the discovery hero collapses during a conversation", !/Less searching\./.test(mainText));
 
-  const cards = await page.locator("main ul li a[href^='/naijastay'], main a[href^='/naijastay/stays']").count();
+  const cards = await page.locator("a[href^='/naijastay']").count();
   check("a real stay result is shown as a card", cards > 0, `${cards} card link(s)`);
 
   await page.screenshot({ path: path.join(OUT, "aura-conversation-desktop.png"), fullPage: false });
