@@ -495,3 +495,48 @@ attribution, commission accounting on the shared ledger, fraud controls, merchan
 Center surfaces, Aura integration — is held ready and must not be built against an unverified
 assistant, because Affiliate depends on Aura's permission-scoped tools and its explanations of
 commission state.
+
+## Aura acceptance record — correction (2026-11-10)
+
+### Withdrawn
+
+The historical totals **"66 checks"** and **"72 checks"** are withdrawn. Neither is
+reproducible from the suites as they existed. The handoff table listed 24 + 28 + 14 + 6 = 72,
+but the visual QA suite contains 12 check sites, not 28, and the Control Center suite's six
+verdicts were printed without ever being counted or returned.
+
+**The historical Control Center result did not establish acceptance.** Before `15e5bfc`,
+`scripts/aura-admin-check.cjs` printed `PASS`/`FAIL` and always exited 0, so the parent runner
+recorded a failing panel as a passing suite. Any "Control Center passed" statement from that
+period carries no evidential weight.
+
+### Static sites are not executed checks
+
+| Suite | Static check sites | Failure handling |
+|---|---|---|
+| `aura-orchestration-test.ts` | 24 | accumulates failures, `process.exit(1)`, `catch` with `$disconnect` — correct |
+| `aura-visual-qa.cjs` | 12 | exited on totals, but threw into an unhandled rejection — catch added in `4068f8f` |
+| `aura-browser-journey.cjs` | 14 | `process.exit(fail === 0 ? 0 : 1)` plus `catch` — correct |
+| `aura-admin-check.cjs` | 9 | verdicts were discarded until `15e5bfc`; now recorded, totalled and exited |
+
+Static sites total 59. A site count is not an executed-test count, and neither substitutes for
+a named scenario passing.
+
+### Inspected vs executed
+
+- **Inspected by reading the source:** all four suites' failure handling (reported above).
+- **Executed today:** only the Control Center suite.
+  - `node scripts/aura-admin-check.cjs` → **9/9, exit 0**
+  - `AURA_ADMIN_FORCE_FAIL="TOOL REGISTRY" node scripts/aura-admin-check.cjs` → **8/9, exit 1**
+  - `AURA_ADMIN_FORCE_FAIL="TOOL REGISTRY" node scripts/aura-acceptance.cjs` → **exit 1**
+- **Not executed since the fixes:** orchestration, visual QA, browser journey, and therefore the
+  full runner. Their propagation is inspected, not proven.
+
+### Remaining gaps
+
+1. No forced-failure run for orchestration, visual QA or browser journey.
+2. `aura-visual-qa.cjs` cleanup on a mid-run throw still relies on process exit; a `finally`
+   around the browser handle is outstanding.
+3. Full `node scripts/aura-acceptance.cjs` against the current preview has not been re-run.
+4. Owner visual acceptance of the desktop and mobile Aura surfaces is still outstanding and is
+   not something a test runner can supply.
