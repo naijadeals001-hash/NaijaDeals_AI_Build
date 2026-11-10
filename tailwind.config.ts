@@ -88,7 +88,11 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
-        display: ["Plus Jakarta Sans", "Inter", "system-ui", "sans-serif"]
+        display: ["Plus Jakarta Sans", "Inter", "system-ui", "sans-serif"],
+        // Aura AI. The approved mockups use a neutral grotesque; the project had
+        // no webfont loaded, so system fallbacks produced different letterforms.
+        // Inter (SIL OFL 1.1, self-hosted in public/fonts) matches the reference.
+        aura: ["Inter Variable", "Inter", "Helvetica Neue", "Arial", "system-ui", "sans-serif"]
       },
       boxShadow: {
         soft: "0 18px 50px rgba(16, 24, 40, 0.08)",

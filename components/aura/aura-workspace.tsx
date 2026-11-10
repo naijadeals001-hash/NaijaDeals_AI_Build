@@ -94,7 +94,7 @@ export function AuraWorkspace({
   }, [aura]);
 
   return (
-    <div className="min-h-dvh bg-aura-canvas text-aura-text">
+    <div className="aura-type min-h-dvh bg-aura-canvas text-aura-text">
       {/* ---------------- mobile: dedicated screen from the mockup ---------------- */}
       <div className="lg:hidden">
         <AuraMobile

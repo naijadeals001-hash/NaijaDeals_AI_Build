@@ -7998,19 +7998,170 @@
       ]
     },
     {
+      "id": "aura-orb-v4",
+      "vertical": "aura",
+      "kind": "brand",
+      "component": "Aura AI orb \u2014 high-resolution replacement (the upscaled 227px copy looked broken)",
+      "prompt": "A single luminous emerald-green sphere formed from four broad glossy ribbon bands sweeping around and across it in smooth overlapping arcs, each ribbon thick translucent green glass with bright mint highlights along its inner curve and warm gold light catching two outer edges, deep dark gaps between the bands revealing the dark core, soft green light bloom behind the sphere, plain very dark forest-green background fading to near-black at the edges, perfectly centred with generous margin all round, crisp clean high-detail 3D render with smooth gradients, no text, no watermark, square composition",
+      "model": "flux-3/klein-text-to-image",
+      "size": "1K",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-orb-v4.png",
+      "taskId": "c552fa0e04d8ee1219d5b5807294e862",
+      "resultUrl": "https://tempfile.aiquickdraw.com/js/p6/f2047c6a0709.png",
+      "generatedAt": "2026-11-10T03:15:40.791Z",
+      "creditsConsumed": 1.6,
+      "costUsd": 0.01,
+      "qualityReview": "pending-owner-review",
+      "usageReferences": [
+        "components/aura"
+      ]
+    },
+    {
+      "id": "aura-card-stay",
+      "vertical": "aura",
+      "kind": "card-artwork",
+      "component": "desktop welcome card 1 (stay)",
+      "source": "design-references/approved/AuraAI/aura-desktop-dark.png",
+      "sourceType": "cropped from the owner's approved mockup (owner authorised reuse)",
+      "crop": {
+        "x": 295,
+        "y": 635,
+        "width": 300,
+        "height": 166
+      },
+      "model": "none \u2014 crop of approved artwork, no generation",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-card-stay.webp",
+      "generatedAt": "2026-11-10T00:00:00.000Z",
+      "creditsConsumed": 0,
+      "costUsd": 0,
+      "qualityReview": "crop inspected at display size; no text, badge, border or button included",
+      "usageReferences": [
+        "components/aura/aura-plan-pieces.tsx",
+        "components/aura/aura-mobile.tsx"
+      ]
+    },
+    {
+      "id": "aura-card-meal",
+      "vertical": "aura",
+      "kind": "card-artwork",
+      "component": "desktop welcome card 2 (meal)",
+      "source": "design-references/approved/AuraAI/aura-desktop-dark.png",
+      "sourceType": "cropped from the owner's approved mockup (owner authorised reuse)",
+      "crop": {
+        "x": 605,
+        "y": 635,
+        "width": 270,
+        "height": 166
+      },
+      "model": "none \u2014 crop of approved artwork, no generation",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-card-meal.webp",
+      "generatedAt": "2026-11-10T00:00:00.000Z",
+      "creditsConsumed": 0,
+      "costUsd": 0,
+      "qualityReview": "crop inspected at display size; no text, badge, border or button included",
+      "usageReferences": [
+        "components/aura/aura-plan-pieces.tsx",
+        "components/aura/aura-mobile.tsx"
+      ]
+    },
+    {
+      "id": "aura-card-ride",
+      "vertical": "aura",
+      "kind": "card-artwork",
+      "component": "desktop welcome card 3 (ride)",
+      "source": "design-references/approved/AuraAI/aura-desktop-dark.png",
+      "sourceType": "cropped from the owner's approved mockup (owner authorised reuse)",
+      "crop": {
+        "x": 894,
+        "y": 635,
+        "width": 266,
+        "height": 166
+      },
+      "model": "none \u2014 crop of approved artwork, no generation",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-card-ride.webp",
+      "generatedAt": "2026-11-10T00:00:00.000Z",
+      "creditsConsumed": 0,
+      "costUsd": 0,
+      "qualityReview": "crop inspected at display size; no text, badge, border or button included",
+      "usageReferences": [
+        "components/aura/aura-plan-pieces.tsx",
+        "components/aura/aura-mobile.tsx"
+      ]
+    },
+    {
+      "id": "aura-card-stay-mobile",
+      "vertical": "aura",
+      "kind": "card-artwork",
+      "component": "mobile welcome card 1 (stay)",
+      "source": "design-references/approved/AuraAI/aura-mobile-dark.png",
+      "sourceType": "cropped from the owner's approved mockup (owner authorised reuse)",
+      "crop": {
+        "x": 16,
+        "y": 845,
+        "width": 400,
+        "height": 160
+      },
+      "model": "none \u2014 crop of approved artwork, no generation",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-card-stay-mobile.webp",
+      "generatedAt": "2026-11-10T00:00:00.000Z",
+      "creditsConsumed": 0,
+      "costUsd": 0,
+      "qualityReview": "crop inspected at display size; no text, badge, border or button included",
+      "usageReferences": [
+        "components/aura/aura-plan-pieces.tsx",
+        "components/aura/aura-mobile.tsx"
+      ]
+    },
+    {
+      "id": "aura-card-meal-mobile",
+      "vertical": "aura",
+      "kind": "card-artwork",
+      "component": "mobile welcome card 2 (meal)",
+      "source": "design-references/approved/AuraAI/aura-mobile-dark.png",
+      "sourceType": "cropped from the owner's approved mockup (owner authorised reuse)",
+      "crop": {
+        "x": 460,
+        "y": 845,
+        "width": 400,
+        "height": 160
+      },
+      "model": "none \u2014 crop of approved artwork, no generation",
+      "status": "generated",
+      "storagePath": "generated/aura/aura-card-meal-mobile.webp",
+      "generatedAt": "2026-11-10T00:00:00.000Z",
+      "creditsConsumed": 0,
+      "costUsd": 0,
+      "qualityReview": "crop inspected at display size; no text, badge, border or button included",
+      "usageReferences": [
+        "components/aura/aura-plan-pieces.tsx",
+        "components/aura/aura-mobile.tsx"
+      ]
+    },
+    {
       "id": "aura-orb-exact",
       "vertical": "aura",
       "kind": "brand",
-      "component": "Aura AI brand orb (owner-supplied reference, upscaled)",
-      "source": "owner-supplied reference image design-references/approved/AuraAI/aura-orb-reference.png (227x170)",
-      "treatment": "lanczos upscale to 1024x1024 with sharpen; WebP q90",
-      "model": "none (no generation \u2014 this is the owner's own image)",
+      "component": "Aura AI orb (hero mark, web + mobile)",
+      "source": "design-references/approved/AuraAI/sections/mobile-hero.png",
+      "sourceType": "cropped from the owner's approved section crop (owner authorised reuse)",
+      "crop": {
+        "x": 620,
+        "y": 160,
+        "width": 340,
+        "height": 310
+      },
+      "model": "none \u2014 crop of approved artwork, no generation",
       "status": "generated",
       "storagePath": "generated/aura/aura-orb-exact.webp",
-      "generatedAt": "2026-11-09T23:00:00.000Z",
+      "generatedAt": "2026-11-10T00:00:00.000Z",
       "creditsConsumed": 0,
       "costUsd": 0,
-      "qualityReview": "owner-supplied",
+      "qualityReview": "exact artwork from the approved mockup; includes the orb's own green aura",
       "usageReferences": [
         "components/aura/aura-visuals.tsx",
         "components/aura/aura-desktop.tsx",

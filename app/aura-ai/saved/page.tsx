@@ -29,7 +29,7 @@ export default async function Page() {
   ]);
 
   return (
-    <main className="min-h-dvh bg-aura-canvas px-4 py-6 text-aura-text sm:px-8">
+    <main className="aura-type min-h-dvh bg-aura-canvas px-4 py-6 text-aura-text sm:px-8">
       <div className="mx-auto max-w-3xl">
         <Link href="/" className="mb-4 inline-block text-xs font-semibold text-aura-muted hover:text-aura-mint">← NaijaDeals</Link>
         <header className="flex items-center gap-3">

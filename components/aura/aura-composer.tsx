@@ -60,7 +60,7 @@ export function AuraComposer({
         }}
         className={
           desktop
-            ? "flex items-end gap-2 rounded-2xl border border-aura-mint/45 bg-aura-composer py-1.5 pl-4 pr-1.5 focus-within:border-aura-mint"
+            ? "flex items-center gap-2 rounded-xl border border-aura-mint bg-aura-composer py-2 pl-5 pr-2 focus-within:border-aura-mint"
             : "flex items-center gap-2 rounded-2xl border border-aura-border bg-aura-composer px-3 py-2"
         }
       >
@@ -80,7 +80,7 @@ export function AuraComposer({
             }
           }}
           placeholder={placeholder}
-          className="min-h-[38px] flex-1 resize-none self-center bg-transparent py-2 text-[15px] leading-snug text-white placeholder:text-white/55 focus:outline-none"
+          className="min-h-[42px] flex-1 resize-none self-center bg-transparent py-2.5 text-[15.5px] leading-snug text-white placeholder:text-white/55 focus:outline-none"
         />
         {desktop && <span className="mb-2 h-6 w-px shrink-0 bg-white/20" aria-hidden="true" />}
         <button
@@ -116,7 +116,7 @@ export function AuraComposer({
             disabled={!value.trim()}
             aria-label="Send message"
             className={`mb-0.5 flex shrink-0 items-center justify-center bg-aura-mint text-aura-canvas transition hover:brightness-105 disabled:opacity-45 ${
-              desktop ? "h-9 w-10 rounded-lg" : "h-10 w-10 rounded-full"
+              desktop ? "h-11 w-11 rounded-lg" : "h-10 w-10 rounded-full"
             }`}
           >
             <Send className="h-[18px] w-[18px]" aria-hidden="true" />

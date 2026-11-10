@@ -106,6 +106,13 @@ const ASSETS = [
     prompt:
       "A glossy abstract orb built from only THREE wide, thick, flat ribbon bands that loop around it in broad sweeping arcs, vivid luminous emerald green ribbons with bright mint highlights on their inner curves, dark near-black gaps between the bands, thin warm golden light spilling along a few ribbon edges near the top-left and lower-right, translucent glassy material, soft green glow halo behind the orb, plain very dark green background with no texture, gently organic slightly irregular silhouette rather than a perfect sphere, square composition with generous margin, premium 3D render, no text"
   },
+  {
+    id: "aura-orb-v4",
+    kind: "brand",
+    component: "Aura AI orb — high-resolution replacement (the upscaled 227px copy looked broken)",
+    prompt:
+      "A single luminous emerald-green sphere formed from four broad glossy ribbon bands sweeping around and across it in smooth overlapping arcs, each ribbon thick translucent green glass with bright mint highlights along its inner curve and warm gold light catching two outer edges, deep dark gaps between the bands revealing the dark core, soft green light bloom behind the sphere, plain very dark forest-green background fading to near-black at the edges, perfectly centred with generous margin all round, crisp clean high-detail 3D render with smooth gradients, no text, no watermark, square composition"
+  },
 ];
 
 const reg = fs.existsSync(REGISTRY_PATH) ? JSON.parse(fs.readFileSync(REGISTRY_PATH, "utf8")) : { assets: [] };

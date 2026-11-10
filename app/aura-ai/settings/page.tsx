@@ -12,7 +12,7 @@ export default async function Page() {
   const user = await getSessionUser();
   if (!user) redirect("/login?next=/aura-ai/settings");
   return (
-    <main className="min-h-dvh bg-aura-canvas px-4 py-6 text-aura-text sm:px-8">
+    <main className="aura-type min-h-dvh bg-aura-canvas px-4 py-6 text-aura-text sm:px-8">
       <div className="mx-auto max-w-2xl">
         <Link href="/" className="mb-4 inline-block text-xs font-semibold text-aura-muted hover:text-aura-mint">← NaijaDeals</Link>
         <header className="flex items-center gap-3">

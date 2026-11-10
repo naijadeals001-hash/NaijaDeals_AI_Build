@@ -54,8 +54,8 @@ const TARGETS = [
   {
     name: "mobile",
     reference: "aura-mobile-dark.png",
-    logical: { width: 896, height: 1754 },
-    dpr: 1,
+    logical: { width: 390, height: 763 },
+    dpr: 2.297,
     composer: "#aura-composer-mobile",
     // Bands derived from the mobile reference: header 0-42, hero 70-393,
     // tiles 445-516, bubble 590-670, cards 800-1120, plan 1260-1530,
@@ -115,17 +115,16 @@ function regionDiff(refData, implData, width, height, [x0, y0, x1, y1]) {
     });
     const page = await ctx.newPage();
     await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
-    await page.evaluate(async (useFixture) => {
-      const account = useFixture
-        ? { email: "aura-mockup-fixture@naijadeals.test", password: process.env.AURA_FIXTURE_PASSWORD ?? "" }
-        : { email: "naijapay-test-sender@naijadeals.test", password: "NaijaPayTest123!" };
+    await page.evaluate(async (account) => {
       await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(account)
       });
-    }, USE_FIXTURE);
+    }, USE_FIXTURE
+      ? { email: "aura-mockup-fixture@naijadeals.test", password: process.env.AURA_FIXTURE_PASSWORD ?? "" }
+      : { email: "naijapay-test-sender@naijadeals.test", password: process.env.NAIJAPAY_TEST_PASSWORD ?? "" });
     await page.goto(`${BASE}/aura-ai`, { waitUntil: "networkidle" });
 
     if (!process.argv.includes("--conversation")) {

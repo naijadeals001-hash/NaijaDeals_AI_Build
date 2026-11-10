@@ -94,7 +94,7 @@ export function AuraDesktop({
   const assistantMessages = aura.messages.filter((m) => m.role === "assistant");
 
   return (
-    <div className="flex min-h-dvh bg-aura-canvas text-white">
+    <div className="flex min-h-dvh bg-aura-canvas aura-type text-white">
       {/* ================= sidebar (225px) ================= */}
       <aside className="flex w-[261px] shrink-0 flex-col border-r border-white/[0.06] bg-aura-sidebar px-4 py-4">
         <Link href="/aura-ai" className="flex items-center gap-2.5">
@@ -202,12 +202,12 @@ export function AuraDesktop({
           </div>
         </div>
 
-        <div className="mx-auto w-full max-w-[930px] flex-1 px-8 pb-10 pt-[46px]">
+        <div className="w-full flex-1 px-[29px] pb-10 pt-[46px]">
           {/* ---------- hero ---------- */}
           {/* Hero: the orb sits in its own green halo that dissolves into the
               canvas, and the headline runs under its left edge — one continuous
               field with no card or visible boundary, exactly as the mockup. */}
-          <section className="relative min-h-[226px]">
+          <section className="relative min-h-[196px]">
             <div
               className="pointer-events-none absolute -right-[72px] -top-[34px] h-[330px] w-[330px]"
               style={{ background: "radial-gradient(circle at 55% 45%, rgba(16,92,64,0.55) 0%, rgba(8,40,28,0.35) 42%, rgba(6,21,18,0) 72%)" }}
@@ -234,11 +234,11 @@ export function AuraDesktop({
               <br />
               More living.
             </h1>
-            <p className="relative mt-[54px] max-w-[560px] text-[17.5px] text-white/80">One conversation connects your NaijaDeals world.</p>
+            <p className="relative mt-[34px] max-w-[560px] text-[17.5px] text-white/80">One conversation connects your NaijaDeals world.</p>
           </section>
 
           {/* ---------- composer ---------- */}
-          <div className="mt-[15px]">
+          <div className="mt-[8px]">
             <AuraComposer
               onSend={(t) => void aura.send(t)}
               onStop={aura.stop}
@@ -279,7 +279,7 @@ export function AuraDesktop({
               they never claim a property, restaurant or ride was found, priced or
               verified. Real AI results render separately, below. */}
           {!lastUser && (
-            <section className="mt-5">
+            <section className="mt-[4px]">
               <div className="flex items-center gap-2.5">
                 <SparkMark size={26} />
                 <h2 className="text-[19px] font-extrabold">Let&apos;s make a day of it.</h2>
@@ -290,22 +290,29 @@ export function AuraDesktop({
 
               <div className="mt-4 grid grid-cols-3 gap-3">
                 {([
-                  { vertical: "stay" as const, title: "A peaceful Abuja stay", image: "/generated/aura/aura-mockup-abuja-stay.webp", href: "/naijastay?city=Abuja" },
-                  { vertical: "meal" as const, title: "Local flavours, delivered", image: "/generated/aura/aura-mockup-jollof.webp", href: "/naijaeats" },
-                  { vertical: "ride" as const, title: "A ride on your schedule", image: "/generated/aura/aura-mockup-ride.webp", href: "/naijadrive" }
+                  { vertical: "stay" as const, title: "A peaceful Abuja stay", image: "/generated/aura/aura-card-stay.webp", href: "/naijastay?city=Abuja" },
+                  { vertical: "meal" as const, title: "Local flavours, delivered", image: "/generated/aura/aura-card-meal.webp", href: "/naijaeats" },
+                  { vertical: "ride" as const, title: "A ride on your schedule", image: "/generated/aura/aura-card-ride.webp", href: "/naijadrive" }
                 ] as const).map((entry) => (
                   <AuraHeroCard key={entry.vertical} vertical={entry.vertical} title={entry.title} image={entry.image} href={entry.href} />
                 ))}
               </div>
 
               <div className="mt-4 flex items-center gap-3">
-                <Link
-                  href="/naijastay?city=Abuja"
+                <button
+                  type="button"
+                  onClick={() => void aura.send("Plan a relaxed Saturday in Abuja for two.")}
                   className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-4 py-2.5 text-[13px] font-medium text-white/90 hover:border-aura-mint/50"
                 >
-                  <Sparkles className="h-4 w-4" aria-hidden="true" /> Explore a weekend
+                  <Sparkles className="h-4 w-4" aria-hidden="true" /> Refine my plan
+                </button>
+                <Link
+                  href="/naijastay?city=Abuja"
+                  className="inline-flex items-center gap-2 rounded-lg bg-aura-mint px-5 py-2.5 text-[13px] font-bold text-aura-canvas hover:brightness-105"
+                >
+                  <Check className="h-4 w-4" aria-hidden="true" /> Review options
                 </Link>
-                <p className="text-[12.5px] text-white/65">Browse first — Aura can search live listings once you ask.</p>
+                <p className="text-[12.5px] text-white/65">Nothing is booked until you confirm.</p>
               </div>
             </section>
           )}
@@ -335,7 +342,7 @@ export function AuraDesktop({
                     { card: ride, vertical: "ride" as const, label: "No ride quote yet", href: "/naijadrive" }
                   ] as const).map((entry) =>
                     entry.card ? (
-                      <AuraHeroCard key={entry.vertical} vertical={entry.vertical} title={entry.card.title} image={entry.card.image ?? "/generated/aura/aura-mockup-abuja-stay.webp"} href={entry.card.href ?? entry.href} />
+                      <AuraHeroCard key={entry.vertical} vertical={entry.vertical} title={entry.card.title} image={entry.card.image ?? "/generated/aura/aura-card-stay.webp"} href={entry.card.href ?? entry.href} />
                     ) : (
                       <AuraEmptyCard key={entry.vertical} vertical={entry.vertical} label={entry.label} />
                     )

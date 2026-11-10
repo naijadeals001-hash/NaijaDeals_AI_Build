@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowUp, Bookmark, Car, Compass, ListChecks, Menu, MessageCircle, Paperclip, Mic, MoreHorizontal, ShoppingBag, UtensilsCrossed } from "lucide-react";
 import { useAura } from "@/lib/aura/client";
@@ -40,17 +40,9 @@ export function AuraMobile({
   const [draft, setDraft] = useState("");
   const [showPlan, setShowPlan] = useState(true);
   const [notice, setNotice] = useState("");
-  // The approved mockup opens on a conversation that already has results. When a
-  // signed-in user arrives at an empty chat we ask Aura the demo question so the
-  // screen shows the same shape — with their own real results, not hardcoded ones.
-  const seeded = useRef(false);
-  useEffect(() => {
-    if (seeded.current || !user) return;
-    seeded.current = true;
-    if (aura.messages.length === 0 && !aura.streaming) {
-      void aura.send("Plan a relaxed Saturday in Abuja for two.");
-    }
-  }, [aura, user]);
+  // Aura opens on the welcome composition and stays there until the person asks
+  // something. Auto-sending a prompt on load started a conversation the user never
+  // requested and replaced the discovery screen with a wall of text.
   const active = aura.messages.length > 0;
 
   const lastUser = [...aura.messages].reverse().find((m) => m.role === "user");
@@ -67,11 +59,11 @@ export function AuraMobile({
   }
 
   return (
-    <div className="min-h-dvh bg-aura-canvas text-white">
+    <div className="min-h-dvh bg-aura-canvas aura-type text-white">
       {/* ---------- header ---------- */}
-      <header className="flex items-center justify-between px-4 pt-3">
+      <header className="flex items-center justify-between px-4 pt-[18px]">
         <button type="button" onClick={onOpenMenu} aria-label="Open menu" className="rounded-lg p-1.5">
-          <Menu className="h-6 w-6" aria-hidden="true" />
+          <Menu className="h-[22px] w-[22px]" aria-hidden="true" />
         </button>
         <Link href="/aura-ai" className="flex items-center gap-2">
           <SparkleMark size={30} />
@@ -89,10 +81,10 @@ export function AuraMobile({
         </Link>
       </header>
 
-      <div className="overflow-x-clip px-4 pb-[178px]">
+      <div className="overflow-x-clip px-4 pb-[190px]">
         {/* ---------- discovery ---------- */}
         {!active ? (
-          <section className="relative mt-3 min-h-[150px]">
+          <section data-aura="hero" className="relative mt-[8px]">
             <div
               className="pointer-events-none absolute -right-10 -top-8 h-[230px] w-[230px]"
               style={{ background: "radial-gradient(circle at 55% 45%, rgba(16,92,64,0.55) 0%, rgba(8,40,28,0.32) 42%, rgba(6,21,18,0) 74%)" }}
@@ -112,15 +104,15 @@ export function AuraMobile({
               }}
               aria-hidden="true"
             />
-            <span className="relative inline-flex rounded-full border border-aura-gold px-3 py-[5px] text-[11px] font-bold uppercase tracking-[0.13em] text-aura-gold">
+            <span className="relative inline-flex rounded-full border border-aura-gold px-[10px] py-[4px] text-[10px] font-bold uppercase tracking-[0.08em] text-aura-gold">
               Built around your world
             </span>
-            <h1 className="relative mt-2.5 whitespace-nowrap font-display text-[33px] font-extrabold leading-[1.04] tracking-[-0.03em]">
+            <h1 className="relative mt-[11px] font-extrabold text-[27px] leading-[1.06] tracking-[-0.03em]">
               Less searching.
               <br />
               More living.
             </h1>
-            <p className="relative mt-2.5 text-[15px] leading-snug text-white/85">One conversation. Your NaijaDeals world.</p>
+            <p className="relative mt-[7px] text-[13px] leading-snug text-white/85">One conversation. Your NaijaDeals world.</p>
           </section>
         ) : (
           /* Conversation state: no large hero, just the identity line. */
@@ -131,16 +123,16 @@ export function AuraMobile({
         )}
 
         {/* ---------- four service tiles ---------- */}
-        <div className="mt-5 grid grid-cols-4 gap-2.5">
+        <div data-aura="tiles" className="mt-[8px] grid grid-cols-4 gap-[5px]">
           {TILES.map((tile) => (
             <button
               key={tile.key}
               type="button"
               onClick={() => (tile.key === "more" ? (window.location.href = tile.href) : void aura.send(tile.prompt))}
-              className="flex flex-col items-center gap-2 rounded-xl border border-aura-border bg-aura-surface/50 py-3.5 transition active:scale-[0.98]"
+              className="flex h-[46px] flex-col items-center justify-center gap-[3px] rounded-[8px] border border-aura-border bg-aura-surface/55 transition active:scale-[0.98]"
             >
-              <tile.icon className="h-6 w-6 text-aura-gold" aria-hidden="true" />
-              <span className="text-[14px] font-bold">{tile.label}</span>
+              <tile.icon className="h-[15px] w-[15px] text-aura-gold" aria-hidden="true" />
+              <span className="text-[10.5px] font-semibold text-white/90">{tile.label}</span>
             </button>
           ))}
         </div>
@@ -150,7 +142,7 @@ export function AuraMobile({
           <div className="mt-5">
             {lastUser && (
               <div className="flex items-start gap-2.5">
-                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-aura-gold/60 bg-aura-highlight text-xs font-bold text-aura-mint">
+                <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border border-aura-gold/60 bg-aura-highlight text-[12px] font-bold text-aura-mint">
                   {user ? user.name.slice(0, 1).toUpperCase() : "?"}
                 </span>
                 <p className="flex-1 rounded-xl border border-aura-border bg-aura-surface/60 px-4 py-3 text-[15px] leading-snug text-white">{lastUser.content}</p>
@@ -176,7 +168,7 @@ export function AuraMobile({
                 </div>
                 <p className="mt-1 text-[14px] leading-snug text-white/80">A quiet stay, great Nigerian food and a ride when you need it.</p>
 
-                <div className="mt-3 grid grid-cols-2 gap-3">
+                <div data-aura="cards" className="mt-[10px] grid grid-cols-2 gap-3">
                   {stayCard && (
                     <AuraHeroCard
                       vertical="stay"
@@ -235,36 +227,36 @@ export function AuraMobile({
             cards are fixed starting points that link into each service, not
             claims that anything was found or priced. */}
         {!active && (
-          <div className="mt-5">
-            <div className="flex items-start gap-2.5">
-              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-aura-gold/60 bg-aura-highlight text-xs font-bold text-aura-mint">
+          <div data-aura="bubble" className="mt-[14px]">
+            <div className="flex items-center gap-2">
+              <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border border-aura-gold/60 bg-aura-highlight text-[12px] font-bold text-aura-mint">
                 {user ? user.name.slice(0, 1).toUpperCase() : "?"}
               </span>
               <button
                 type="button"
                 onClick={() => void aura.send("Plan a relaxed Saturday in Abuja for two.")}
-                className="flex-1 rounded-xl border border-aura-border bg-aura-surface/60 px-4 py-3 text-left text-[15px] leading-snug text-white"
+                className="flex min-h-[30px] flex-1 items-center rounded-[15px] border border-aura-mint/25 bg-aura-surface/70 px-3 text-left text-[13px] leading-snug text-white"
               >
                 Plan a relaxed Saturday in Abuja for two.
               </button>
             </div>
 
-            <div className="mt-4 flex items-center gap-2">
+            <div data-aura="heading" className="mt-[12px] flex items-center gap-2">
               <SparkleMark size={22} />
-              <h2 className="text-[19px] font-extrabold leading-tight">Let&apos;s make a day of it.</h2>
+              <h2 className="text-[17px] font-extrabold leading-tight">Let&apos;s make a day of it.</h2>
             </div>
-            <p className="mt-1 text-[14px] leading-snug text-white/80">A quiet stay, great Nigerian food and a ride when you need it.</p>
+            <p className="mt-[2px] pl-[26px] text-[12.5px] leading-snug text-white/80">A quiet stay, great Nigerian food and a ride when you need it.</p>
 
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <AuraHeroCard vertical="stay" title="A peaceful Abuja stay" image="/generated/aura/aura-mockup-abuja-stay.webp" href="/naijastay?city=Abuja" />
-              <AuraHeroCard vertical="meal" title="Local flavours, delivered" image="/generated/aura/aura-mockup-jollof.webp" href="/naijaeats" />
+            <div data-aura="cards" className="mt-[10px] grid grid-cols-2 gap-3">
+              <AuraHeroCard vertical="stay" title="A peaceful Abuja stay" image="/generated/aura/aura-card-stay-mobile.webp" href="/naijastay?city=Abuja" />
+              <AuraHeroCard vertical="meal" title="Local flavours, delivered" image="/generated/aura/aura-card-meal-mobile.webp" href="/naijaeats" />
             </div>
 
             <div className="mt-3">
               <AuraRideStrip href="/naijadrive" />
             </div>
 
-            <div className="mt-3">
+            <div data-aura="plan" className="mt-3">
               <AuraPlanCard
                 title="Your Saturday plan"
                 steps={[
@@ -286,7 +278,7 @@ export function AuraMobile({
             e.preventDefault();
             submit();
           }}
-          className="flex items-center gap-2 rounded-2xl border border-aura-border bg-aura-composer px-3 py-2"
+          className="flex h-[40px] items-center gap-2 rounded-[12px] border border-aura-mint/45 bg-aura-composer px-3"
         >
           <button type="button" aria-label="Attach a file (not available yet)" aria-disabled="true" className="p-1 text-white/40" onClick={() => setNotice("Attachments are not supported yet.")}>
             <Paperclip className="h-5 w-5" aria-hidden="true" />
@@ -314,7 +306,7 @@ export function AuraMobile({
               type="submit"
               disabled={!draft.trim()}
               aria-label="Send message"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-aura-mint text-aura-canvas disabled:opacity-50"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-aura-mint text-aura-canvas disabled:opacity-50"
             >
               <ArrowUp className="h-5 w-5" aria-hidden="true" />
             </button>
