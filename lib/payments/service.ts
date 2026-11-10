@@ -704,9 +704,14 @@ export async function refundPayment(input: {
         select: { eligibleKobo: true }
       });
       const priorEligible = priorIntents.reduce((sum, row) => sum + (row.eligibleKobo ?? 0n), 0n);
+      // Cumulative proportional allocation, not "consume the subtotal first".
+      // A refund of the whole order includes delivery, and only the part that is
+      // inside the basis may reduce commission: eligible = requested x basis / paid.
+      const paid = order.totalKobo > 0n ? order.totalKobo : conversion.basisKobo;
+      const share = (requested * conversion.basisKobo) / paid;
       const remainingBasis = conversion.basisKobo - priorEligible;
       const capped = remainingBasis > 0n ? remainingBasis : 0n;
-      eligibleKobo = requested < capped ? requested : capped;
+      eligibleKobo = share < capped ? share : capped;
       allocationPolicy = `proportional_${conversion.basisType.toLowerCase()}_v1`;
     }
 
