@@ -28,7 +28,7 @@ async function check(name: string, run: () => Promise<string>) {
   }
 }
 
-const made = { users: [] as string[], recovery: [] as string[], conversions: [] as string[], intents: [] as string[], campaign: "", profile: "", wallet: "" };
+const made = { ops: [] as string[], users: [] as string[], recovery: [] as string[], conversions: [] as string[], intents: [] as string[], campaign: "", profile: "", wallet: "" };
 
 async function main() {
   const db = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
@@ -151,11 +151,29 @@ async function main() {
       assert(row.lastError === "no_attributed_conversion", `reason ${row.lastError}`);
       return "DONE with no_attributed_conversion, not a retry loop";
     });
+    await check("racing distinct reversal keys cannot exceed the commission", async () => {
+      // Cumulative is already 2500 of a 5000 commission, so two 2000 reversals
+      // cannot both succeed: the second would take the total to 6500.
+      const { reverseConversion } = await import("../lib/services/affiliate/settlement");
+      const results = await Promise.allSettled([
+        reverseConversion({ actorId: null, conversionId: conversion.id, amountKobo: 2_000n, reason: "race a", idempotencyKey: `race-a-${runId}` }),
+        reverseConversion({ actorId: null, conversionId: conversion.id, amountKobo: 2_000n, reason: "race b", idempotencyKey: `race-b-${runId}` })
+      ]);
+      const succeeded = results.filter((r) => r.status === "fulfilled" && r.value.reversed).length;
+      const ops = await prisma.affiliateReversalOperation.findMany({ where: { conversionId: conversion.id } });
+      const total = ops.reduce((sum, op) => sum + op.requestedKobo, 0n);
+      assert(total <= conversion.amountKobo, `operations total ${total} exceeds commission ${conversion.amountKobo}`);
+      assert(succeeded === 1, `${succeeded} reversals succeeded, expected exactly 1`);
+      made.ops = ops.map((op) => op.id);
+      return `${succeeded} succeeded, operations total ${total} of ${conversion.amountKobo}`;
+    });
+
   } finally {
     const txs = await prisma.walletTransaction.findMany({ where: { walletId: made.wallet }, select: { id: true } });
     await prisma.ledgerEntry.deleteMany({ where: { OR: [{ walletId: made.wallet }, { transactionId: { in: txs.map((t) => t.id) } }] } });
     await prisma.walletTransaction.deleteMany({ where: { id: { in: txs.map((t) => t.id) } } });
     await prisma.affiliateRecovery.deleteMany({ where: { affiliateId: profile.id } });
+    await prisma.affiliateReversalOperation.deleteMany({ where: { conversionId: conversion.id } });
     await prisma.affiliateReversalIntent.deleteMany({ where: { id: { in: made.intents } } });
     await prisma.affiliateConversion.deleteMany({ where: { affiliateId: profile.id } });
     await prisma.affiliateProfile.deleteMany({ where: { id: profile.id } });
