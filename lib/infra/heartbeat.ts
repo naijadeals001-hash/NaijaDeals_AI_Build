@@ -1,4 +1,5 @@
 import { cacheGetJson, cacheIncrement, cacheSetJson } from "./cache";
+import { queuePrefix } from "./queue";
 import { infraConfig } from "./config";
 
 /**
@@ -9,8 +10,18 @@ import { infraConfig } from "./config";
  * different answers instead of one optimistic one.
  */
 
-const KEY = "worker:heartbeat";
+const LEGACY_KEY = "worker:heartbeat";
 const TTL_SECONDS = 90;
+
+/**
+ * Heartbeat key is namespaced by the queue prefix, so a test worker running as
+ * `nd-test` cannot make the development health endpoint report a live worker.
+ * The unprefixed key is still written on the default namespace and still read
+ * as a fallback, so a worker started before this change keeps reporting.
+ */
+export function heartbeatKey(): string {
+  return `${queuePrefix()}:worker:heartbeat`;
+}
 
 export type Heartbeat = { at: string; pid: number; host: string; queues: string[]; starts: number };
 
@@ -35,11 +46,15 @@ export async function writeHeartbeat(queues: string[]): Promise<boolean> {
     queues,
     starts: await workerStartCount()
   };
-  return cacheSetJson(KEY, beat, TTL_SECONDS);
+  const written = await cacheSetJson(heartbeatKey(), beat, TTL_SECONDS);
+  if (queuePrefix() === "nd") await cacheSetJson(LEGACY_KEY, beat, TTL_SECONDS);
+  return written;
 }
 
 export async function readHeartbeat(): Promise<Heartbeat | null> {
-  return cacheGetJson<Heartbeat>(KEY);
+  const namespaced = await cacheGetJson<Heartbeat>(heartbeatKey());
+  if (namespaced) return namespaced;
+  return cacheGetJson<Heartbeat>(LEGACY_KEY);
 }
 
 /** True only when a worker has written the key recently enough to be alive. */
