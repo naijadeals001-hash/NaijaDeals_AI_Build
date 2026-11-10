@@ -2661,3 +2661,31 @@ test identity.
 4. Control Center screens over the existing admin APIs.
 5. Guest attribution: nullable attribution reference on `Order`, frozen at checkout.
 6. Aura adapter on the `lib/aura/test-provider.ts` pattern.
+
+## Refund → reversal integration: fixture requirements (2026-11-10, HEAD 6d167b0)
+
+Discovered by reading `refundPayment`, so the next attempt does not have to
+rediscover them.
+
+`refundPayment` requires an `Order` with:
+- `paymentStatus` in `paid` | `partially_refunded` | `refund_pending`
+  (it throws `not_paid` otherwise, and `already_refunded` when `refunded`),
+- `refundedKobo` honoured for the remaining balance,
+- at least one `Payment` in `COMPLETED`,
+- an `EscrowHold` row when the order was escrowed, because the full-refund branch
+  updates it to `refunded`,
+- vendor and order items, because the refund ledger entries and optional restock
+  reference them.
+
+The intent is written in the same transaction as `Refund` reaching `COMPLETED`,
+keyed `refund:<refundId>`. The processor claims it on the notification sweep in
+`scripts/infra-worker.ts`.
+
+Still unproven, in priority order:
+1. `refundPayment` → intent → processor → adjustment (the deliverable that has
+   not been built; every processor test creates its intent directly).
+2. Customer refund succeeding when affiliate processing fails.
+3. Partial refunds accumulating from frozen rules.
+4. Crash replay between posting and DONE.
+5. Concurrent unsettled reversals; settlement racing a reversal.
+6. Caller-side identity through real refund and retry entry points.
