@@ -50,6 +50,9 @@ async function check(name: string, run: () => Promise<string>) {
   }
 }
 
+let mixedOrderId = "";
+let mixedConversionId = "";
+
 const made = { users: [] as string[], conversions: [] as string[], intents: [] as string[], campaign: "", profile: "", order: "", vendor: "", product: "" };
 
 async function main() {
@@ -438,6 +441,8 @@ async function main() {
       }
     });
 
+    mixedOrderId = mixedOrder.id;
+    mixedConversionId = mixedConversion.id;
     const expected = [1_999_200n, 1_999_200n, 1_001_600n];
     const amounts = [2_000_000n, 2_000_000n, 1_002_000n];
     const deltas: bigint[] = [];
@@ -464,6 +469,24 @@ async function main() {
     const reversed = ops.reduce((sum, op) => sum + op.requestedKobo, 0n);
     assert(reversed === 250_000n, `commission reversed ${reversed}, expected the original 250000`);
     return `deltas ${deltas.join("+")} = ${cumulative}; commission reversed ${reversed}`;
+  });
+
+  await check("duplicate confirmation under mixed components adds nothing", async () => {
+    const intentsBefore = await prisma.affiliateReversalIntent.count({ where: { orderId: mixedOrderId } });
+    const opsBefore = await prisma.affiliateReversalOperation.count({ where: { conversionId: mixedConversionId } });
+    const walletBefore = (await prisma.wallet.findFirstOrThrow({ where: { userId: affiliateUser.id } })).availableKobo;
+    const debtBefore = await prisma.affiliateRecovery.aggregate({ where: { conversionId: mixedConversionId }, _sum: { amountKobo: true } });
+    await refundPayment({ orderId: mixedOrderId, actorId: customer.id, reason: "mixed partial 3", amountKobo: 1_002_000n, idempotencyKey: `mix-refund-2-${runId}` }).catch(() => undefined);
+    await processReversalIntents("mixed-dupe", 50);
+    const intentsAfter = await prisma.affiliateReversalIntent.count({ where: { orderId: mixedOrderId } });
+    const opsAfter = await prisma.affiliateReversalOperation.count({ where: { conversionId: mixedConversionId } });
+    const walletAfter = (await prisma.wallet.findFirstOrThrow({ where: { userId: affiliateUser.id } })).availableKobo;
+    const debtAfter = await prisma.affiliateRecovery.aggregate({ where: { conversionId: mixedConversionId }, _sum: { amountKobo: true } });
+    assert(intentsAfter === intentsBefore, `intents ${intentsBefore} -> ${intentsAfter}`);
+    assert(opsAfter === opsBefore, `operations ${opsBefore} -> ${opsAfter}`);
+    assert(walletAfter === walletBefore, `wallet ${walletBefore} -> ${walletAfter}`);
+    assert((debtBefore._sum.amountKobo ?? 0n) === (debtAfter._sum.amountKobo ?? 0n), "debt changed");
+    return "intents, operations, wallet and debt unchanged";
   });
 
   const width = Math.max(...rows.map((row) => row.name.length));
