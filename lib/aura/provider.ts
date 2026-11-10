@@ -54,6 +54,8 @@ export type ProviderInfo = {
   };
 };
 
+import { streamTestCompletion, testProviderEnabled } from "./test-provider";
+
 const DEFAULT_TIMEOUT_MS = 45_000;
 const MAX_ATTEMPTS = 2;
 
@@ -100,6 +102,14 @@ export type StreamOptions = {
  * streamed answer would duplicate text on screen.
  */
 export async function* streamCompletion(options: StreamOptions): AsyncGenerator<StreamEvent> {
+  // Deterministic provider for isolated tests. Configuration-only: no header,
+  // query parameter or session can select it, and a production build refuses
+  // unless the deployment is explicitly marked as the local test build.
+  if (testProviderEnabled()) {
+    yield* streamTestCompletion(options);
+    return;
+  }
+
   const key = process.env.DEEPSEEK_API_KEY;
   if (!key) {
     yield { type: "error", code: "provider_not_configured", message: "No AI provider is configured for this environment." };
