@@ -473,6 +473,14 @@ export async function cancelShipment(input: { customerId: string; shipmentId: st
   return prisma.$transaction(async (tx) => {
     await tx.logisticsShipment.update({ where: { id: shipment.id }, data: { status: "cancelled" } });
     await tx.shipmentEvent.create({ data: { shipmentId: shipment.id, status: "cancelled", label: "Cancelled", actorId: input.customerId } });
+    await enqueueIntent(tx, {
+      dedupeKey: `shipment:${shipment.id}:cancelled`,
+      eventType: "shipment.cancelled",
+      entityType: "LogisticsShipment",
+      entityId: shipment.id,
+      recipientUserId: shipment.customerId,
+      payload: { reference: shipment.reference, label: "cancelled" }
+    });
     return { cancelled: true };
   });
 }

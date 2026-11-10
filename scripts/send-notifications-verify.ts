@@ -88,15 +88,15 @@ async function main() {
       // A live worker may be consuming the queue, so this test creates its own
       // batch immediately before claiming instead of relying on older rows.
       const keys: string[] = [];
-      for (let index = 0; index < 4; index += 1) {
+      for (let index = 0; index < 6; index += 1) {
         const key = `intent:${runId}:batch:${index}`;
         keys.push(key);
         await prisma.$transaction((tx) => enqueueIntent(tx, intent(key, shipment.id, customer.id)));
       }
-      const a = await claimIntents("worker-a", 10);
-      const b = await claimIntents("worker-b", 10);
+      const a = await claimIntents("worker-a", 3);
+      const b = await claimIntents("worker-b", 3);
       const union = new Set([...a.rows.map((row) => row.id), ...b.rows.map((row) => row.id)]);
-      assert(union.size > 0, "both workers claimed nothing while a fresh batch existed");
+      assert(a.rows.length > 0 && b.rows.length > 0, `each worker must claim at least one (a=${a.rows.length} b=${b.rows.length})`);
       const overlap = a.rows.filter((row) => b.rows.some((other) => other.id === row.id));
       assert(overlap.length === 0, `${overlap.length} intents claimed twice`);
       const claimedKeys = new Set([...a.rows, ...b.rows].map((row) => row.dedupeKey));
@@ -151,6 +151,53 @@ async function main() {
       const after = await prisma.notification.count({ where: { entityId: shipment.id, eventType: "shipment.status_changed" } });
       assert(after === notes.length, `notification count changed on reprocess (${notes.length} -> ${after})`);
       return `processed=${first.processed}, reprocessed=${second.processed}, notifications=${after}`;
+    });
+
+    await check("8. provider failure leaves the shipment and its intents intact", async () => {
+      const key = `intent:${runId}:providerfail`;
+      await prisma.$transaction((tx) => enqueueIntent(tx, intent(key, shipment.id, customer.id)));
+      const savedInApp = process.env.NOTIFY_IN_APP_CHAIN;
+      const savedEmail = process.env.NOTIFY_EMAIL_CHAIN;
+      process.env.NOTIFY_IN_APP_CHAIN = "none";
+      process.env.NOTIFY_EMAIL_CHAIN = "none";
+      try {
+        await prisma.notificationIntent.updateMany({ where: { dedupeKey: key }, data: { nextAttemptAt: new Date(Date.now() - 1000) } });
+        await processIntents("worker-fail", 50);
+      } finally {
+        if (savedInApp === undefined) delete process.env.NOTIFY_IN_APP_CHAIN; else process.env.NOTIFY_IN_APP_CHAIN = savedInApp;
+        if (savedEmail === undefined) delete process.env.NOTIFY_EMAIL_CHAIN; else process.env.NOTIFY_EMAIL_CHAIN = savedEmail;
+      }
+      const row = await prisma.notificationIntent.findUnique({ where: { dedupeKey: key } });
+      assert(row?.status === "PROCESSED", `intent status ${row?.status}, expected PROCESSED`);
+      const after = await prisma.logisticsShipment.findUnique({ where: { id: shipment.id }, select: { status: true } });
+      assert(after?.status === "quoting", `shipment status changed to ${after?.status}`);
+      const queued = await prisma.notification.count({ where: { entityId: shipment.id, status: { in: ["QUEUED", "FAILED"] } } });
+      assert(queued >= 1, "no notification record was created for the intent");
+      const stillPending = await prisma.notificationIntent.count({ where: { dedupeKey: key, status: "PENDING" } });
+      assert(stillPending === 0, "intent was requeued instead of completing");
+      return "intent PROCESSED once, shipment untouched, channel failure recorded";
+    });
+
+    await check("9. cancellation by a non-owner is rejected with no intent", async () => {
+      const before = await prisma.notificationIntent.count({ where: { entityId: shipment.id, eventType: "shipment.cancelled" } });
+      let status = 0;
+      try { await cancelShipment({ customerId: stranger.id, shipmentId: shipment.id }); }
+      catch (error) { status = (error as { status?: number }).status ?? 500; }
+      assert(status === 403, `expected 403, got ${status}`);
+      const after = await prisma.notificationIntent.count({ where: { entityId: shipment.id, eventType: "shipment.cancelled" } });
+      assert(after === before, "an intent was created for a rejected request");
+      const row = await prisma.logisticsShipment.findUnique({ where: { id: shipment.id }, select: { status: true } });
+      assert(row?.status === "quoting", `shipment mutated to ${row?.status}`);
+      return "403, shipment unchanged, zero intents";
+    });
+
+    await check("10. owner cancellation writes exactly one intent", async () => {
+      await cancelShipment({ customerId: customer.id, shipmentId: shipment.id });
+      const intents = await prisma.notificationIntent.findMany({ where: { entityId: shipment.id, eventType: "shipment.cancelled" } });
+      assert(intents.length === 1, `${intents.length} cancellation intents`);
+      const row = await prisma.logisticsShipment.findUnique({ where: { id: shipment.id }, select: { status: true } });
+      assert(row?.status === "cancelled", `status ${row?.status}`);
+      return "one intent, shipment cancelled";
     });
 
   } finally {
