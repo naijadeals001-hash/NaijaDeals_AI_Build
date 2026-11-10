@@ -23,6 +23,50 @@ import { recordAudit } from "@/lib/services/core/audit.service";
 
 const TOUCH_COOKIE_TTL_DEFAULT_DAYS = 30;
 
+/**
+ * A destination is only safe if it is a same-origin absolute path.
+ *
+ * Rejecting only "http://" is not enough: protocol-relative "//host", the
+ * "/\host" and "/%5Chost" bypasses browsers normalise to "//host", encoded
+ * slashes, "javascript:" and "data:" schemes, whitespace/control characters and
+ * backslashes all reach an external origin or a script context. Validation runs
+ * at link creation AND at redirect time, because a tampered row must not produce
+ * an external redirect.
+ */
+/**
+ * A destination is only safe if it is a same-origin absolute path.
+ *
+ * Rejecting only a full URL is not enough: protocol-relative //host, a
+ * backslash after the first slash, percent-encoded slash or backslash, any
+ * scheme (javascript:, data:) and control characters all reach an external
+ * origin or a script context. Validation runs at link creation AND at
+ * redirect time, because a tampered row must not produce an external redirect.
+ */
+export function safeInternalDestination(value: string): string | null {
+  if (typeof value !== "string") return null;
+  const raw = value.trim();
+  if (!raw || raw.length > 500) return null;
+  const BS = String.fromCharCode(92);
+  for (const ch of raw) {
+    const code = ch.charCodeAt(0);
+    if (code < 32 || code === 127 || ch === " ") return null;
+    if (ch === BS) return null;
+  }
+  let decoded = raw;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+  if (decoded !== raw) {
+    if (decoded.startsWith("//") || decoded.includes(BS) || decoded.includes(":")) return null;
+  }
+  if (!raw.startsWith("/")) return null;
+  if (raw.startsWith("//")) return null;
+  if (raw[1] === "/" || raw[1] === BS) return null;
+  if (raw.includes(":")) return null;
+  return raw;
+}
 export function affiliateCode(): string {
   return randomBytes(5).toString("hex").toUpperCase();
 }
@@ -93,12 +137,13 @@ export async function createLink(input: { affiliateId: string; campaignId: strin
     throw new ApiError(409, "campaign_inactive", "That campaign is not accepting traffic.");
   }
   // Internal paths only: a link can never become an open redirect.
-  if (!input.destination.startsWith("/") || input.destination.startsWith("//")) {
+  const destination = safeInternalDestination(input.destination);
+  if (!destination) {
     throw new ApiError(400, "invalid_destination", "Destination must be an internal path such as /product/abc.");
   }
 
   return prisma.affiliateLink.create({
-    data: { affiliateId: profile.id, campaignId: campaign.id, code: affiliateCode(), destination: input.destination }
+    data: { affiliateId: profile.id, campaignId: campaign.id, code: affiliateCode(), destination }
   });
 }
 

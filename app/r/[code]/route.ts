@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { cookies } from "next/headers";
-import { resolveTouch } from "@/lib/services/affiliate/service";
+import { resolveTouch, safeInternalDestination } from "@/lib/services/affiliate/service";
 import { prisma } from "@/lib/prisma";
 import { log } from "@/lib/infra/logger";
 
@@ -54,6 +54,11 @@ export async function GET(request: NextRequest, { params }: { params: { code: st
     return NextResponse.redirect(new URL("/", request.url), 302);
   }
 
-  const destination = touch.link.destination.startsWith("/") ? touch.link.destination : "/";
+  // Re-validated at redirect time: a tampered row must not become a redirect out.
+  const destination = safeInternalDestination(touch.link.destination);
+  if (!destination) {
+    log.warn("affiliate.unsafe_destination", { linkId: touch.link.id });
+    return NextResponse.redirect(new URL("/", request.url), 302);
+  }
   return NextResponse.redirect(new URL(destination, request.url), 302);
 }
