@@ -247,6 +247,45 @@ ${out}`);
       return `requested 1000 = cash 700 + debt 300`;
     });
 
+    // --- prefix boundary -----------------------------------------------------
+    // Explicit ids on purpose: cuid generation never produces a prefix collision,
+    // so the only way to prove the boundary check is to construct one.
+    const shortId = `pfx${runId}`;
+    const longId = `${shortId}extra`;
+    const prefixParent = await prisma.affiliateConversion.create({
+      data: {
+        id: shortId, dedupeKey: `Order:pfx-a-${runId}`, affiliateId: profile.id, campaignId: campaign.id,
+        entityType: "Order", entityId: `pfx-a-${runId}`, ruleVersion: 1, commissionBps: 500,
+        basisKobo: 40_000n, amountKobo: 2_000n, state: "REVERSED", ledgerReference: "AFF-COMM-pfx-a"
+      }
+    });
+    made.conversions.push(prefixParent.id);
+    const prefixChild = await prisma.affiliateConversion.create({
+      data: {
+        id: longId, dedupeKey: `Order:pfx-b-${runId}`, affiliateId: profile.id, campaignId: campaign.id,
+        entityType: "Order", entityId: `pfx-b-${runId}`, ruleVersion: 1, commissionBps: 500,
+        basisKobo: 60_000n, amountKobo: 3_000n, state: "REVERSED", ledgerReference: "AFF-COMM-pfx-b"
+      }
+    });
+    made.conversions.push(prefixChild.id);
+    await prisma.walletTransaction.create({
+      data: { walletId: wallet.id, type: "debit", amountKobo: 400n, reference: `AFF-REV-${shortId}-legacy`, description: "parent" }
+    });
+    await prisma.walletTransaction.create({
+      data: { walletId: wallet.id, type: "debit", amountKobo: 900n, reference: `AFF-REV-${longId}-legacy`, description: "child" }
+    });
+
+    await check("prefix boundary: each conversion receives only its own evidence", async () => {
+      reconcile("--apply");
+      const parentOps = await prisma.affiliateReversalOperation.findMany({ where: { conversionId: shortId } });
+      const childOps = await prisma.affiliateReversalOperation.findMany({ where: { conversionId: longId } });
+      assert(parentOps.length === 1, `${parentOps.length} operations for the parent`);
+      assert(childOps.length === 1, `${childOps.length} operations for the child`);
+      assert(parentOps[0].requestedKobo === 400n, `parent reconstructed ${parentOps[0].requestedKobo}, expected only its own 400`);
+      assert(childOps[0].requestedKobo === 900n, `child reconstructed ${childOps[0].requestedKobo}, expected its own 900`);
+      return `parent 400 (not 1300), child 900 — neither captured the other`;
+    });
+
   } finally {
     await prisma.affiliateReversalOperation.deleteMany({ where: { conversionId: { in: made.conversions } } });
     const wallets = await prisma.wallet.findMany({ where: { userId: { in: made.users } }, select: { id: true } });
