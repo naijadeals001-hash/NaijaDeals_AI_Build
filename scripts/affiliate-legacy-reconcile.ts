@@ -57,8 +57,14 @@ async function main() {
   for (const conversion of candidates) {
     // AffiliateReversalOperation.conversionId is a bare scalar, so existing
     // operations are checked directly rather than through a relation filter.
-    const already = await prisma.affiliateReversalOperation.count({ where: { conversionId: conversion.id } });
-    if (already > 0) continue;
+    // Existing operations must not hide older unrecorded history: a conversion
+    // can have both. The reconstructed total is compared against what operations
+    // already account for, and only the difference is recorded.
+    const existingOps = await prisma.affiliateReversalOperation.aggregate({
+      where: { conversionId: conversion.id },
+      _sum: { requestedKobo: true }
+    });
+    const recordedKobo = existingOps._sum.requestedKobo ?? 0n;
     const cash = await prisma.walletTransaction.findMany({
       where: { reference: { startsWith: `AFF-REV-${conversion.id}` } },
       select: { amountKobo: true, reference: true }
@@ -78,12 +84,15 @@ async function main() {
       continue;
     }
 
+    const unrecorded = requestedKobo - recordedKobo;
+    if (unrecorded <= 0n) continue; // fully accounted for by existing operations
+
     plans.push({
       conversionId: conversion.id,
       entityId: conversion.entityId,
       cashKobo,
       debtKobo,
-      requestedKobo,
+      requestedKobo: unrecorded,
       evidence: [
         ...(cash.length ? [`${cash.length} reversal ledger entr${cash.length === 1 ? "y" : "ies"}`] : []),
         ...(debtRows.length ? [`${debtRows.length} recovery row${debtRows.length === 1 ? "" : "s"}`] : [])
@@ -113,6 +122,7 @@ async function main() {
   for (const plan of plans) {
     // Re-check inside the write so a concurrent run cannot double-insert:
     // opKey is unique on (legacy, conversion).
+    // If a legacy row already exists the difference has been recorded before.
     const existing = await prisma.affiliateReversalOperation.findUnique({
       where: { opKey: `legacy:${plan.conversionId}` }
     });
