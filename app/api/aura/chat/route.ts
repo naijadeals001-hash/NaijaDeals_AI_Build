@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, requireUser, assertSameOrigin } from "@/lib/auth/guard";
+import { checkAuraRateLimit } from "@/lib/aura/rate-limit";
 import { runTurn } from "@/lib/aura/chat";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,33 @@ export async function POST(request: NextRequest) {
   try {
     await assertSameOrigin(request);
     const user = await requireUser();
+
+    // Identity comes from the session, never the body. This runs before the
+    // body is read and before any model call, so a limited user cannot spend
+    // tokens. A chat turn is a paid call, so an unavailable limiter denies.
+    const limit = await checkAuraRateLimit(user.id);
+    if (!limit.allowed) {
+      const status = limit.unavailable ? 503 : 429;
+      return NextResponse.json(
+        {
+          error: limit.unavailable
+            ? "Aura is temporarily unable to check usage limits. Try again shortly."
+            : "You have reached the Aura message limit for this window.",
+          code: limit.unavailable ? "limiter_unavailable" : "rate_limited",
+          limit: limit.limit,
+          remaining: limit.remaining,
+          retryAfterSeconds: limit.retryAfterSeconds
+        },
+        {
+          status,
+          headers: {
+            "Retry-After": String(limit.retryAfterSeconds),
+            "X-RateLimit-Limit": String(limit.limit),
+            "X-RateLimit-Remaining": String(limit.remaining)
+          }
+        }
+      );
+    }
     const body = await request.json().catch(() => null);
 
     const message = String(body?.message ?? "").trim().slice(0, 4000);
