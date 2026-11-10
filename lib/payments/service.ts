@@ -708,10 +708,19 @@ export async function refundPayment(input: {
       // A refund of the whole order includes delivery, and only the part that is
       // inside the basis may reduce commission: eligible = requested x basis / paid.
       const paid = order.totalKobo > 0n ? order.totalKobo : conversion.basisKobo;
-      const share = (requested * conversion.basisKobo) / paid;
+      const priorGross = await tx.affiliateReversalIntent.aggregate({
+        where: { orderId: order.id },
+        _sum: { amountKobo: true }
+      });
+      // Cumulative allocation: floor(total gross refunded x basis / paid) minus what
+      // earlier refunds already allocated. Computing each refund's own share and
+      // summing them drifts; the cumulative form cannot.
+      const cumulativeGross = (priorGross._sum.amountKobo ?? 0n) + requested;
+      const cumulativeEligible = (cumulativeGross * conversion.basisKobo) / paid;
+      const delta = cumulativeEligible - priorEligible;
       const remainingBasis = conversion.basisKobo - priorEligible;
       const capped = remainingBasis > 0n ? remainingBasis : 0n;
-      eligibleKobo = share < capped ? share : capped;
+      eligibleKobo = delta < capped ? delta : capped;
       allocationPolicy = `proportional_${conversion.basisType.toLowerCase()}_v1`;
     }
 
