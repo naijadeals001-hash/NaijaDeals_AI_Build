@@ -15,6 +15,11 @@ import { processReversalIntents } from "../lib/services/affiliate/reversal-proce
  * processor and checks the committed financial effects.
  */
 
+// Fail closed: this suite writes financial records and must never run against
+// the shared development database. The guard checks the ACTUAL connected
+// database, not an environment variable.
+const REQUIRED_DB = "naijadeals_affiliate_test";
+
 const runId = randomUUID().slice(0, 8);
 const rows: { name: string; status: "PASS" | "FAIL"; detail: string }[] = [];
 function assert(condition: unknown, message: string): void {
@@ -33,6 +38,11 @@ const made = { users: [] as string[], conversions: [] as string[], intents: [] a
 async function main() {
   const db = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
   console.log("database:", db[0].db);
+  if (db[0].db !== REQUIRED_DB) {
+    console.error(`Refusing to run: connected to "${db[0].db}", expected "${REQUIRED_DB}".`);
+    await prisma.$disconnect();
+    process.exit(2);
+  }
 
   const customer = await prisma.user.create({
     data: { email: `ri-cust-${runId}@example.test`, name: "Refund Integration Customer", actorType: "CUSTOMER" }
@@ -81,10 +91,15 @@ async function main() {
       idempotencyKey: `ri-pay-${runId}`, amountKobo: 5_000_000n, currency: "NGN", status: "COMPLETED"
     }
   });
+  // A real capture leaves the funds held against the vendor wallet, which is what
+  // the refund reversal guard checks. Creating the hold without that balance is an
+  // inconsistent fixture, not a reason to relax the guard.
+  const vendorWallet = await prisma.wallet.create({
+    data: { vendorId: vendor.id, ownerType: "VENDOR", currency: "NGN", availableKobo: 0n, heldKobo: 5_000_000n }
+  });
   await prisma.escrowHold.create({
     data: {
-      orderId: order.id, buyerWalletId: customerWallet.id,
-      vendorWalletId: (await prisma.wallet.create({ data: { vendorId: vendor.id, ownerType: "VENDOR", currency: "NGN", availableKobo: 0n, heldKobo: 0n } })).id,
+      orderId: order.id, buyerWalletId: customerWallet.id, vendorWalletId: vendorWallet.id,
       amountKobo: 5_000_000n, status: "held", reason: "fixture"
     }
   });
@@ -98,6 +113,9 @@ async function main() {
   // The released-escrow branch debits the platform's AVAILABLE balance, not its
   // held balance (lib/payments/service.ts:615), so that is what the fixture must
   // fund. Measured from the persisted record rather than assumed.
+  // A disposable database starts with a zero platform wallet. Funding it here is
+  // the fixture's own escrow, and cleanup below removes it in a way that is safe
+  // after partial execution because the whole database is thrown away.
   await prisma.wallet.update({ where: { id: platform.id }, data: { availableKobo: { increment: 5_000_000n } } });
 
   // Attribution: an approved affiliate with a conversion for this order.
@@ -120,8 +138,9 @@ async function main() {
   });
   made.conversions.push(conversion.id);
 
-  try {
-    let intentId = "";
+  let intentId = "";
+  {
+   
 
     await check("refundPayment confirms the refund and writes one intent", async () => {
       const result = await refundPayment({
@@ -178,32 +197,12 @@ async function main() {
       assert(refund.status === "COMPLETED", `refund status ${refund.status}`);
       return "refund stayed COMPLETED";
     });
-  } finally {
-    const wallets = await prisma.wallet.findMany({ where: { OR: [{ userId: { in: made.users } }, { vendorId: made.vendor }] }, select: { id: true } });
-    const ids = wallets.map((row) => row.id);
-    const txs = await prisma.walletTransaction.findMany({ where: { walletId: { in: ids } }, select: { id: true } });
-    await prisma.ledgerEntry.deleteMany({ where: { OR: [{ walletId: { in: ids } }, { transactionId: { in: txs.map((t) => t.id) } }] } });
-    await prisma.walletTransaction.deleteMany({ where: { id: { in: txs.map((t) => t.id) } } });
-    await prisma.affiliateReversalOperation.deleteMany({ where: { conversionId: conversion.id } });
-    await prisma.affiliateReversalIntent.deleteMany({ where: { orderId: order.id } });
-    await prisma.affiliateRecovery.deleteMany({ where: { affiliateId: profile.id } });
-    await prisma.affiliateConversion.deleteMany({ where: { affiliateId: profile.id } });
-    await prisma.affiliateProfile.deleteMany({ where: { id: profile.id } });
-    await prisma.affiliateCampaign.deleteMany({ where: { id: campaign.id } });
-    await prisma.refund.deleteMany({ where: { orderId: order.id } });
-    await prisma.escrowHold.deleteMany({ where: { orderId: order.id } });
-    await prisma.payment.deleteMany({ where: { id: payment.id } });
-    await prisma.orderItem.deleteMany({ where: { orderId: order.id } });
-    await prisma.order.deleteMany({ where: { id: order.id } });
-    await prisma.inventoryStock.deleteMany({ where: { productId: product.id } });
-    await prisma.product.deleteMany({ where: { id: product.id } });
-    await prisma.category.deleteMany({ where: { slug: `ri-cat-${runId}` } });
-    await prisma.vendor.deleteMany({ where: { id: vendor.id } }).catch(() => undefined);
-    await prisma.auditLog.deleteMany({ where: { entityId: { in: [order.id, ...made.conversions] } } });
-    await prisma.wallet.deleteMany({ where: { id: { in: ids } } });
-    await prisma.wallet.update({ where: { id: platform.id }, data: { availableKobo: { decrement: 5_000_000n } } }).catch(() => undefined);
-    await prisma.user.deleteMany({ where: { id: { in: made.users } } });
   }
+  // No per-record teardown: the target is a disposable database whose whole point
+  // is that partial execution leaves nothing to repair. Every fixture is keyed by
+  // runId, so consecutive runs cannot collide, and drift is measured rather than
+  // compensated — the previous version subtracted a hardcoded delta from a shared
+  // balance, which is exactly how the development wallet was driven negative.
 
   const width = Math.max(...rows.map((row) => row.name.length));
   for (const row of rows) console.log(`${row.status.padEnd(4)} ${row.name.padEnd(width)}  ${row.detail}`);
