@@ -2816,8 +2816,13 @@ deployment step, so the push itself would not deploy.
 
 Verified locally: `npx tsc --noEmit` exit 0; both HTTP review suites pass twice with 0 failures;
 the browser walk passes twice on the final build. Commits waiting to be published, newest first:
-`dbac36d`, `ebbcbd1`, `b30e275`, `3a9ace1`, `53f562f` (plus the earlier unpublished backlog; the
-branch was 174 commits ahead of `e80a0f97` before these).
+`0255fa0`, `cd419c7`, `dbac36d`, `ebbcbd1`, `b30e275`, `3a9ace1`, `53f562f` (plus the earlier
+unpublished backlog; the branch was 174 commits ahead of `e80a0f97` before these).
+
+Re-checked at `57c85e6`: `gh auth status` still reports no logged-in host, the stored helpers are
+`manager` + `store`, `GITHUB_TOKEN`/`GH_TOKEN`/`GIT_ASKPASS`/`SSH_AUTH_SOCK` are unset, and a
+non-mutating `git push --dry-run` still returns `Permission ... denied to BetFuz` (403). No
+credential value was printed or read. The blocker is unchanged.
 
 Recovery once credentials with write access exist:
 
@@ -2825,3 +2830,73 @@ Recovery once credentials with write access exist:
    `e80a0f97` and a fast-forward is possible.
 2. `git push github-preservation HEAD:naijashop-marketplace` (never `--force`).
 3. `git ls-remote --heads github-preservation naijashop-marketplace` must equal local `git rev-parse HEAD`.
+
+---
+
+## 2026-11-05 — Unknown-role authorization fails closed (cd419c7)
+
+`permissionsFor` used to grant the legacy admin surface whenever no *recognised* role was present.
+That covered an explicit assignment of unknown role names, so a typo or a stale role silently
+escalated its holder to full administration. The fallback is now keyed on `roleNames(user).length
+=== 0`: only an ADMIN actor with **no role rows at all** keeps the documented legacy surface. A
+non-empty set of unknown roles grants nothing, and a recognised role plus an unknown one keeps
+exactly the recognised grant.
+
+Evidence added to `scripts/affiliate-review-authz.ts`, run twice with 0 failures:
+
+| Case | Result |
+|------|--------|
+| ADMIN with only `unknown_operator` | list 403 `permission_denied`; console page redirects to `/admin`; resolve 403; no mutation or audit |
+| ADMIN with `affiliate_reviewer` + `unknown_operator` | list 200, resolve 403 — the unknown role adds nothing |
+| ADMIN with zero roles (legacy) | resolve 200 — preserved unchanged |
+| reviewer, manager, ordinary, anonymous, admin, super_admin | all previous results unchanged |
+
+## 2026-11-05 — Campaign management and affiliate link journey (0255fa0)
+
+New surface, reusing the existing campaign, link and redirect services:
+
+- `PATCH /api/admin/affiliate-campaigns/:id` — guarded lifecycle with `affiliates:manage`,
+  conditional status update against contention, audit `affiliate.campaign_status_changed`.
+  Legal transitions: DRAFT/PAUSED → ACTIVE, ACTIVE → PAUSED, any non-ended → ENDED. ENDED is
+  terminal. Activation is refused without a commission rule, with an exhausted budget, or after
+  `effectiveTo`.
+- `/admin/affiliate-campaigns` — Control Center page and panel: create a draft, activate, pause,
+  end; read-only staff see the list without controls. Added under a new **Affiliates** navigation
+  section alongside Reversal review.
+- `/affiliate` — approved affiliates now see "Campaigns open to you", choose a campaign, enter an
+  internal destination and create a tracked link; the new link appears under "Your links".
+  `bg-brand`, `text-brand` and `text-danger` were replaced with defined tokens on this page.
+
+Evidence — `npx tsx scripts/affiliate-campaign-journey.ts`, 8 checks, run twice with 0 failures:
+
+| Case | Result |
+|------|--------|
+| Manager drafts a campaign | 201 DRAFT; absent from discovery; link creation 409 `campaign_inactive`; creation audited |
+| Activation authorization | reviewer, unknown-role ADMIN and ordinary affiliate all 403; campaign stays DRAFT |
+| Activation | 200 ACTIVE; audit `DRAFT → ACTIVE`; campaign appears in discovery |
+| Link creation | 201 with `/r/<code>`; external destination 400 `invalid_destination`; link tied to affiliate and campaign |
+| Referral redirect | 302 to the stored `/product/journey-item`; consenting touch stored; unconsented visit stored `consent:false` |
+| Pause | 200 PAUSED; removed from discovery; existing link redirects home with no new touch |
+| Illegal transitions | zero commission cannot activate (409 `invalid_commission`); ENDED cannot reopen (409 `invalid_transition`) |
+| Concurrent activation | one 200 and one 409 contended; exactly one transition audit row |
+
+Evidence — `node scripts/affiliate-campaign-ui-check.cjs`, real Chrome, run twice with 0 failures:
+a manager creates and activates a campaign through the form; an approved affiliate discovers it,
+creates a tracked `/r/<code>` link for `/product/ui-journey`, sees it under "Your links"; a consenting browser
+lands on the destination and an `AttributionTouch` with `consent:true` is stored. Screenshots are
+in the gitignored `qa-artifacts/affiliate-campaigns/`.
+
+## Backlog — explicitly still unverified
+
+- Guest (pre-signup) attribution: touches are recorded, but nothing yet joins an anonymous touch to
+  a later signup or order.
+- Aura assistance inside the affiliate surfaces.
+- Provider-failure coverage for the affiliate notification and AI paths.
+- Actual worker processing: reversal intents are driven by test hooks; a real `infra-worker` sweep
+  committing a refund intent has not been observed.
+- Unsettled-conversion concurrency and settlement-versus-reversal contention.
+- Caller-side identity propagation in worker and background paths.
+- Campaign discovery pagination: the affiliate endpoint returns all ACTIVE campaigns; bounded only
+  by the number of rows in the table.
+- Migration preflight still validates counts, not migration identity/status.
+- Publication: the preservation remote still rejects the stored credential (above).
