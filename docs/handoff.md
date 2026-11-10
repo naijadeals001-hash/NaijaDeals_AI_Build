@@ -2605,3 +2605,59 @@ errors in the untracked `scripts/send-concurrency-verify.ts`.
 
 This checkpoint was written at a hard session limit, not because a decision was
 needed or a dependency was missing.
+
+## Affiliate checkpoint (2026-11-10, HEAD 560326f)
+
+### Implemented and committed
+
+- `3ea116c` `/affiliate` page + `apply` and `me` APIs.
+- `14c2c93` `affiliates:read` / `affiliates:manage`, admin review API.
+- `560326f` campaign discovery, link creation, admin campaign APIs.
+
+### Served by the preview
+
+`/affiliate`, `/api/affiliate/apply`, `/api/affiliate/me`,
+`/api/admin/affiliates`. Build `fDvhsbmESsfoHysSSSoie` from source at `14c2c93`.
+
+### HTTP-verified
+
+login 200 → apply 200 (APPLIED) → me enrolled → admin list → approve 200
+(APPROVED, approvedAt set). Terms version `affiliate-2026-11` recorded.
+
+### Browser-verified
+
+`/affiliate` hydrates, calls `/api/affiliate/me`, renders the signed-out prompt
+and the 401 is handled as signed-out rather than as an error.
+
+### Not served — needs a rebuild before any probe is meaningful
+
+`/api/affiliate/links` (GET/POST) and `/api/admin/affiliate-campaigns`
+(GET/POST) exist only in source. Probing the old bundle returns 404 from the
+catch-all slug route, which is not an auth result.
+
+### Not built
+
+Control Center screens; campaign discovery and link-generation UI; reversal
+shortfall receivables (`AffiliateRecovery` model, migration, ledger treatment,
+idempotent collection); guest attribution frozen on the order; Aura adapter;
+the complete journey.
+
+### Development data created during verification
+
+`admin@naijadeals.local` now holds an APPROVED affiliate profile
+(`cmwalrwbi0008v4hwkajd5i4a`, display name "Owner Test"). It is development data
+and should be removed deliberately, or replaced by a dedicated ordinary-affiliate
+account, before acceptance runs — the admin account must not be the affiliate
+test identity.
+
+### Next executable actions
+
+1. `cmd //c "set NEXT_DIST_DIR=.next-pay&& npm run build"`, kill the 3015 tree,
+   re-run `scripts\preview-3015.cmd`, then confirm
+   `curl /api/affiliate/links` returns 200 rather than 404.
+2. `AffiliateRecovery` model + migration; write the shortfall row inside
+   `reverseConversion` when `recoverable < requested`.
+3. Campaign discovery and link creation in `components/affiliate/affiliate-home.tsx`.
+4. Control Center screens over the existing admin APIs.
+5. Guest attribution: nullable attribution reference on `Order`, frozen at checkout.
+6. Aura adapter on the `lib/aura/test-provider.ts` pattern.
