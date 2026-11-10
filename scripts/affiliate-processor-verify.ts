@@ -168,6 +168,74 @@ async function main() {
       return `${succeeded} succeeded, operations total ${total} of ${conversion.amountKobo}`;
     });
 
+    // A second conversion with full headroom, so idempotency can be tested
+    // without fighting the bound established above.
+    const idemOrder = `ord-idem-${runId}`;
+    const idemConversion = await prisma.affiliateConversion.create({
+      data: {
+        dedupeKey: `Order:${idemOrder}`, affiliateId: profile.id, campaignId: campaign.id,
+        entityType: "Order", entityId: idemOrder, ruleVersion: 1, commissionBps: 500,
+        basisKobo: 100_000n, amountKobo: 5_000n, state: "PAID", ledgerReference: `AFF-COMM-${idemOrder}`
+      }
+    });
+    made.conversions.push(idemConversion.id);
+    const { reverseConversion } = await import("../lib/services/affiliate/settlement");
+    const opsFor = () => prisma.affiliateReversalOperation.findMany({ where: { conversionId: idemConversion.id } });
+
+    await check("idempotency: same key retried has one financial effect", async () => {
+      const key = `idem-same-${runId}`;
+      const first = await reverseConversion({ actorId: null, conversionId: idemConversion.id, amountKobo: 1_000n, reason: "refund", idempotencyKey: key });
+      const second = await reverseConversion({ actorId: null, conversionId: idemConversion.id, amountKobo: 1_000n, reason: "refund", idempotencyKey: key });
+      assert(first.reversed && second.reversed, "a retry did not replay the committed result");
+      const ops = await opsFor();
+      assert(ops.length === 1, `${ops.length} operations after a retry, expected 1`);
+      const debt = await prisma.affiliateRecovery.findMany({ where: { conversionId: idemConversion.id } });
+      const debtTotal = debt.reduce((sum, row) => sum + row.amountKobo, 0n);
+      assert(debtTotal === 1_000n, `debt ${debtTotal}, expected 1000 once`);
+      made.recovery.push(...debt.map((row) => row.id));
+      return `one operation, one debt row of ${debtTotal}`;
+    });
+
+    await check("idempotency: different keys with identical contents both apply", async () => {
+      const before = (await opsFor()).length;
+      await reverseConversion({ actorId: null, conversionId: idemConversion.id, amountKobo: 1_000n, reason: "refund", idempotencyKey: `idem-a-${runId}` });
+      await reverseConversion({ actorId: null, conversionId: idemConversion.id, amountKobo: 1_000n, reason: "refund", idempotencyKey: `idem-b-${runId}` });
+      const ops = await opsFor();
+      assert(ops.length === before + 2, `${ops.length - before} new operations, expected 2`);
+      const total = ops.reduce((sum, op) => sum + op.requestedKobo, 0n);
+      assert(total <= idemConversion.amountKobo, `operations total ${total} exceeds ${idemConversion.amountKobo}`);
+      return `two distinct operations applied, total ${total} of ${idemConversion.amountKobo}`;
+    });
+
+    await check("idempotency: reusing a key with different parameters is refused", async () => {
+      const key = `idem-conflict-${runId}`;
+      await reverseConversion({ actorId: null, conversionId: idemConversion.id, amountKobo: 500n, reason: "refund", idempotencyKey: key });
+      const before = (await opsFor()).length;
+      const conflict = await reverseConversion({ actorId: null, conversionId: idemConversion.id, amountKobo: 700n, reason: "refund", idempotencyKey: key });
+      if (conflict.reversed) throw new Error("conflicting reuse was accepted");
+      assert(conflict.reason === "key_conflict", `reason ${conflict.reason}`);
+      const after = (await opsFor()).length;
+      assert(after === before, `operations changed from ${before} to ${after} on a refused request`);
+      return "key_conflict returned, no operation written";
+    });
+
+    await check("idempotency: concurrent identical keys commit once", async () => {
+      const key = `idem-race-${runId}`;
+      const before = (await opsFor()).length;
+      const results = await Promise.allSettled([
+        reverseConversion({ actorId: null, conversionId: idemConversion.id, amountKobo: 200n, reason: "refund", idempotencyKey: key }),
+        reverseConversion({ actorId: null, conversionId: idemConversion.id, amountKobo: 200n, reason: "refund", idempotencyKey: key })
+      ]);
+      const ops = await opsFor();
+      const added = ops.length - before;
+      assert(added <= 1, `${added} operations committed for one key`);
+      const settled = results.filter((r) => r.status === "fulfilled" && r.value.reversed).length;
+      assert(settled >= 1, "neither concurrent request settled");
+      const total = ops.reduce((sum, op) => sum + op.requestedKobo, 0n);
+      assert(total <= idemConversion.amountKobo, `operations total ${total} exceeds commission`);
+      return `${added} operation, ${settled} settled responses, total ${total}`;
+    });
+
   } finally {
     const txs = await prisma.walletTransaction.findMany({ where: { walletId: made.wallet }, select: { id: true } });
     await prisma.ledgerEntry.deleteMany({ where: { OR: [{ walletId: made.wallet }, { transactionId: { in: txs.map((t) => t.id) } }] } });
