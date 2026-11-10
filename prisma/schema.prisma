@@ -3670,7 +3670,15 @@ model AffiliateReversalIntent {
   dedupeKey      String               @unique
   refundId       String
   orderId        String
+  /// Gross refunded amount as reported by the provider.
   amountKobo     BigInt
+  /// Portion of the refund that falls inside the conversion's frozen commission
+  /// basis. Null on pre-policy intents, which must be reviewed rather than applied
+  /// at the gross figure.
+  eligibleKobo   BigInt?
+  /// Identifies how eligibleKobo was derived, so a later change cannot be read as
+  /// if it had always applied.
+  allocationPolicy String?
   state          ReversalIntentState  @default(PENDING)
   attempts       Int                  @default(0)
   maxAttempts    Int                  @default(6)
