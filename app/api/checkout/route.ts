@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { checkout } from "@/lib/services/core/checkout.service";
 import {
   assertSameOrigin,
@@ -31,7 +32,8 @@ export async function POST(request: Request) {
         line2: optionalString(address.line2, 200),
         postalCode: optionalString(address.postalCode, 20)
       },
-      saveAddress: Boolean(body.saveAddress)
+      saveAddress: Boolean(body.saveAddress),
+      visitorKey: cookies().get("nd_visitor")?.value ?? null
     });
     return NextResponse.json(jsonSafe(result), { status: 201 });
   } catch (error) {

@@ -11,6 +11,7 @@ import { recordSystemEvent } from "@/lib/services/core/event.service";
 import { createDelivery } from "@/lib/services/core/delivery.service";
 import { notifyOrderPaid } from "@/lib/notifications/domain-events";
 import { recordConversion } from "@/lib/services/affiliate/service";
+import { log } from "@/lib/infra/logger";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -493,6 +494,33 @@ export async function confirmPayment(input: { reference: string; provider: Adapt
     totalKobo: payment.order.totalKobo,
     customerId: payment.order.customerId
   });
+
+  // Commission is created from the attribution frozen at checkout, never from a
+  // cookie or request value. It runs after the payment transaction commits: a
+  // commission failure must not undo a verified payment, and the frozen row and
+  // the unique dedupe key make a retry safe.
+  try {
+    const attribution = await prisma.orderAttribution.findUnique({ where: { orderId: payment.orderId } });
+    if (attribution) {
+      const outcome = await recordConversion({
+        entityType: "Order",
+        entityId: payment.orderId,
+        attributionTouchId: attribution.touchId,
+        customerId: payment.order.customerId,
+        basisKobo: payment.order.totalKobo,
+        subtotalKobo: payment.order.subtotalKobo,
+        totalKobo: payment.order.totalKobo
+      });
+      if (!outcome.created) {
+        log.warn("affiliate.conversion_not_created", { orderId: payment.orderId, reason: outcome.reason });
+      }
+    }
+  } catch (error) {
+    log.warn("affiliate.conversion_failed", {
+      orderId: payment.orderId,
+      error: error instanceof Error ? error.message.slice(0, 160) : "unknown"
+    });
+  }
 
   return { status: "COMPLETED" as const, orderId: payment.orderId, duplicate: false };
 }

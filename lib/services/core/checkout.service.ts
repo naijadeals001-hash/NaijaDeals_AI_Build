@@ -7,6 +7,7 @@ import { recordSystemEvent } from "./event.service";
 import { updateOrderStatus } from "./order.service";
 import { availablePaymentMethods } from "@/lib/payments/service";
 import { activationFor } from "./country.service";
+import { resolveCheckoutAttribution } from "@/lib/services/affiliate/service";
 
 export type CheckoutAddress = {
   label?: string;
@@ -30,6 +31,8 @@ export async function checkout(input: {
   userId: string;
   address: CheckoutAddress;
   saveAddress?: boolean;
+  /** Visitor key issued by middleware; never supplied by the client. */
+  visitorKey?: string | null;
 }) {
   const country = getCountry(input.address.countryCode);
   // Runtime activation overrides the static catalogue; absent rows fall back to config.
@@ -83,6 +86,10 @@ export async function checkout(input: {
     group.push(item);
     byVendor.set(item.product.vendorId, group);
   }
+
+  // Resolved server-side before the order exists. The frozen row below is the
+  // only thing payment-time commission creation reads.
+  const attribution = await resolveCheckoutAttribution({ userId: input.userId, visitorKey: input.visitorKey ?? null });
 
   const created = await prisma.$transaction(async (tx) => {
     const orders: Array<{
@@ -203,6 +210,19 @@ export async function checkout(input: {
         metadata: { orderNumber, totalKobo: totalKobo.toString(), vendorId }
       });
 
+      if (attribution) {
+        await tx.orderAttribution.create({
+          data: {
+            orderId: order.id,
+            touchId: attribution.id,
+            linkId: attribution.linkId,
+            affiliateId: attribution.link.affiliateId,
+            campaignId: attribution.link.campaignId,
+            expiresAt: attribution.expiresAt
+          }
+        });
+      }
+
       orders.push({
         orderId: order.id,
         orderNumber,
@@ -239,7 +259,8 @@ export async function checkout(input: {
 
   return {
     orders: created,
-    paymentMethods: availablePaymentMethods(country.code)
+    paymentMethods: availablePaymentMethods(country.code),
+    attributed: Boolean(attribution)
   };
 }
 

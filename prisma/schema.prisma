@@ -3717,3 +3717,22 @@ model AffiliateReversalOperation {
 
   @@index([conversionId])
 }
+
+/// The attribution frozen onto an order at checkout.
+///
+/// Scalar ids only: this is an immutable snapshot of the touch, link, campaign
+/// and affiliate that qualified the order. It deliberately has no relations, so
+/// later edits or deletions cannot rewrite what the order was attributed to.
+model OrderAttribution {
+  id          String   @id @default(cuid())
+  orderId     String   @unique
+  touchId     String
+  linkId      String
+  affiliateId String
+  campaignId  String
+  expiresAt   DateTime
+  frozenAt    DateTime @default(now())
+
+  @@index([affiliateId])
+  @@index([campaignId])
+}

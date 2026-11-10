@@ -192,6 +192,39 @@ export async function findAttributionForUser(userId: string, at = new Date()) {
   });
 }
 
+/**
+ * Server-side attribution for an order about to be created.
+ *
+ * Considers the signed-in user's recorded touches first, then the visitor key
+ * issued by our own middleware, so a guest who signs up mid-session keeps the
+ * touch. Every candidate must be consented, unexpired, campaign-eligible and
+ * must not belong to the purchasing affiliate. Nothing here reads an affiliate
+ * id from the request.
+ */
+export async function resolveCheckoutAttribution(input: { userId: string; visitorKey?: string | null; now?: Date }) {
+  const now = input.now ?? new Date();
+  const candidates: Array<Awaited<ReturnType<typeof findAttribution>>> = [];
+  const byUser = await findAttributionForUser(input.userId, now);
+  if (byUser) candidates.push(byUser);
+  if (input.visitorKey) {
+    const byVisitor = await findAttribution(input.visitorKey, now);
+    if (byVisitor && !candidates.some((row) => row?.id === byVisitor.id)) candidates.push(byVisitor);
+  }
+  candidates.sort((a, b) => (b?.landedAt.getTime() ?? 0) - (a?.landedAt.getTime() ?? 0));
+
+  for (const touch of candidates) {
+    if (!touch || !touch.consent) continue;
+    if (touch.expiresAt.getTime() <= now.getTime()) continue;
+    const campaign = touch.link.campaign;
+    if (campaign.status !== "ACTIVE") continue;
+    if (campaign.effectiveTo && campaign.effectiveTo.getTime() <= now.getTime()) continue;
+    if (touch.link.affiliate.status !== "APPROVED") continue;
+    if (touch.link.affiliate.userId === input.userId) continue;
+    return touch;
+  }
+  return null;
+}
+
 export type ConversionInput = {
   entityType: string;
   entityId: string;
@@ -199,6 +232,13 @@ export type ConversionInput = {
   visitorKey?: string;
   userId?: string;
   now?: Date;
+  /** Frozen at checkout: the exact touch the order was attributed to. */
+  attributionTouchId?: string;
+  /** The order's customer, used to refuse a purchase by the affiliate themself. */
+  customerId?: string;
+  /** When supplied, the basis is chosen from the campaign's snapshot rule. */
+  subtotalKobo?: bigint;
+  totalKobo?: bigint;
 };
 
 /**
@@ -218,16 +258,36 @@ export async function recordConversion(input: ConversionInput): Promise<
   const existing = await prisma.affiliateConversion.findUnique({ where: { dedupeKey } });
   if (existing) return { created: false, reason: "duplicate" };
 
-  const touch = input.userId
-    ? await findAttributionForUser(input.userId, now)
-    : await findAttribution(input.visitorKey ?? "", now);
+  let touch;
+  if (input.attributionTouchId) {
+    touch = await prisma.attributionTouch.findUnique({
+      where: { id: input.attributionTouchId },
+      include: { link: { include: { campaign: true, affiliate: true } } }
+    });
+    if (!touch) return { created: false, reason: "no_attribution" };
+    if (touch.expiresAt.getTime() <= now.getTime()) return { created: false, reason: "attribution_expired" };
+    if (input.customerId && touch.link.affiliate.userId === input.customerId) {
+      return { created: false, reason: "self_referral" };
+    }
+  } else {
+    touch = input.userId
+      ? await findAttributionForUser(input.userId, now)
+      : await findAttribution(input.visitorKey ?? "", now);
+    if (touch && input.customerId && touch.link.affiliate.userId === input.customerId) {
+      return { created: false, reason: "self_referral" };
+    }
+  }
   if (!touch || !touch.consent) return { created: false, reason: "no_attribution" };
   const campaign = touch.link.campaign;
   if (campaign.status !== "ACTIVE") return { created: false, reason: "campaign_inactive" };
   if (campaign.effectiveTo && campaign.effectiveTo < now) return { created: false, reason: "campaign_ended" };
   if (touch.link.affiliate.status !== "APPROVED") return { created: false, reason: "affiliate_not_approved" };
 
-  const basis = campaign.commissionBasis === "TOTAL" ? input.basisKobo : input.basisKobo;
+  // The basis type is snapshotted onto the conversion, so a later campaign edit
+  // cannot change what this order is judged on.
+  const basis = campaign.commissionBasis === "TOTAL"
+    ? (input.totalKobo ?? input.basisKobo)
+    : (input.subtotalKobo ?? input.basisKobo);
   const amount =
     campaign.commissionFlatKobo !== null && campaign.commissionFlatKobo !== undefined
       ? campaign.commissionFlatKobo
