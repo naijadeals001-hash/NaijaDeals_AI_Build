@@ -2568,3 +2568,40 @@ process carrying both variables can activate the provider. A marker file or a se
 a security boundary. Real isolation requires the process to be unable to reach a paid endpoint at
 all — no `DEEPSEEK_API_KEY` in its effective environment, including values loaded from project
 dotenv files, and outbound denial to the provider host at the process or network boundary.
+
+## Affiliate checkpoint (2026-11-10, HEAD b9a8655)
+
+### Working and verified
+
+| Capability | Evidence |
+|---|---|
+| Enrolment, approval gating, audit | `scripts/affiliate-verify.ts` 12/12 |
+| Link creation, destination allowlist | 12/12 plus `affiliate-destination-verify.ts` 11/11 |
+| `/r/<code>` touch capture, consent, redirect | typechecked; not yet exercised over HTTP |
+| Commission accrual, frozen rule, dedupe, budget | 12/12 |
+| **Settlement into the NaijaPay wallet** | `scripts/affiliate-settlement-verify.ts` **10/10** |
+| **Reversal before and after settlement** | 10/10, bounded by original amount and wallet balance |
+
+Accounting: accrual posts nothing; settlement debits the platform SYSTEM wallet and credits the affiliate wallet in one balanced journal inside a single transaction. Wallet settlement is not an external payout.
+
+### Not built — in dependency order
+
+1. **Guest attribution.** No `Order` field carries the touch, so only signed-in buyers attribute. Needs a migration adding a nullable attribution reference frozen at checkout, plus the checkout hook.
+2. **Affiliate UI.** No pages exist: landing, enrolment, dashboard, campaigns, link generator, reporting.
+3. **Control Center.** No admin surfaces for applications, campaigns, conversions or settlement.
+4. **Aura adapter.** Not started; deterministic local provider pattern exists in `lib/aura/test-provider.ts` and should be reused, never falling back to a live model.
+5. **End-to-end HTTP journey.** Not run.
+
+### Next commands
+
+```
+npx tsx scripts/affiliate-verify.ts
+npx tsx scripts/affiliate-settlement-verify.ts
+npx tsx scripts/affiliate-destination-verify.ts
+```
+
+All three pass at this commit. Typecheck is clean apart from two pre-existing
+errors in the untracked `scripts/send-concurrency-verify.ts`.
+
+This checkpoint was written at a hard session limit, not because a decision was
+needed or a dependency was missing.
