@@ -1,0 +1,42 @@
+groups:
+  - name: naijadeals-backup
+    rules:
+      - alert: BackupsStale
+        expr: naijadeals_backup_age_seconds > 129600
+        for: 10m
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: "No successful NaijaDeals backup for over 36 hours"
+          description: "naijadeals_backup_age_seconds is {{ $value }}s. Run `node scripts/backup/run.mjs backup` and check the off-site destination."
+
+      - alert: BackupManifestMissing
+        expr: naijadeals_backup_age_seconds < 0
+        for: 15m
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: "Backup manifest is missing or unreadable"
+          description: "The metrics endpoint reports age < 0, which means scripts/backup/run.mjs has never completed on this host."
+
+      - alert: BackupMetricsAbsent
+        expr: absent(naijadeals_backup_last_success_timestamp)
+        for: 15m
+        labels:
+          severity: warning
+          component: backup
+        annotations:
+          summary: "Backup metrics are not being scraped"
+          description: "The naijadeals-backup series is absent. Check the app target and /api/metrics authentication."
+
+      - alert: BackupsNeverOffsite
+        expr: naijadeals_backup_remote_configured == 0
+        for: 60m
+        labels:
+          severity: warning
+          component: backup
+        annotations:
+          summary: "Backups exist only on this machine"
+          description: "No off-site destination is configured, so a disk failure loses every backup with the host."

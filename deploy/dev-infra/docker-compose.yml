@@ -134,6 +134,7 @@ services:
       - "127.0.0.1:9091:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
       - ./.runtime/metrics-token:/etc/prometheus/secrets/metrics-token:ro
       - nd_prom_data:/prometheus
     extra_hosts:
