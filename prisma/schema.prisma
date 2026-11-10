@@ -3591,6 +3591,12 @@ model AffiliateConversion {
   entityId        String
   /// Frozen at capture so a later rule edit cannot change an earned liability.
   ruleVersion     Int
+  /// SUBTOTAL or TOTAL as it was when the conversion was created. Basis type is
+  /// not derivable from basisKobo, and the campaign field is editable, so reading
+  /// it later would let an edit rewrite history.
+  basisType       String?
+  /// Delivery amount included in basisKobo, when the basis was TOTAL.
+  includedDeliveryKobo BigInt?
   commissionBps   Int
   basisKobo       BigInt
   amountKobo      BigInt

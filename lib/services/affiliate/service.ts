@@ -255,6 +255,9 @@ export async function recordConversion(input: ConversionInput): Promise<
         entityType: input.entityType,
         entityId: input.entityId,
         ruleVersion: campaign.ruleVersion,
+        // Snapshot the basis type at creation. The campaign field is editable, so
+        // reading it later would let an edit rewrite what a refund charges back.
+        basisType: campaign.commissionBasis,
         commissionBps: campaign.commissionBps,
         basisKobo: basis,
         amountKobo: amount,
