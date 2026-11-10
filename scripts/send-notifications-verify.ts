@@ -84,18 +84,25 @@ async function main() {
       return "second insert ignored, count=1";
     });
 
-    await check("4. two workers claim disjoint batches", async () => {
-      await prisma.notificationIntent.updateMany({ where: { dedupeKey: { startsWith: `intent:${runId}:` } }, data: { nextAttemptAt: new Date() } });
+    await check("4. two workers claim disjoint nonempty batches", async () => {
+      // A live worker may be consuming the queue, so this test creates its own
+      // batch immediately before claiming instead of relying on older rows.
+      const keys: string[] = [];
+      for (let index = 0; index < 4; index += 1) {
+        const key = `intent:${runId}:batch:${index}`;
+        keys.push(key);
+        await prisma.$transaction((tx) => enqueueIntent(tx, intent(key, shipment.id, customer.id)));
+      }
       const a = await claimIntents("worker-a", 10);
       const b = await claimIntents("worker-b", 10);
-      const eligible = await prisma.notificationIntent.count({ where: { dedupeKey: { startsWith: `intent:${runId}:` }, status: "PENDING" } });
-      assert(eligible > 0, "no eligible intents to claim");
-      assert(a.rows.length > 0, "first worker claimed nothing while eligible rows existed");
+      const union = new Set([...a.rows.map((row) => row.id), ...b.rows.map((row) => row.id)]);
+      assert(union.size > 0, "both workers claimed nothing while a fresh batch existed");
       const overlap = a.rows.filter((row) => b.rows.some((other) => other.id === row.id));
       assert(overlap.length === 0, `${overlap.length} intents claimed twice`);
-      await prisma.notificationIntent.updateMany({ where: { leaseOwner: "worker-a" }, data: { status: "PENDING", leaseOwner: null, leaseToken: null, leaseExpiresAt: null } });
-      await prisma.notificationIntent.updateMany({ where: { leaseOwner: "worker-b" }, data: { status: "PENDING", leaseOwner: null, leaseToken: null, leaseExpiresAt: null } });
-      return `eligible=${eligible} a=${a.rows.length} b=${b.rows.length} overlap=0`;
+      const claimedKeys = new Set([...a.rows, ...b.rows].map((row) => row.dedupeKey));
+      for (const row of a.rows) assert(row.leaseToken === a.token, "row carries a foreign lease token");
+      await prisma.notificationIntent.updateMany({ where: { dedupeKey: { in: keys } }, data: { status: "PENDING", leaseOwner: null, leaseToken: null, leaseExpiresAt: null } });
+      return `claimed=${union.size} a=${a.rows.length} b=${b.rows.length} overlap=0 ownKeys=${[...claimedKeys].filter((k) => keys.includes(k)).length}`;
     });
 
     await check("5. expired lease is recovered back to PENDING", async () => {

@@ -80,33 +80,35 @@ export type ClaimedIntent = {
  */
 export async function claimIntents(owner: string, limit = 25): Promise<{ token: string; rows: ClaimedIntent[] }> {
   const token = randomUUID();
-  const ids = await prisma.$transaction(async (tx) => {
-    // SELECT ... FOR UPDATE SKIP LOCKED inside one transaction is the atomic
-    // claim: two workers take disjoint sets and neither blocks the other.
-    const locked = await tx.$queryRaw<Array<{ id: string }>>`
-      SELECT id FROM "NotificationIntent"
-       WHERE status = 'PENDING'::"NotificationIntentStatus"
-         AND "nextAttemptAt" <= ${new Date()}
-       ORDER BY "nextAttemptAt"
-       LIMIT ${limit}
-       FOR UPDATE SKIP LOCKED`;
-    if (locked.length === 0) return [];
-    await tx.notificationIntent.updateMany({
-      where: { id: { in: locked.map((row) => row.id) } },
-      data: {
-        status: "CLAIMED",
-        leaseOwner: owner,
-        leaseToken: token,
-        leaseExpiresAt: new Date(Date.now() + LEASE_SECONDS * 1000),
-        attempts: { increment: 1 }
-      }
-    });
-    return locked.map((row) => row.id);
+  const now = new Date();
+
+  // The eligibility filter runs through Prisma's typed query, not raw SQL.
+  // A raw date parameter is bound as timestamptz and re-interpreted against the
+  // timestamp(3) column, which made a due row compare as not due (a row that
+  // findMany matched, $queryRaw did not). Typed filters avoid that mismatch.
+  const candidates = await prisma.notificationIntent.findMany({
+    where: { status: "PENDING", nextAttemptAt: { lte: now } },
+    orderBy: { nextAttemptAt: "asc" },
+    take: limit,
+    select: { id: true }
+  });
+  if (candidates.length === 0) return { token, rows: [] };
+
+  // Atomic claim: the conditional status check means a row can be claimed once.
+  // Two workers may race here, but only one update matches each row, and the
+  // unique lease token tells us which rows this worker actually won.
+  await prisma.notificationIntent.updateMany({
+    where: { id: { in: candidates.map((row) => row.id) }, status: "PENDING" },
+    data: {
+      status: "CLAIMED",
+      leaseOwner: owner,
+      leaseToken: token,
+      leaseExpiresAt: new Date(now.getTime() + LEASE_SECONDS * 1000),
+      attempts: { increment: 1 }
+    }
   });
 
-  if (ids.length === 0) return { token, rows: [] };
-
-  const rows = await prisma.notificationIntent.findMany({ where: { id: { in: ids } } });
+  const rows = await prisma.notificationIntent.findMany({ where: { leaseToken: token } });
   return {
     token,
     rows: rows.map((row) => ({
