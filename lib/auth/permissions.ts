@@ -34,7 +34,9 @@ export const PERMISSIONS = [
   "gigs:read",
   "gigs:moderate",
   "stream:read",
-  "stream:write"
+  "stream:write",
+  "affiliates:read",
+  "affiliates:manage"
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
