@@ -95,7 +95,10 @@ async function main() {
   if (!platform) {
     platform = await prisma.wallet.create({ data: { ownerType: "SYSTEM", currency: "NGN", availableKobo: 0n, heldKobo: 0n } });
   }
-  await prisma.wallet.update({ where: { id: platform.id }, data: { heldKobo: { increment: 5_000_000n } } });
+  // The released-escrow branch debits the platform's AVAILABLE balance, not its
+  // held balance (lib/payments/service.ts:615), so that is what the fixture must
+  // fund. Measured from the persisted record rather than assumed.
+  await prisma.wallet.update({ where: { id: platform.id }, data: { availableKobo: { increment: 5_000_000n } } });
 
   // Attribution: an approved affiliate with a conversion for this order.
   const campaign = await prisma.affiliateCampaign.create({
@@ -198,7 +201,7 @@ async function main() {
     await prisma.vendor.deleteMany({ where: { id: vendor.id } }).catch(() => undefined);
     await prisma.auditLog.deleteMany({ where: { entityId: { in: [order.id, ...made.conversions] } } });
     await prisma.wallet.deleteMany({ where: { id: { in: ids } } });
-    await prisma.wallet.update({ where: { id: platform.id }, data: { heldKobo: { decrement: 5_000_000n } } }).catch(() => undefined);
+    await prisma.wallet.update({ where: { id: platform.id }, data: { availableKobo: { decrement: 5_000_000n } } }).catch(() => undefined);
     await prisma.user.deleteMany({ where: { id: { in: made.users } } });
   }
 
