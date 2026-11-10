@@ -51,8 +51,10 @@ async function signIn(browser, viewport) {
   await page.waitForTimeout(1000);
 
   // --- real conversation ---
-  await page.fill("#aura-composer-mobile, #aura-composer-desktop", "What stays are available in Abuja?");
-  await page.click('button[aria-label="Send message"]');
+  // Both composers are in the DOM; only one is visible at a given width. Asking
+  // for the first match picks the hidden mobile one on desktop.
+  await page.locator("#aura-composer-mobile:visible, #aura-composer-desktop:visible").fill("What stays are available in Abuja?");
+  await page.locator('button[aria-label="Send message"]:visible').click();
 
   // The user's message appears immediately.
   await page.waitForTimeout(800);
