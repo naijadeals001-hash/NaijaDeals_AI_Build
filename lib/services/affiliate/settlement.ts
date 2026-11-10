@@ -201,36 +201,46 @@ export async function reverseConversion(input: {
     const affiliateWallet = await ensureWallet(tx, { userId: conversion.affiliate.userId, ownerType: "CUSTOMER" });
     const wallet = await tx.wallet.findUniqueOrThrow({ where: { id: affiliateWallet.id } });
 
-    // Recovery is bounded by what the wallet holds: never overdraft silently.
+    // Recovery is bounded by what the wallet holds, but a wallet balance must not
+    // decide whether a valid reversal is recorded. Whatever is available is taken;
+    // the remainder becomes debt. With nothing available, no money moves and no
+    // zero-value transaction is created.
     const recoverable = wallet.availableKobo < input.amountKobo ? wallet.availableKobo : input.amountKobo;
-    if (recoverable <= 0n) return { ok: false as const, reason: "no_recoverable_balance" };
+    const shortfall = input.amountKobo - recoverable;
 
-    await tx.wallet.update({ where: { id: affiliateWallet.id }, data: { availableKobo: { decrement: recoverable } } });
-    await tx.wallet.update({ where: { id: platform.id }, data: { availableKobo: { increment: recoverable } } });
+    let journalReference: string | null = null;
+    if (recoverable > 0n) {
+      await tx.wallet.update({ where: { id: affiliateWallet.id }, data: { availableKobo: { decrement: recoverable } } });
+      await tx.wallet.update({ where: { id: platform.id }, data: { availableKobo: { increment: recoverable } } });
 
-    const transaction = await postBalancedTransaction({
-      tx,
-      actorId: input.actorId,
-      walletId: affiliateWallet.id,
-      type: "debit",
-      amountKobo: recoverable,
-      reference,
-      description: `Affiliate commission reversal for ${conversion.entityType} ${conversion.entityId}`,
-      entries: [
-        { walletId: affiliateWallet.id, direction: "DEBIT", amountKobo: recoverable, memo: "Commission reversed" },
-        { walletId: platform.id, direction: "CREDIT", amountKobo: recoverable, memo: "Commission recovered" }
-      ]
-    });
+      const transaction = await postBalancedTransaction({
+        tx,
+        actorId: input.actorId,
+        walletId: affiliateWallet.id,
+        type: "debit",
+        amountKobo: recoverable,
+        reference,
+        description: `Affiliate commission reversal for ${conversion.entityType} ${conversion.entityId}`,
+        entries: [
+          { walletId: affiliateWallet.id, direction: "DEBIT", amountKobo: recoverable, memo: "Commission reversed" },
+          { walletId: platform.id, direction: "CREDIT", amountKobo: recoverable, memo: "Commission recovered" }
+        ]
+      });
+      journalReference = transaction.reference;
+    }
 
     await tx.affiliateConversion.update({
       where: { id: conversion.id },
-      data: { state: remaining === 0n ? "REVERSED" : conversion.state, reason: input.reason.slice(0, 300), ledgerReference: transaction.reference }
+      data: {
+        state: remaining === 0n ? "REVERSED" : conversion.state,
+        reason: input.reason.slice(0, 300),
+        ...(journalReference ? { ledgerReference: journalReference } : {})
+      }
     });
 
     // Shortfall becomes a receivable rather than a silent loss. One open record
     // per conversion: a second partial reversal tops it up instead of creating a
     // duplicate receivable that could be collected twice.
-    const shortfall = input.amountKobo - recoverable;
     if (shortfall > 0n) {
       const open = await tx.affiliateRecovery.findFirst({
         where: { conversionId: conversion.id, state: "OUTSTANDING" }
@@ -252,10 +262,8 @@ export async function reverseConversion(input: {
       }
     }
 
-    return { ok: true as const, reference: transaction.reference, recovered: recoverable };
+    return { ok: true as const, reference: journalReference, recovered: recoverable, shortfall };
   });
-
-  if (!outcome.ok) return { reversed: false, reason: outcome.reason };
 
   await recordAudit({
     actorId: input.actorId,
