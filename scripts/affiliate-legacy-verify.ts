@@ -115,7 +115,8 @@ async function main() {
       const after = await prisma.affiliateReversalOperation.count({ where: { conversionId: { in: made.conversions } } });
       assert(after === before, `dry run wrote ${after - before} operations`);
       assert(/reconstructable: 3/.test(out), `expected 3 reconstructable, output: ${out.match(/reconstructable: \d+/)?.[0]}`);
-      assert(/ambiguous overlap .*: 1/.test(out), `expected 1 ambiguous overlap, output: ${out.match(/ambiguous overlap[^:]*: \d+/)?.[0]}`);
+      assert(/not subtracted\): 1/.test(out), `expected 1 blocked overlap; full output:
+${out}`);
       return "4 reconstructable, 1 ambiguous, nothing written";
     });
 

@@ -146,6 +146,11 @@ async function main() {
     console.log(`  ${row.id.slice(0, 10)}… entity=${row.entityId} state=${row.state}`);
   }
 
+  console.log(`ambiguous overlap (blocked, not subtracted): ${overlapAmbiguous.length}`);
+  for (const row of overlapAmbiguous) {
+    console.log(`  ${row.id.slice(0, 10)}… has both legacy evidence and operations`);
+  }
+
   if (DRY) {
     console.log("\nDry run: nothing written.");
     await prisma.$disconnect();
