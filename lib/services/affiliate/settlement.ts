@@ -233,6 +233,19 @@ export async function reverseConversion(input: {
     const affiliateWallet = await ensureWallet(tx, { userId: conversion.affiliate.userId, ownerType: "CUSTOMER" });
     const wallet = await tx.wallet.findUniqueOrThrow({ where: { id: affiliateWallet.id } });
 
+    // Serialise reversals for this conversion, then re-check the bound inside the
+    // transaction. A SUM followed by INSERT without this lock lets two distinct
+    // operations each pass the check and together exceed the commission.
+    await tx.$queryRaw`SELECT id FROM "AffiliateConversion" WHERE id = ${conversion.id} FOR UPDATE`;
+    const lockedCumulative = await tx.affiliateReversalOperation.aggregate({
+      where: { conversionId: conversion.id },
+      _sum: { requestedKobo: true }
+    });
+    const alreadyReversedKobo = lockedCumulative._sum.requestedKobo ?? 0n;
+    if (alreadyReversedKobo + input.amountKobo > conversion.amountKobo) {
+      return { ok: false as const, reason: "exceeds_original", reference: null, recovered: 0n, shortfall: 0n };
+    }
+
     // Recovery is bounded by what the wallet holds, but a wallet balance must not
     // decide whether a valid reversal is recorded. Whatever is available is taken;
     // the remainder becomes debt. With nothing available, no money moves and no
@@ -309,6 +322,8 @@ export async function reverseConversion(input: {
 
     return { ok: true as const, reference: journalReference, recovered: recoverable, shortfall };
   });
+
+  if (!outcome.ok) return { reversed: false, reason: outcome.reason };
 
   await recordAudit({
     actorId: input.actorId,
