@@ -92,7 +92,7 @@ export async function processReversalIntents(owner: string, limit = 25): Promise
       }
 
       await reverseConversion({
-        actorId: "system:affiliate-reversal",
+        actorId: null,
         conversionId: conversion.id,
         amountKobo: proportional,
         reason: `Refund confirmed for order ${intent.orderId}`,

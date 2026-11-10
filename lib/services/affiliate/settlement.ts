@@ -137,7 +137,7 @@ export type ReversalResult =
  * the wallet is only debited by what it can actually cover.
  */
 export async function reverseConversion(input: {
-  actorId: string;
+  actorId: string | null;
   conversionId: string;
   amountKobo: bigint;
   reason: string;
