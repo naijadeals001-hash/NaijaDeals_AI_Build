@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { availableQuantity, isFixtureListing, listProducts, ratingSummary, saleModesFor } from "@/lib/services/core/catalog.service";
 import { jsonSafe } from "@/lib/services/core/serialize";
+import { searchProductIds } from "@/lib/infra/catalogue-index";
+import { isSearchConfigured } from "@/lib/infra/search";
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +19,25 @@ export async function GET(request: NextRequest) {
   let products = await listProducts();
 
   if (query) {
-    products = products.filter((product) =>
-      [product.name, product.description, product.brand, product.vendor.name, product.vendor.market, product.category.name]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(query)
-    );
+    // Meilisearch answers typo-tolerant queries when it is configured and
+    // populated. Anything that makes the index untrustworthy (engine down,
+    // empty index) returns null and the substring scan below runs instead, so
+    // search is never less available than it was before the engine existed.
+    const ranked = isSearchConfigured() ? await searchProductIds(query, { limit: 200 }) : null;
+    if (ranked) {
+      const rank = new Map(ranked.map((id, index) => [id, index]));
+      products = products
+        .filter((product) => rank.has(product.id))
+        .sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+    } else {
+      products = products.filter((product) =>
+        [product.name, product.description, product.brand, product.vendor.name, product.vendor.market, product.category.name]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(query)
+      );
+    }
   }
   if (category && category !== "all") {
     products = products.filter(

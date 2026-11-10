@@ -14,10 +14,23 @@ earlier version that referenced commit `61b066ee` and a stash that no longer exi
 | Payments | `lib/payments/service.ts` with wallet, Paystack, Flutterwave and a test adapter gated by `isTestPaymentsEnabled` |
 | Maps | Leaflet dependency + `drive-map.tsx`; no live map provider configured (UI says so) |
 | Media | `sharp`, 43 public images |
+| Background jobs | BullMQ 6.7.3 over Valkey 9.1.3 (`lib/infra/queue.ts`); consumer `scripts/infra-worker.ts` |
+| Cache | Valkey 9.1.3 (`lib/infra/cache.ts`) |
+| Search | Meilisearch 1.56.2 (`lib/infra/search.ts`, `lib/infra/catalogue-index.ts`); Postgres remains authoritative |
+| Object storage | S3-compatible SeaweedFS 4.53 (`lib/infra/storage.ts`) |
+| Vectors | pgvector 0.8.7 on an isolated PostgreSQL 18 instance (`lib/infra/vectors.ts`) |
+| Routing | OSRM 26.11.0 (`lib/infra/routing.ts`) |
+| Observability | Prometheus 3.16.0 + Grafana 13.3.0; `app/api/health`, `app/api/metrics` |
 | Tests | `tsx` suites (`scripts/*-tests.ts`) + Playwright/Chrome for browser QA |
 | CI | `.github/workflows/ci.yml`: type-check, lint, build, PostgreSQL-service test suites, Docker build — **no deploy job** |
 
-There is no `middleware.ts`; authorization is enforced per route and per page.
+Infrastructure is optional at runtime: each `lib/infra/*` module reports itself unavailable when its
+environment variable is absent, and the application falls back to its previous behaviour. That is why
+CI and the preview build work without the Docker stack. Pinned versions and local operations:
+`docs/infra/local-development-stack.md`; selection rationale: `docs/infra/open-source-and-mcp-audit.md`.
+
+`middleware.ts` exists but does **not** authorise anything: it only issues the opaque `nd_visitor`
+cookie that pins the homepage design assignment. Authorization is enforced per route and per page.
 
 ## Request flow
 
@@ -83,8 +96,12 @@ property, streaming media or AI conversations — those verticals are not functi
 
 1. Ten `lib/services/*-service.ts` stub files (TODO-only) are exported by an unused index —
    dead surface that should be removed or wired.
-2. No background queue/outbox; `startDriveSweeper` is an in-process timer.
+2. The drive sweeper is still an in-process timer. BullMQ is installed and verified, but the sweeper
+   has not been migrated onto it, so two app instances would both still run it.
 3. No email/SMS provider, no live map provider, no image-generation endpoint wired.
 4. Admin tables lack pagination, bulk actions and record-detail views (Phase 05 open).
-5. No observability (metrics/traces/health endpoint) and no rate limiting.
+5. Metrics and a health endpoint now exist, but there is no rate limiting and no distributed tracing.
 6. Documentation drift is being corrected in this pass; four older documents were stale.
+7. `npm audit` reports 23 advisories in pre-existing tooling (eslint plugins, prisma config,
+   browserslist, esbuild, `next`); the six packages added for infrastructure introduced none, and one
+   advisory is critical.

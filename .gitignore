@@ -44,3 +44,11 @@ public/generated/home/originals/
 public/generated/pay/originals/
 # Aura AI: PNG originals kept locally; the app serves WebP.
 public/generated/aura/originals/
+
+# Local development infrastructure (generated secrets, data and OSM extracts)
+deploy/dev-infra/.env
+deploy/dev-infra/.runtime/
+deploy/dev-infra/osrm-data/
+
+# Playwright MCP scratch output
+.playwright-mcp/

@@ -2440,3 +2440,53 @@ Screenshots: `qa-artifacts/aura/` (desktop, tablet, mobile, conversation, admin)
 5. A separate commit on this branch (`dc13281`, and later `55adda3`) marking all
    verticals "live" was **not made by this session** and contradicts NaijaGigs'
    own in-code caution about production deployment. Left untouched and reported.
+
+---
+
+# Local infrastructure and MCP audit — 2026-11-05
+
+Full matrices, licences and classification: `docs/infra/open-source-and-mcp-audit.md`.
+Operations: `docs/infra/local-development-stack.md`. MCP: `docs/infra/mcp-setup.md`.
+
+## Installed (development only, all pinned, all bound to 127.0.0.1)
+
+| Component | Version | Port | Consumed by |
+|---|---|---|---|
+| Valkey | 9.1.3 | 6380 | `lib/infra/cache.ts`, `lib/infra/queue.ts` |
+| BullMQ | 6.7.3 | — | `scripts/infra-worker.ts`, `POST /api/admin/infra/reindex` |
+| Meilisearch | 1.56.2 | 7700 | `app/api/products/route.ts` (Postgres fallback intact) |
+| SeaweedFS | 4.53 | 9002 | `lib/infra/storage.ts` |
+| pgvector | 0.8.7 (PostgreSQL 18) | 5433 | `lib/infra/vectors.ts` |
+| Prometheus | 3.16.0 | 9091 | scrapes `/api/metrics` |
+| Grafana | 13.3.0 | 3002 | provisioned dashboard `nd-overview` |
+| OSRM | 26.11.0 | 5000 | `lib/infra/routing.ts` |
+| Playwright MCP | 0.0.85 | — | ZCode user config |
+
+Rejected: MinIO (archived upstream, AGPL, paid successor) → SeaweedFS; GitHub/Filesystem/Git MCP
+(duplicate existing capability). Deferred: GraphHopper, LiveKit, MediaMTX, Chrome DevTools MCP.
+Blocked: PostgreSQL MCP (upstream package incompatible with the current MCP SDK).
+
+## New application surface
+
+- `app/api/health` — database is critical (503 on failure); auxiliary engines report `degraded`.
+- `app/api/metrics` — bearer-token only, 404 when `METRICS_TOKEN` is unset.
+- `POST /api/admin/infra/reindex` — `products:moderate` + same-origin, audited, queued when BullMQ
+  is available.
+- `lib/infra/*` — every integration is optional; absence of its env var falls back to prior behaviour.
+
+## Verified
+
+- `npx tsx scripts/infra-verify.ts` — see the final report for the exact run.
+- Typo tolerance end-to-end: `/api/products?q=infinx|tecn0|tabet` returns the right products, which
+  the previous substring scan could not.
+- MCP: `node scripts/mcp-verify.mjs playwright rea kie-ai` → Playwright navigated to the live app;
+  REA advertised 229 tools; Kie.ai advertised 10.
+- `tsc --noEmit` clean; `NEXT_DIST_DIR=.next-pay npm run build` succeeded; preview restarted.
+
+## Not done / open
+
+1. The drive expiry sweeper still uses an in-process timer; BullMQ is installed but the sweeper has
+   not been migrated, so two app instances would still both run it.
+2. Object storage has no product upload path yet; the gig artwork is still served from `public/`.
+3. pgvector has no embedding provider; collections are created per model when one is authorised.
+4. Push remains blocked (`403 … denied to BetFuz`); nothing in this work was pushed.
