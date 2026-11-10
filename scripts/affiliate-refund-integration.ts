@@ -192,6 +192,35 @@ async function main() {
       return `debit=${debit} credit=${credit}`;
     });
 
+    await check("duplicate confirmation produces no second intent or adjustment", async () => {
+      const intentsBefore = await prisma.affiliateReversalIntent.count({ where: { orderId: order.id } });
+      const opsBefore = await prisma.affiliateReversalOperation.count({ where: { conversionId: conversion.id } });
+      await refundPayment({
+        orderId: order.id, actorId: customer.id, reason: "duplicate confirmation", idempotencyKey: `ri-refund-${runId}`
+      }).catch(() => undefined);
+      const intentsAfter = await prisma.affiliateReversalIntent.count({ where: { orderId: order.id } });
+      const opsAfter = await prisma.affiliateReversalOperation.count({ where: { conversionId: conversion.id } });
+      assert(intentsAfter === intentsBefore, `intents went ${intentsBefore} -> ${intentsAfter}`);
+      assert(opsAfter === opsBefore, `operations went ${opsBefore} -> ${opsAfter}`);
+      return `still ${intentsAfter} intent and ${opsAfter} operation after a repeat call`;
+    });
+
+    await check("replaying a DONE intent adds no financial effect", async () => {
+      const opsBefore = await prisma.affiliateReversalOperation.count({ where: { conversionId: conversion.id } });
+      const debtsBefore = await prisma.affiliateRecovery.aggregate({ where: { conversionId: conversion.id }, _sum: { amountKobo: true } });
+      // Simulates the crash window: work committed, the intent not yet marked DONE.
+      await prisma.affiliateReversalIntent.update({ where: { id: intentId }, data: { state: "PENDING" } });
+      await processReversalIntents("replay-probe", 50);
+      const opsAfter = await prisma.affiliateReversalOperation.count({ where: { conversionId: conversion.id } });
+      const debtsAfter = await prisma.affiliateRecovery.aggregate({ where: { conversionId: conversion.id }, _sum: { amountKobo: true } });
+      assert(opsAfter === opsBefore, `operations went ${opsBefore} -> ${opsAfter} on replay`);
+      assert(
+        (debtsBefore._sum.amountKobo ?? 0n) === (debtsAfter._sum.amountKobo ?? 0n),
+        "debt changed on replay"
+      );
+      return `replay left ${opsAfter} operation and unchanged debt`;
+    });
+
     await check("the customer refund is not affected by affiliate processing", async () => {
       const refund = await prisma.refund.findFirstOrThrow({ where: { orderId: order.id }, orderBy: { createdAt: "desc" } });
       assert(refund.status === "COMPLETED", `refund status ${refund.status}`);
