@@ -31,7 +31,7 @@ import { useAura, type AuraCard } from "@/lib/aura/client";
 import { AuraOrb } from "./aura-visuals";
 import { AuraAfricaMark } from "./aura-africa-mark";
 import { AuraLanguageSelect } from "./aura-language-select";
-import { AuraEmptyCard, AuraHeroCard, AuraPlanCard } from "./aura-plan-pieces";
+import { AuraHeroCard, AuraPlanCard } from "./aura-plan-pieces";
 import { AuraComposer } from "./aura-composer";
 import { AuraMessages } from "./aura-messages";
 
@@ -105,7 +105,9 @@ export function AuraDesktop({
   const meal = lastCards.find((c) => c.kind === "meal");
   const ride = lastCards.find((c) => c.kind === "ride");
   const planId = aura.messages.map((m) => m.planId).filter(Boolean).pop() as string | undefined;
-  const showResults = Boolean(lastUser);
+  // Only when this turn actually produced results; a general question should not
+  // display three empty "no match" slots for verticals it never searched.
+  const showResults = Boolean(stay || meal || ride);
   const assistantMessages = aura.messages.filter((m) => m.role === "assistant");
 
   return (
@@ -219,7 +221,10 @@ export function AuraDesktop({
           {/* ---------- hero ---------- */}
           {/* Hero: the orb sits in its own green halo that dissolves into the
               canvas, and the headline runs under its left edge — one continuous
-              field with no card or visible boundary, exactly as the mockup. */}
+              field with no card or visible boundary, exactly as the mockup.
+              It belongs to the welcome state only; during a conversation the
+              screen belongs to the messages. */}
+          {!lastUser && (
           <section className="relative min-h-[196px]">
             <div
               className="pointer-events-none absolute -right-[72px] -top-[34px] h-[330px] w-[330px]"
@@ -249,6 +254,7 @@ export function AuraDesktop({
             </h1>
             <p className="relative mt-[34px] max-w-[560px] text-[17.5px] text-white/80">One conversation connects your NaijaDeals world.</p>
           </section>
+          )}
 
           {/* ---------- composer ---------- */}
           <div className="mt-[8px]">
@@ -349,17 +355,21 @@ export function AuraDesktop({
 
               {showResults && (
                 <div className="grid grid-cols-3 gap-3">
-                  {([
-                    { card: stay, vertical: "stay" as const, label: "No Abuja stay matched this request", href: "/naijastay?city=Abuja" },
-                    { card: meal, vertical: "meal" as const, label: "No restaurant matched this request", href: "/naijaeats" },
-                    { card: ride, vertical: "ride" as const, label: "No ride quote yet", href: "/naijadrive" }
-                  ] as const).map((entry) =>
-                    entry.card ? (
-                      <AuraHeroCard key={entry.vertical} vertical={entry.vertical} title={entry.card.title} image={entry.card.image ?? "/generated/aura/aura-card-stay.webp"} href={entry.card.href ?? entry.href} />
-                    ) : (
-                      <AuraEmptyCard key={entry.vertical} vertical={entry.vertical} label={entry.label} />
-                    )
-                  )}
+                  {[
+                    { card: stay, vertical: "stay" as const, fallback: "/generated/aura/aura-card-stay.webp", href: "/naijastay?city=Abuja" },
+                    { card: meal, vertical: "meal" as const, fallback: "/generated/aura/aura-card-meal.webp", href: "/naijaeats" },
+                    { card: ride, vertical: "ride" as const, fallback: "/generated/aura/aura-card-ride.webp", href: "/naijadrive" }
+                  ]
+                    .filter((entry) => Boolean(entry.card))
+                    .map((entry) => (
+                      <AuraHeroCard
+                        key={entry.vertical}
+                        vertical={entry.vertical}
+                        title={entry.card!.title}
+                        image={entry.card!.image ?? entry.fallback}
+                        href={entry.card!.href ?? entry.href}
+                      />
+                    ))}
                 </div>
               )}
 
