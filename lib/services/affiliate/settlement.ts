@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
@@ -163,9 +163,20 @@ export async function reverseConversion(input: {
   // Cumulative reversal is the sum of committed operations. A partial reversal
   // leaves the conversion PAID, so a state-derived total would read zero and
   // permit over-reversal.
-  const opKey = input.idempotencyKey ?? `manual:${conversion.id}:${randomUUID()}`;
+  // Identity must survive a retry. A random per-call key looked like protection
+  // but was not: a resubmitted manual request produced a second operation. When
+  // no key is supplied, derive one from the request itself so the same request
+  // retried maps to the same key, and a genuinely different request does not.
+  const opKey =
+    input.idempotencyKey ??
+    `manual:${conversion.id}:${input.amountKobo.toString()}:${createHash("sha256").update(input.reason).digest("hex").slice(0, 16)}`;
   const prior = await prisma.affiliateReversalOperation.findUnique({ where: { opKey } });
   if (prior) {
+    // A reused key that does not describe the same request is a caller bug, not a
+    // replay. Returning the prior result would silently discard the new request.
+    if (prior.conversionId !== conversion.id || prior.requestedKobo !== input.amountKobo) {
+      return { reversed: false, reason: "key_conflict" };
+    }
     return {
       reversed: true,
       conversionId: conversion.id,
