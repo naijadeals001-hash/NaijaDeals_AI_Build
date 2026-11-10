@@ -3680,3 +3680,22 @@ model AffiliateReversalIntent {
   @@index([state, createdAt])
   @@index([orderId])
 }
+
+/// One committed reversal operation. Cumulative reversal is a SUM over these
+/// rows, never a state flag: a partial reversal leaves the conversion PAID, so a
+/// state-derived total silently resets to zero and permits over-reversal.
+model AffiliateReversalOperation {
+  id              String   @id @default(cuid())
+  /// Stable identity per intent/conversion. Unique, so a replay cannot commit twice.
+  opKey           String   @unique
+  conversionId    String
+  intentId        String?
+  requestedKobo   BigInt
+  recoveredKobo   BigInt   @default(0)
+  debtKobo        BigInt   @default(0)
+  ledgerReference String?
+  actorId         String?
+  createdAt       DateTime @default(now())
+
+  @@index([conversionId])
+}

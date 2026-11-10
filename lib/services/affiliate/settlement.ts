@@ -25,6 +25,14 @@ import { recordAudit } from "@/lib/services/core/audit.service";
  * the second.
  */
 
+async function cumulativeReversed(conversionId: string): Promise<bigint> {
+  const sum = await prisma.affiliateReversalOperation.aggregate({
+    where: { conversionId },
+    _sum: { requestedKobo: true }
+  });
+  return sum._sum.requestedKobo ?? 0n;
+}
+
 const SETTLEABLE: string[] = ["APPROVED", "PAYABLE"];
 
 export type SettlementResult =
@@ -152,11 +160,22 @@ export async function reverseConversion(input: {
   if (!conversion) throw new ApiError(404, "conversion_not_found", "That conversion does not exist.");
   if (input.amountKobo <= 0n) return { reversed: false, reason: "invalid_amount" };
 
-  const alreadyReversed = await prisma.affiliateConversion.aggregate({
-    where: { entityId: conversion.entityId, entityType: conversion.entityType, state: "REVERSED" },
-    _sum: { amountKobo: true }
-  });
-  const cumulative = alreadyReversed._sum.amountKobo ?? 0n;
+  // Cumulative reversal is the sum of committed operations. A partial reversal
+  // leaves the conversion PAID, so a state-derived total would read zero and
+  // permit over-reversal.
+  const opKey = input.idempotencyKey ?? `manual:${conversion.id}:${randomUUID()}`;
+  const prior = await prisma.affiliateReversalOperation.findUnique({ where: { opKey } });
+  if (prior) {
+    return {
+      reversed: true,
+      conversionId: conversion.id,
+      amountKobo: prior.recoveredKobo.toString(),
+      cumulativeReversedKobo: (await cumulativeReversed(conversion.id)).toString(),
+      ledgerReference: prior.ledgerReference
+    };
+  }
+
+  const cumulative = await cumulativeReversed(conversion.id);
   const remaining = conversion.amountKobo - cumulative - input.amountKobo;
   if (remaining < 0n) return { reversed: false, reason: "exceeds_original" };
 
@@ -181,6 +200,17 @@ export async function reverseConversion(input: {
       return true;
     });
     if (!updated) return { reversed: false, reason: "state_not_reversible" };
+    await prisma.affiliateReversalOperation.create({
+      data: {
+        opKey,
+        conversionId: conversion.id,
+        intentId: input.idempotencyKey ?? null,
+        requestedKobo: input.amountKobo,
+        recoveredKobo: 0n,
+        debtKobo: input.amountKobo,
+        actorId: input.actorId
+      }
+    });
     await recordAudit({
       actorId: input.actorId,
       action: "affiliate.commission_reversed_unsettled",
@@ -263,6 +293,19 @@ export async function reverseConversion(input: {
         });
       }
     }
+
+    await tx.affiliateReversalOperation.create({
+      data: {
+        opKey,
+        conversionId: conversion.id,
+        intentId: input.idempotencyKey ?? null,
+        requestedKobo: input.amountKobo,
+        recoveredKobo: recoverable,
+        debtKobo: shortfall,
+        ledgerReference: journalReference,
+        actorId: input.actorId
+      }
+    });
 
     return { ok: true as const, reference: journalReference, recovered: recoverable, shortfall };
   });

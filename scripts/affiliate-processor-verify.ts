@@ -77,8 +77,15 @@ async function main() {
       const row = await prisma.affiliateReversalIntent.findUniqueOrThrow({ where: { id: first.id } });
       assert(row.state === "DONE", `state ${row.state}, error ${row.lastError}`);
       const after = await prisma.affiliateConversion.findUniqueOrThrow({ where: { id: conversion.id } });
-      assert(after.state === "REVERSED", `conversion state ${after.state}`);
-      return `intent DONE, conversion REVERSED, ${result.done} processed`;
+      // A 2,500 reversal of a 5,000 commission is PARTIAL: the conversion stays
+      // PAID until the full amount is returned. Asserting REVERSED here would be
+      // wrong, so the financial outcome is asserted instead.
+      assert(after.state === "PAID", `conversion state ${after.state}, expected PAID for a partial reversal`);
+      const op = await prisma.affiliateReversalOperation.findFirst({ where: { conversionId: conversion.id } });
+      assert(op, "no reversal operation recorded");
+      assert(op!.requestedKobo === 2_500n, `requested ${op!.requestedKobo}`);
+      assert(op!.debtKobo === 2_500n, `debt ${op!.debtKobo}`);
+      return `intent DONE, partial reversal recorded (requested 2500, debt 2500), conversion still PAID`;
     });
 
     await check("debt records the full amount when the wallet is empty", async () => {
@@ -104,15 +111,15 @@ async function main() {
 
     await check("replaying a completed intent posts nothing further", async () => {
       await prisma.affiliateReversalIntent.update({ where: { id: first.id }, data: { state: "PENDING", leaseToken: null, leaseExpiresAt: null } });
-      const before = await prisma.affiliateConversion.findUniqueOrThrow({ where: { id: conversion.id } });
       const beforeRecovery = await prisma.affiliateRecovery.findMany({ where: { conversionId: conversion.id } });
       const result = await processReversalIntents("test-worker", 25);
       const after = await prisma.affiliateRecovery.findMany({ where: { conversionId: conversion.id } });
       const debt = after.reduce((sum, r) => sum + r.amountKobo, 0n);
       const debtBefore = beforeRecovery.reduce((sum, r) => sum + r.amountKobo, 0n);
       assert(debt === debtBefore, `debt grew from ${debtBefore} to ${debt} on replay`);
-      assert(before.state === "REVERSED", "conversion changed on replay");
-      return `replay: ${result.done} done, debt unchanged at ${debt}, no second posting`;
+      const ops = await prisma.affiliateReversalOperation.count({ where: { conversionId: conversion.id } });
+      assert(ops === 1, `${ops} operations after replay, expected 1`);
+      return `replay: ${result.done} done, debt unchanged at ${debt}, operations still 1`;
     });
 
     await check("the ledger reference is derived from the intent, not random", async () => {
