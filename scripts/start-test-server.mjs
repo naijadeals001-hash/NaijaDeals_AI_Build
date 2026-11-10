@@ -77,7 +77,10 @@ function validate(env) {
   }
 
   facts.distDir = env.NEXT_DIST_DIR ?? null;
-  if (facts.distDir !== ".next-pay") failures.push('NEXT_DIST_DIR must be ".next-pay" to serve the existing build');
+  // The development preview owns .next-pay. The test server must serve its own
+  // build so rebuilding for tests can never swap the bytes 3015 serves.
+  if (facts.distDir === ".next-pay") failures.push("NEXT_DIST_DIR is the development build .next-pay");
+  else if (facts.distDir !== ".next-test") failures.push('NEXT_DIST_DIR must be ".next-test" for the test server');
 
   return { ok: failures.length === 0, failures, facts };
 }
