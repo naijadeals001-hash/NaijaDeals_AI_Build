@@ -37,11 +37,14 @@ export async function collectRecovery(input: {
 }): Promise<CollectionResult> {
   if (input.amountKobo <= 0n) return { collected: false, reason: "invalid_amount" };
 
-  const recovery = await prisma.affiliateRecovery.findUnique({
-    where: { id: input.recoveryId },
-    include: { affiliate: { select: { userId: true } } }
-  });
+  const recovery = await prisma.affiliateRecovery.findUnique({ where: { id: input.recoveryId } });
   if (!recovery) throw new ApiError(404, "recovery_not_found", "That recovery record does not exist.");
+  // AffiliateRecovery stores affiliateId without a Prisma relation, so the wallet
+  // owner is resolved explicitly rather than through an include.
+  const affiliate = await prisma.affiliateProfile.findUniqueOrThrow({
+    where: { id: recovery.affiliateId },
+    select: { userId: true }
+  });
   if (recovery.state !== "OUTSTANDING") return { collected: false, reason: `state_${recovery.state.toLowerCase()}` };
 
   const outstanding = recovery.amountKobo - recovery.collectedKobo;
@@ -50,7 +53,7 @@ export async function collectRecovery(input: {
   const requested = input.amountKobo < outstanding ? input.amountKobo : outstanding;
 
   const outcome = await prisma.$transaction(async (tx) => {
-    const affiliateWallet = await ensureWallet(tx, { userId: recovery.affiliate.userId, ownerType: "CUSTOMER" });
+    const affiliateWallet = await ensureWallet(tx, { userId: affiliate.userId, ownerType: "CUSTOMER" });
     const wallet = await tx.wallet.findUniqueOrThrow({ where: { id: affiliateWallet.id } });
     const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
 
