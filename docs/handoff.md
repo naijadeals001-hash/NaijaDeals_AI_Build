@@ -2723,3 +2723,44 @@ Next actions:
 3. Do not repair `naijadeals_core`'s negative balance as part of this work — that is a separate
    decision about shared development data, and the number itself shows earlier test activity has
    been corrupting it.
+
+---
+
+## 2026-11-05 — Affiliate reversal review authorization (commit 53f562f)
+
+**Defect.** `POST /api/admin/affiliate-reviews` returned 200 to a read-only reviewer. Trace:
+session → `getSessionUser` → `actorType=ADMIN`, roles `[affiliate_reviewer]` → `roleNames` filtered by
+`STAFF_ROLES`, which did not contain `affiliate_reviewer` → `recognised=false` → the legacy
+`actorType === "ADMIN"` fallback granted the entire admin permission set, including
+`affiliates:manage`. The route and `requireAdminPermission` were correct; the role was invisible to
+the permission model.
+
+**Fix.** `affiliate_reviewer` is now a staff role with exactly `affiliates:read`. The fallback is
+unchanged and still applies to an ADMIN actor with no role rows, so documented legacy access is
+preserved.
+
+**Evidence.** `npx tsx scripts/affiliate-review-authz.ts` against the isolated preview
+(`http://localhost:3017`) and `naijadeals_affiliate_test`, guarded by `current_database()`; two
+consecutive runs, 0 failures, exit 0:
+
+| Case | Result |
+|------|--------|
+| Reviewer lists and opens the console page | 200, page renders `canManage:false` |
+| Reviewer resolves | 403 `permission_denied`; intent unchanged; no resolution audit row |
+| Manager resolves | 200, `eligibleKobo=500000`, `review_total_v1`, intent `PENDING`, 1 audit row |
+| Manager replays the same body | 409 `not_reviewable`; still 1 audit row and one allocation |
+| Ordinary authenticated user | list 403 `forbidden`, page 307 out of the console, resolve 403; untouched |
+| Anonymous caller | list 401 `unauthenticated`, page redirects to `/login`, resolve 401; untouched |
+| Reviewer + finance composition | list 200, resolve 403 — composition cannot invent `affiliates:manage` |
+| Reviewer + admin, super_admin, legacy ADMIN with no roles | resolve 200 each |
+| Role grant/revoke during one session | same cookie: 403 → grant admin → 200 → revoke → 403; list still 200 |
+
+The last row confirms authorization is resolved from the database on every request
+(`getSessionUser` stores only a user id in the session), so a permission change applies to an
+existing session on its next request; no session invalidation is needed and no stale authority is
+cached in the cookie.
+
+**Still open in this slice:** invalid-allocation and zero-allocation HTTP cases, two reviewers
+resolving different intents on one conversion, and the populated browser walk of the queue. The
+reviewer HTTP 200 that originally revealed the defect is not reproducible; the intent it mutated
+remains in the isolated database as `PENDING`.
