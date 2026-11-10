@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
+import { inspect } from "node:util";
 import { prisma } from "../lib/prisma";
 import { refundPayment } from "../lib/payments/service";
 import { processReversalIntents } from "../lib/services/affiliate/reversal-processor";
@@ -25,11 +26,27 @@ const rows: { name: string; status: "PASS" | "FAIL"; detail: string }[] = [];
 function assert(condition: unknown, message: string): void {
   if (!condition) throw new Error(message);
 }
+function describeError(error: unknown): string {
+  // util.inspect with showHidden reaches Prisma's code/meta/clientVersion, which are
+  // not always enumerable; JSON.stringify loses them and cannot handle BigInt.
+  const redact = (text: string) => {
+    const cut = text.indexOf("postgresql:");
+    return (cut >= 0 ? text.slice(0, cut) + "postgresql:[redacted]" : text).slice(0, 1500);
+  };
+  try {
+    const props = error && typeof error === "object" ? Object.getOwnPropertyNames(error) : [];
+    const inspected = inspect(error, { depth: 4, showHidden: true, breakLength: 200, maxArrayLength: 10 });
+    return redact(`props=[${props.join(",")}] ${inspected}`);
+  } catch {
+    return redact(`uninspectable thrown value: ${String(error)}`);
+  }
+}
+
 async function check(name: string, run: () => Promise<string>) {
   try {
     rows.push({ name, status: "PASS", detail: await run() });
   } catch (error) {
-    rows.push({ name, status: "FAIL", detail: error instanceof Error ? error.message : String(error) });
+    rows.push({ name, status: "FAIL", detail: describeError(error) });
   }
 }
 
@@ -38,6 +55,19 @@ const made = { users: [] as string[], conversions: [] as string[], intents: [] a
 async function main() {
   const db = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
   console.log("database:", db[0].db);
+  // Preflight: a pending migration on the target surfaces later as an opaque Prisma
+  // error inside a financial write. Check before any fixture is created, and never
+  // migrate here — the operator must run deploy against this exact target.
+  const [{ applied }] = await prisma.$queryRawUnsafe<Array<{ applied: bigint }>>(
+    "select count(*)::bigint as applied from _prisma_migrations where finished_at is not null"
+  );
+  const expected = Number(process.env.EXPECTED_MIGRATIONS ?? 0);
+  if (expected && Number(applied) < expected) {
+    console.error(`Refusing to run: ${applied} migrations applied on ${db[0].db}, expected at least ${expected}. Run prisma migrate deploy against this target.`);
+    await prisma.$disconnect();
+    process.exit(2);
+  }
+
   if (db[0].db !== REQUIRED_DB) {
     console.error(`Refusing to run: connected to "${db[0].db}", expected "${REQUIRED_DB}".`);
     await prisma.$disconnect();
