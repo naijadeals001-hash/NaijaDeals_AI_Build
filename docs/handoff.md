@@ -2490,3 +2490,47 @@ Blocked: PostgreSQL MCP (upstream package incompatible with the current MCP SDK)
 2. Object storage has no product upload path yet; the gig artwork is still served from `public/`.
 3. pgvector has no embedding provider; collections are created per model when one is authorised.
 4. Push remains blocked (`403 … denied to BetFuz`); nothing in this work was pushed.
+
+## Aura browser journey — locator repair and evidence withdrawal (2026-11-10)
+
+### Withdrawn
+
+The results previously attributed to commit `cd9c47e` are **withdrawn as evidence for that
+commit**. The composer `fill` the run depended on was not present in the committed file, so
+those PASS lines described a working tree that no commit contained. They were also produced by
+reading a log from an earlier run rather than the run being reported.
+
+The earlier note that "identical page-text lengths proved streaming" is also withdrawn: equal
+lengths across two samples are consistent with a static page and prove nothing.
+
+### What is now verified
+
+Every composer and send reference in `scripts/aura-browser-journey.cjs` now carries `:visible`,
+including the Stop-scenario interactions on `stopPage`, which the earlier bulk edit missed
+because they were single-quoted. Each interaction is preceded by an asserted count of exactly
+one visible element.
+
+Run (unique artifact directory, no reused logs):
+
+```
+artifact: qa-artifacts/aura/run-20261110T102246Z/journey.log
+command:  node scripts/aura-browser-journey.cjs
+exit:     0
+result:   16 passed, 0 failed
+```
+
+Covered by that run: sign-in, single visible composer and send button per layout, user message
+rendering, streamed answer, Abuja content, stay result cards, conversation persistence, reload,
+cross-account open and delete isolation, and mobile composer placement.
+
+### Still not done
+
+1. The journey still measures `document.body.innerText` and counts `/naijastay` links globally
+   rather than reading the specific assistant message. It can therefore be satisfied by page
+   furniture, and its streaming check compares two samples of total page text.
+2. Deterministic delayed-stream coverage with distinct chunk sizes is not implemented; the
+   streaming evidence is live-provider only.
+3. Persistence is asserted by counts, not by conversation ID and content.
+4. Cancellation policy is asserted only as "Stop returns", not that rendering halts and
+   persistence follows the documented rule.
+5. The parent runner does not yet retain per-child sanitized artifacts.

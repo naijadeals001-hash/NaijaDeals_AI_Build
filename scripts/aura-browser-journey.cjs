@@ -53,7 +53,11 @@ async function signIn(browser, viewport) {
   // --- real conversation ---
   // Both composers are in the DOM; only one is visible at a given width. Asking
   // for the first match picks the hidden mobile one on desktop.
-  await page.locator("#aura-composer-mobile:visible, #aura-composer-desktop:visible").fill("What stays are available in Abuja?");
+  const visibleComposers = page.locator("#aura-composer-mobile:visible, #aura-composer-desktop:visible");
+  check("exactly one composer is visible", (await visibleComposers.count()) === 1, `${await visibleComposers.count()} visible`);
+  const visibleSend = page.locator('button[aria-label="Send message"]:visible');
+  check("exactly one send button is visible", (await visibleSend.count()) === 1, `${await visibleSend.count()} visible`);
+  await visibleComposers.fill("What stays are available in Abuja?");
   await page.locator('button[aria-label="Send message"]:visible').click();
 
   // The user's message appears immediately.
@@ -126,8 +130,8 @@ async function signIn(browser, viewport) {
   // --- stop generation ---
   const stopPage = await ctx.newPage();
   await stopPage.goto(`${BASE}/aura-ai`, { waitUntil: "networkidle" });
-  await stopPage.fill("#aura-composer-mobile, #aura-composer-desktop", "Write a long description of Nigerian street food culture, at least 400 words.");
-  await stopPage.click('button[aria-label="Send message"]');
+  await stopPage.fill("#aura-composer-mobile:visible, #aura-composer-desktop:visible", "Write a long description of Nigerian street food culture, at least 400 words.");
+  await stopPage.click('button[aria-label="Send message"]:visible');
   await stopPage.waitForTimeout(2500);
   const stopVisible = await stopPage.getByRole("button", { name: /stop generating/i }).count();
   check("a stop control appears while generating", stopVisible === 1);
@@ -145,7 +149,7 @@ async function signIn(browser, viewport) {
   await mobile.page.waitForTimeout(800);
   const overflow = await mobile.page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   check("mobile has no horizontal overflow", overflow <= 0, `${overflow}px`);
-  const composerVisible = await mobile.page.locator("#aura-composer-mobile, #aura-composer-desktop").isVisible();
+  const composerVisible = await mobile.page.locator("#aura-composer-mobile:visible, #aura-composer-desktop:visible").isVisible();
   check("mobile composer is visible above the bottom bar", composerVisible);
   await mobile.page.screenshot({ path: path.join(OUT, "aura-conversation-mobile.png"), fullPage: false });
   await mobile.ctx.close();
