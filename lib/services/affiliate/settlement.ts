@@ -51,6 +51,9 @@ export async function settleConversion(input: { actorId: string; conversionId: s
     include: { affiliate: true }
   });
   if (!conversion) throw new ApiError(404, "conversion_not_found", "That conversion does not exist.");
+  if (conversion.reconciliationRequired) {
+    throw new ApiError(409, "reconciliation_required", "This conversion has unreconciled reversal history and is blocked until reviewed.");
+  }
   if (!SETTLEABLE.includes(conversion.state)) {
     return { settled: false, reason: `state_${conversion.state.toLowerCase()}` };
   }
@@ -158,6 +161,9 @@ export async function reverseConversion(input: {
     include: { affiliate: true, campaign: true }
   });
   if (!conversion) throw new ApiError(404, "conversion_not_found", "That conversion does not exist.");
+  if (conversion.reconciliationRequired) {
+    return { reversed: false, reason: "reconciliation_required" };
+  }
   if (input.amountKobo <= 0n) return { reversed: false, reason: "invalid_amount" };
 
   // Cumulative reversal is the sum of committed operations. A partial reversal

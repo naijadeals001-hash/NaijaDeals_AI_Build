@@ -3602,6 +3602,10 @@ model AffiliateConversion {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
+  /// Set when historical reversal evidence is insufficient to reconstruct a
+  /// cumulative total. Financial mutation is blocked until reviewed.
+  reconciliationRequired Boolean   @default(false)
+
   @@index([affiliateId, state, createdAt])
   @@index([entityType, entityId])
 }
