@@ -38,12 +38,6 @@ async function main() {
   const admin = await prisma.user.create({ data: { email: `affset-admin-${runId}@example.test`, name: "Settlement Admin", actorType: "ADMIN" } });
   const platform = await prisma.wallet.findFirstOrThrow({ where: { ownerType: "SYSTEM" } });
 
-  // The affiliate wallet does not exist until settlement creates it, so the test
-  // must establish it before measuring a balance.
-  const seededWallet = await prisma.wallet.create({
-    data: { userId: user.id, ownerType: "CUSTOMER", currency: "NGN", availableKobo: 0n, heldKobo: 0n }
-  });
-
   const profile = await applyAffiliate({ userId: user.id, termsVersion: "2026-11" });
   await decideAffiliate({ actorId: admin.id, affiliateId: profile.id, approve: true });
   const campaign = await prisma.affiliateCampaign.create({
@@ -79,15 +73,17 @@ async function main() {
     let before = 0n;
     let platformBefore = 0n;
 
-    await check("settlement credits the affiliate once and debits the platform", async () => {
-      const wallet = await prisma.wallet.findUniqueOrThrow({ where: { id: seededWallet.id } });
-      affiliateWalletId = wallet.id;
-      before = await balance(wallet.id);
+    await check("settlement creates a missing wallet and credits it once", async () => {
+      const preexisting = await prisma.wallet.count({ where: { userId: user.id, ownerType: "CUSTOMER" } });
+      assert(preexisting === 0, `affiliate already had ${preexisting} wallet(s) before settlement`);
+      before = 0n;
       platformBefore = await balance(platform.id);
 
       const result = await settleConversion({ actorId: admin.id, conversionId: first.id });
       assert(result.settled, `not settled: ${"reason" in result ? result.reason : ""}`);
-      const after = await balance(wallet.id);
+      const created = await prisma.wallet.findFirstOrThrow({ where: { userId: user.id, ownerType: "CUSTOMER" } });
+      affiliateWalletId = created.id;
+      const after = created.availableKobo;
       assert(after - before === 5_000n, `wallet moved ${after - before}, expected 5000`);
       const platformAfter = await balance(platform.id);
       assert(platformBefore - platformAfter === 5_000n, `platform moved ${platformBefore - platformAfter}`);
