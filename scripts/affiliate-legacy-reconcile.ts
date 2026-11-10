@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { prisma } from "../lib/prisma";
+import { requireIsolatedDatabase } from "./lib/require-isolated-database";
 
 /**
  * Legacy reversal reconciliation.
@@ -43,6 +44,10 @@ type Plan = {
 async function main() {
   const db = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
   console.log(`database: ${db[0].db}  mode: ${DRY ? "DRY RUN" : "APPLY"}`);
+  // Launched as a child process, this must verify its own connection rather than
+  // trust the parent's environment: a missing DATABASE_URL would otherwise fall
+  // back to .env and write against the development database.
+  if (process.env.AFFILIATE_TEST_MODE === "1") requireIsolatedDatabase(db[0].db);
 
   const candidates = await prisma.affiliateConversion.findMany({
     where: {

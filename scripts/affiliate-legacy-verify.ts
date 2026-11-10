@@ -32,9 +32,16 @@ const made: { users: string[]; conversions: string[]; campaign: string; profile:
 };
 
 function reconcile(mode: "--dry-run" | "--apply"): string {
+  // The launcher refuses before spawning: without an explicit connection the child
+  // would fall back to .env and could reconcile the development database.
+  if (!process.env.DATABASE_URL) {
+    console.error("Refusing to spawn the reconciler without an explicit DATABASE_URL.");
+    process.exit(2);
+  }
   return execFileSync("npx", ["tsx", "scripts/affiliate-legacy-reconcile.ts", mode], {
     encoding: "utf8",
-    shell: process.platform === "win32"
+    shell: process.platform === "win32",
+    env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL, AFFILIATE_TEST_MODE: "1" }
   });
 }
 
