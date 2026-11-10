@@ -675,6 +675,21 @@ export async function refundPayment(input: {
       data: { status: "COMPLETED", completedAt: new Date(), providerReference: providerReference ?? null }
     });
 
+    // Durable affiliate reversal intent, written in the same transaction as the
+    // confirmed refund. A crash cannot lose it and a rollback cannot leave one.
+    // The worker processes it independently, so an affiliate failure can never
+    // fail or roll back the customer's refund.
+    await tx.affiliateReversalIntent.upsert({
+      where: { dedupeKey: `refund:${refund.id}` },
+      create: {
+        dedupeKey: `refund:${refund.id}`,
+        refundId: refund.id,
+        orderId: order.id,
+        amountKobo: requested
+      },
+      update: {}
+    });
+
     if (isFullRefund) {
       await tx.payment.update({ where: { id: completed.id }, data: { status: "REFUNDED" } });
       // The order-level payment state must move with the payment record, or a

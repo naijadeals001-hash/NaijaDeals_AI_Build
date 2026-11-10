@@ -3649,3 +3649,34 @@ model AffiliateRecovery {
   @@index([state, createdAt])
   @@index([conversionId])
 }
+
+enum ReversalIntentState {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+/// Durable outbox for commission adjustments caused by confirmed refunds.
+/// Written in the same transaction as the refund reaching COMPLETED, so a crash
+/// cannot lose it and a rollback cannot leave one behind. Processed by the
+/// worker, independently of the customer refund.
+model AffiliateReversalIntent {
+  id             String               @id @default(cuid())
+  dedupeKey      String               @unique
+  refundId       String
+  orderId        String
+  amountKobo     BigInt
+  state          ReversalIntentState  @default(PENDING)
+  attempts       Int                  @default(0)
+  maxAttempts    Int                  @default(6)
+  leaseToken     String?
+  leaseExpiresAt DateTime?
+  lastError      String?
+  processedAt    DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([state, createdAt])
+  @@index([orderId])
+}
