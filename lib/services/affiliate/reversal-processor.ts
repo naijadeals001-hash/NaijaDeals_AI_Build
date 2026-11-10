@@ -41,7 +41,12 @@ export async function recoverExpiredIntents(): Promise<number> {
   return result.count;
 }
 
-export async function processReversalIntents(owner: string, limit = 25): Promise<ProcessResult> {
+export async function processReversalIntents(
+  owner: string,
+  limit = 25,
+  /** Test-only seam: throws after the financial commit, before the intent is DONE. */
+  hooks: { failBeforeDone?: boolean } = {}
+): Promise<ProcessResult> {
   const recovered = await recoverExpiredIntents();
   const token = randomUUID();
 
@@ -98,6 +103,8 @@ export async function processReversalIntents(owner: string, limit = 25): Promise
         reason: `Refund confirmed for order ${intent.orderId}`,
         idempotencyKey: reversalReferenceFor(intent.id)
       });
+
+      if (hooks.failBeforeDone) throw new Error("injected_failure_before_done");
 
       await finish(intent.id, token, { state: "DONE", processedAt: new Date(), lastError: null });
       done += 1;

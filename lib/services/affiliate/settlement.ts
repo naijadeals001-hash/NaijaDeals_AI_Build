@@ -155,6 +155,12 @@ export async function reverseConversion(input: {
   releaseBudget?: boolean;
   /** Stable reference so a replayed reversal collides instead of double-posting. */
   idempotencyKey?: string;
+  /**
+   * Test-only seam for the rollback boundary: throws inside the financial
+   * transaction after the ledger write. Dependency-injected by a test; there is no
+   * environment variable and no production caller passes it.
+   */
+  testHooks?: { failAfterLedgerWrite?: boolean };
 }): Promise<ReversalResult> {
   const conversion = await prisma.affiliateConversion.findUnique({
     where: { id: input.conversionId },
@@ -307,6 +313,9 @@ export async function reverseConversion(input: {
         ]
       });
       journalReference = transaction.reference;
+      if (input.testHooks?.failAfterLedgerWrite) {
+        throw new Error("injected_failure_after_ledger_write");
+      }
     }
 
     await tx.affiliateConversion.update({

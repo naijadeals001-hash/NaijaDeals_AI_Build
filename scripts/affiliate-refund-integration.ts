@@ -180,6 +180,89 @@ async function main() {
       return `requested ${op.requestedKobo} = recovered ${op.recoveredKobo} + debt ${op.debtKobo}`;
     });
 
+    await check("zero-balance replay leaves every figure unchanged", async () => {
+      const snap = async () => {
+        const ops = await prisma.affiliateReversalOperation.findMany({ where: { conversionId: conversion.id } });
+        const debts = await prisma.affiliateRecovery.findMany({ where: { conversionId: conversion.id } });
+        const wallet = await prisma.wallet.findFirstOrThrow({ where: { userId: customer.id } });
+        return {
+          operations: ops.length,
+          cumulative: ops.reduce((sum, op) => sum + op.requestedKobo, 0n),
+          debt: debts.reduce((sum, row) => sum + row.amountKobo, 0n),
+          collected: debts.reduce((sum, row) => sum + row.collectedKobo, 0n),
+          wallet: wallet.availableKobo
+        };
+      };
+      const before = await snap();
+      await prisma.affiliateReversalIntent.update({ where: { id: intentId }, data: { state: "PENDING" } });
+      await processReversalIntents("zero-replay", 50);
+      const after = await snap();
+      assert(after.operations === before.operations, `operations ${before.operations} -> ${after.operations}`);
+      assert(after.cumulative === before.cumulative, `cumulative ${before.cumulative} -> ${after.cumulative}`);
+      assert(after.debt === before.debt, `debt ${before.debt} -> ${after.debt}`);
+      assert(after.collected === before.collected, `collected ${before.collected} -> ${after.collected}`);
+      assert(after.wallet === before.wallet, `wallet ${before.wallet} -> ${after.wallet}`);
+      return `ops ${after.operations}, cumulative ${after.cumulative}, debt ${after.debt}, collected ${after.collected}, wallet ${after.wallet} — all unchanged`;
+    });
+
+    await check("a failure after the ledger write rolls back every effect", async () => {
+      const { reverseConversion } = await import("../lib/services/affiliate/settlement");
+      const opsBefore = await prisma.affiliateReversalOperation.count({ where: { conversionId: conversion.id } });
+      const debtsBefore = await prisma.affiliateRecovery.aggregate({ where: { conversionId: conversion.id }, _sum: { amountKobo: true } });
+      const walletBefore = (await prisma.wallet.findFirstOrThrow({ where: { userId: customer.id } })).availableKobo;
+      const ledgerBefore = await prisma.ledgerEntry.count({});
+
+      let threw = "";
+      try {
+        await reverseConversion({
+          actorId: null, conversionId: conversion.id, amountKobo: 1_000n, reason: "rollback probe",
+          idempotencyKey: `rollback-${runId}`,
+          testHooks: { failAfterLedgerWrite: true }
+        });
+      } catch (error) {
+        threw = error instanceof Error ? error.message : String(error);
+      }
+      assert(threw === "injected_failure_after_ledger_write", `did not fail as intended: ${threw}`);
+
+      const opsAfter = await prisma.affiliateReversalOperation.count({ where: { conversionId: conversion.id } });
+      const debtsAfter = await prisma.affiliateRecovery.aggregate({ where: { conversionId: conversion.id }, _sum: { amountKobo: true } });
+      const walletAfter = (await prisma.wallet.findFirstOrThrow({ where: { userId: customer.id } })).availableKobo;
+      const ledgerAfter = await prisma.ledgerEntry.count({});
+
+      assert(opsAfter === opsBefore, `operation survived the rollback (${opsBefore} -> ${opsAfter})`);
+      assert((debtsBefore._sum.amountKobo ?? 0n) === (debtsAfter._sum.amountKobo ?? 0n), "recovery changed");
+      assert(walletAfter === walletBefore, `wallet changed ${walletBefore} -> ${walletAfter}`);
+      assert(ledgerAfter === ledgerBefore, `ledger entries changed ${ledgerBefore} -> ${ledgerAfter}`);
+      return "ledger, wallet, operation, recovery and cumulative all rolled back";
+    });
+
+    await check("a failure before DONE replays to exactly one financial effect", async () => {
+      const opsBefore = await prisma.affiliateReversalOperation.count({ where: { conversionId: conversion.id } });
+      await prisma.affiliateReversalIntent.update({ where: { id: intentId }, data: { state: "PENDING" } });
+      let threw = "";
+      try {
+        await processReversalIntents("post-commit", 50, { failBeforeDone: true });
+      } catch (error) {
+        threw = error instanceof Error ? error.message : String(error);
+      }
+      // The processor catches handler failures and marks the intent retryable; it
+      // does not rethrow, so the boundary is observed through state, not exit.
+      const afterFailure = await prisma.affiliateReversalIntent.findUniqueOrThrow({ where: { id: intentId } });
+      assert(afterFailure.state === "PENDING", `intent state after the injected failure: ${afterFailure.state}`);
+      assert((afterFailure.lastError ?? "").includes("injected_failure_before_done"), `lastError ${afterFailure.lastError}`);
+
+      // Expire the lease and let the processor finish what it already committed.
+      await prisma.affiliateReversalIntent.update({ where: { id: intentId }, data: { leaseExpiresAt: new Date(Date.now() - 1000) } });
+      await processReversalIntents("post-commit-retry", 50);
+      const opsAfter = await prisma.affiliateReversalOperation.count({ where: { conversionId: conversion.id } });
+      const finalIntent = await prisma.affiliateReversalIntent.findUniqueOrThrow({ where: { id: intentId } });
+      assert(opsAfter === opsBefore, `operations ${opsBefore} -> ${opsAfter} on retry`);
+      assert(finalIntent.state === "DONE", `intent state ${finalIntent.state}, error ${finalIntent.lastError}`);
+      const refund = await prisma.refund.findFirstOrThrow({ where: { orderId: order.id }, orderBy: { createdAt: "desc" } });
+      assert(refund.status === "COMPLETED", `refund status ${refund.status}`);
+      return `one effect before and after retry, intent DONE, refund COMPLETED`;
+    });
+
     await check("any ledger entry the reversal posted is balanced", async () => {
       const ops = await prisma.affiliateReversalOperation.findMany({ where: { conversionId: conversion.id } });
       const op = ops[ops.length - 1];
