@@ -20,7 +20,9 @@ import { hashPassword } from "../lib/auth/password";
 
 const REQUIRED_DB = "naijadeals_affiliate_test";
 const BASE = process.env.AUTHZ_BASE_URL ?? "http://localhost:3017";
-const PASSWORD = "AuthzReview!2026";
+// Generated per run: fixture users exist only in the isolated database and the
+// password is never printed or reused outside this process.
+const PASSWORD = `Authz-${randomUUID()}`;
 
 const runId = randomUUID().slice(0, 8);
 const rows: { name: string; status: "PASS" | "FAIL"; detail: string }[] = [];
