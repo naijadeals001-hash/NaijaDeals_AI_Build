@@ -88,11 +88,14 @@ async function main() {
       await prisma.notificationIntent.updateMany({ where: { dedupeKey: { startsWith: `intent:${runId}:` } }, data: { nextAttemptAt: new Date() } });
       const a = await claimIntents("worker-a", 10);
       const b = await claimIntents("worker-b", 10);
+      const eligible = await prisma.notificationIntent.count({ where: { dedupeKey: { startsWith: `intent:${runId}:` }, status: "PENDING" } });
+      assert(eligible > 0, "no eligible intents to claim");
+      assert(a.rows.length > 0, "first worker claimed nothing while eligible rows existed");
       const overlap = a.rows.filter((row) => b.rows.some((other) => other.id === row.id));
       assert(overlap.length === 0, `${overlap.length} intents claimed twice`);
       await prisma.notificationIntent.updateMany({ where: { leaseOwner: "worker-a" }, data: { status: "PENDING", leaseOwner: null, leaseToken: null, leaseExpiresAt: null } });
       await prisma.notificationIntent.updateMany({ where: { leaseOwner: "worker-b" }, data: { status: "PENDING", leaseOwner: null, leaseToken: null, leaseExpiresAt: null } });
-      return `a=${a.rows.length} b=${b.rows.length} overlap=0`;
+      return `eligible=${eligible} a=${a.rows.length} b=${b.rows.length} overlap=0`;
     });
 
     await check("5. expired lease is recovered back to PENDING", async () => {

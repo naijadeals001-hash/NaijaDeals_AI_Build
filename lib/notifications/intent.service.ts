@@ -31,6 +31,7 @@ export type IntentInput = {
   entityId: string;
   recipientUserId: string;
   payload: IntentPayload;
+  scheduledAt?: Date;
 };
 
 /**
@@ -48,7 +49,8 @@ export async function enqueueIntent(tx: Tx, input: IntentInput): Promise<boolean
         entityId: input.entityId,
         recipientUserId: input.recipientUserId,
         payload: input.payload as Prisma.InputJsonValue,
-        payloadVersion: 1
+        payloadVersion: 1,
+        nextAttemptAt: input.scheduledAt ?? new Date()
       }
     });
     infraMetrics().queueJobs.inc({ queue: "notifications", event: "intent_enqueued" });
@@ -83,8 +85,8 @@ export async function claimIntents(owner: string, limit = 25): Promise<{ token: 
     // claim: two workers take disjoint sets and neither blocks the other.
     const locked = await tx.$queryRaw<Array<{ id: string }>>`
       SELECT id FROM "NotificationIntent"
-       WHERE status = 'PENDING'
-         AND "nextAttemptAt" <= now()
+       WHERE status = 'PENDING'::"NotificationIntentStatus"
+         AND "nextAttemptAt" <= ${new Date()}
        ORDER BY "nextAttemptAt"
        LIMIT ${limit}
        FOR UPDATE SKIP LOCKED`;
