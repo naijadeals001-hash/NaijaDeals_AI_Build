@@ -199,7 +199,7 @@ async function main() {
   const live = await fetch(`${BASE}/api/auth/me`).catch(() => null);
   if (!live) throw new Error(`Preview ${BASE} is not reachable.`);
 
-  const roleIds = await ensureRoles(["admin", "super_admin", "affiliate_reviewer", "finance"]);
+  const roleIds = await ensureRoles(["admin", "super_admin", "affiliate_reviewer", "finance", "unknown_operator"]);
 
   const reviewer = await makeUser({ key: "reviewer", actorType: "ADMIN", roles: ["affiliate_reviewer"] }, roleIds);
   const manager = await makeUser({ key: "manager", actorType: "ADMIN", roles: ["admin"] }, roleIds);
@@ -208,6 +208,8 @@ async function main() {
   const legacyAdmin = await makeUser({ key: "legacy", actorType: "ADMIN", roles: [] }, roleIds);
   const readerFinance = await makeUser({ key: "reader-finance", actorType: "ADMIN", roles: ["affiliate_reviewer", "finance"] }, roleIds);
   const reviewerAdmin = await makeUser({ key: "reviewer-admin", actorType: "ADMIN", roles: ["affiliate_reviewer", "admin"] }, roleIds);
+  const unknownRole = await makeUser({ key: "unknown-role", actorType: "ADMIN", roles: ["unknown_operator"] }, roleIds);
+  const reviewerUnknown = await makeUser({ key: "reviewer-unknown", actorType: "ADMIN", roles: ["affiliate_reviewer", "unknown_operator"] }, roleIds);
 
   const reviewerUserId = (await prisma.user.findUniqueOrThrow({ where: { email: reviewer.email } })).id;
 
@@ -316,6 +318,32 @@ async function main() {
     const asLegacy = await http("POST", "/api/admin/affiliate-reviews", { cookie: legacyAdmin.cookie, body: resolveBody(legacyParked.intentId) });
     assert(asLegacy.status === 200, `legacy ADMIN fallback resolve returned ${asLegacy.status}: ${JSON.stringify(asLegacy.body)}`);
     return `reviewer+admin=200 super_admin=200 legacy ADMIN (no role rows)=200`;
+  });
+
+  await check("5c. Unrecognised role assignments never trigger the legacy admin surface", async () => {
+    const parked = await park("unknown-role");
+    const before = await snapshot(parked.intentId);
+
+    const list = await http("GET", "/api/admin/affiliate-reviews", { cookie: unknownRole.cookie });
+    assert(list.status === 403, `unknown-role list returned ${list.status}: ${JSON.stringify(list.body)}`);
+    // The console gate passes on actorType; the permission check is what denies.
+    assert((list.body as { code?: string }).code === "permission_denied", `unexpected unknown-role code: ${JSON.stringify(list.body)}`);
+
+    const page = await http("GET", "/admin/affiliate-reviews", { cookie: unknownRole.cookie, redirect: "manual" });
+    assert(page.status === 307 || page.status === 308, `unknown-role console page returned ${page.status}`);
+    assert(String(page.location ?? "").endsWith("/admin"), `unknown-role was not sent to the console root: ${page.location}`);
+
+    const resolve = await http("POST", "/api/admin/affiliate-reviews", { cookie: unknownRole.cookie, body: resolveBody(parked.intentId) });
+    assert(resolve.status === 403, `unknown-role resolve returned ${resolve.status}: ${JSON.stringify(resolve.body)}`);
+    assertUntouched(before, await snapshot(parked.intentId), "unknown-role resolve");
+
+    // A recognised role plus an unknown one keeps exactly the recognised grant.
+    const mixedList = await http("GET", "/api/admin/affiliate-reviews", { cookie: reviewerUnknown.cookie });
+    assert(mixedList.status === 200, `reviewer+unknown list returned ${mixedList.status}`);
+    const mixedParked = await park("reviewer-unknown");
+    const mixedResolve = await http("POST", "/api/admin/affiliate-reviews", { cookie: reviewerUnknown.cookie, body: resolveBody(mixedParked.intentId) });
+    assert(mixedResolve.status === 403, `reviewer+unknown resolve returned ${mixedResolve.status}: ${JSON.stringify(mixedResolve.body)}`);
+    return `unknown-only ADMIN: list=403, page->/admin, resolve=403; reviewer+unknown: list=200 resolve=403`;
   });
 
   await check("6. Permission changes apply to the same session without stale authority", async () => {

@@ -117,23 +117,24 @@ export function isStaffRole(name: string): name is StaffRole {
 }
 
 /**
- * Permissions held by a session user. An ADMIN actor without any recognised
- * staff role keeps the legacy `admin` surface; every other actor gets exactly
- * what their roles grant.
+ * Permissions held by a session user.
+ *
+ * An ADMIN actor with no role rows at all keeps the legacy `admin` surface.
+ * Any explicit role assignment is authoritative: an unknown role name grants
+ * nothing, so a typo or a stale role cannot silently escalate its holder to
+ * full administration. A mixture grants only what the recognised roles hold.
  */
 export function permissionsFor(user: SessionUser): Permission[] {
   const names = roleNames(user);
   const granted = new Set<Permission>();
-  let recognised = false;
 
   for (const name of names) {
     const set = ROLE_PERMISSIONS[name];
     if (!set) continue;
-    recognised = true;
     for (const permission of set) granted.add(permission);
   }
 
-  if (!recognised && user.actorType === "ADMIN") {
+  if (names.length === 0 && user.actorType === "ADMIN") {
     for (const permission of ROLE_PERMISSIONS.admin) granted.add(permission);
   }
 
