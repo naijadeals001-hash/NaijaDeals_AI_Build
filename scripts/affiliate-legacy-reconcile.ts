@@ -65,10 +65,17 @@ async function main() {
       _sum: { requestedKobo: true }
     });
     const recordedKobo = existingOps._sum.requestedKobo ?? 0n;
-    const cash = await prisma.walletTransaction.findMany({
-      where: { reference: { startsWith: `AFF-REV-${conversion.id}` } },
-      select: { amountKobo: true, reference: true }
-    });
+    // The database filter is a prefix match, which would also capture another
+    // conversion whose id begins with this one. The returned rows are therefore
+    // re-checked against the delimiter boundary: the reference must read
+    // AFF-REV-<id>-<anything>, not AFF-REV-<id><more id characters>.
+    const prefix = `AFF-REV-${conversion.id}-`;
+    const cash = (
+      await prisma.walletTransaction.findMany({
+        where: { reference: { startsWith: `AFF-REV-${conversion.id}` } },
+        select: { amountKobo: true, reference: true }
+      })
+    ).filter((row) => row.reference.startsWith(prefix));
     const debtRows = await prisma.affiliateRecovery.findMany({
       where: { conversionId: conversion.id },
       select: { amountKobo: true }
