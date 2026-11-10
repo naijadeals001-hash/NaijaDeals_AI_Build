@@ -162,7 +162,7 @@ async function main() {
   const conversion = await prisma.affiliateConversion.create({
     data: {
       dedupeKey: `Order:${order.id}`, affiliateId: profile.id, campaignId: campaign.id,
-      entityType: "Order", entityId: order.id, ruleVersion: 1, commissionBps: 500,
+      entityType: "Order", entityId: order.id, ruleVersion: 1, basisType: "SUBTOTAL", commissionBps: 500,
       basisKobo: 5_000_000n, amountKobo: 250_000n, state: "PAID", ledgerReference: `AFF-COMM-${order.id}`
     }
   });
@@ -251,7 +251,7 @@ async function main() {
       const fundedConversion = await prisma.affiliateConversion.create({
         data: {
           dedupeKey: `Order:${fundedEntity}`, affiliateId: profile.id, campaignId: campaign.id,
-          entityType: "Order", entityId: fundedEntity, ruleVersion: 1, commissionBps: 500,
+          entityType: "Order", entityId: fundedEntity, ruleVersion: 1, basisType: "SUBTOTAL", commissionBps: 500,
           basisKobo: 5_000_000n, amountKobo: 250_000n, state: "PAID", ledgerReference: `AFF-COMM-${fundedEntity}`
         }
       });
@@ -280,7 +280,7 @@ async function main() {
       const rollbackConversion = await prisma.affiliateConversion.create({
         data: {
           dedupeKey: `Order:rollback-${runId}`, affiliateId: profile.id, campaignId: campaign.id,
-          entityType: "Order", entityId: `rollback-order-${runId}`, ruleVersion: 1, commissionBps: 500,
+          entityType: "Order", entityId: `rollback-order-${runId}`, ruleVersion: 1, basisType: "SUBTOTAL", commissionBps: 500,
           basisKobo: 5_000_000n, amountKobo: 250_000n, state: "PAID", ledgerReference: `AFF-COMM-rollback-${runId}`
         }
       });

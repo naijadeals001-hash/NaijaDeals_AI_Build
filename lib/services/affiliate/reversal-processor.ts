@@ -88,8 +88,32 @@ export async function processReversalIntents(
         continue;
       }
 
-      // Adjust from the frozen rule, not from today's campaign settings.
-      const proportional = (intent.amountKobo * BigInt(conversion.commissionBps)) / 10_000n;
+      // Fail closed: no eligible allocation means the charge-back cannot be computed
+      // without charging commission on components the affiliate was never paid on.
+      if (intent.eligibleKobo === null || !intent.allocationPolicy) {
+        await finish(intent.id, token, { state: "FAILED", lastError: "review_required:missing_allocation" });
+        dead += 1;
+        log.warn("affiliate.reversal_needs_review", { intentId: intent.id, orderId: intent.orderId });
+        continue;
+      }
+
+      // Cumulative rounding: the target is computed from the running total of
+      // eligible refunds, and only the difference from what earlier refunds already
+      // reversed is applied. Rounding each refund independently would drift.
+      const prior = await prisma.affiliateReversalIntent.findMany({
+        where: {
+          orderId: intent.orderId,
+          state: "DONE",
+          eligibleKobo: { not: null },
+          createdAt: { lt: intent.createdAt }
+        },
+        select: { eligibleKobo: true }
+      });
+      const priorEligible = prior.reduce((sum, row) => sum + (row.eligibleKobo ?? 0n), 0n);
+      const bps = BigInt(conversion.commissionBps);
+      const targetCumulative = ((priorEligible + intent.eligibleKobo) * bps) / 10_000n;
+      const priorTarget = (priorEligible * bps) / 10_000n;
+      const proportional = targetCumulative - priorTarget;
       if (proportional <= 0n) {
         await finish(intent.id, token, { state: "DONE", processedAt: new Date(), lastError: "zero_adjustment" });
         done += 1;

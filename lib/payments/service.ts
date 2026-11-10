@@ -679,13 +679,46 @@ export async function refundPayment(input: {
     // confirmed refund. A crash cannot lose it and a rollback cannot leave one.
     // The worker processes it independently, so an affiliate failure can never
     // fail or roll back the customer's refund.
+    // Allocate the eligible portion from the conversion's frozen snapshot. Only
+    // the part of the refund that falls inside the commission basis can reduce
+    // commission; when the basis is SUBTOTAL the delivery component is excluded.
+    const conversion = await tx.affiliateConversion.findFirst({
+      where: { entityType: "Order", entityId: order.id },
+      orderBy: { createdAt: "desc" }
+    });
+    let eligibleKobo: bigint | null = null;
+    let allocationPolicy: string | null = null;
+
+    if (!conversion) {
+      // Nothing was ever commissioned on this order, so there is nothing to adjust.
+      eligibleKobo = 0n;
+      allocationPolicy = "no_conversion_v1";
+    } else if (!conversion.basisType) {
+      // Historical row with no frozen basis: the eligible portion is unknowable and
+      // must be reviewed rather than guessed from the editable campaign.
+      eligibleKobo = null;
+      allocationPolicy = null;
+    } else {
+      const priorIntents = await tx.affiliateReversalIntent.findMany({
+        where: { orderId: order.id, eligibleKobo: { not: null } },
+        select: { eligibleKobo: true }
+      });
+      const priorEligible = priorIntents.reduce((sum, row) => sum + (row.eligibleKobo ?? 0n), 0n);
+      const remainingBasis = conversion.basisKobo - priorEligible;
+      const capped = remainingBasis > 0n ? remainingBasis : 0n;
+      eligibleKobo = requested < capped ? requested : capped;
+      allocationPolicy = `proportional_${conversion.basisType.toLowerCase()}_v1`;
+    }
+
     await tx.affiliateReversalIntent.upsert({
       where: { dedupeKey: `refund:${refund.id}` },
       create: {
         dedupeKey: `refund:${refund.id}`,
         refundId: refund.id,
         orderId: order.id,
-        amountKobo: requested
+        amountKobo: requested,
+        eligibleKobo,
+        allocationPolicy
       },
       update: {}
     });
