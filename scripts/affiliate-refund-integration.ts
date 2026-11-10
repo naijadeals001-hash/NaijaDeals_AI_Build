@@ -4,6 +4,7 @@ import { inspect } from "node:util";
 import { prisma } from "../lib/prisma";
 import { refundPayment } from "../lib/payments/service";
 import { processReversalIntents } from "../lib/services/affiliate/reversal-processor";
+import { createLink, resolveTouch, recordConversion } from "../lib/services/affiliate/service";
 
 /**
  * The real refund workflow: refundPayment → persisted intent → processor →
@@ -536,6 +537,53 @@ async function main() {
     assert((debt._sum.amountKobo ?? 0n) + op.recoveredKobo === op.requestedKobo, "wallet recovery plus debt does not equal the adjustment");
     await prisma.affiliateCampaign.update({ where: { id: campaign.id }, data: { commissionBps: 500, commissionBasis: "SUBTOTAL" } });
     return `eligible 1999200 and commission 99960 unchanged after the campaign moved to 900 bps / TOTAL`;
+  });
+
+  await check("TOTAL basis snapshot comes from recordConversion", async () => {
+    // Built through the real service, not by writing basisType onto a fixture row.
+    const totalCampaign = await prisma.affiliateCampaign.create({
+      data: { slug: `total-${runId}`, name: "Total campaign", vertical: "shop", status: "ACTIVE", funding: "PLATFORM", commissionBps: 500, budgetKobo: 100_000_000n, attributionDays: 30, commissionBasis: "TOTAL", ruleVersion: 1 }
+    });
+    const totalLink = await createLink({ affiliateId: profile.id, campaignId: totalCampaign.id, destination: "/product/abc" });
+    const visitor = `total-visitor-${runId}`;
+    await resolveTouch({ code: totalLink.code, visitorKey: visitor, consent: true });
+
+    const totalOrder = await prisma.order.create({
+      data: {
+        orderNumber: `TOT-${runId}`, customerId: customer.id, vendorId: vendor.id,
+        status: "completed", paymentStatus: "paid",
+        subtotalKobo: 5_000_000n, deliveryFeeKobo: 2_000n, totalKobo: 5_002_000n,
+        commissionKobo: 250_100n, escrowFeeKobo: 0n,
+        deliveryAddress: "12 Broad Street, Lagos", contactName: "Total Basis", contactPhone: "08012345678",
+        items: { create: [{ productId: product.id, quantity: 1, unitKobo: 5_000_000n, totalKobo: 5_000_000n, productName: `Tot ${runId}` }] }
+      }
+    });
+    await prisma.payment.create({
+      data: { orderId: totalOrder.id, provider: "test", providerReference: `TEST-TOT-${runId}`, idempotencyKey: `tot-pay-${runId}`, amountKobo: 5_002_000n, currency: "NGN", status: "COMPLETED" }
+    });
+    const totVendorWallet = await prisma.wallet.findFirstOrThrow({ where: { vendorId: vendor.id } });
+    await prisma.wallet.update({ where: { id: totVendorWallet.id }, data: { heldKobo: { increment: 5_002_000n } } });
+    await prisma.wallet.update({ where: { id: platform.id }, data: { availableKobo: { increment: 5_002_000n } } });
+    await prisma.escrowHold.create({
+      data: { orderId: totalOrder.id, buyerWalletId: customerWallet.id, vendorWalletId: totVendorWallet.id, amountKobo: 5_002_000n, status: "held", reason: "total fixture" }
+    });
+
+    const recorded = await recordConversion({ entityType: "Order", entityId: totalOrder.id, basisKobo: 5_002_000n, visitorKey: visitor });
+    assert(recorded.created, `conversion not created: ${"reason" in recorded ? recorded.reason : ""}`);
+    if (!recorded.created) return "";
+    const conversion = recorded.conversion;
+    assert(conversion.basisType === "TOTAL", `snapshot basisType ${conversion.basisType}, expected TOTAL`);
+    assert(conversion.basisKobo === 5_002_000n, `snapshot basis ${conversion.basisKobo}, expected the paid total`);
+
+    await refundPayment({ orderId: totalOrder.id, actorId: customer.id, reason: "total basis", amountKobo: 2_000_000n, idempotencyKey: `tot-refund-${runId}` });
+    const intent = await prisma.affiliateReversalIntent.findFirstOrThrow({ where: { orderId: totalOrder.id } });
+    assert(intent.eligibleKobo === 2_000_000n, `eligible ${intent.eligibleKobo}, expected the full refund under TOTAL`);
+    assert(intent.allocationPolicy === "proportional_total_v1", `policy ${intent.allocationPolicy}`);
+    await processReversalIntents("total-basis", 50);
+    const op = await prisma.affiliateReversalOperation.findFirstOrThrow({ where: { conversionId: conversion.id } });
+    assert(op.requestedKobo === 100_000n, `commission ${op.requestedKobo}, expected 100000 (5% of 2,000,000)`);
+    await prisma.affiliateCampaign.update({ where: { id: totalCampaign.id }, data: { spendingCents: 0 } as never }).catch(() => undefined);
+    return `snapshot TOTAL on ${conversion.basisKobo}; eligible 2000000; commission 100000`;
   });
 
   const width = Math.max(...rows.map((row) => row.name.length));
