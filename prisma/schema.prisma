@@ -209,6 +209,7 @@ model User {
   auraConversations AuraConversation[]
   auraPreferences   AuraPreference?
   notifications Notification[] @relation("UserNotifications")
+  affiliateProfile AffiliateProfile?
   notificationPreferences NotificationPreference[] @relation("UserNotificationPreferences")
 }
 
@@ -3442,4 +3443,182 @@ model NotificationIntent {
   @@index([status, nextAttemptAt])
   @@index([leaseExpiresAt])
   @@index([entityType, entityId])
+}
+
+// ---------------------------------------------------------------------------
+// NaijaDeals Affiliate (design committed 2026-11-10; owner waived Aura gate)
+// ---------------------------------------------------------------------------
+
+enum AffiliateStatus {
+  APPLIED
+  APPROVED
+  SUSPENDED
+  REJECTED
+}
+
+enum CampaignFunding {
+  PLATFORM
+  MERCHANT
+}
+
+enum AffiliateCampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+enum ConversionState {
+  TRACKED
+  VALIDATING
+  APPROVED
+  PAYABLE
+  PAYING
+  PAID
+  REJECTED
+  REVERSED
+  DISPUTED
+}
+
+enum PayoutState {
+  REQUESTED
+  APPROVED
+  PROCESSING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+model AffiliateProfile {
+  id              String            @id @default(cuid())
+  userId          String            @unique
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status          AffiliateStatus   @default(APPLIED)
+  displayName     String?
+  channels        String[]          @default([])
+  audienceCity    String?
+  termsVersion    String
+  termsAcceptedAt DateTime?
+  payoutBank      String?
+  payoutAccountName String?
+  payoutAccountNumber String?
+  riskNote        String?
+  approvedAt      DateTime?
+  suspendedReason String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  links           AffiliateLink[]
+  conversions     AffiliateConversion[]
+  payouts         AffiliatePayout[]
+
+  @@index([status, createdAt])
+}
+
+model AffiliateCampaign {
+  id                String                 @id @default(cuid())
+  slug              String                 @unique
+  name              String
+  vertical          String                 @default("shop")
+  status            AffiliateCampaignStatus @default(DRAFT)
+  funding           CampaignFunding        @default(PLATFORM)
+  /// Percentage in basis points, applied to the qualifying basis.
+  commissionBps     Int                    @default(0)
+  /// Fixed alternative in kobo; when set, takes precedence over commissionBps.
+  commissionFlatKobo BigInt?
+  budgetKobo        BigInt                 @default(0)
+  spentKobo         BigInt                 @default(0)
+  attributionDays   Int                    @default(30)
+  /// Which amount is commissioned: SUBTOTAL (excludes delivery) or TOTAL.
+  commissionBasis   String                 @default("SUBTOTAL")
+  ruleVersion       Int                    @default(1)
+  effectiveFrom     DateTime               @default(now())
+  effectiveTo       DateTime?
+  termsUrl          String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  links             AffiliateLink[]
+  conversions       AffiliateConversion[]
+
+  @@index([status, vertical])
+}
+
+model AffiliateLink {
+  id          String             @id @default(cuid())
+  affiliateId String
+  affiliate   AffiliateProfile  @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  campaignId  String
+  campaign    AffiliateCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  code        String             @unique
+  /// Allowlisted destination path on this platform; never an external URL.
+  destination String
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+
+  touches     AttributionTouch[]
+  conversions AffiliateConversion[]
+
+  @@index([affiliateId, createdAt])
+}
+
+model AttributionTouch {
+  id         String        @id @default(cuid())
+  linkId     String
+  link       AffiliateLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  /// Hashed visitor key; no raw IP or device fingerprint is stored.
+  visitorKey String
+  userId     String?
+  landedAt   DateTime      @default(now())
+  expiresAt  DateTime
+  consent    Boolean       @default(false)
+
+  @@index([visitorKey, expiresAt])
+}
+
+model AffiliateConversion {
+  id              String          @id @default(cuid())
+  /// Unique: one qualifying event can never produce two commissions.
+  dedupeKey       String          @unique
+  affiliateId     String
+  affiliate       AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Restrict)
+  campaignId      String
+  campaign        AffiliateCampaign @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  linkId          String?
+  link            AffiliateLink?   @relation(fields: [linkId], references: [id], onDelete: SetNull)
+  /// The order or booking that qualified, by type and id.
+  entityType      String
+  entityId        String
+  /// Frozen at capture so a later rule edit cannot change an earned liability.
+  ruleVersion     Int
+  commissionBps   Int
+  basisKobo       BigInt
+  amountKobo      BigInt
+  state           ConversionState @default(TRACKED)
+  /// Ledger reference once the liability or settlement is posted.
+  ledgerReference String?
+  reversibleUntil DateTime?
+  reason          String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([affiliateId, state, createdAt])
+  @@index([entityType, entityId])
+}
+
+model AffiliatePayout {
+  id            String      @id @default(cuid())
+  affiliateId   String
+  affiliate     AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Restrict)
+  reference     String      @unique
+  amountKobo    BigInt
+  state         PayoutState @default(REQUESTED)
+  ledgerReference String?
+  requestedAt   DateTime    @default(now())
+  decidedBy     String?
+  decidedAt     DateTime?
+  paidAt        DateTime?
+  failureReason String?
+
+  @@index([affiliateId, state, requestedAt])
 }
