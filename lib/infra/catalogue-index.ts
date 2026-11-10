@@ -3,7 +3,7 @@ import {
   isFixtureListing,
   listProducts
 } from "@/lib/services/core/catalog.service";
-import { cacheSetJson } from "./cache";
+import { cacheSetJson, cached } from "./cache";
 import {
   deleteProducts,
   ensureProductIndex,
@@ -82,19 +82,32 @@ export async function removeFromIndex(productId: string): Promise<boolean> {
  * Returns product ids in relevance order, or `null` when the index cannot be
  * trusted (not configured, unreachable, or empty) so the caller falls back to
  * the Postgres scan.
+ *
+ * Only the id list is cached, never price or stock: those are read from the
+ * database on every request, so a short TTL cannot serve a stale price. A
+ * product deleted during the TTL simply drops out downstream, because the
+ * caller filters ids against the live product rows.
  */
 export async function searchProductIds(
   query: string,
   options: { limit?: number; filter?: string } = {}
 ): Promise<string[] | null> {
-  if (!query.trim()) return null;
-  const result = await searchProducts(query, options);
-  if (!result) return null;
+  const normalised = query.trim().toLowerCase();
+  if (!normalised) return null;
 
-  // An empty index produces an empty hit list for every query; that is a
-  // configuration problem, not a genuine "no results" answer.
-  const count = await indexDocumentCount();
-  if (count === null || count === 0) return null;
+  const cacheKey = `search:ids:${options.limit ?? 200}:${options.filter ?? "all"}:${normalised}`;
+  return cached<string[]>(cacheKey, 20, async () => {
+    const result = await searchProducts(query, options);
+    if (!result) throw new SearchUnavailable();
 
-  return result.hits.map((hit) => hit.id);
+    // An empty index produces an empty hit list for every query; that is a
+    // configuration problem, not a genuine "no results" answer.
+    const count = await indexDocumentCount();
+    if (count === null || count === 0) throw new SearchUnavailable();
+
+    return result.hits.map((hit) => hit.id);
+  }).catch(() => null);
 }
+
+/** Thrown so the read-through helper does not cache an unavailable index. */
+class SearchUnavailable extends Error {}
