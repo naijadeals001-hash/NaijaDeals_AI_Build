@@ -52,6 +52,9 @@ export type Permission = (typeof PERMISSIONS)[number];
  */
 const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
   super_admin: PERMISSIONS,
+  // Read-only affiliate review. Deliberately narrow: inspection without any
+  // authority to resolve, approve or move money.
+  affiliate_reviewer: ["affiliates:read"],
   admin: PERMISSIONS.filter((permission) => permission !== "roles:write"),
   ops: [
     "dashboard:read",
@@ -105,7 +108,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
 };
 
 /** Roles that grant Control Center access at all. */
-export const STAFF_ROLES = ["super_admin", "admin", "ops", "finance", "support", "moderator"] as const;
+export const STAFF_ROLES = ["super_admin", "admin", "ops", "finance", "support", "moderator", "affiliate_reviewer"] as const;
 
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
