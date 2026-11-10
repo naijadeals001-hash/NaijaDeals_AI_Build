@@ -192,6 +192,61 @@ ${out}`);
       assert(total === 5_000n, `total ${total}, expected exactly the commission`);
       return `4,500 refused, 4,000 accepted, total ${total} of 5000`;
     });
+    // --- additional provenance cases ---------------------------------------
+    const overlapConv = await conversion("overlap", 5_000n, { state: "PAID" });
+    const overlapTx = await prisma.walletTransaction.create({
+      data: { walletId: wallet.id, type: "debit", amountKobo: 800n, reference: `AFF-REV-${overlapConv.id}-x`, description: "overlap" }
+    });
+    await prisma.affiliateReversalOperation.create({
+      data: { opKey: `prov-${runId}`, conversionId: overlapConv.id, requestedKobo: 800n, recoveredKobo: 800n, debtKobo: 0n, ledgerReference: overlapTx.reference }
+    });
+
+    const collected = await conversion("collected", 5_000n);
+    await prisma.affiliateRecovery.create({
+      data: { conversionId: collected.id, affiliateId: profile.id, amountKobo: 900n, collectedKobo: 300n, state: "OUTSTANDING", note: "partial" }
+    });
+
+    const writtenOff = await conversion("written", 5_000n);
+    await prisma.affiliateRecovery.create({
+      data: { conversionId: writtenOff.id, affiliateId: profile.id, amountKobo: 700n, collectedKobo: 0n, state: "WRITTEN_OFF", note: "wo" }
+    });
+
+    await check("proven overlap: a matching ledger reference is counted once and not flagged", async () => {
+      const out = reconcile("--apply");
+      const row = await prisma.affiliateConversion.findUniqueOrThrow({ where: { id: overlapConv.id } });
+      assert(!row.reconciliationRequired, "proven overlap was flagged");
+      const ops = await prisma.affiliateReversalOperation.findMany({ where: { conversionId: overlapConv.id } });
+      const total = ops.reduce((sum, op) => sum + op.requestedKobo, 0n);
+      assert(ops.length === 1 && total === 800n, `${ops.length} operations totalling ${total}, expected the existing 800`);
+      return `existing operation recognised as the same money, still one operation of ${total}`;
+    });
+
+    await check("partially collected recovery counts the original debt, not the remainder", async () => {
+      const ops = await prisma.affiliateReversalOperation.findMany({ where: { conversionId: collected.id } });
+      assert(ops.length === 1, `${ops.length} operations`);
+      assert(ops[0].requestedKobo === 900n, `requested ${ops[0].requestedKobo}, expected the original 900`);
+      assert(ops[0].debtKobo === 900n, `debt ${ops[0].debtKobo}`);
+      return `requested 900 and debt 900 despite 300 already collected`;
+    });
+
+    await check("written-off recovery keeps the original reversal amount", async () => {
+      const ops = await prisma.affiliateReversalOperation.findMany({ where: { conversionId: writtenOff.id } });
+      assert(ops.length === 1, `${ops.length} operations`);
+      assert(ops[0].requestedKobo === 700n, `requested ${ops[0].requestedKobo}, expected 700`);
+      assert(ops[0].debtKobo === 700n, `debt ${ops[0].debtKobo}`);
+      return `write-off did not erase the 700 reversal`;
+    });
+
+    await check("mixed cash and debt keeps amount-level provenance", async () => {
+      const ops = await prisma.affiliateReversalOperation.findMany({ where: { conversionId: mixed.id } });
+      const legacy = ops.find((op) => op.opKey.startsWith("legacy:"));
+      assert(legacy, "no legacy operation for the mixed conversion");
+      assert(legacy!.requestedKobo === 1_000n, `requested ${legacy!.requestedKobo}`);
+      assert(legacy!.recoveredKobo === 700n, `recovered ${legacy!.recoveredKobo}, expected the cash 700`);
+      assert(legacy!.debtKobo === 300n, `debt ${legacy!.debtKobo}, expected 300`);
+      return `requested 1000 = cash 700 + debt 300`;
+    });
+
   } finally {
     await prisma.affiliateReversalOperation.deleteMany({ where: { conversionId: { in: made.conversions } } });
     const wallets = await prisma.wallet.findMany({ where: { userId: { in: made.users } }, select: { id: true } });
