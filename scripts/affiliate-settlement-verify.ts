@@ -38,6 +38,12 @@ async function main() {
   const admin = await prisma.user.create({ data: { email: `affset-admin-${runId}@example.test`, name: "Settlement Admin", actorType: "ADMIN" } });
   const platform = await prisma.wallet.findFirstOrThrow({ where: { ownerType: "SYSTEM" } });
 
+  // The affiliate wallet does not exist until settlement creates it, so the test
+  // must establish it before measuring a balance.
+  const seededWallet = await prisma.wallet.create({
+    data: { userId: user.id, ownerType: "CUSTOMER", currency: "NGN", availableKobo: 0n, heldKobo: 0n }
+  });
+
   const profile = await applyAffiliate({ userId: user.id, termsVersion: "2026-11" });
   await decideAffiliate({ actorId: admin.id, affiliateId: profile.id, approve: true });
   const campaign = await prisma.affiliateCampaign.create({
@@ -74,7 +80,7 @@ async function main() {
     let platformBefore = 0n;
 
     await check("settlement credits the affiliate once and debits the platform", async () => {
-      const wallet = await prisma.wallet.findFirstOrThrow({ where: { userId: user.id, ownerType: "CUSTOMER" } });
+      const wallet = await prisma.wallet.findUniqueOrThrow({ where: { id: seededWallet.id } });
       affiliateWalletId = wallet.id;
       before = await balance(wallet.id);
       platformBefore = await balance(platform.id);
