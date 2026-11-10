@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const limit = await checkAuraRateLimit(user.id);
     if (!limit.allowed) {
       const status = limit.unavailable ? 503 : 429;
-      return NextResponse.json(
+      return Response.json(
         {
           error: limit.unavailable
             ? "Aura is temporarily unable to check usage limits. Try again shortly."
