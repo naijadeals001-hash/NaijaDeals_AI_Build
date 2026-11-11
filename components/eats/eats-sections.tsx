@@ -81,20 +81,37 @@ export function EatsHero() {
       <img src={HERO} alt="" className="absolute inset-0 h-full w-full object-cover opacity-90" fetchPriority="high" />
       <div className="absolute inset-0 bg-gradient-to-r from-[#0b5c33] via-[#0b5c33]/85 to-transparent" aria-hidden />
       <div className="relative max-w-[460px] p-5 sm:p-8">
-        <p className="flex items-center gap-1.5 font-display text-[20px] font-extrabold text-white sm:text-[24px]">
+        <p className="flex items-center gap-1.5 font-display text-[18px] font-extrabold text-white sm:text-[20px]">
           Naija<span className="text-[#8ed14b]">Eats</span>
         </p>
-        <h1 className="mt-1 font-display text-[24px] font-extrabold leading-tight text-white sm:text-[34px]">
-          Africa&apos;s biggest food delivery &amp; restaurant marketplace
+        <h1 className="mt-2 font-display text-[30px] font-extrabold leading-[1.08] tracking-tight text-white sm:text-[46px]">
+          Your favourites.
+          <br />
+          Delivered.
         </h1>
-        <ul className="mt-3 space-y-1 text-[11.5px] font-semibold text-white/90 sm:text-[12.5px]">
-          <li className="flex items-center gap-1.5"><BadgeCheck className="h-4 w-4 text-[#8ed14b]" aria-hidden /> Thousands of restaurants</li>
-          <li className="flex items-center gap-1.5"><Bike className="h-4 w-4 text-[#8ed14b]" aria-hidden /> Fast &amp; reliable delivery</li>
-          <li className="flex items-center gap-1.5"><UtensilsCrossed className="h-4 w-4 text-[#8ed14b]" aria-hidden /> Authentic African flavours</li>
-        </ul>
-        <Link href="/naijaeats/restaurants" className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#f26b21] px-5 py-2.5 text-[12.5px] font-extrabold text-white hover:bg-[#dd5f18]">
-          Order food now <ArrowRight className="h-4 w-4" aria-hidden />
-        </Link>
+        <p className="mt-2 max-w-[380px] text-[13px] leading-5 text-white/90 sm:text-[14px]">
+          Discover restaurants, local kitchens and African flavours near you.
+        </p>
+        <form action="/naijaeats/restaurants" method="get" className="mt-4 space-y-2">
+          <p className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-extrabold text-white">
+            <Bike className="h-3.5 w-3.5" aria-hidden="true" /> Delivery
+          </p>
+          <label className="block">
+            <span className="sr-only">Delivery address</span>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                name="address"
+                type="text"
+                autoComplete="street-address"
+                placeholder="Enter delivery address"
+                className="min-h-11 w-full rounded-lg border border-white/30 bg-white px-3 text-sm font-semibold text-[#14241b] placeholder:text-[#7b8780] focus:outline-none focus:ring-2 focus:ring-[#8ed14b]"
+              />
+              <button type="submit" className="min-h-11 rounded-lg bg-[#0a4a29] px-5 text-sm font-extrabold text-white hover:bg-[#083d22] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                Find food
+              </button>
+            </div>
+          </label>
+        </form>
       </div>
     </section>
   );
