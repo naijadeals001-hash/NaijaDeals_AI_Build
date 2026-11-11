@@ -45,6 +45,15 @@ export function availablePaymentMethods(countryCode: string) {
 }
 
 export async function ensureWallet(tx: Db, input: { userId?: string; vendorId?: string; ownerType: "CUSTOMER" | "VENDOR" | "COURIER" | "DRIVER" | "SYSTEM" }) {
+  // Ownership rules: SYSTEM is platform-wide, VENDOR belongs to a vendor row,
+  // and every personal wallet belongs to a user. Reject mixed or missing ids.
+  if (input.ownerType === "SYSTEM") {
+    if (input.userId || input.vendorId) throw new ApiError(400, "invalid_wallet_identity", "The platform wallet cannot belong to a user or vendor.");
+  } else if (input.ownerType === "VENDOR") {
+    if (!input.vendorId || input.userId) throw new ApiError(400, "invalid_wallet_identity", "A vendor wallet requires a vendorId and no userId.");
+  } else if (!input.userId || input.vendorId) {
+    throw new ApiError(400, "invalid_wallet_identity", "A personal wallet requires a userId and no vendorId.");
+  }
   // Resolve by owner type as well as identity: one user can hold CUSTOMER,
   // DRIVER and COURIER wallets, and paying the wrong one is a financial bug.
   const identity = input.userId

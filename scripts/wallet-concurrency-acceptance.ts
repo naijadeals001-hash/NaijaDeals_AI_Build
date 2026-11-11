@@ -49,6 +49,18 @@ async function main() {
     assert(new Set(results.map((w) => w.id)).size === 1 && count === 1, `rows=${count}`);
     return `8 calls -> 1 SYSTEM wallet`;
   });
+  await check("5. Invalid ownership combinations fail safely", async () => {
+    const u = await user();
+    const attempts = [
+      () => ensureWallet(prisma, { ownerType: "SYSTEM", userId: u.id }),
+      () => ensureWallet(prisma, { ownerType: "VENDOR", userId: u.id }),
+      () => ensureWallet(prisma, { ownerType: "CUSTOMER", userId: u.id, vendorId: u.id })
+    ];
+    let rejected = 0;
+    for (const attempt of attempts) { try { await attempt(); } catch (e) { if ((e as { code?: string }).code === "invalid_wallet_identity") rejected += 1; } }
+    assert(rejected === 3, `only ${rejected}/3 rejected`);
+    return `3 invalid combinations rejected with invalid_wallet_identity`;
+  });
   console.log(JSON.stringify({ database: DB, checks: rows, failures }, null, 2));
   await prisma.$disconnect();
   process.exit(failures ? 1 : 0);

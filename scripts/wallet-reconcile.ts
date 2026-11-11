@@ -8,10 +8,11 @@ import { prisma } from "../lib/prisma";
  * `heldKobo` are stored projections of that balance. Opening balances and any
  * direct balance write without a journal therefore surface as a difference.
  */
-const DB = "naijadeals_affiliate_test";
+const EXPECTED = process.env.RECONCILE_DB ?? "naijadeals_affiliate_test";
 (async () => {
   const db = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
-  if (db[0]?.db !== DB) throw new Error(`wrong database ${db[0]?.db}`);
+  const DB = db[0]?.db ?? "";
+  if (DB !== EXPECTED) throw new Error(`wrong database ${DB}, expected ${EXPECTED}`);
   const wallets = await prisma.wallet.findMany({ select: { id: true, ownerType: true, userId: true, vendorId: true, currency: true, availableKobo: true, heldKobo: true, createdAt: true } });
   const legs = await prisma.ledgerEntry.groupBy({ by: ["walletId", "direction"], _sum: { amountKobo: true } });
   const txCounts = await prisma.walletTransaction.groupBy({ by: ["walletId"], _count: { _all: true } });
