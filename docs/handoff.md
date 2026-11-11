@@ -3175,3 +3175,25 @@ with the repository build (`NEXT_DIST_DIR=.next-pay npm run build`), contains
 `AURA_TEST_PROVIDER=1`. The unauthenticated `/api/aura/chat` probe returned 403 before any provider
 was reached, so this is not proof of the refusal path: an authenticated conversation request was not
 executed. Outbound paid traffic was not generated. Missing-credential behaviour was not exercised.
+
+## 2026-11-05 — Production artifact acceptance
+
+Artifact: `.next-pay/standalone/server.js`, built with `set NEXT_DIST_DIR=.next-pay&& npm run build`.
+Started with `PORT=3018`, the isolated `naijadeals_affiliate_test` URL, and a preload that rejects
+any fetch to deepseek/openai/anthropic (`scripts/block-provider-network.cjs`), logging attempts.
+
+**Refusal — PASS.** `AURA_TEST_PROVIDER=1` with a local dummy key; authenticated POST to
+`/api/aura/chat` (session created directly, app Origin) returned 200 SSE with
+`{"type":"error","code":"test_provider_refused"}` and no deterministic chunks. Outbound attempts: 0.
+
+**Missing configuration — PASS.** Restarted with `AURA_TEST_PROVIDER` absent and
+`DEEPSEEK_API_KEY=` empty; the same request returned `provider_not_configured` and made no outbound
+attempt. A first attempt without explicitly emptying the key loaded the key from `.env` and made two
+provider fetches, both blocked by the preload — confirming the outbound block works.
+
+**Browser — PASS.** Campaign manager and guest attribution journeys on the final build: 0 failures
+each.
+
+Artifact process stopped. Session token was written to a temporary file and never printed.
+Process-kill interruption of the backfill remains untested; only its transaction boundary is
+recorded.
