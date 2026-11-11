@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bike, Bus, Car, Footprints, Truck, Zap } from "lucide-react";
 
@@ -25,6 +25,16 @@ const FAQS = [
 
 export function EatsLandingExtras() {
   const [dismissed, setDismissed] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<{ prompt: () => Promise<void> } | null>(null);
+  const [showSteps, setShowSteps] = useState(false);
+  useEffect(() => {
+    const onPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as unknown as { prompt: () => Promise<void> });
+    };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    return () => window.removeEventListener("beforeinstallprompt", onPrompt);
+  }, []);
   return (
     <>
       <section className="mx-auto mt-8 w-full max-w-[1180px] px-4">
@@ -102,15 +112,33 @@ export function EatsLandingExtras() {
           </div>
         </div>
         <div className="rounded-2xl border border-[#e4e9e5] bg-white p-5">
-          <h2 className="font-display text-xl font-extrabold text-[#14241b]">Your cravings, closer.</h2>
-          <p className="mt-1 text-sm text-[#6b7a70]">Install NaijaDeals for quicker access to food, rides and shopping. Installation is optional and never blocks ordering.</p>
+          <h2 className="font-display text-xl font-extrabold text-[#14241b]">Get the NaijaEats app</h2>
+          <p className="mt-1 text-sm text-[#6b7a70]">Order food, track delivery and earn rewards.</p>
           {dismissed ? (
-            <p className="mt-3 text-xs text-[#6b7a70]">Prompt dismissed. You can install later from your browser menu.</p>
+            <p className="mt-3 text-xs text-[#6b7a70]">Installation skipped. You can add NaijaEats to your home screen later from your browser menu.</p>
           ) : (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Link href="/naijaeats" className="rounded-full bg-[#0b5c33] px-4 py-2 text-sm font-bold text-white">Continue on web</Link>
-              <button onClick={() => setDismissed(true)} className="rounded-full border border-[#d8dfd8] px-4 py-2 text-sm font-bold">Dismiss</button>
-            </div>
+            <>
+              <p className="mt-2 text-xs text-[#6b7a70]">Not in the app stores yet. Install this page as a home-screen app for the same experience — no download link is required.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={() => { if (installPrompt) void installPrompt.prompt(); else setShowSteps((open) => !open); }}
+                  className="rounded-full bg-[#0b5c33] px-4 py-2 text-sm font-bold text-white"
+                >
+                  Install NaijaEats
+                </button>
+                <button onClick={() => setDismissed(true)} className="rounded-full border border-[#d8dfd8] px-4 py-2 text-sm font-bold">Continue on web</button>
+              </div>
+              {showSteps && !installPrompt ? (
+                <div className="mt-3 rounded-xl bg-[#f4f8f4] p-3 text-xs text-[#4b5a51]">
+                  <p className="font-bold text-[#14241b]">How to install</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-4">
+                    <li>Android / Chrome: menu (⋮) → “Add to Home screen” or “Install app”.</li>
+                    <li>iPhone / Safari: Share → “Add to Home Screen”.</li>
+                    <li>Desktop Chrome or Edge: install icon in the address bar.</li>
+                  </ul>
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       </section>

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EatsHeader } from "@/components/eats/eats-header";
 import {
-  AppBanner,
   CuisineCard,
   DishCategoryCard,
   EatsHero,
@@ -107,7 +106,6 @@ export default async function NaijaEatsPage() {
 
         <EatsLandingExtras />
         <MoreWays />
-        <AppBanner />
       </main>
 
       <EatsFooter />
