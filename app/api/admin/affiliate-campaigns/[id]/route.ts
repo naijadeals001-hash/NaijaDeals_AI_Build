@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { assertSameOrigin, jsonError, requireAdminPermission } from "@/lib/auth/guard";
 import { recordAudit } from "@/lib/services/core/audit.service";
 import { jsonSafe } from "@/lib/services/core/serialize";
+import { isSupportedAffiliateVertical } from "@/lib/services/affiliate/verticals";
 
 /**
  * Campaign lifecycle.
@@ -47,6 +48,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       );
     }
 
+    if (next === "ACTIVE" && !isSupportedAffiliateVertical(campaign.vertical)) {
+      return NextResponse.json({ error: `The ${campaign.vertical} vertical has no verified affiliate integration.`, code: "unsupported_vertical" }, { status: 409 });
+    }
     if (next === "ACTIVE") {
       if (campaign.commissionBps <= 0 && (campaign.commissionFlatKobo ?? 0n) <= 0n) {
         return NextResponse.json({ error: "Set a percentage or flat commission before activating.", code: "invalid_commission" }, { status: 409 });

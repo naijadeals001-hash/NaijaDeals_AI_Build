@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { assertSameOrigin, jsonError, requireUser } from "@/lib/auth/guard";
 import { createLink } from "@/lib/services/affiliate/service";
 import { jsonSafe } from "@/lib/services/core/serialize";
+import { SUPPORTED_AFFILIATE_VERTICALS } from "@/lib/services/affiliate/verticals";
 
 /** Campaign discovery and link creation for the signed-in affiliate. */
 
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
     const take = Math.min(Math.max(Number(request.nextUrl.searchParams.get("take") ?? 20), 1), 50);
     const cursor = request.nextUrl.searchParams.get("cursor");
     const campaigns = await prisma.affiliateCampaign.findMany({
-      where: { status: "ACTIVE", OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }] },
+      where: { status: "ACTIVE", vertical: { in: [...SUPPORTED_AFFILIATE_VERTICALS] }, OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }] },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: take + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),

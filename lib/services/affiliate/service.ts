@@ -3,6 +3,7 @@ import type { AffiliateConversion, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { recordAudit } from "@/lib/services/core/audit.service";
+import { isSupportedAffiliateVertical } from "./verticals";
 
 /**
  * NaijaDeals Affiliate — attribution and commission accrual.
@@ -136,6 +137,9 @@ export async function createLink(input: { affiliateId: string; campaignId: strin
   if (!campaign || campaign.status !== "ACTIVE") {
     throw new ApiError(409, "campaign_inactive", "That campaign is not accepting traffic.");
   }
+  if (!isSupportedAffiliateVertical(campaign.vertical)) {
+    throw new ApiError(409, "unsupported_vertical", "That vertical has no verified affiliate integration.");
+  }
   // Internal paths only: a link can never become an open redirect.
   const destination = safeInternalDestination(input.destination);
   if (!destination) {
@@ -159,6 +163,7 @@ export async function resolveTouch(input: { code: string; visitorKey: string; us
   });
   if (!link || !link.active) return null;
   if (link.campaign.status !== "ACTIVE") return null;
+  if (!isSupportedAffiliateVertical(link.campaign.vertical)) return null;
   if (link.affiliate.status !== "APPROVED") return null;
 
   const days = link.campaign.attributionDays || TOUCH_COOKIE_TTL_DEFAULT_DAYS;
@@ -217,6 +222,8 @@ export async function resolveCheckoutAttribution(input: { userId: string; visito
     if (touch.expiresAt.getTime() <= now.getTime()) continue;
     const campaign = touch.link.campaign;
     if (campaign.status !== "ACTIVE") continue;
+    if (!isSupportedAffiliateVertical(campaign.vertical)) continue;
+    if (!isSupportedAffiliateVertical(campaign.vertical)) continue;
     if (campaign.effectiveTo && campaign.effectiveTo.getTime() <= now.getTime()) continue;
     if (touch.link.affiliate.status !== "APPROVED") continue;
     if (touch.link.affiliate.userId === input.userId) continue;
@@ -280,6 +287,7 @@ export async function recordConversion(input: ConversionInput): Promise<
   if (!touch || !touch.consent) return { created: false, reason: "no_attribution" };
   const campaign = touch.link.campaign;
   if (campaign.status !== "ACTIVE") return { created: false, reason: "campaign_inactive" };
+  if (!isSupportedAffiliateVertical(campaign.vertical)) return { created: false, reason: "unsupported_vertical" };
   if (campaign.effectiveTo && campaign.effectiveTo < now) return { created: false, reason: "campaign_ended" };
   if (touch.link.affiliate.status !== "APPROVED") return { created: false, reason: "affiliate_not_approved" };
 
