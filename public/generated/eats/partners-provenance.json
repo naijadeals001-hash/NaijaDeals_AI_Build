@@ -12,9 +12,17 @@
       "costUsd": 0.03
     },
     {
+      "id": "africa-map",
+      "path": "/generated/eats/africa-map.png",
+      "prompt": "Minimal premium flat vector-style illustration of the African continent centred on a warm cream background. Deep forest-green landmass with clean smooth coastlines, the North African region in a lighter leaf green, a small restrained orange dot over Nigeria, subtle soft shadow. Accurate recognizable Africa shape including Madagascar. No text, no labels, no watermark.",
+      "created": "2026-11-11",
+      "credits": 6,
+      "costUsd": 0.03
+    },
+    {
       "id": "partners-restaurant",
       "path": "/generated/eats/partners-restaurant.png",
-      "prompt": "Photorealistic editorial photograph inside a warm Nigerian restaurant. A Nigerian female chef in a white chef jacket and apron smiling as she hands a plain kraft paper takeaway bag to a Nigerian male delivery rider in a deep forest-green uniform holding a green insulated food bag. Shelves of ingredients behind them, warm natural window light, authentic faces, premium brand campaign photography. Each insulated bag and the rider shirt carry a small embroidered badge reading NaijaEats. No other text, no watermarks.",
+      "prompt": "Photorealistic editorial photograph inside a warm Nigerian restaurant. A Nigerian female chef in a white chef jacket and apron smiling as she hands a kraft paper takeaway bag clearly printed with a large green NaijaEats logo to a Nigerian male delivery rider in a deep forest-green uniform; the rider green insulated bag also clearly displays the NaijaEats logo. Shelves of ingredients behind them, warm natural window light, authentic faces, premium brand campaign photography. Each insulated bag and the rider shirt carry a small embroidered badge reading NaijaEats. No other text, no watermarks.",
       "created": "2026-11-11",
       "credits": 6,
       "costUsd": 0.03

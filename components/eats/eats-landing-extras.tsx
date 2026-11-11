@@ -29,15 +29,7 @@ export function EatsLandingExtras() {
     <>
       <section className="mx-auto mt-8 w-full max-w-[1180px] px-4">
         <div className="grid items-center gap-4 sm:grid-cols-[180px_1fr]">
-          <svg viewBox="0 0 200 240" role="img" aria-label="Map of Africa" className="mx-auto h-auto w-[150px] sm:mx-0 sm:w-[180px]">
-            <path
-              d="M40 8 C36 12 30 18 27 24 C22 32 18 40 15 48 C11 56 8 62 8 70 C8 78 12 86 18 94 C24 101 28 107 34 109 C42 112 50 106 58 107 C66 108 72 111 76 122 C80 134 82 146 86 158 C90 170 92 184 96 198 C100 212 104 224 110 234 L124 226 C130 216 136 204 141 192 C145 182 148 172 154 164 C160 156 162 148 160 140 C158 132 160 124 166 118 C176 108 186 98 192 90 C186 86 178 84 170 82 C162 80 156 76 154 68 C152 60 152 52 150 44 C146 34 140 26 132 22 C122 18 110 17 98 16 L82 4 L65 6 C56 7 48 8 40 8 Z"
-              fill="#0b5c33" stroke="#0b3d24" strokeWidth="2" strokeLinejoin="round"
-            />
-            <path d="M15 48 C22 32 32 20 44 12 C58 6 74 4 86 10 C110 14 132 22 148 40 C152 48 154 56 152 64 C140 66 122 64 104 62 C86 60 66 62 50 68 C38 66 24 58 15 48 Z" fill="#8ed14b" opacity="0.5" />
-            <ellipse cx="176" cy="186" rx="7" ry="14" fill="#0b5c33" stroke="#0b3d24" strokeWidth="2" />
-            <circle cx="75" cy="93" r="5" fill="#f26b21" />
-          </svg>
+          <img src="/generated/eats/africa-map.png" alt="Map of Africa showing the regions available for food discovery" loading="lazy" className="mx-auto h-auto w-[150px] rounded-xl sm:mx-0 sm:w-[180px]" />
           <div>
             <ul className="flex flex-wrap gap-2">
               {REGIONS.map((region) => (
