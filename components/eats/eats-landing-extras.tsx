@@ -31,10 +31,10 @@ export function EatsLandingExtras() {
         <div className="grid items-center gap-4 sm:grid-cols-[180px_1fr]">
           <svg viewBox="0 0 200 240" role="img" aria-label="Map of Africa" className="mx-auto h-auto w-[150px] sm:mx-0 sm:w-[180px]">
             <path
-              d="M37 6 L27 22 L8 54 L8 74 L19 93 L32 107 L53 104 L69 109 L77 109 L77 125 L85 141 L88 163 L93 192 L101 230 L123 230 L141 205 L147 182 L160 170 L160 154 L157 138 L165 125 L189 86 L168 83 L157 74 L152 51 L139 22 L120 19 L83 16 L80 3 L61 6 Z"
+              d="M40 8 C36 12 30 18 27 24 C22 32 18 40 15 48 C11 56 8 62 8 70 C8 78 12 86 18 94 C24 101 28 107 34 109 C42 112 50 106 58 107 C66 108 72 111 76 122 C80 134 82 146 86 158 C90 170 92 184 96 198 C100 212 104 224 110 234 L124 226 C130 216 136 204 141 192 C145 182 148 172 154 164 C160 156 162 148 160 140 C158 132 160 124 166 118 C176 108 186 98 192 90 C186 86 178 84 170 82 C162 80 156 76 154 68 C152 60 152 52 150 44 C146 34 140 26 132 22 C122 18 110 17 98 16 L82 4 L65 6 C56 7 48 8 40 8 Z"
               fill="#0b5c33" stroke="#0b3d24" strokeWidth="2" strokeLinejoin="round"
             />
-            <path d="M8 54 L27 22 L61 6 L80 3 L83 16 L120 19 L139 22 L152 51 L120 60 L90 66 L60 70 L30 64 Z" fill="#8ed14b" opacity="0.55" />
+            <path d="M15 48 C22 32 32 20 44 12 C58 6 74 4 86 10 C110 14 132 22 148 40 C152 48 154 56 152 64 C140 66 122 64 104 62 C86 60 66 62 50 68 C38 66 24 58 15 48 Z" fill="#8ed14b" opacity="0.5" />
             <ellipse cx="176" cy="186" rx="7" ry="14" fill="#0b5c33" stroke="#0b3d24" strokeWidth="2" />
             <circle cx="75" cy="93" r="5" fill="#f26b21" />
           </svg>
@@ -80,7 +80,7 @@ export function EatsLandingExtras() {
               <a href="#delivery-transport" className="rounded-full border border-white/50 px-5 py-2.5 text-sm font-extrabold text-white">Explore transport options</a>
             </div>
           </div>
-          <img src="/generated/eats/partners-delivery.png" alt="Three NaijaEats delivery partners with a motorbike, bicycle and car, each carrying an insulated food bag" loading="lazy" className="h-56 w-full rounded-2xl object-cover md:h-64" />
+          <img src="/generated/eats/partners-delivery.png" alt="Three NaijaEats delivery partners with a motorbike, bicycle and car, each carrying an insulated food bag" loading="lazy" className="h-auto w-full rounded-2xl object-contain" />
         </div>
       </section>
 
@@ -102,7 +102,7 @@ export function EatsLandingExtras() {
 
       <section className="mx-auto mt-8 grid w-full max-w-[1180px] gap-4 px-4 sm:grid-cols-2">
         <div className="overflow-hidden rounded-2xl border border-[#e4e9e5] bg-white">
-          <img src="/generated/eats/partners-restaurant.png" alt="A Nigerian chef handing a takeaway bag to a NaijaEats delivery rider inside a restaurant" loading="lazy" className="h-44 w-full object-cover" />
+          <img src="/generated/eats/partners-restaurant.png" alt="A Nigerian chef handing a takeaway bag to a NaijaEats delivery rider inside a restaurant" loading="lazy" className="h-auto w-full object-contain bg-[#f7f4ee]" />
           <div className="p-5">
             <h2 className="font-display text-xl font-extrabold text-[#14241b]">Your kitchen. More customers.</h2>
             <p className="mt-1 text-sm text-[#6b7a70]">List your restaurant on NaijaEats and reach more food lovers in your city.</p>
