@@ -3054,3 +3054,74 @@ the documentation commit; `git bundle list-heads` must show
 `refs/heads/naijashop-marketplace` at that commit, and `git bundle verify` must report a complete
 history. The bundle is a backup, not remote publication. GitHub credentials remain rejected and were
 not retried.
+
+---
+
+## 2026-11-05 — Recovery accounting completion (c23a2ec)
+
+### Implemented
+
+- Migration `20261111040000_recovery_offset` adds `AffiliateRecovery.offsetKobo`.
+- An unsettled reversal now creates or tops up one `OUTSTANDING` recovery row **inside** the
+  reversal transaction, alongside its operation and budget release. Debt is no longer only a column
+  on the operation.
+- `settleConversion` reads the outstanding recovery inside its transaction and nets
+  `offsetKobo = min(outstanding, commission)` against the payout. It pays `payout = commission −
+  offset`, records `AFF-OFFSET-<id>` when payout is zero, and closes the recovery when fully offset.
+  Gross commission, payout and offset are all in the settlement audit row.
+- `collectRecovery` computes outstanding as `amount − collected − offset`, claims on both counters,
+  and closes when either cash or offset covers the debt. Partial collection and `no_available_funds`
+  are unchanged.
+- `scripts/affiliate-recovery-backfill.ts` (dry-run by default, `--apply`) targets
+  `sum(debtKobo per conversion) − sum(recovery.amountKobo)`; it creates one row per conversion and
+  audits each change. On the isolated database: dry run found 25 legacy deficits, `--apply` created
+  25, a second `--apply` found 0 and changed nothing.
+
+### Tested locally (0 failures)
+
+- `scripts/affiliate-recovery-accounting.ts` (5 checks): atomic debt persistence; settlement offset
+  (paid 3,000 of a 5,000 commission with 2,000 debt, recovery `COLLECTED`, one payout transaction,
+  later collection refused); settled shortfall collected 700 then 1,300, duplicate refused, two
+  recovery ledger rows; replayed reversal key adds no second operation or debt; collection racing
+  settlement never exceeds the debt (`offset 2,000`, collection refused as already collected).
+- `scripts/affiliate-settlement-race.ts` (6 checks, rerun with offset semantics): settlement-first,
+  reversal-first (settlement offsets 100,000 and pays 150,000; no recovery left open), and three
+  true overlaps; exactly one operation each, intents DONE, budgets released once.
+- `scripts/payments-provider-failure.ts` (4 checks): configured-provider timeout, retry, verification
+  timeout, verified retry with one commission and a flagged duplicate. In-process adapter injection;
+  no network.
+- `scripts/aura-affiliate-dispatch-verify.ts`: `runTurn` with the deterministic provider dispatches
+  `get_affiliate_summary`, persists the tool trail, produces the card. No model call.
+
+### Verified through browser (final build, 0 failures)
+
+`scripts/affiliate-campaign-ui-check.cjs` (manager creates and activates; affiliate discovers and
+creates a link) and `scripts/affiliate-guest-journey.cjs` (consented guest → signup → checkout →
+wallet payment → one 5,000-kobo commission; no consent; signed-in and self-referral). The landing
+screenshot is now best-effort so a slow font load cannot fail a passing journey.
+
+### Vertical coverage audit — implementation blocked on business rules
+
+Exact existing contracts (static audit):
+
+| Vertical | Model | Freeze point | Qualifying event | Blocking decision |
+|----------|-------|--------------|------------------|-------------------|
+| NaijaStay | `StayReservation` | `createHold` tx | `payReservation` (wallet) | No completion event and no host payout exist; commission basis (`totalKobo` bundles cleaning/service fees) is undefined |
+| Rides | `Ride` | `requestRide` tx | wallet `driverUpdateRideStatus(completed)`; cash excluded by `paymentMethod` | Driver receives 100% of the fare; no platform margin, so the commission funding source is undefined |
+| Gigs | `ServiceBooking` | `requestBooking` / `acceptProposal` tx | `fundBooking` or `releaseBookingFunds` | The platform already takes `commissionBps` at release; a second affiliate charge and its funding source are undefined |
+
+Also found: `AffiliateCampaign.vertical` is free text with no server validation and never gates
+`createLink`/`recordConversion`; the admin UI's allowlist is bypassable. Unsupported verticals are
+advertised to affiliates today. These need product decisions before an adapter is written; no Shop
+`Order` rows were manufactured. **Not implemented.**
+
+### Externally verified
+
+None. No remote repository access, no hosted provider, no real payment.
+
+### Still blocked
+
+- GitHub publication: `BetFuz` credential rejected; not retried.
+- Stay/ride/gig attribution: business rules above.
+- Mid-flight provider outage with a real configured provider (fault injection only).
+- More than two unsettled reversals and multi-refund compounding.
