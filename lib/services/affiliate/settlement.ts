@@ -364,6 +364,17 @@ export async function reverseConversion(input: {
       }
     });
 
+    // Release the budget the reversal actually took back. The unsettled branch
+    // already does this; omitting it here left a settled reversal consuming
+    // campaign budget it no longer pays against, which understates what future
+    // traffic can earn.
+    if (input.releaseBudget !== false) {
+      await tx.affiliateCampaign.update({
+        where: { id: conversion.campaignId },
+        data: { spentKobo: { decrement: input.amountKobo } }
+      });
+    }
+
     return { ok: true as const, reference: journalReference, recovered: recoverable, shortfall };
   });
 

@@ -120,13 +120,37 @@ export async function processReversalIntents(
         continue;
       }
 
-      await reverseConversion({
+      const outcome = await reverseConversion({
         actorId: null,
         conversionId: conversion.id,
         amountKobo: proportional,
         reason: `Refund confirmed for order ${intent.orderId}`,
         idempotencyKey: reversalReferenceFor(intent.id)
       });
+
+      // A refusal is not a completed adjustment. Settlement holds the conversion
+      // in PAYING inside its transaction, so a reversal that arrives during that
+      // window must be retried: the next sweep sees PAID and applies the settled
+      // branch. Anything else is a terminal conflict that needs review, because
+      // marking it DONE would silently discard a real charge-back.
+      if (!outcome.reversed) {
+        if (outcome.reason === "state_not_reversible") {
+          const exhausted = intent.attempts >= intent.maxAttempts;
+          await finish(intent.id, token, {
+            state: exhausted ? "FAILED" : "PENDING",
+            lastError: exhausted ? "review_required:settlement_contended" : "retry:settlement_contended"
+          });
+          if (exhausted) dead += 1;
+          else retried += 1;
+          continue;
+        }
+        await finish(intent.id, token, {
+          state: "FAILED",
+          lastError: `review_required:reversal_refused:${outcome.reason}`
+        });
+        dead += 1;
+        continue;
+      }
 
       if (hooks.failBeforeDone) throw new Error("injected_failure_before_done");
 
