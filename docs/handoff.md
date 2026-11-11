@@ -2980,3 +2980,77 @@ Still remaining:
 `git bundle create C:\Users\User\Documents\naijadeals-backup-20261105.bundle --all`, then
 `git bundle verify` reported "The bundle records a complete history." The file is 456 MB and lives
 outside the repository; it is a backup, not a remote publication.
+
+---
+
+## 2026-11-05 — Settlement/reversal contention, provider fault, Aura dispatch (9cb3995, f8852b2)
+
+### Defects found and fixed
+
+1. **Lost charge-back on a transient conflict.** `processReversalIntents` ignored
+   `reverseConversion`'s `{ reversed: false, reason }` result and marked the intent `DONE`. When
+   settlement held the conversion in `PAYING`, the reversal returned `state_not_reversible` and the
+   adjustment was silently discarded. The processor now retries that reason (bounded by
+   `maxAttempts`) and marks other refusals `FAILED` with `review_required:reversal_refused:<reason>`.
+   The retry reuses the stable per-intent idempotency key, so the later settled branch cannot
+   double-apply.
+2. **Settled reversals did not release campaign budget.** The unsettled branch decremented
+   `spentKobo`; the settled branch recovered money but left the budget consumed. Fixed inside the
+   same transaction, guarded by the existing `releaseBudget` flag and the unique operation key.
+
+### Evidence
+
+`scripts/affiliate-settlement-race.ts` drives real refunds (`refundPayment` → durable intent) and
+ran twice with 0 failures:
+
+- Settlement first: refund COMPLETED; one operation (125,000 requested, recovered 125,000, debt 0);
+  intent DONE exactly once; wallet 250,000 → 125,000; campaign budget released 125,000; drain
+  claimed nothing.
+- Reversal first: unsettled operation records 100,000 debt; intent DONE; settlement then pays the
+  full 250,000; net 150,000; budget released once.
+- True overlap (3 fixtures): reversal won once, settlement won twice. Each sweep that met `PAYING`
+  logged `retried:1`, and the drain finished with `done:1`; every intent ended DONE with exactly one
+  operation, `recovered + debt = requested`; settled reversals released their budget.
+- Global reconciliation: 5 conversions/intents/operations, requested 975,000 ≤ commissioned
+  1,250,000, every operation balances internally.
+
+`scripts/payments-provider-failure.ts` (in-process adapter fault injection, no network) passes four
+checks: configured-provider timeout → FAILED payment with the reason preserved, order still pending,
+zero conversions; retry creates a second PENDING attempt; verification timeout leaves the payment
+PENDING with no commission; a verified retry completes once and creates exactly one 500-kobo
+commission with the duplicate flagged.
+
+`scripts/aura-affiliate-dispatch-verify.ts` runs the real `runTurn` loop with the deterministic test
+provider (`AURA_TEST_PROVIDER=1`) and `AURA_TEST_TOOL=get_affiliate_summary`: the tool status fires,
+the affiliate card is yielded, the assistant message persists with `get_affiliate_summary` in
+`toolNames`. The dummy key satisfies only the configured-check; the test provider is selected before
+any key is read, so there is no model call.
+
+### Vertical coverage (exact)
+
+- **Shop `Order`**: attributed, verified end to end (guest and signed-in), commission created on
+  payment.
+- **NaijaStay**: `payReservation` updates `StayReservation` and moves wallet funds; no attribution
+  hook and no `Order`. Not covered.
+- **Rides**: `drive.service.ts` marks rides paid directly (including cash); no attribution hook.
+  Not covered.
+- **Gigs**: wallet escrow lives in `gigs/service.ts` against `ServiceBooking`; no attribution hook.
+  Not covered.
+
+Attribution is deliberately not forced through shop `Order` rows for these verticals; each needs a
+freeze at its own booking/reservation creation and a commission call at its payment completion.
+
+### Remaining
+
+- Unsettled reversals record `debtKobo` on the operation but do not create an `AffiliateRecovery`
+  receivable row; collection is therefore not yet driven by the recovery ledger.
+- Stay, ride and gig attribution.
+- Bundle verification results are recorded in the preservation section below.
+
+### Preservation
+
+Local `HEAD` at the time of this entry is `f8852b2`. The off-repository bundle is regenerated after
+the documentation commit; `git bundle list-heads` must show
+`refs/heads/naijashop-marketplace` at that commit, and `git bundle verify` must report a complete
+history. The bundle is a backup, not remote publication. GitHub credentials remain rejected and were
+not retried.
