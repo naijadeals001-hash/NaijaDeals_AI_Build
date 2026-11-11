@@ -54,13 +54,23 @@ export async function ensureWallet(tx: Db, input: { userId?: string; vendorId?: 
       : { ownerType: "SYSTEM" as const };
   const existing = await tx.wallet.findFirst({ where: identity });
   if (existing) return existing;
-  return tx.wallet.create({
-    data: {
-      ownerType: input.ownerType,
-      userId: input.userId ?? null,
-      vendorId: input.vendorId ?? null
+  try {
+    return await tx.wallet.create({
+      data: {
+        ownerType: input.ownerType,
+        userId: input.userId ?? null,
+        vendorId: input.vendorId ?? null
+      }
+    });
+  } catch (error) {
+    // Partial unique indexes are the authority: a concurrent creator won, so
+    // return its canonical row instead of failing the caller or making a second.
+    if ((error as { code?: string }).code === "P2002") {
+      const winner = await tx.wallet.findFirst({ where: identity });
+      if (winner) return winner;
     }
-  });
+    throw error;
+  }
 }
 
 async function getPaymentByReference(reference: string) {
