@@ -28,17 +28,30 @@ export function EatsLandingExtras() {
   return (
     <>
       <section className="mx-auto mt-8 w-full max-w-[1180px] px-4">
-        <h2 className="font-display text-2xl font-extrabold text-[#14241b]">From local favourites to African flavours</h2>
-        <ul className="mt-3 flex flex-wrap gap-2">
-          {REGIONS.map((region) => (
-            <li key={region}>
-              <Link href="/naijaeats/restaurants" className="inline-flex rounded-full border border-[#e4e9e5] bg-white px-4 py-2 text-sm font-bold text-[#14241b] hover:border-[#0b5c33]">
-                {region}
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-2 text-xs text-[#6b7a70]">Cuisine availability depends on the restaurants operating in your city.</p>
+        <div className="grid items-center gap-4 sm:grid-cols-[180px_1fr]">
+          <svg viewBox="0 0 200 220" role="img" aria-label="Schematic map of Africa" className="mx-auto h-auto w-[140px] sm:mx-0 sm:w-[170px]">
+            <path
+              d="M52 18 L92 10 L128 18 L151 34 L157 52 L150 74 L158 94 L166 118 L158 146 L142 170 L124 196 L108 210 L96 196 L86 170 L70 152 L58 128 L44 110 L32 86 L30 60 L38 38 Z"
+              fill="#0b5c33"
+              stroke="#0b3d24"
+              strokeWidth="2"
+            />
+            <path d="M128 18 L151 34 L157 52 L140 58 L118 46 Z" fill="#8ed14b" opacity="0.55" />
+            <circle cx="96" cy="96" r="5" fill="#f26b21" />
+          </svg>
+          <div>
+            <ul className="flex flex-wrap gap-2">
+              {REGIONS.map((region) => (
+                <li key={region}>
+                  <Link href="/naijaeats/restaurants" className="inline-flex rounded-full border border-[#e4e9e5] bg-white px-4 py-2 text-sm font-bold text-[#14241b] hover:border-[#0b5c33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]">
+                    {region}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-[#6b7a70]">Cuisine availability depends on the restaurants operating in your city.</p>
+          </div>
+        </div>
       </section>
 
       <section className="mx-auto mt-8 w-full max-w-[1180px] px-4">
