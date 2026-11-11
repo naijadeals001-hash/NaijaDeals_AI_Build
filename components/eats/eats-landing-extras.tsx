@@ -29,15 +29,14 @@ export function EatsLandingExtras() {
     <>
       <section className="mx-auto mt-8 w-full max-w-[1180px] px-4">
         <div className="grid items-center gap-4 sm:grid-cols-[180px_1fr]">
-          <svg viewBox="0 0 200 220" role="img" aria-label="Schematic map of Africa" className="mx-auto h-auto w-[140px] sm:mx-0 sm:w-[170px]">
+          <svg viewBox="0 0 200 240" role="img" aria-label="Map of Africa" className="mx-auto h-auto w-[150px] sm:mx-0 sm:w-[180px]">
             <path
-              d="M52 18 L92 10 L128 18 L151 34 L157 52 L150 74 L158 94 L166 118 L158 146 L142 170 L124 196 L108 210 L96 196 L86 170 L70 152 L58 128 L44 110 L32 86 L30 60 L38 38 Z"
-              fill="#0b5c33"
-              stroke="#0b3d24"
-              strokeWidth="2"
+              d="M37 6 L27 22 L8 54 L8 74 L19 93 L32 107 L53 104 L69 109 L77 109 L77 125 L85 141 L88 163 L93 192 L101 230 L123 230 L141 205 L147 182 L160 170 L160 154 L157 138 L165 125 L189 86 L168 83 L157 74 L152 51 L139 22 L120 19 L83 16 L80 3 L61 6 Z"
+              fill="#0b5c33" stroke="#0b3d24" strokeWidth="2" strokeLinejoin="round"
             />
-            <path d="M128 18 L151 34 L157 52 L140 58 L118 46 Z" fill="#8ed14b" opacity="0.55" />
-            <circle cx="96" cy="96" r="5" fill="#f26b21" />
+            <path d="M8 54 L27 22 L61 6 L80 3 L83 16 L120 19 L139 22 L152 51 L120 60 L90 66 L60 70 L30 64 Z" fill="#8ed14b" opacity="0.55" />
+            <ellipse cx="176" cy="186" rx="7" ry="14" fill="#0b5c33" stroke="#0b3d24" strokeWidth="2" />
+            <circle cx="75" cy="93" r="5" fill="#f26b21" />
           </svg>
           <div>
             <ul className="flex flex-wrap gap-2">
