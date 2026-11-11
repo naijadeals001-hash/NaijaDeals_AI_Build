@@ -3217,3 +3217,71 @@ regressions, visual comparison screenshots.
 Next session: read `scripts/generate-fresh-images.mjs --plan` first; generate a minimal asset set
 (hero, eight category tiles, courier recruitment scene, restaurant recruitment scene), record
 provider/model/prompt/date/path, then rebuild `/naijaeats` and run the full interaction matrix.
+
+## 2026-11-11 — Cross-service wallet-spend concurrency acceptance (PASS)
+
+Scope: `scripts/wallet-spend-concurrency-acceptance.ts` against the isolated
+`naijadeals_wallet_acceptance` database only. The script derives the URL from `.env` by replacing
+only the database path and guards `select current_database()`. No credentials were printed, and no
+production database, real charge, payout, push or deployment was touched.
+
+### Amounts — the requested 80,000/100,000 figures are not representable
+
+- `quoteDrive` rounds to the nearest 5,000 kobo. No shipped place/vehicle-class pair quotes 80,000.
+- A real checkout total is `subtotal + delivery zone fee + 1% escrow`. The cheapest Lagos zone is
+  150,000 kobo, so the minimum possible total is 151,010 kobo and 80,000 is arithmetically impossible
+  without overriding a real fee.
+- The suite therefore uses the smallest real demand common to both services:
+  - drive: Surulere -> Apapa, bike = 155,000 kobo
+  - shop: 4,951 subtotal + 150,000 delivery + 49 escrow = 155,000 kobo
+- Funding is 175,000 kobo so a single winner leaves exactly 20,000 kobo. No quote, fee or delivery
+  rule was overridden.
+
+### Commands and outcomes
+
+- `npx tsc --noEmit` -> exit 0.
+- `npx tsx scripts/wallet-spend-concurrency-acceptance.ts` -> PASS 31/31 checks.
+  - Cross-service: drive won a 155,000-kobo fare hold (`RIDE-cmwcfu37i0001v4t4tznk73p0-HOLD`);
+    shop `confirmPayment` was rejected 402 `insufficient_wallet` ("NaijaPay wallet balance is
+    insufficient for this order.").
+  - Overlap: 64 ms; separate worker/backend PIDs 67144/59552 and 39504/46004.
+  - Customer: 0/0 -> funded 175,000 available/0 held -> 20,000 available/155,000 held after the race.
+  - Shop loser retained only its deliberate checkout fixture: order `payment_pending`, payment
+    `PENDING`, zero escrow, zero delivery, stock still reserved (5 quantity/1 reserved), and no
+    wallet journal.
+  - Exactly one hold journal existed; every journal balances; NGN ledger net 0; 14 wallets reconciled;
+    `wallet-reconcile` CLEAN.
+  - Same-rider: two `requestRide` calls overlapped 67 ms (backend PIDs 66696/87480); exactly one ride
+    (`NDR-CFU4KU-404F23`) committed, the other returned 409 `active_ride_exists`; one hold journal,
+    no duplicate posting, wallet 20,000/155,000, reconcile CLEAN.
+- `DATABASE_URL=<acceptance URL derived from .env> RECONCILE_DB=naijadeals_wallet_acceptance npx tsx scripts/wallet-reconcile.ts`
+  -> `{"status":"CLEAN","wallets":15,"openRides":6,"openEscrows":0,"unattributedRides":0,"mismatches":0,"duplicateIdentities":0}`.
+
+### Defect found and fixed
+
+`scripts/wallet-reconcile.ts` compared `availableKobo + heldKobo` against the full ledger net. That is
+the superseded convention explicitly rejected in `docs/naijapay-ledger-forensics.md` and
+`lib/services/core/reconciliation-correct.ts`: it reported every open buyer hold as REVIEW. The first
+acceptance run reproduced it (customer 20,000 available/155,000 held, ledger net 20,000, difference
+155,000). The script now reconciles the two balances separately:
+
+- `availableKobo == ledgerNet - open counterparty hold credits`
+- `heldKobo == open buyer holds + open counterparty holds`
+
+Duplicate identities are still reported, and held balances from sources not wired into the script
+surface for review rather than being ignored. The script remains read-only.
+
+### Remaining limitation
+
+`lib/services/core/reconciliation-correct.ts` (the Control Center reconciliation) still reports these
+legitimate open holds: its `isEscrowMovement` regex does not match `RIDE-...-HOLD`, and its
+`available == full journal net` check does not subtract counterparty hold credits. It was not changed
+in this slice because a correct fix needs a product decision on how buyer held funds are represented
+after release (there is no buyer-side release ledger entry). The acceptance gate uses the corrected
+`scripts/wallet-reconcile.ts`.
+
+### Fixtures left for evidence
+
+Each run creates a new customer, vendor, category, product (subtotal 4,951), cart/order/payment and
+two open wallet rides in the isolated acceptance database. Reruns accumulate these; all journals and
+projections reconcile. No cleanup or database reset was performed.
