@@ -3197,3 +3197,23 @@ each.
 Artifact process stopped. Session token was written to a temporary file and never printed.
 Process-kill interruption of the backfill remains untested; only its transaction boundary is
 recorded.
+
+## 2026-11-11 — NaijaEats redesign resume point (after 9216a9c)
+
+Kie.ai: MCP is not exposed in this session, but the repository's REST integration is present and
+permitted: `scripts/generate-fresh-images.mjs` documents the verified API
+(`POST /api/v1/jobs/createTask`, model `gpt-image-2-text-to-image`, size `1K`, 6 credits ≈ $0.03 per
+image, polled via `/api/v1/jobs/recordInfo`). `KIE_API_KEY` is present; no value was printed. No
+images were generated in this session and no credits were spent, because the UI rewrite and
+integration could not be completed in the remaining execution window.
+
+Done: lower-page sections (commit 9216a9c) render at 390/768/1440 with zero overflow.
+Outstanding: header/mobile nav, hero with address suggestions and Find food, Delivery/Pickup truth,
+category presentation, location-based discovery, accurate regional filters, imagery generation and
+provenance, transport query parsing/persistence through courier auth, restaurant-specific partner
+entry, consolidation of AppBanner/install panels, PWA conditions, interaction and cart/checkout
+regressions, visual comparison screenshots.
+
+Next session: read `scripts/generate-fresh-images.mjs --plan` first; generate a minimal asset set
+(hero, eight category tiles, courier recruitment scene, restaurant recruitment scene), record
+provider/model/prompt/date/path, then rebuild `/naijaeats` and run the full interaction matrix.
