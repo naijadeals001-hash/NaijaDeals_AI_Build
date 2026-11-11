@@ -3153,3 +3153,25 @@ Production test-provider safety is unchanged: `streamCompletion` selects the det
 only when `AURA_TEST_PROVIDER=1`, and `testProviderRefusal` additionally requires
 `AURA_TEST_ALLOW_PRODUCTION_BUILD=1` when `NODE_ENV=production`. The 3017 preview runs without
 those flags. A deployable standalone artifact was not built or exercised separately.
+
+## 2026-11-05 — Compound recovery and VPS artifact attempt
+
+**Compound recovery — PASS.** `scripts/affiliate-compound-recovery.ts` (5/5): three partial
+reversals 2,000+1,000+1,000 with a duplicated event → 3 operations, recovery 4,000, budget released
+4,000 once; collection 1,000 then settlement (offset 2,000, paid 3,000) then a later 1,000 reversal
+→ cumulative 4,000 and collected+offset ≤ amount; legacy full debt of 5,000 settles with offset
+5,000, payout 0, no payout transaction and the `AFF-OFFSET` marker; backfill tops an existing
+1,000 recovery (with collected 400/offset 200) to 3,000 once and a rerun changes nothing; two
+concurrent `--apply` processes create one row because each conversion is serialised with
+`pg_advisory_xact_lock` and the deficit is recomputed inside the transaction. An interrupted
+process is covered by the same per-conversion transaction boundary and rerun idempotency; a kill
+mid-run was not separately simulated.
+
+**VPS artifact — FAIL (verification incomplete).** The production override was removed:
+`testProviderRefusal` now refuses whenever `NODE_ENV === "production"`, which is inlined at build
+time, so runtime flags cannot enable the deterministic provider. The standalone artifact was built
+with the repository build (`NEXT_DIST_DIR=.next-pay npm run build`), contains
+`.next-pay/standalone/server.js`, and was started on port 3018 with the isolated database and
+`AURA_TEST_PROVIDER=1`. The unauthenticated `/api/aura/chat` probe returned 403 before any provider
+was reached, so this is not proof of the refusal path: an authenticated conversation request was not
+executed. Outbound paid traffic was not generated. Missing-credential behaviour was not exercised.

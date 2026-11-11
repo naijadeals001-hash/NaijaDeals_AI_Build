@@ -10,9 +10,7 @@ import type { StreamEvent, StreamOptions } from "./provider";
  *
  * Activation is configuration-only and impossible for a normal user:
  *   AURA_TEST_PROVIDER=1              required
- *   AURA_TEST_ALLOW_PRODUCTION_BUILD=1  additionally required when NODE_ENV is
- *                                       "production", because `next start` sets
- *                                       that even for a local preview build
+ *   (there is no production override: NODE_ENV is fixed at build time)
  * No header, query parameter or session can enable it.
  *
  * Failure and timing are configurable so tests can drive each path:
@@ -25,7 +23,10 @@ const CHUNKS = ["Your ", "Abuja ", "stays ", "are ", "ready ", "to ", "review."]
 
 export function testProviderRefusal(): string | null {
   if (process.env.AURA_TEST_PROVIDER !== "1") return "not_requested";
-  if (process.env.NODE_ENV === "production" && process.env.AURA_TEST_ALLOW_PRODUCTION_BUILD !== "1") {
+  // Production builds are inlined with NODE_ENV=production, so runtime flags
+  // cannot change this branch. There is deliberately no override: the artifact
+  // intended for deployment can never activate the deterministic provider.
+  if (process.env.NODE_ENV === "production") {
     return "production_build_not_authorised";
   }
   return null;

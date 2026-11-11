@@ -53,20 +53,31 @@ async function main() {
     changes.push({ conversionId: group.conversionId, debtKobo: target.toString(), coveredKobo: coveredKobo.toString(), deficitKobo: deficit.toString(), action });
 
     if (!apply) continue;
-    if (open) {
-      await prisma.affiliateRecovery.update({ where: { id: open.id }, data: { amountKobo: { increment: deficit } } });
-      toppedUp += 1;
-    } else {
-      await prisma.affiliateRecovery.create({
+    // Serialise per conversion and recompute inside the lock: two backfill
+    // processes that both read the same deficit must not both create it.
+    const outcome = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${conversion.id}))`;
+      const lockedOps = await tx.affiliateReversalOperation.aggregate({ where: { conversionId: conversion.id }, _sum: { debtKobo: true } });
+      const lockedCovered = await tx.affiliateRecovery.aggregate({ where: { conversionId: conversion.id }, _sum: { amountKobo: true } });
+      const lockedDeficit = (lockedOps._sum.debtKobo ?? 0n) - (lockedCovered._sum.amountKobo ?? 0n);
+      if (lockedDeficit <= 0n) return "none" as const;
+      const lockedOpen = await tx.affiliateRecovery.findFirst({ where: { conversionId: conversion.id, state: "OUTSTANDING" } });
+      if (lockedOpen) {
+        await tx.affiliateRecovery.update({ where: { id: lockedOpen.id }, data: { amountKobo: { increment: lockedDeficit } } });
+        return "topped_up" as const;
+      }
+      await tx.affiliateRecovery.create({
         data: {
           conversionId: conversion.id,
           affiliateId: conversion.affiliateId,
-          amountKobo: deficit,
+          amountKobo: lockedDeficit,
           note: "Backfilled from reversal operations"
         }
       });
-      created += 1;
-    }
+      return "created" as const;
+    });
+    if (outcome === "none") continue;
+    if (outcome === "topped_up") toppedUp += 1; else created += 1;
     await recordAudit({
       actorId: null,
       action: "affiliate.recovery_backfilled",
