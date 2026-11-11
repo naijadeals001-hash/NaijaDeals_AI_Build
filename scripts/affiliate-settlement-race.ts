@@ -462,23 +462,31 @@ async function main() {
     assert(unsettledTxs === 0, `${unsettledTxs} ledger transactions for an unsettled reversal`);
 
     const settle = await settleConversion({ actorId: fixture.customerId, conversionId: fixture.conversionId });
-    assert(settle.settled, `settlement refused: ${"reason" in settle ? settle.reason : "unknown"}`);
+    if (!settle.settled) throw new Error(`settlement refused: ${"reason" in settle ? settle.reason : "unknown"}`);
     assert(
-      settle.amountKobo === COMMISSION.toString(),
-      `settlement paid ${settle.amountKobo}, expected the full commission ${COMMISSION}`
+      settle.offsetKobo === op.requestedKobo.toString(),
+      `settlement offset ${settle.offsetKobo}, expected the outstanding debt ${op.requestedKobo}`
+    );
+    assert(
+      settle.paidKobo === (COMMISSION - op.requestedKobo).toString(),
+      `settlement paid ${settle.paidKobo}, expected commission minus debt ${COMMISSION - op.requestedKobo}`
     );
     const conversionAfter = await prisma.affiliateConversion.findUniqueOrThrow({ where: { id: fixture.conversionId } });
     assert(conversionAfter.state === "PAID", `conversion state ${conversionAfter.state}, expected PAID`);
     const walletAfter = await walletKobo(fixture.affiliateUserId);
-    assert(walletAfter === COMMISSION, `affiliate wallet ${walletAfter}, expected the full commission ${COMMISSION}`);
-
-    // Settlement pays the whole commission; the already-recorded reversal stays on
-    // the operation (recovered 0, debt = requested), so the affiliate's net
-    // position is commission minus the reversal.
-    const netPosition = walletAfter - op.recoveredKobo - op.debtKobo;
     assert(
-      netPosition === COMMISSION - op.requestedKobo,
-      `net ${netPosition} (wallet ${walletAfter} - recovered ${op.recoveredKobo} - debt ${op.debtKobo}) != commission ${COMMISSION} - reversal ${op.requestedKobo}`
+      walletAfter === COMMISSION - op.requestedKobo,
+      `affiliate wallet ${walletAfter}, expected commission minus offset ${COMMISSION - op.requestedKobo}`
+    );
+
+    // The debt was netted against the payout, so the affiliate's net position is
+    // commission minus the reversal and no receivable remains open.
+    const recoveryAfter = await prisma.affiliateRecovery.findMany({ where: { conversionId: fixture.conversionId } });
+    const openAfter = recoveryAfter.filter((row) => row.state === "OUTSTANDING");
+    assert(openAfter.length === 0, `${openAfter.length} recoveries still outstanding after offset`);
+    assert(
+      walletAfter === COMMISSION - op.requestedKobo,
+      `net ${walletAfter} != commission ${COMMISSION} - reversal ${op.requestedKobo}`
     );
 
     // A sweep after settlement must not apply the reversal a second time or
@@ -495,7 +503,7 @@ async function main() {
     const walletAfterDrain = await walletKobo(fixture.affiliateUserId);
     assert(walletAfterDrain === walletAfter, `wallet moved ${walletAfter} -> ${walletAfterDrain} on the post-settlement sweep`);
 
-    return `refund COMPLETED; unsettled op requested ${op.requestedKobo} recovered ${op.recoveredKobo} debt ${op.debtKobo} (receivable rows ${recoveries.length}, total ${receivableKobo}); intent DONE; settlement paid ${settle.amountKobo}; wallet ${walletAfter}; net ${netPosition}; campaign spent ${campaignAfter.spentKobo}; drain ${JSON.stringify(drain)}`;
+    return `refund COMPLETED; unsettled op requested ${op.requestedKobo} recovered ${op.recoveredKobo} debt ${op.debtKobo} (receivable rows ${recoveries.length}, total ${receivableKobo}); intent DONE; settlement offset ${settle.offsetKobo} paid ${settle.paidKobo}; wallet ${walletAfter}; campaign spent ${campaignAfter.spentKobo}; drain ${JSON.stringify(drain)}`;
   });
 
   async function overlapCheck(index: number): Promise<string> {

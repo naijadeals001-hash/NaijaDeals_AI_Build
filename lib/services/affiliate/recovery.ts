@@ -47,7 +47,7 @@ export async function collectRecovery(input: {
   });
   if (recovery.state !== "OUTSTANDING") return { collected: false, reason: `state_${recovery.state.toLowerCase()}` };
 
-  const outstanding = recovery.amountKobo - recovery.collectedKobo;
+  const outstanding = recovery.amountKobo - recovery.collectedKobo - recovery.offsetKobo;
   if (outstanding <= 0n) return { collected: false, reason: "fully_collected" };
 
   const requested = input.amountKobo < outstanding ? input.amountKobo : outstanding;
@@ -65,10 +65,10 @@ export async function collectRecovery(input: {
     // Conditional claim: only one caller can move this much of the outstanding
     // debt, so two concurrent collections cannot both take it.
     const claimed = await tx.affiliateRecovery.updateMany({
-      where: { id: recovery.id, state: "OUTSTANDING", collectedKobo: recovery.collectedKobo },
+      where: { id: recovery.id, state: "OUTSTANDING", collectedKobo: recovery.collectedKobo, offsetKobo: recovery.offsetKobo },
       data: {
         collectedKobo: { increment: amount },
-        state: recovery.collectedKobo + amount >= recovery.amountKobo ? "COLLECTED" : "OUTSTANDING"
+        state: recovery.collectedKobo + amount + recovery.offsetKobo >= recovery.amountKobo ? "COLLECTED" : "OUTSTANDING"
       }
     });
     if (claimed.count === 0) return { ok: false as const, reason: "contended" };
@@ -118,7 +118,7 @@ export async function collectRecovery(input: {
     collected: true,
     recoveryId: recovery.id,
     collectedKobo: outcome.amount.toString(),
-    outstandingKobo: (after.amountKobo - after.collectedKobo).toString(),
+    outstandingKobo: (after.amountKobo - after.collectedKobo - after.offsetKobo).toString(),
     ledgerReference: outcome.reference
   };
 }

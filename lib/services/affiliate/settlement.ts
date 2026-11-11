@@ -36,7 +36,7 @@ async function cumulativeReversed(conversionId: string): Promise<bigint> {
 const SETTLEABLE: string[] = ["APPROVED", "PAYABLE"];
 
 export type SettlementResult =
-  | { settled: true; conversionId: string; ledgerReference: string; amountKobo: string }
+  | { settled: true; conversionId: string; ledgerReference: string; amountKobo: string; offsetKobo: string; paidKobo: string }
   | { settled: false; reason: string };
 
 /**
@@ -79,39 +79,74 @@ export async function settleConversion(input: { actorId: string; conversionId: s
       const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
       const affiliateWallet = await ensureWallet(tx, { userId: conversion.affiliate.userId, ownerType: "CUSTOMER" });
 
-      await tx.wallet.update({
-        where: { id: affiliateWallet.id },
-        data: { availableKobo: { increment: conversion.amountKobo } }
+      // Outstanding shortfall from an earlier unsettled reversal is netted
+      // against this payout. Paying gross and then collecting the same debt
+      // would move money twice for one adjustment.
+      const recovery = await tx.affiliateRecovery.findFirst({
+        where: { conversionId: conversion.id, state: "OUTSTANDING" }
       });
-      await tx.wallet.update({
-        where: { id: platform.id },
-        data: { availableKobo: { decrement: conversion.amountKobo } }
-      });
+      const outstanding = recovery
+        ? recovery.amountKobo - recovery.collectedKobo - recovery.offsetKobo
+        : 0n;
+      const offset = outstanding > 0n
+        ? (outstanding < conversion.amountKobo ? outstanding : conversion.amountKobo)
+        : 0n;
+      const payout = conversion.amountKobo - offset;
 
-      const transaction = await postBalancedTransaction({
-        tx,
-        actorId: input.actorId,
-        walletId: affiliateWallet.id,
-        type: "credit",
-        amountKobo: conversion.amountKobo,
-        reference,
-        description: `Affiliate commission for ${conversion.entityType} ${conversion.entityId}`,
-        entries: [
-          { walletId: platform.id, direction: "DEBIT", amountKobo: conversion.amountKobo, memo: "Affiliate commission payable" },
-          { walletId: affiliateWallet.id, direction: "CREDIT", amountKobo: conversion.amountKobo, memo: "Affiliate commission settled" }
-        ]
-      });
+      if (offset > 0n && recovery) {
+        const remaining = outstanding - offset;
+        await tx.affiliateRecovery.update({
+          where: { id: recovery.id },
+          data: {
+            offsetKobo: { increment: offset },
+            state: remaining <= 0n ? "COLLECTED" : "OUTSTANDING",
+            note: `Offset ${offset} kobo against settlement ${conversion.id}`
+          }
+        });
+      }
+
+      if (payout > 0n) {
+        await tx.wallet.update({
+          where: { id: affiliateWallet.id },
+          data: { availableKobo: { increment: payout } }
+        });
+        await tx.wallet.update({
+          where: { id: platform.id },
+          data: { availableKobo: { decrement: payout } }
+        });
+      }
+
+      const transaction = payout > 0n
+        ? await postBalancedTransaction({
+            tx,
+            actorId: input.actorId,
+            walletId: affiliateWallet.id,
+            type: "credit",
+            amountKobo: payout,
+            reference,
+            description: `Affiliate commission for ${conversion.entityType} ${conversion.entityId}`,
+            entries: [
+              { walletId: platform.id, direction: "DEBIT", amountKobo: payout, memo: "Affiliate commission payable" },
+              { walletId: affiliateWallet.id, direction: "CREDIT", amountKobo: payout, memo: "Affiliate commission settled" }
+            ]
+          })
+        : null;
 
       await tx.affiliateConversion.update({
         where: { id: conversion.id },
-        data: { state: "PAID", ledgerReference: transaction.reference }
+        data: {
+          state: "PAID",
+          ledgerReference: transaction?.reference ?? `AFF-OFFSET-${conversion.id}`
+        }
       });
 
       return {
         settled: true as const,
         conversionId: conversion.id,
-        ledgerReference: transaction.reference,
-        amountKobo: conversion.amountKobo.toString()
+        ledgerReference: transaction?.reference ?? `AFF-OFFSET-${conversion.id}`,
+        amountKobo: conversion.amountKobo.toString(),
+        offsetKobo: offset.toString(),
+        paidKobo: payout.toString()
       };
     });
 
@@ -121,7 +156,7 @@ export async function settleConversion(input: { actorId: string; conversionId: s
         action: "affiliate.commission_settled",
         entity: "AffiliateConversion",
         entityId: conversion.id,
-        metadata: { amountKobo: conversion.amountKobo.toString(), ledgerReference: outcome.ledgerReference }
+        metadata: { amountKobo: conversion.amountKobo.toString(), offsetKobo: outcome.offsetKobo, paidKobo: outcome.paidKobo, ledgerReference: outcome.ledgerReference }
       });
     }
     return outcome;
@@ -249,6 +284,27 @@ export async function reverseConversion(input: {
           actorId: input.actorId
         }
       });
+
+      // The debt must be collectible, not just recorded on the operation. One
+      // open recovery per conversion is topped up, mirroring the settled branch.
+      const openRecovery = await tx.affiliateRecovery.findFirst({
+        where: { conversionId: conversion.id, state: "OUTSTANDING" }
+      });
+      if (openRecovery) {
+        await tx.affiliateRecovery.update({
+          where: { id: openRecovery.id },
+          data: { amountKobo: { increment: input.amountKobo } }
+        });
+      } else {
+        await tx.affiliateRecovery.create({
+          data: {
+            conversionId: conversion.id,
+            affiliateId: conversion.affiliateId,
+            amountKobo: input.amountKobo,
+            note: input.reason.slice(0, 300)
+          }
+        });
+      }
       return "ok" as const;
     });
     if (updated !== "ok") return { reversed: false, reason: updated };

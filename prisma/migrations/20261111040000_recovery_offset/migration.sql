@@ -1,0 +1,1 @@
+ALTER TABLE "AffiliateRecovery" ADD COLUMN "offsetKobo" BIGINT NOT NULL DEFAULT 0;

@@ -176,7 +176,8 @@ async function main() {
     const page = await context.newPage();
     await page.goto(`${BASE}/r/${linkCode}`, { waitUntil: "domcontentloaded" });
     await page.waitForURL(new RegExp(`${DESTINATION}$`), { timeout: 20000 });
-    await page.screenshot({ path: path.join(SHOTS, "guest-landing.png"), fullPage: true });
+    // Evidence only: a slow font load must not turn a passing journey into a failure.
+    await page.screenshot({ path: path.join(SHOTS, "guest-landing.png"), fullPage: true }).catch(() => undefined);
     await page.waitForLoadState("load");
     await page.waitForTimeout(800);
 

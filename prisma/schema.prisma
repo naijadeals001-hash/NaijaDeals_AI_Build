@@ -3648,7 +3648,10 @@ model AffiliateRecovery {
   conversionId    String
   affiliateId     String
   amountKobo      BigInt
+  /// Cash recovered from the affiliate's wallet by a recovery sweep.
   collectedKobo   BigInt        @default(0)
+  /// Debt extinguished by netting against a settlement payout; no cash moved.
+  offsetKobo      BigInt        @default(0)
   state           RecoveryState @default(OUTSTANDING)
   ledgerReference String?
   note            String?
