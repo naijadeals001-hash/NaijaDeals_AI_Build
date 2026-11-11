@@ -930,6 +930,14 @@ async function cleanupRun(prisma: PrismaClient, runId: string = RUN_ID) {
     await tx.product.deleteMany({ where: { id: { in: productIds } } });
     await tx.vendor.deleteMany({ where: { id: { in: vendorIds } } });
     await tx.category.deleteMany({ where: { id: { in: categoryIds } } });
+    await tx.notificationAttempt.deleteMany({
+      where: { notification: { OR: [{ userId: { in: userIds } }, { entityId: { in: entityIds } }] } }
+    });
+    // Paid shop orders now write a durable vendor notification intent inside the
+    // payment transaction. It is this run's row, so cleanup removes it too.
+    await tx.notificationIntent.deleteMany({
+      where: { OR: [{ entityId: { in: entityIds } }, { dedupeKey: { contains: runId } }] }
+    });
     await tx.partnerNotification.deleteMany({ where: { userId: { in: userIds } } });
     await tx.notification.deleteMany({ where: { userId: { in: userIds } } });
     await tx.session.deleteMany({ where: { userId: { in: userIds } } });
