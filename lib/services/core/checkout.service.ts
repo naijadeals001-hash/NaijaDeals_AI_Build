@@ -264,6 +264,141 @@ export async function checkout(input: {
   };
 }
 
+const DEFAULT_ABANDON_AFTER_MS = 30 * 60 * 1000;
+const MIN_ABANDON_AFTER_MS = 60 * 1000;
+const MAX_SWEEP_BATCH = 100;
+
+class ExpirySkip extends Error {
+  constructor(readonly reason: string) {
+    super(reason);
+    this.name = "ExpirySkip";
+  }
+}
+
+export type AbandonedCheckoutSweep = {
+  inspected: number;
+  expired: Array<{ orderId: string; orderNumber: string }>;
+  skipped: Array<{ orderId: string; reason: string }>;
+};
+
+/**
+ * Release reservations held by checkouts that were never paid.
+ *
+ * The payment retry/cancel paths already release stock (`markPaymentFailed`,
+ * `cancelOrder`). This bounded sweep closes the third path: a checkout that was
+ * abandoned with no provider callback at all. It is deliberately conservative:
+ *
+ *  - only `created`/`payment_pending` orders whose `paymentStatus` is still
+ *    `pending` are candidates;
+ *  - the payment rows are locked first (the same order `confirmPayment` uses),
+ *    then the order row, so an in-flight payment either commits before the
+ *    sweep and makes it skip, or is marked FAILED by the sweep and its
+ *    confirmation is refused;
+ *  - an order with any COMPLETED payment, escrow hold or delivery is never
+ *    cancelled or restocked;
+ *  - stock is released once through the shared `releaseReservedStock` helper.
+ *
+ * It is a service function, not a timer: no scheduler is wired to it yet.
+ */
+export async function expireAbandonedCheckouts(
+  input: { olderThanMs?: number; limit?: number; orderIds?: string[] } = {}
+): Promise<AbandonedCheckoutSweep> {
+  const olderThanMs = input.olderThanMs ?? DEFAULT_ABANDON_AFTER_MS;
+  if (!Number.isFinite(olderThanMs) || olderThanMs < MIN_ABANDON_AFTER_MS) {
+    throw new ApiError(400, "invalid_expiry_window", "The abandonment window must be at least one minute.");
+  }
+  const limit = Math.min(Math.max(Math.trunc(input.limit ?? 25), 1), MAX_SWEEP_BATCH);
+  const cutoff = new Date(Date.now() - olderThanMs);
+  // A scheduler sweeps globally. `orderIds` is a bounded support/manual scope so
+  // an operator or an acceptance run cannot expire unrelated orders.
+  const scope = input.orderIds?.length ? { id: { in: input.orderIds } } : {};
+
+  const candidates = await prisma.order.findMany({
+    where: {
+      ...scope,
+      status: { in: ["created", "payment_pending"] },
+      paymentStatus: "pending",
+      createdAt: { lt: cutoff }
+    },
+    select: { id: true, orderNumber: true },
+    orderBy: { createdAt: "asc" },
+    take: limit
+  });
+
+  const { releaseReservedStock } = await import("@/lib/payments/service");
+  const sweep: AbandonedCheckoutSweep = { inspected: candidates.length, expired: [], skipped: [] };
+
+  for (const candidate of candidates) {
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Lock payments before the order, matching confirmPayment's write order so
+        // the two transactions cannot deadlock and a paid attempt always wins.
+        const lockedPayments = await tx.$queryRaw<Array<{ id: string; status: string }>>`
+          SELECT id, status FROM "Payment" WHERE "orderId" = ${candidate.id} FOR UPDATE
+        `;
+        if (lockedPayments.some((payment) => payment.status === "COMPLETED")) {
+          throw new ExpirySkip("payment_completed");
+        }
+        const completed = await tx.payment.count({ where: { orderId: candidate.id, status: "COMPLETED" } });
+        if (completed > 0) throw new ExpirySkip("payment_completed");
+
+        const lockedOrder = await tx.$queryRaw<Array<{ status: string; paymentStatus: string }>>`
+          SELECT status, "paymentStatus" FROM "Order" WHERE id = ${candidate.id} FOR UPDATE
+        `;
+        const current = lockedOrder[0];
+        if (!current) throw new ExpirySkip("order_missing");
+        if (!["created", "payment_pending"].includes(current.status)) {
+          throw new ExpirySkip(`status_${current.status}`);
+        }
+        if (current.paymentStatus !== "pending") {
+          throw new ExpirySkip(`payment_${current.paymentStatus}`);
+        }
+
+        const [escrowCount, deliveryCount] = await Promise.all([
+          tx.escrowHold.count({ where: { orderId: candidate.id } }),
+          tx.delivery.count({ where: { orderId: candidate.id } })
+        ]);
+        if (escrowCount > 0) throw new ExpirySkip("escrow_exists");
+        if (deliveryCount > 0) throw new ExpirySkip("delivery_exists");
+
+        await releaseReservedStock(tx, candidate.id);
+        await tx.payment.updateMany({
+          where: { orderId: candidate.id, status: "PENDING" },
+          data: { status: "FAILED", failureReason: "Checkout expired before payment." }
+        });
+        await updateOrderStatus({
+          tx,
+          actorId: null,
+          orderId: candidate.id,
+          status: "cancelled",
+          note: `Checkout abandoned for ${Math.round(olderThanMs / 60000)} minutes; reserved stock released.`
+        });
+        await recordAudit({
+          tx,
+          actorId: null,
+          action: "order.expired",
+          entity: "Order",
+          entityId: candidate.id,
+          metadata: {
+            orderNumber: candidate.orderNumber,
+            abandonedAfterMs: olderThanMs,
+            releasedStock: true
+          }
+        });
+      });
+      sweep.expired.push({ orderId: candidate.id, orderNumber: candidate.orderNumber });
+    } catch (error) {
+      if (error instanceof ExpirySkip) {
+        sweep.skipped.push({ orderId: candidate.id, reason: error.reason });
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  return sweep;
+}
+
 export async function cancelOrder(input: { orderId: string; userId: string; reason: string }) {
   const order = await prisma.order.findUnique({ where: { id: input.orderId }, include: { payments: true } });
   if (!order) throw new ApiError(404, "order_not_found", "Order not found.");

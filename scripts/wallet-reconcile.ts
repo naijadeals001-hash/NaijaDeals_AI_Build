@@ -1,5 +1,7 @@
 import "dotenv/config";
 import { prisma } from "../lib/prisma";
+import { compareWalletProjection, loadOpenHoldLedger } from "../lib/services/core/reconciliation-correct";
+
 /**
  * Read-only wallet reconciliation. No writes.
  *
@@ -11,18 +13,18 @@ import { prisma } from "../lib/prisma";
  *  - `heldKobo` is the open escrow reservation: buyer-side wallet holds plus
  *    escrow the wallet holds as a counterparty.
  *
+ * The interpretation is owned by `lib/services/core/reconciliation-correct.ts`
+ * and imported here, so the Control Center and this checker apply one tested
+ * convention. Open holds are read from the records that own them: wallet-paid
+ * `Ride` rows in `held` state and `EscrowHold` rows in an open status (less the
+ * order's refunded amount, because a partial refund returns held money). Holds
+ * with no attributable wallet are reported, never dropped.
+ *
  * The earlier form of this script compared `availableKobo + heldKobo` with the
  * full journal net. That is the superseded convention documented as wrong in
- * `docs/naijapay-ledger-forensics.md` and
- * `lib/services/core/reconciliation-correct.ts`: an open buyer hold debits the
- * buyer's journal net while the money is still the buyer's, so the sum test
- * reports every open hold as broken.
- *
- * Authoritative open-hold sources wired here are the two used by the wallet
- * acceptance suite: wallet-paid `Ride` rows in `held` state and `EscrowHold`
- * rows in `held` state. Held money from any other module is not silently
- * ignored: it makes expected held smaller than stored held, so the wallet is
- * reported for review rather than marked clean.
+ * `docs/naijapay-ledger-forensics.md`: an open buyer hold debits the buyer's
+ * journal net while the money is still the buyer's, so the sum test reports
+ * every open hold as broken.
  *
  * Duplicate (identity, ownerType, currency) wallet rows are also reported.
  */
@@ -63,51 +65,20 @@ const EXPECTED = process.env.RECONCILE_DB ?? "naijadeals_affiliate_test";
     );
   }
 
-  // Open reservations, straight from the records that own them. A wallet-paid
-  // ride reserves the fare on the rider (buyer) and on SYSTEM (counterparty). A
-  // shop escrow reserves on the buyer and on the vendor.
-  const openRides = await prisma.ride.findMany({
-    where: { paymentMethod: "wallet", paymentStatus: "held" },
-    select: { riderId: true, fareKobo: true }
-  });
-  const openEscrows = await prisma.escrowHold.findMany({
-    where: { status: "held" },
-    select: { buyerWalletId: true, vendorWalletId: true, amountKobo: true }
-  });
-  const customerWalletByUser = new Map(
-    wallets.filter((wallet) => wallet.ownerType === "CUSTOMER" && wallet.userId).map((wallet) => [wallet.userId as string, wallet.id])
-  );
-  const systemWallet = wallets.find((wallet) => wallet.ownerType === "SYSTEM");
-
-  const buyerHeld = new Map<string, bigint>();
-  const counterpartyHeld = new Map<string, bigint>();
-  const addHeld = (map: Map<string, bigint>, walletId: string | null | undefined, amount: bigint) => {
-    if (!walletId) return;
-    map.set(walletId, (map.get(walletId) ?? BigInt(0)) + amount);
-  };
-  let unattributedRides = 0;
-  for (const ride of openRides) {
-    const riderWalletId = customerWalletByUser.get(ride.riderId);
-    if (!riderWalletId) {
-      unattributedRides += 1;
-      continue;
-    }
-    addHeld(buyerHeld, riderWalletId, ride.fareKobo);
-    addHeld(counterpartyHeld, systemWallet?.id, ride.fareKobo);
-  }
-  for (const escrow of openEscrows) {
-    addHeld(buyerHeld, escrow.buyerWalletId, escrow.amountKobo);
-    addHeld(counterpartyHeld, escrow.vendorWalletId, escrow.amountKobo);
-  }
+  // One shared interpretation of what an open hold is and which wallet owes it.
+  const holds = await loadOpenHoldLedger(prisma);
+  const openRides = holds.holds.filter((hold) => hold.kind === "ride");
+  const openEscrows = holds.holds.filter((hold) => hold.kind === "escrow");
 
   const rows = wallets.map((wallet) => {
     const ledgerNet = net.get(wallet.id) ?? BigInt(0);
-    const buyer = buyerHeld.get(wallet.id) ?? BigInt(0);
-    const counterparty = counterpartyHeld.get(wallet.id) ?? BigInt(0);
-    const expectedHeld = buyer + counterparty;
-    const expectedAvailable = ledgerNet - counterparty;
-    const availableDifference = wallet.availableKobo - expectedAvailable;
-    const heldDifference = wallet.heldKobo - expectedHeld;
+    const projection = compareWalletProjection({
+      walletId: wallet.id,
+      availableKobo: wallet.availableKobo,
+      heldKobo: wallet.heldKobo,
+      ledgerNetKobo: ledgerNet,
+      holds
+    });
     return {
       walletId: wallet.id,
       identity: identity(wallet),
@@ -116,12 +87,12 @@ const EXPECTED = process.env.RECONCILE_DB ?? "naijadeals_affiliate_test";
       available: wallet.availableKobo.toString(),
       held: wallet.heldKobo.toString(),
       ledgerNet: ledgerNet.toString(),
-      openBuyerHeld: buyer.toString(),
-      openCounterpartyHeld: counterparty.toString(),
-      expectedAvailable: expectedAvailable.toString(),
-      expectedHeld: expectedHeld.toString(),
-      availableDifference: availableDifference.toString(),
-      heldDifference: heldDifference.toString(),
+      openBuyerHeld: projection.openBuyerHeldKobo.toString(),
+      openCounterpartyHeld: projection.openCounterpartyHeldKobo.toString(),
+      expectedAvailable: projection.expectedAvailableKobo.toString(),
+      expectedHeld: projection.expectedHeldKobo.toString(),
+      availableDifference: projection.availableDifferenceKobo.toString(),
+      heldDifference: projection.heldDifferenceKobo.toString(),
       walletTransactions: txMap.get(wallet.id) ?? 0,
       duplicateIdentity: (byIdentity.get(`${identity(wallet)}|${wallet.ownerType}|${wallet.currency}`) ?? 0) > 1,
       createdAt: wallet.createdAt.toISOString()
@@ -130,21 +101,30 @@ const EXPECTED = process.env.RECONCILE_DB ?? "naijadeals_affiliate_test";
 
   const mismatches = rows.filter((row) => row.availableDifference !== "0" || row.heldDifference !== "0");
   const duplicates = rows.filter((row) => row.duplicateIdentity);
+  const unattributed = holds.unattributed.map((hold) => ({
+    kind: hold.kind,
+    id: hold.id,
+    reference: hold.reference,
+    amountKobo: hold.amountKobo.toString(),
+    reason: hold.reason
+  }));
   console.log(
     JSON.stringify(
       {
         database: DB,
         convention:
-          "availableKobo == ledgerNet - open counterparty hold credits; heldKobo == open buyer holds + open counterparty holds; duplicate identities are reported",
+          "availableKobo == ledgerNet - open counterparty hold credits; heldKobo == open buyer holds + open counterparty holds; duplicate identities and unattributed holds are reported",
         wallets: rows.length,
         openRides: openRides.length,
         openEscrows: openEscrows.length,
-        unattributedRides,
+        unattributedRides: holds.unattributed.filter((hold) => hold.kind === "ride").length,
+        unattributedHolds: unattributed.length,
+        unattributed,
         mismatches: mismatches.length,
         duplicateIdentities: duplicates.length,
         duplicates,
         mismatchRows: mismatches.slice(0, 50),
-        status: mismatches.length || duplicates.length ? "REVIEW" : "CLEAN"
+        status: mismatches.length || duplicates.length || unattributed.length ? "REVIEW" : "CLEAN"
       },
       null,
       2

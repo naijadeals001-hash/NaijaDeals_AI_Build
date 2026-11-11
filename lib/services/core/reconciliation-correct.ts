@@ -1,29 +1,57 @@
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 
 /**
  * Reconciliation for the NaijaPay books.
  *
- * ## The invariant
+ * ## One interpretation, two balances
  *
- * A wallet holds two balances that mean different things, and each reconciles
- * against its own slice of the journal:
+ * A wallet stores two balances that reconcile against different slices of the
+ * same journal. This module owns the interpretation; `scripts/wallet-reconcile.ts`
+ * imports the same helpers so the Control Center and the acceptance checker can
+ * never drift apart.
  *
- *  - `availableKobo` — reconciles against the FULL journal net for the wallet.
- *    Held money still belongs to the wallet, so it is not removed from the
- *    wallet's position; it is only removed from what the wallet may spend.
- *  - `heldKobo` — reconciles against the magnitude of the wallet's net across
- *    escrow movements. A buyer is debited into escrow (negative), and the
- *    magnitude of that debit is what it has on hold.
+ *  - `availableKobo` is the spendable position: the wallet's full journal net,
+ *    less any open hold credit the wallet received as an escrow counterparty.
+ *  - `heldKobo` is the open escrow reservation: buyer-side holds plus escrow the
+ *    wallet holds on behalf of a counterparty.
  *
- *        availableKobo == journal net (all movements)
- *        heldKobo      == |journal net over escrow movements|
+ *        availableKobo == ledgerNet - open counterparty hold credits
+ *        heldKobo       == open buyer holds + open counterparty hold credits
+ *
+ * Open holds are read from the records that own them, never guessed from
+ * transaction names:
+ *
+ *  - `Ride` rows with `paymentMethod = wallet` and `paymentStatus = held`:
+ *    the rider wallet is the buyer, the SYSTEM wallet is the counterparty.
+ *  - `EscrowHold` rows in a status that still holds funds: the buyer wallet is
+ *    the buyer, the vendor wallet is the counterparty. A partial refund against
+ *    an open hold reduces the money actually held, so the exposure is
+ *    `amountKobo - Order.refundedKobo` (clamped at zero). A full refund moves
+ *    the hold to `refunded`, which is not an open status.
+ *
+ * The lifecycle this reproduces (verified against the posting services):
+ *
+ *  | phase                        | buyer available | buyer held | counterparty available | counterparty held |
+ *  |------------------------------|-----------------|------------|------------------------|-------------------|
+ *  | wallet funding               | +amount         | 0          | -amount                | 0                 |
+ *  | ride hold / shop escrow hold | -amount         | +amount    | 0                      | +amount           |
+ *  | ride cancel                  | +refund         | -fare      | +fee                   | -fare             |
+ *  | ride completed               | 0               | -fare      | 0 (debit leg)          | -fare             |
+ *  | shop escrow released         | 0               | -amount    | 0                      | -amount           |
+ *  | partial refund, hold open    | +refund         | -refund    | 0                      | -refund           |
+ *  | full refund                  | +remaining      | -remaining | 0                      | -remaining        |
+ *  | partner settlement/recovery  | no hold impact  | no hold impact | no hold impact    | no hold impact    |
  *
  * Comparing `availableKobo + heldKobo` against the full journal net — which the
  * earlier report did — reports every wallet holding an open escrow as broken.
  * That is exactly what produced the two "customer exceptions" in the previous
  * note. They were not exceptions: their `heldKobo` equalled their open escrows
  * to the kobo, and their `availableKobo` reconciled exactly.
+ *
+ * Any held balance with no attributable open record is reported rather than
+ * ignored: a wallet holding an unexplained amount is a reconciliation exception.
  *
  * ## The equity book
  *
@@ -38,6 +66,7 @@ export type IssueSeverity = "broken" | "unexplained" | "info";
 export type IssueClass =
   | "wallet_available_delta"
   | "wallet_held_delta"
+  | "hold_attribution"
   | "journal_unbalanced"
   | "account_drift"
   | "documentation_posted_as_money";
@@ -57,6 +86,8 @@ export type ReconciliationIssue = {
   remediation: string;
 };
 
+type Db = PrismaClient | Prisma.TransactionClient;
+
 const NGN = (kobo: bigint) =>
   "NGN " + (Number(kobo) / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -67,7 +98,167 @@ const NGN = (kobo: bigint) =>
  */
 const toBigInt = (value: unknown): bigint => BigInt(String(value ?? 0));
 
-const isEscrowMovement = (reference: string) => /ESCROW-HOLD|RELEASE-/i.test(reference);
+/**
+ * Escrow statuses that still represent money the buyer has not received back and
+ * the seller cannot spend. `released` and `refunded` are terminal.
+ */
+export const OPEN_ESCROW_STATUSES = [
+  "pending",
+  "held",
+  "release_eligible",
+  "refund_requested",
+  "disputed",
+  "reserved"
+] as const;
+
+export type OpenHold = {
+  kind: "ride" | "escrow";
+  id: string;
+  reference: string;
+  amountKobo: bigint;
+  buyerWalletId: string | null;
+  counterpartyWalletId: string | null;
+  detail: string;
+};
+
+export type UnattributedHold = OpenHold & { reason: string };
+
+export type OpenHoldLedger = {
+  holds: OpenHold[];
+  unattributed: UnattributedHold[];
+  buyerHeld: Map<string, bigint>;
+  counterpartyHeld: Map<string, bigint>;
+};
+
+const addTo = (map: Map<string, bigint>, walletId: string | null | undefined, amount: bigint) => {
+  if (!walletId || amount === BigInt(0)) return;
+  map.set(walletId, (map.get(walletId) ?? BigInt(0)) + amount);
+};
+
+/**
+ * Read every open reservation from its owning record.
+ *
+ * Holds whose buyer wallet cannot be resolved (deleted wallet, missing rider
+ * wallet) are returned as `unattributed` instead of being dropped, so the caller
+ * can report REVIEW rather than CLEAN.
+ */
+export async function loadOpenHoldLedger(db: Db): Promise<OpenHoldLedger> {
+  const [openRides, openEscrows, customerWallets] = await Promise.all([
+    db.ride.findMany({
+      where: { paymentMethod: "wallet", paymentStatus: "held" },
+      select: { id: true, rideNumber: true, riderId: true, fareKobo: true }
+    }),
+    db.escrowHold.findMany({
+      where: { status: { in: [...OPEN_ESCROW_STATUSES] } },
+      select: {
+        id: true,
+        orderId: true,
+        buyerWalletId: true,
+        vendorWalletId: true,
+        amountKobo: true,
+        status: true,
+        order: { select: { orderNumber: true, refundedKobo: true } }
+      }
+    }),
+    db.wallet.findMany({
+      where: { ownerType: "CUSTOMER", userId: { not: null } },
+      select: { id: true, userId: true }
+    })
+  ]);
+
+  const customerWalletByUser = new Map(customerWallets.map((wallet) => [wallet.userId as string, wallet.id]));
+  const systemWallet = await db.wallet.findFirst({ where: { ownerType: "SYSTEM" }, select: { id: true } });
+
+  const holds: OpenHold[] = [];
+  const unattributed: UnattributedHold[] = [];
+  const buyerHeld = new Map<string, bigint>();
+  const counterpartyHeld = new Map<string, bigint>();
+
+  for (const ride of openRides) {
+    const buyerWalletId = customerWalletByUser.get(ride.riderId) ?? null;
+    const hold: OpenHold = {
+      kind: "ride",
+      id: ride.id,
+      reference: `RIDE-${ride.id}-HOLD`,
+      amountKobo: ride.fareKobo,
+      buyerWalletId,
+      counterpartyWalletId: systemWallet?.id ?? null,
+      detail: `${ride.rideNumber} fare hold`
+    };
+    if (!buyerWalletId) {
+      unattributed.push({ ...hold, reason: "rider has no CUSTOMER wallet" });
+      continue;
+    }
+    if (!systemWallet) {
+      unattributed.push({ ...hold, reason: "no SYSTEM wallet for the counterparty" });
+      continue;
+    }
+    holds.push(hold);
+    addTo(buyerHeld, buyerWalletId, ride.fareKobo);
+    addTo(counterpartyHeld, systemWallet.id, ride.fareKobo);
+  }
+
+  for (const escrow of openEscrows) {
+    const refunded = escrow.order?.refundedKobo ?? BigInt(0);
+    const exposure = escrow.amountKobo > refunded ? escrow.amountKobo - refunded : BigInt(0);
+    const hold: OpenHold = {
+      kind: "escrow",
+      id: escrow.id,
+      reference: `ESCROW-HOLD-${escrow.orderId}`,
+      amountKobo: exposure,
+      buyerWalletId: escrow.buyerWalletId,
+      counterpartyWalletId: escrow.vendorWalletId,
+      detail: `${escrow.order?.orderNumber ?? escrow.orderId} escrow ${escrow.status}, ${escrow.amountKobo.toString()} held less ${refunded.toString()} refunded`
+    };
+    holds.push(hold);
+    addTo(buyerHeld, escrow.buyerWalletId, exposure);
+    addTo(counterpartyHeld, escrow.vendorWalletId, exposure);
+  }
+
+  return { holds, unattributed, buyerHeld, counterpartyHeld };
+}
+
+export function expectedPosition(ledgerNet: bigint, holds: OpenHoldLedger, walletId: string) {
+  const buyer = holds.buyerHeld.get(walletId) ?? BigInt(0);
+  const counterparty = holds.counterpartyHeld.get(walletId) ?? BigInt(0);
+  return {
+    availableKobo: ledgerNet - counterparty,
+    heldKobo: buyer + counterparty,
+    openBuyerHeldKobo: buyer,
+    openCounterpartyHeldKobo: counterparty
+  };
+}
+
+export type WalletProjection = {
+  walletId: string;
+  ledgerNetKobo: bigint;
+  expectedAvailableKobo: bigint;
+  expectedHeldKobo: bigint;
+  availableDifferenceKobo: bigint;
+  heldDifferenceKobo: bigint;
+  openBuyerHeldKobo: bigint;
+  openCounterpartyHeldKobo: bigint;
+};
+
+export function compareWalletProjection(input: {
+  walletId: string;
+  availableKobo: bigint;
+  heldKobo: bigint;
+  ledgerNetKobo: bigint;
+  holds: OpenHoldLedger;
+}): WalletProjection {
+  const expected = expectedPosition(input.ledgerNetKobo, input.holds, input.walletId);
+  return {
+    walletId: input.walletId,
+    ledgerNetKobo: input.ledgerNetKobo,
+    expectedAvailableKobo: expected.availableKobo,
+    expectedHeldKobo: expected.heldKobo,
+    availableDifferenceKobo: input.availableKobo - expected.availableKobo,
+    heldDifferenceKobo: input.heldKobo - expected.heldKobo,
+    openBuyerHeldKobo: expected.openBuyerHeldKobo,
+    openCounterpartyHeldKobo: expected.openCounterpartyHeldKobo
+  };
+}
 
 export async function journalTotals() {
   const rows = await prisma.ledgerEntry.groupBy({ by: ["direction"], _sum: { amountKobo: true }, _count: { _all: true } });
@@ -155,33 +346,50 @@ export async function reconcile(): Promise<{ totals: Awaited<ReturnType<typeof j
   }
 
   // ---- the invariant, per wallet -------------------------------------------
-  const journals = await prisma.ledgerEntry.findMany({
-    select: { walletId: true, direction: true, amountKobo: true, transaction: { select: { reference: true, createdAt: true } } }
-  });
+  const [journals, wallets, holds] = await Promise.all([
+    prisma.ledgerEntry.findMany({
+      select: { walletId: true, direction: true, amountKobo: true, transaction: { select: { reference: true, createdAt: true } } }
+    }),
+    prisma.wallet.findMany({
+      select: {
+        id: true,
+        ownerType: true,
+        availableKobo: true,
+        heldKobo: true,
+        user: { select: { email: true } },
+        vendor: { select: { name: true } }
+      }
+    }),
+    loadOpenHoldLedger(prisma)
+  ]);
+
   const journalNet = new Map<string, bigint>();
-  const escrowNetByWallet = new Map<string, bigint>();
   for (const entry of journals) {
     const signed = entry.direction === "CREDIT" ? entry.amountKobo : -entry.amountKobo;
     journalNet.set(entry.walletId, (journalNet.get(entry.walletId) ?? BigInt(0)) + signed);
-    if (isEscrowMovement(entry.transaction.reference)) {
-      escrowNetByWallet.set(entry.walletId, (escrowNetByWallet.get(entry.walletId) ?? BigInt(0)) + signed);
-    }
   }
 
-  const wallets = await prisma.wallet.findMany({
-    select: {
-      id: true,
-      ownerType: true,
-      availableKobo: true,
-      heldKobo: true,
-      user: { select: { email: true } },
-      vendor: { select: { name: true } }
-    }
-  });
+  // A hold with no resolvable buyer/counterparty is money the books cannot
+  // attribute. It is reported explicitly instead of silently reducing expected held.
+  for (const orphan of holds.unattributed) {
+    const recent = journals
+      .filter((entry) => entry.transaction.reference === orphan.reference)
+      .map((entry) => `${entry.transaction.createdAt.toISOString()} ${entry.transaction.reference}`);
+    issues.push({
+      severity: "unexplained",
+      kind: "hold_attribution",
+      subject: orphan.id,
+      deltaKobo: orphan.amountKobo.toString(),
+      detail: `Open ${orphan.kind} ${orphan.reference} holds ${NGN(orphan.amountKobo)} but its ${orphan.reason}.`,
+      evidence: [orphan.detail, ...recent],
+      fixtureProvenance: false,
+      remediation:
+        "Restore or identify the owning wallet before release. Never move the held amount to an invented counterparty."
+    });
+  }
 
   for (const wallet of wallets) {
-    const expectedAvailable = journalNet.get(wallet.id) ?? BigInt(0);
-    const escrowNet = escrowNetByWallet.get(wallet.id) ?? BigInt(0);
+    const ledgerNet = journalNet.get(wallet.id) ?? BigInt(0);
     const label = `${wallet.user?.email ?? wallet.vendor?.name ?? wallet.ownerType} (${wallet.id.slice(-8)})`;
     const testIdentity = wallet.user?.email?.endsWith(".local") === true || wallet.user?.email?.endsWith(".demo") === true;
     const recent = journals
@@ -189,36 +397,38 @@ export async function reconcile(): Promise<{ totals: Awaited<ReturnType<typeof j
       .sort((a, b) => b.transaction.createdAt.getTime() - a.transaction.createdAt.getTime())
       .slice(0, 6)
       .map((e) => `${e.transaction.createdAt.toISOString()} ${e.transaction.reference}`);
+    const projection = compareWalletProjection({
+      walletId: wallet.id,
+      availableKobo: wallet.availableKobo,
+      heldKobo: wallet.heldKobo,
+      ledgerNetKobo: ledgerNet,
+      holds
+    });
 
-    const availableDelta = wallet.availableKobo - expectedAvailable;
-    if (availableDelta !== BigInt(0)) {
+    if (projection.availableDifferenceKobo !== BigInt(0)) {
       issues.push({
         severity: "broken",
         kind: "wallet_available_delta",
         subject: wallet.id,
-        deltaKobo: availableDelta.toString(),
-        detail: `availableKobo ${NGN(wallet.availableKobo)} differs from the journal net ${NGN(expectedAvailable)} by ${NGN(availableDelta)} (wallet ${label}).`,
+        deltaKobo: projection.availableDifferenceKobo.toString(),
+        detail: `availableKobo ${NGN(wallet.availableKobo)} differs from the expected ${NGN(projection.expectedAvailableKobo)} (ledger net ${NGN(ledgerNet)} less ${NGN(projection.openCounterpartyHeldKobo)} counterparty hold credit) by ${NGN(projection.availableDifferenceKobo)} (wallet ${label}).`,
         evidence: recent,
         fixtureProvenance: testIdentity,
         remediation: "Identify the posting that changed the stored balance without a matching journal entry, or vice versa. Requires an operator decision."
       });
     }
 
-    // A buyer is debited into escrow, so its escrow net is negative and heldKobo
-    // is that net's magnitude; a seller is credited, so its escrow net is the
-    // payable itself and it holds no escrow of its own. Compare magnitudes.
-    const escrowMagnitude = escrowNet < BigInt(0) ? -escrowNet : escrowNet;
-    const heldDelta = wallet.heldKobo - escrowMagnitude;
-    if (heldDelta !== BigInt(0)) {
+    if (projection.heldDifferenceKobo !== BigInt(0)) {
       issues.push({
         severity: "unexplained",
         kind: "wallet_held_delta",
         subject: wallet.id,
-        deltaKobo: heldDelta.toString(),
-        detail: `heldKobo ${NGN(wallet.heldKobo)} differs from the escrow journal position ${NGN(escrowMagnitude)} by ${NGN(heldDelta)} (wallet ${label}).`,
+        deltaKobo: projection.heldDifferenceKobo.toString(),
+        detail: `heldKobo ${NGN(wallet.heldKobo)} differs from the open reservations (${NGN(projection.expectedHeldKobo)}) by ${NGN(projection.heldDifferenceKobo)} (wallet ${label}).`,
         evidence: recent,
         fixtureProvenance: testIdentity,
-        remediation: "Escrow holds and releases must move heldKobo and the journal together. Reconcile per order."
+        remediation:
+          "Escrow holds and releases must move heldKobo and the journal together. A positive difference means held money has no open business record; reconcile per order/ride."
       });
     }
   }

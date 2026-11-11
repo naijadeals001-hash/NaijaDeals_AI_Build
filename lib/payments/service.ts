@@ -592,9 +592,17 @@ export async function refundPayment(input: {
   const completed = order.payments.find((payment) => payment.status === "COMPLETED");
   if (!completed) throw new ApiError(409, "no_payment", "No completed payment was found for this order.");
 
-  // Reserve the exact amount first. Concurrent attempts see the reduced remaining
-  // balance, so the cumulative refund can never exceed the order total.
-  const refund = await prisma.$transaction(async (tx) => {
+  const external = completed.provider !== "wallet";
+
+  /**
+   * Reserve the exact amount and create the PENDING refund row. For a wallet
+   * refund this must run inside the same transaction as the wallet movement:
+   * otherwise a refused wallet debit (for example a negative platform balance)
+   * leaves the order's refunded amount claimed and a PENDING refund with no
+   * money behind it. External providers keep the pre-claim because the provider
+   * call must happen between the claim and the local settlement.
+   */
+  const claimRefund = async (tx: Prisma.TransactionClient) => {
     const claim = await tx.order.updateMany({
       where: { id: order.id, refundedKobo: alreadyRefunded },
       data: { refundedKobo: { increment: requested } }
@@ -611,15 +619,16 @@ export async function refundPayment(input: {
         status: "PENDING"
       }
     });
-  });
+  };
 
-  const external = completed.provider !== "wallet";
+  const priorRefund = external ? await prisma.$transaction(claimRefund) : null;
+
   let providerReference: string | undefined;
   if (external) {
     const adapter = adapters[completed.provider as AdapterId];
     if (!adapter?.refund) {
       await prisma.$transaction([
-        prisma.refund.update({ where: { id: refund.id }, data: { status: "FAILED" } }),
+        prisma.refund.update({ where: { id: priorRefund!.id }, data: { status: "FAILED" } }),
         prisma.order.update({ where: { id: order.id }, data: { refundedKobo: { decrement: requested } } })
       ]);
       throw new ApiError(503, "refund_unsupported", `${completed.provider} refunds are not configured on this server.`);
@@ -634,14 +643,14 @@ export async function refundPayment(input: {
       });
     } catch (error) {
       await prisma.$transaction([
-        prisma.refund.update({ where: { id: refund.id }, data: { status: "FAILED" } }),
+        prisma.refund.update({ where: { id: priorRefund!.id }, data: { status: "FAILED" } }),
         prisma.order.update({ where: { id: order.id }, data: { refundedKobo: { decrement: requested } } })
       ]);
       throw error;
     }
     providerReference = result.providerReference;
     if (result.status !== "COMPLETED") {
-      await prisma.refund.update({ where: { id: refund.id }, data: { providerReference, status: "PENDING" } });
+      await prisma.refund.update({ where: { id: priorRefund!.id }, data: { providerReference, status: "PENDING" } });
       throw new ApiError(502, "refund_pending", `${adapter.label} has not confirmed this refund. The amount stays reserved for reconciliation.`);
     }
   }
@@ -656,6 +665,10 @@ export async function refundPayment(input: {
     const buyerWallet = await ensureWallet(tx, { userId: order.customerId, ownerType: "CUSTOMER" });
     const vendorWallet = await ensureWallet(tx, { vendorId: order.vendorId, ownerType: "VENDOR" });
     const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
+    // Wallet refunds claim and move in one transaction. A refused debit rolls the
+    // claim and the PENDING refund row back with it, so the order is not left
+    // reporting money returned that never left the platform.
+    const refund = priorRefund ?? (await claimRefund(tx));
 
     if (completed.provider === "wallet" && escrowReleased) {
       await tx.wallet.update({ where: { id: buyerWallet.id }, data: { availableKobo: { increment: requested } } });

@@ -196,6 +196,8 @@ type WorkerSpec = {
   userId: string;
   walletId: string;
   reference?: string;
+  /** Milliseconds to wait after the shared release before starting the service call. */
+  delayMs?: number;
 };
 
 type WorkerOutput = {
@@ -272,7 +274,12 @@ function spawnWorker(spec: WorkerSpec, barrierDir: string, url: string): WorkerH
       WC_PAYMENT_REFERENCE: spec.reference ?? "",
       WC_BARRIER_DIR: barrierDir,
       WC_DB: DB,
+      WC_DELAY_MS: String(spec.delayMs ?? 0),
       DRIVE_SWEEP_DISABLED: "1",
+      // No queue backend is part of this isolated run. Emptying VALKEY_URL makes
+      // scheduleDelivery a no-op instead of letting BullMQ wait forever on an
+      // absent Valkey while the payment's post-commit notification runs.
+      VALKEY_URL: "",
       NODE_ENV: "test"
     },
     stdio: ["ignore", "pipe", "pipe"],
@@ -351,30 +358,108 @@ function overlappingMs(results: WorkerOutput[]) {
   return Math.max(0, Math.min(...ends) - Math.max(...starts));
 }
 
-async function runRace(label: string, specs: WorkerSpec[]) {
+type LockWaitSample = {
+  at: number;
+  pid: number;
+  waitEventType: string | null;
+  waitEvent: string | null;
+  blockers: number[];
+};
+
+/**
+ * Watch the two worker backends while they run. A row lock held by one
+ * transaction makes the other wait on `transactionid`; `pg_blocking_pids` names
+ * the holder. This distinguishes real database lock contention from mere
+ * wall-clock overlap in the harness.
+ */
+function startLockMonitor(prisma: PrismaClient, pids: number[]) {
+  const watched = pids.filter((pid) => Number.isInteger(pid) && pid > 0);
+  const samples = new Map<string, LockWaitSample>();
+  let polling = false;
+  const timer = setInterval(() => {
+    if (polling || watched.length === 0) return;
+    polling = true;
+    const list = watched.join(", ");
+    prisma
+      .$queryRawUnsafe<Array<{ pid: number; waitEventType: string | null; waitEvent: string | null; blockers: number[] }>>(
+        `select pid, wait_event_type as "waitEventType", wait_event as "waitEvent", pg_blocking_pids(pid) as "blockers" from pg_stat_activity where pid in (${list})`
+      )
+      .then((rows) => {
+        const at = Date.now();
+        for (const row of rows) {
+          const blockers = Array.isArray(row.blockers) ? row.blockers.map(Number).filter((pid) => pid > 0) : [];
+          if (row.waitEventType !== "Lock" && blockers.length === 0) continue;
+          const key = `${row.pid}|${row.waitEventType}|${row.waitEvent}|${blockers.join(",")}`;
+          if (!samples.has(key)) {
+            samples.set(key, { at, pid: Number(row.pid), waitEventType: row.waitEventType, waitEvent: row.waitEvent, blockers });
+          }
+        }
+      })
+      .catch(() => {
+        // Monitoring must never fail the race it observes.
+      })
+      .finally(() => {
+        polling = false;
+      });
+  }, 4);
+  timer.unref?.();
+  return {
+    async stop(): Promise<LockWaitSample[]> {
+      clearInterval(timer);
+      const stopAt = Date.now() + 250;
+      while (polling && Date.now() < stopAt) await sleep(5);
+      return [...samples.values()].sort((a, b) => a.at - b.at);
+    }
+  };
+}
+
+async function runRace(prisma: PrismaClient, label: string, specs: WorkerSpec[]) {
   const barrierDir = fs.mkdtempSync(path.join(os.tmpdir(), `wc-spend-${label}-`));
-  const url = acceptanceUrl(1);
+  // Two connections per worker: a payment transaction calls notifyVendorOwner,
+  // which reads the vendor through the global client (a real defect: it should
+  // use the transaction client). With connection_limit=1 that query waits for
+  // the connection the transaction itself holds and the payment times out at
+  // Prisma's 5 s transaction limit. Two connections keeps the worker independent
+  // without masking the wallet row lock that this race is meant to exercise.
+  const url = acceptanceUrl(2);
   const workers = specs.map((spec) => spawnWorker(spec, barrierDir, url));
   let barrierOk = true;
   let releasedAt = 0;
+  let readyPids: number[] = [];
+  let lockWaits: LockWaitSample[] = [];
+  let monitor: ReturnType<typeof startLockMonitor> | null = null;
   try {
     await waitForFiles(
       specs.map((spec) => path.join(barrierDir, `ready-${spec.role}`)),
       BARRIER_TIMEOUT_MS
     );
+    readyPids = specs.map((spec) => {
+      try {
+        const ready = JSON.parse(fs.readFileSync(path.join(barrierDir, `ready-${spec.role}`), "utf8")) as { backendPid?: number };
+        return Number(ready.backendPid ?? 0);
+      } catch {
+        return 0;
+      }
+    });
+    monitor = startLockMonitor(prisma, readyPids);
     releasedAt = Date.now();
     fs.writeFileSync(path.join(barrierDir, "go"), String(releasedAt));
-  } catch {
+    const results = await Promise.all(workers.map((worker) => worker.done));
+    lockWaits = await monitor.stop();
+    return { label, barrierOk, releasedAt, overlapMs: overlappingMs(results), results, readyPids, lockWaits };
+  } catch (error) {
     barrierOk = false;
     for (const worker of workers) worker.kill();
+    const results = await Promise.all(workers.map((worker) => worker.done));
+    if (monitor) lockWaits = await monitor.stop();
+    return { label, barrierOk, releasedAt, overlapMs: overlappingMs(results), results, readyPids, lockWaits };
+  } finally {
+    try {
+      fs.rmSync(barrierDir, { recursive: true, force: true });
+    } catch {
+      // Temporary barrier files are harmless if cleanup races an open handle.
+    }
   }
-  const results = await Promise.all(workers.map((worker) => worker.done));
-  try {
-    fs.rmSync(barrierDir, { recursive: true, force: true });
-  } catch {
-    // Temporary barrier files are harmless if cleanup races an open handle.
-  }
-  return { label, barrierOk, releasedAt, overlapMs: overlappingMs(results), results };
 }
 
 async function buildServiceCall(kind: WorkerSpec["kind"], input: { userId: string; reference: string }) {
@@ -453,8 +538,14 @@ async function workerMain() {
     const call = await buildServiceCall(kind, { userId, reference });
 
     const readyAt = Date.now();
-    fs.writeFileSync(path.join(barrierDir, `ready-${role}`), String(readyAt));
+    fs.writeFileSync(
+      path.join(barrierDir, `ready-${role}`),
+      JSON.stringify({ readyAt, backendPid: backendPidBefore })
+    );
     await waitForFiles([path.join(barrierDir, "go")], BARRIER_TIMEOUT_MS);
+
+    const delayMs = Number(process.env.WC_DELAY_MS ?? 0);
+    if (Number.isFinite(delayMs) && delayMs > 0) await sleep(delayMs);
 
     const startedAt = Date.now();
     fs.writeFileSync(path.join(barrierDir, `started-${role}`), String(startedAt));
@@ -537,103 +628,349 @@ async function projectionCheck(prisma: PrismaClient) {
 
   // The two stored balances reconcile separately: available to the ledger net
   // less counterparty hold credits, held to the open reservations themselves.
-  const openRides = await prisma.ride.findMany({
-    where: { paymentMethod: "wallet", paymentStatus: "held" },
-    select: { riderId: true, fareKobo: true }
-  });
-  const openEscrows = await prisma.escrowHold.findMany({
-    where: { status: "held" },
-    select: { buyerWalletId: true, vendorWalletId: true, amountKobo: true }
-  });
-  const customerByUser = new Map<string, string>();
-  for (const wallet of wallets) {
-    if (wallet.ownerType === "CUSTOMER" && wallet.userId) customerByUser.set(wallet.userId, wallet.id);
-  }
-  const systemId = wallets.find((wallet) => wallet.ownerType === "SYSTEM")?.id;
-  const buyerHeld = new Map<string, bigint>();
-  const counterpartyHeld = new Map<string, bigint>();
-  const addHeld = (map: Map<string, bigint>, walletId: string | null | undefined, amount: bigint) => {
-    if (!walletId) return;
-    map.set(walletId, (map.get(walletId) ?? BigInt(0)) + amount);
-  };
-  for (const ride of openRides) {
-    const riderWalletId = customerByUser.get(ride.riderId);
-    if (!riderWalletId) continue;
-    addHeld(buyerHeld, riderWalletId, ride.fareKobo);
-    addHeld(counterpartyHeld, systemId, ride.fareKobo);
-  }
-  for (const escrow of openEscrows) {
-    addHeld(buyerHeld, escrow.buyerWalletId, escrow.amountKobo);
-    addHeld(counterpartyHeld, escrow.vendorWalletId, escrow.amountKobo);
-  }
+  // The interpretation is imported from the Control Center reconciliation module
+  // so this harness cannot drift from the checker it is validating.
+  const { compareWalletProjection, loadOpenHoldLedger } = await import("../lib/services/core/reconciliation-correct");
+  const holds = await loadOpenHoldLedger(prisma);
 
   const mismatched = wallets
     .map((wallet) => {
       const ledgerNet = net.get(wallet.id) ?? BigInt(0);
-      const counterparty = counterpartyHeld.get(wallet.id) ?? BigInt(0);
-      const expectedAvailable = ledgerNet - counterparty;
-      const expectedHeld = (buyerHeld.get(wallet.id) ?? BigInt(0)) + counterparty;
-      const availableDifference = wallet.availableKobo - expectedAvailable;
-      const heldDifference = wallet.heldKobo - expectedHeld;
+      const projection = compareWalletProjection({
+        walletId: wallet.id,
+        availableKobo: wallet.availableKobo,
+        heldKobo: wallet.heldKobo,
+        ledgerNetKobo: ledgerNet,
+        holds
+      });
       return {
         walletId: wallet.id,
         ownerType: wallet.ownerType,
         available: wallet.availableKobo.toString(),
         held: wallet.heldKobo.toString(),
-        expectedAvailable: expectedAvailable.toString(),
-        expectedHeld: expectedHeld.toString(),
-        availableDifference: availableDifference.toString(),
-        heldDifference: heldDifference.toString(),
+        expectedAvailable: projection.expectedAvailableKobo.toString(),
+        expectedHeld: projection.expectedHeldKobo.toString(),
+        availableDifference: projection.availableDifferenceKobo.toString(),
+        heldDifference: projection.heldDifferenceKobo.toString(),
         ledger: ledgerNet.toString()
       };
     })
     .filter((row) => row.availableDifference !== "0" || row.heldDifference !== "0");
-  return { wallets: wallets.length, mismatched };
+  return { wallets: wallets.length, mismatched, unattributed: holds.unattributed.length };
 }
 
-async function runReconcile(url: string) {
-  return new Promise<{ database?: string; status?: string; mismatches?: number; duplicateIdentities?: number; wallets?: number }>(
-    (resolve, reject) => {
-      const child = spawn(process.execPath, [TSX_CLI, path.join(REPO_ROOT, "scripts", "wallet-reconcile.ts")], {
-        cwd: REPO_ROOT,
-        env: { ...process.env, DATABASE_URL: url, RECONCILE_DB: DB, NODE_ENV: "test" },
-        stdio: ["ignore", "pipe", "pipe"],
-        windowsHide: true
-      });
-      let stdout = "";
-      let stderr = "";
-      child.stdout?.on("data", (chunk) => {
-        stdout += String(chunk);
-      });
-      child.stderr?.on("data", (chunk) => {
-        stderr += String(chunk);
-      });
-      const timer = setTimeout(() => {
-        child.kill();
-        reject(new Error("wallet-reconcile timed out"));
-      }, WORKER_TIMEOUT_MS);
-      child.on("exit", () => {
-        clearTimeout(timer);
-        const start = stdout.indexOf("{");
-        const end = stdout.lastIndexOf("}");
-        if (start < 0 || end <= start) {
-          reject(new Error(`wallet-reconcile produced no JSON: ${redact(stderr || stdout).slice(0, 400)}`));
-          return;
-        }
-        try {
-          resolve(JSON.parse(stdout.slice(start, end + 1)) as {
-            database?: string;
-            status?: string;
-            mismatches?: number;
-            duplicateIdentities?: number;
-            wallets?: number;
-          });
-        } catch (error) {
-          reject(new Error(`wallet-reconcile JSON could not be parsed: ${String(error)}`));
+type ReconcileReport = {
+  database?: string;
+  status?: string;
+  wallets?: number;
+  openRides?: number;
+  openEscrows?: number;
+  unattributedRides?: number;
+  unattributedHolds?: number;
+  mismatches?: number;
+  duplicateIdentities?: number;
+  mismatchRows?: Array<Record<string, unknown>>;
+};
+
+async function runReconcile(url: string): Promise<ReconcileReport> {
+  return new Promise<ReconcileReport>((resolve, reject) => {
+    const child = spawn(process.execPath, [TSX_CLI, path.join(REPO_ROOT, "scripts", "wallet-reconcile.ts")], {
+      cwd: REPO_ROOT,
+      env: { ...process.env, DATABASE_URL: url, RECONCILE_DB: DB, NODE_ENV: "test" },
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout?.on("data", (chunk) => {
+      stdout += String(chunk);
+    });
+    child.stderr?.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error("wallet-reconcile timed out"));
+    }, WORKER_TIMEOUT_MS);
+    child.on("exit", () => {
+      clearTimeout(timer);
+      const start = stdout.indexOf("{");
+      const end = stdout.lastIndexOf("}");
+      if (start < 0 || end <= start) {
+        reject(new Error(`wallet-reconcile produced no JSON: ${redact(stderr || stdout).slice(0, 400)}`));
+        return;
+      }
+      try {
+        resolve(JSON.parse(stdout.slice(start, end + 1)) as ReconcileReport);
+      } catch (error) {
+        reject(new Error(`wallet-reconcile JSON could not be parsed: ${String(error)}`));
+      }
+    });
+  });
+}
+
+/* ------------------------------------------------------------- fixtures --- */
+
+const CHECKOUT_ADDRESS = {
+  label: "WC acceptance fixture address",
+  contactName: "WC acceptance customer",
+  contactPhone: "+2348000000000",
+  countryCode: "NG",
+  state: "Lagos",
+  city: "Lagos",
+  line1: "1 Acceptance Fixture Way",
+  line2: null,
+  postalCode: null
+};
+
+/**
+ * One complete real shop checkout: vendor, category, product with stock, cart,
+ * checkout and a wallet payment initialized but not confirmed. Every slug and
+ * identity is tagged with RUN_ID so cleanup can remove exactly this run.
+ */
+async function createShopFixture(
+  prisma: PrismaClient,
+  input: { customerId: string; label: string; stockQuantity?: number; priceKobo?: bigint }
+) {
+  const { checkout } = await import("../lib/services/core/checkout.service");
+  const { initializePayment } = await import("../lib/payments/service");
+  const slug = `wc-spend-${input.label}-${RUN_ID.toLowerCase()}`;
+  const owner = await createFixtureUser(prisma, `vendor-${input.label}`);
+  const vendor = await prisma.vendor.create({
+    data: {
+      ownerId: owner.id,
+      name: `WC spend ${input.label} vendor ${RUN_ID}`,
+      slug,
+      market: "Isolated acceptance fixture market",
+      description: "Isolated wallet-concurrency acceptance fixture. Not a real vendor.",
+      pickupAddress: "1 Acceptance Fixture Way, Lagos",
+      pickupPhone: "+2348000000000",
+      status: "VERIFIED",
+      commissionBps: 1000
+    }
+  });
+  const category = await prisma.category.create({
+    data: {
+      name: `WC spend ${input.label} category ${RUN_ID}`,
+      slug: `wc-spend-category-${input.label}-${RUN_ID.toLowerCase()}`,
+      description: "Isolated wallet-concurrency acceptance fixture."
+    }
+  });
+  const product = await prisma.product.create({
+    data: {
+      vendorId: vendor.id,
+      categoryId: category.id,
+      name: `WC acceptance ${input.label} item ${RUN_ID}`,
+      slug: `wc-accept-item-${input.label}-${RUN_ID.toLowerCase()}`,
+      description: "Isolated wallet-concurrency acceptance fixture. Not a real listing.",
+      priceKobo: input.priceKobo ?? SHOP_SUBTOTAL_KOBO,
+      status: "ACTIVE",
+      isSample: false,
+      stock: { create: { quantity: input.stockQuantity ?? 3, reserved: 0 } }
+    }
+  });
+  await prisma.cart.create({ data: { userId: input.customerId, items: { create: { productId: product.id, quantity: 1 } } } });
+  const checkoutResult = await checkout({ userId: input.customerId, address: CHECKOUT_ADDRESS, saveAddress: false });
+  assert(checkoutResult.orders.length === 1, `${input.label}: expected one vendor order, got ${checkoutResult.orders.length}`);
+  const orderId = checkoutResult.orders[0].orderId;
+  const initialized = await initializePayment({
+    orderId,
+    userId: input.customerId,
+    provider: "wallet",
+    callbackUrl: "http://localhost/wallet"
+  });
+  const order = await prisma.order.findUniqueOrThrow({
+    where: { id: orderId },
+    include: { payments: true, escrowHolds: true, deliveries: true }
+  });
+  assert(order.totalKobo === DEMAND_KOBO, `${input.label}: checkout total ${order.totalKobo}, expected ${DEMAND_KOBO}`);
+  return { owner, vendor, category, product, order, orderId, initialized, paymentId: initialized.paymentId };
+}
+
+/**
+ * Delete only the rows this run created. Everything is selected by the RUN_ID
+ * identity (`wc-spend-${RUN_ID}-...`) or by the run's own wallet/order/ride IDs,
+ * so a concurrent or earlier run is never touched.
+ */
+async function cleanupRun(prisma: PrismaClient, runId: string = RUN_ID) {
+  const emailPrefix = `wc-spend-${runId}-`;
+  const runSlug = runId.toLowerCase();
+  const users = await prisma.user.findMany({ where: { email: { startsWith: emailPrefix } }, select: { id: true } });
+  const userIds = users.map((user) => user.id);
+  if (userIds.length === 0) {
+    return { users: 0, wallets: 0, orders: 0, rides: 0, transactions: 0, leftovers: 0 };
+  }
+  const vendors = await prisma.vendor.findMany({
+    where: { OR: [{ ownerId: { in: userIds } }, { slug: { contains: runSlug } }] },
+    select: { id: true }
+  });
+  const vendorIds = vendors.map((vendor) => vendor.id);
+  const products = await prisma.product.findMany({
+    where: { OR: [{ vendorId: { in: vendorIds } }, { slug: { contains: runSlug } }] },
+    select: { id: true }
+  });
+  const productIds = products.map((product) => product.id);
+  const categories = await prisma.category.findMany({ where: { slug: { contains: runSlug } }, select: { id: true } });
+  const categoryIds = categories.map((category) => category.id);
+  const orders = await prisma.order.findMany({
+    where: { customerId: { in: userIds } },
+    select: { id: true }
+  });
+  const orderIds = orders.map((order) => order.id);
+  const carts = await prisma.cart.findMany({ where: { userId: { in: userIds } }, select: { id: true } });
+  const cartIds = carts.map((cart) => cart.id);
+  const rides = await prisma.ride.findMany({ where: { riderId: { in: userIds } }, select: { id: true } });
+  const rideIds = rides.map((ride) => ride.id);
+  const deliveries = await prisma.delivery.findMany({ where: { orderId: { in: orderIds } }, select: { id: true } });
+  const deliveryIds = deliveries.map((delivery) => delivery.id);
+  const escrows = await prisma.escrowHold.findMany({ where: { orderId: { in: orderIds } }, select: { id: true } });
+  const escrowIds = escrows.map((escrow) => escrow.id);
+  const wallets = await prisma.wallet.findMany({
+    where: { OR: [{ userId: { in: userIds } }, { vendorId: { in: vendorIds } }] },
+    select: { id: true }
+  });
+  const walletIds = wallets.map((wallet) => wallet.id);
+  const transactions = await prisma.walletTransaction.findMany({
+    where: {
+      OR: [
+        { walletId: { in: walletIds } },
+        { reference: { contains: runId } },
+        { orderId: { in: orderIds } }
+      ]
+    },
+    select: { id: true }
+  });
+  const transactionIds = transactions.map((transaction) => transaction.id);
+  const entityIds = [
+    ...orderIds,
+    ...rideIds,
+    ...deliveryIds,
+    ...escrowIds,
+    ...productIds,
+    ...vendorIds,
+    ...categoryIds,
+    ...transactionIds
+  ];
+
+  /**
+   * Our journals also moved the shared SYSTEM wallet (funding debits, ride hold
+   * credits, ride releases and platform commission). Deleting those ledger rows
+   * without reversing the stored projection would leave SYSTEM permanently out
+   * of balance, so compute the exact inverse of each transaction's stored effect
+   * before deleting anything. Only RUN_ID-tagged funding and our own rides and
+   * releases are touched.
+   */
+  const systemWallet = await prisma.wallet.findFirst({ where: { ownerType: "SYSTEM" }, select: { id: true } });
+  let systemAvailableDelta = BigInt(0);
+  let systemHeldDelta = BigInt(0);
+  if (systemWallet) {
+    const fullTransactions = await prisma.walletTransaction.findMany({
+      where: { id: { in: transactionIds } },
+      include: { ledger: true }
+    });
+    for (const transaction of fullTransactions) {
+      const legs = transaction.ledger.filter((leg) => leg.walletId === systemWallet.id);
+      if (legs.length === 0) continue;
+      const debit = legs.find((leg) => leg.direction === "DEBIT");
+      const credit = legs.find((leg) => leg.direction === "CREDIT");
+      if (transaction.type === "credit" && transaction.reference.includes(runId)) {
+        // Funding debited SYSTEM available in the same journal as the customer credit.
+        systemAvailableDelta += debit?.amountKobo ?? BigInt(0);
+      } else if (transaction.type === "hold" && transaction.reference.startsWith("RIDE-")) {
+        systemHeldDelta -= credit?.amountKobo ?? BigInt(0);
+      } else if (transaction.type === "release" && transaction.reference.startsWith("RIDE-")) {
+        systemHeldDelta += debit?.amountKobo ?? BigInt(0);
+      } else if (transaction.type === "refund" && transaction.reference.startsWith("RIDE-")) {
+        systemHeldDelta += debit?.amountKobo ?? BigInt(0);
+      } else if (transaction.type === "fee" && transaction.reference.startsWith("RIDE-")) {
+        systemHeldDelta += debit?.amountKobo ?? BigInt(0);
+        systemAvailableDelta -= credit?.amountKobo ?? BigInt(0);
+      } else if (transaction.type === "release" && transaction.reference.startsWith("RELEASE-")) {
+        systemAvailableDelta -= credit?.amountKobo ?? BigInt(0);
+      } else if (transaction.type === "refund" && transaction.reference.startsWith("REFUND-")) {
+        systemAvailableDelta += debit?.amountKobo ?? BigInt(0);
+      }
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (systemWallet && (systemAvailableDelta !== BigInt(0) || systemHeldDelta !== BigInt(0))) {
+      await tx.wallet.update({
+        where: { id: systemWallet.id },
+        data: {
+          availableKobo: { increment: systemAvailableDelta },
+          heldKobo: { increment: systemHeldDelta }
         }
       });
     }
+    await tx.trackingEvent.deleteMany({ where: { deliveryId: { in: deliveryIds } } });
+    await tx.delivery.deleteMany({ where: { id: { in: deliveryIds } } });
+    await tx.dispute.deleteMany({ where: { orderId: { in: orderIds } } });
+    await tx.refund.deleteMany({ where: { orderId: { in: orderIds } } });
+    await tx.escrowEvent.deleteMany({ where: { escrowId: { in: escrowIds } } });
+    await tx.escrowHold.deleteMany({ where: { id: { in: escrowIds } } });
+    await tx.payment.deleteMany({ where: { orderId: { in: orderIds } } });
+    await tx.orderStatusEvent.deleteMany({ where: { orderId: { in: orderIds } } });
+    await tx.orderItem.deleteMany({ where: { orderId: { in: orderIds } } });
+    await tx.orderAttribution.deleteMany({ where: { orderId: { in: orderIds } } });
+    await tx.ledgerEntry.deleteMany({
+      where: { OR: [{ transactionId: { in: transactionIds } }, { walletId: { in: walletIds } }] }
+    });
+    await tx.walletTransaction.deleteMany({ where: { id: { in: transactionIds } } });
+    await tx.order.deleteMany({ where: { id: { in: orderIds } } });
+    await tx.cartItem.deleteMany({ where: { cartId: { in: cartIds } } });
+    await tx.cart.deleteMany({ where: { id: { in: cartIds } } });
+    await tx.rideEvent.deleteMany({ where: { rideId: { in: rideIds } } });
+    await tx.ride.deleteMany({ where: { id: { in: rideIds } } });
+    await tx.wallet.deleteMany({ where: { id: { in: walletIds } } });
+    await tx.auditLog.deleteMany({ where: { OR: [{ actorId: { in: userIds } }, { entityId: { in: entityIds } }] } });
+    await tx.systemEvent.deleteMany({ where: { OR: [{ actorId: { in: userIds } }, { entityId: { in: entityIds } }] } });
+    await tx.inventoryStock.deleteMany({ where: { productId: { in: productIds } } });
+    await tx.productImage.deleteMany({ where: { productId: { in: productIds } } });
+    await tx.product.deleteMany({ where: { id: { in: productIds } } });
+    await tx.vendor.deleteMany({ where: { id: { in: vendorIds } } });
+    await tx.category.deleteMany({ where: { id: { in: categoryIds } } });
+    await tx.partnerNotification.deleteMany({ where: { userId: { in: userIds } } });
+    await tx.notification.deleteMany({ where: { userId: { in: userIds } } });
+    await tx.session.deleteMany({ where: { userId: { in: userIds } } });
+    await tx.address.deleteMany({ where: { userId: { in: userIds } } });
+    await tx.user.deleteMany({ where: { id: { in: userIds } } });
+  }, { timeout: 30_000 });
+
+  const leftovers = await prisma.user.count({ where: { email: { startsWith: emailPrefix } } });
+  return {
+    users: userIds.length,
+    wallets: walletIds.length,
+    orders: orderIds.length,
+    rides: rideIds.length,
+    transactions: transactionIds.length,
+    leftovers
+  };
+}
+
+function walletMismatchRows(report: ReconcileReport, walletId: string) {
+  return (report.mismatchRows ?? []).filter((row) => row.walletId === walletId);
+}
+
+/**
+ * Did one worker's transaction actually wait on a lock held by the other?
+ * A 4 ms `pg_stat_activity` sample can miss short waits, so absence is reported
+ * as "not observed" instead of being presented as either proof or disproof.
+ */
+function summarizeLocks(race: { lockWaits: LockWaitSample[]; readyPids: number[] }) {
+  const relevant = race.lockWaits.filter(
+    (sample) => race.readyPids.includes(sample.pid) && sample.blockers.some((pid) => race.readyPids.includes(pid))
   );
+  return {
+    observed: relevant.length > 0,
+    samples: relevant.slice(0, 10),
+    waitedPids: [...new Set(relevant.map((sample) => sample.pid))],
+    blockerPids: [...new Set(relevant.flatMap((sample) => sample.blockers))],
+    note:
+      relevant.length > 0
+        ? "At least one worker backend waited on a lock held by the other worker."
+        : "No lock wait was captured by 4 ms pg_stat_activity sampling. Execution overlap alone is not proof of row-level contention."
+  };
 }
 
 function winnerReference(result: WorkerOutput | null) {
@@ -668,14 +1005,9 @@ function describeWorker(result: WorkerOutput) {
 
 /* --------------------------------------------------------------------- main --- */
 
-async function main() {
-  process.env.DRIVE_SWEEP_DISABLED = "1";
-  const url = acceptanceUrl();
-  process.env.DATABASE_URL = url;
-
-  const { prisma } = await import("../lib/prisma");
-  const { ensureWallet, initializePayment } = await import("../lib/payments/service");
-  const { checkout } = await import("../lib/services/core/checkout.service");
+async function main(prisma: PrismaClient, url: string) {
+  const { ensureWallet, initializePayment, confirmPayment, refundPayment } = await import("../lib/payments/service");
+  const { checkout, cancelOrder } = await import("../lib/services/core/checkout.service");
   const { getQuote } = await import("../lib/services/core/drive.service");
 
   const db = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
@@ -817,13 +1149,10 @@ async function main() {
   /* ---- Cross-service race: requestRide vs confirmPayment ---- */
   const crossBefore = snapshot(await readWallet(prisma, customerWallet.id));
   const systemBeforeCrossRace = await readWallet(prisma, system.id);
-  const cross = await runRace(
-    "cross-service",
-    [
-      { role: "drive", kind: "drive", userId: customer.id, walletId: customerWallet.id },
-      { role: "shop", kind: "shop", userId: customer.id, walletId: customerWallet.id, reference: initialized.reference }
-    ]
-  );
+  const cross = await runRace(prisma, "cross-service", [
+    { role: "drive", kind: "drive", userId: customer.id, walletId: customerWallet.id },
+    { role: "shop", kind: "shop", userId: customer.id, walletId: customerWallet.id, reference: initialized.reference }
+  ]);
   const crossCustomer = await readWallet(prisma, customerWallet.id);
   const crossSystem = await readWallet(prisma, system.id);
   const crossVendorWallet = await prisma.wallet.findFirst({
@@ -1032,10 +1361,11 @@ async function main() {
   );
 
   const systemBeforeRideRace = await readWallet(prisma, system.id);
-  const rideRace = await runRace("same-rider", [
+  const rideRace = await runRace(prisma, "same-rider", [
     { role: "ride-a", kind: "ride", userId: rider.id, walletId: riderWallet.id },
     { role: "ride-b", kind: "ride", userId: rider.id, walletId: riderWallet.id }
-  ]);  const riderAfter = await readWallet(prisma, riderWallet.id);
+  ]);
+  const riderAfter = await readWallet(prisma, riderWallet.id);
   const systemAfterRide = await readWallet(prisma, system.id);
   const riderRides = await prisma.ride.findMany({
     where: { riderId: rider.id },
@@ -1131,6 +1461,602 @@ async function main() {
     JSON.stringify(reconcileFinal)
   );
 
+  /* ---- Controlled winners, failed-checkout lifecycle and checker accuracy ---- */
+
+  const reconciliationModule = await import("../lib/services/core/reconciliation-correct");
+  const readOrder = (orderId: string) =>
+    prisma.order.findUniqueOrThrow({
+      where: { id: orderId },
+      include: { payments: true, escrowHolds: true, deliveries: true }
+    });
+  const readStock = (productId: string) =>
+    prisma.inventoryStock.findUniqueOrThrow({ where: { productId } });
+  const vendorWalletOf = (vendorId: string) =>
+    prisma.wallet.findFirst({ where: { vendorId, ownerType: "VENDOR" } });
+
+  /**
+   * A legitimate lifecycle state must reconcile CLEAN through both the checker
+   * script and the Control Center module. This asserts the whole books, not only
+   * the fixture wallet, so an unrelated regression is visible too.
+   */
+  const checkpoint = async (label: string, walletIds: string[]) => {
+    const report = await runReconcile(url);
+    const fixtureRows = walletIds.flatMap((walletId) => walletMismatchRows(report, walletId));
+    const issues = await reconciliationModule.reconcile();
+    record(
+      `${label}: wallet-reconcile is CLEAN`,
+      report.status === "CLEAN" && report.mismatches === 0 && report.unattributedHolds === 0 && fixtureRows.length === 0,
+      `status ${report.status}, wallets ${report.wallets}, mismatches ${report.mismatches}, unattributed ${report.unattributedHolds}`
+    );
+    record(
+      `${label}: reconciliation-correct reports no issue`,
+      issues.issues.length === 0,
+      issues.issues.map((issue) => `${issue.kind}:${issue.subject}`).join(", ") || "0 issues"
+    );
+  };
+
+  /* ---- Controlled Drive-wins: drive released first, shop 500 ms later ---- */
+  const dwCustomer = await createFixtureUser(prisma, "drive-wins");
+  const dwWallet = await ensureWallet(prisma, { userId: dwCustomer.id, ownerType: "CUSTOMER" });
+  await fundCustomer(prisma, {
+    customerWalletId: dwWallet.id,
+    systemWalletId: system.id,
+    amountKobo: FUNDING_KOBO,
+    reference: `WC-SPEND-DW-FUND-${RUN_ID}`
+  });
+  const dwAfterFunding = await readWallet(prisma, dwWallet.id);
+  const dwFixture = await createShopFixture(prisma, { customerId: dwCustomer.id, label: "drive-wins" });
+  const dwRace = await runRace(prisma, "drive-wins", [
+    { role: "drive", kind: "drive", userId: dwCustomer.id, walletId: dwWallet.id, delayMs: 0 },
+    {
+      role: "shop",
+      kind: "shop",
+      userId: dwCustomer.id,
+      walletId: dwWallet.id,
+      reference: dwFixture.initialized.reference,
+      delayMs: 500
+    }
+  ]);
+  const dwDrive = dwRace.results.find((result) => result.role === "drive") ?? null;
+  const dwShop = dwRace.results.find((result) => result.role === "shop") ?? null;
+  const dwAfterRace = await readWallet(prisma, dwWallet.id);
+  const dwOrderAfterRace = await readOrder(dwFixture.orderId);
+  const dwStockAfterRace = await readStock(dwFixture.product.id);
+  record(
+    "drive-wins (controlled): the real ride hold commits",
+    dwDrive?.ok === true && !dwDrive.harnessError,
+    dwDrive ? `${dwDrive.role}: ${JSON.stringify(dwDrive.result)}` : "drive result missing"
+  );
+  record(
+    "drive-wins (controlled): the real shop payment is refused 402 insufficient_wallet",
+    dwShop?.error?.status === 402 && dwShop?.error?.code === "insufficient_wallet",
+    dwShop ? `${dwShop.error?.status ?? "?"} ${dwShop.error?.code ?? "?"}` : "shop result missing"
+  );
+  record(
+    "drive-wins (controlled): the losing checkout keeps only its deliberate reservation",
+    dwOrderAfterRace.status === "payment_pending" &&
+      dwOrderAfterRace.paymentStatus === "pending" &&
+      dwOrderAfterRace.payments.length === 1 &&
+      dwOrderAfterRace.payments[0]?.status === "PENDING" &&
+      dwOrderAfterRace.escrowHolds.length === 0 &&
+      dwOrderAfterRace.deliveries.length === 0 &&
+      dwStockAfterRace.quantity === 3 &&
+      dwStockAfterRace.reserved === 1,
+    `order ${dwOrderAfterRace.status}/${dwOrderAfterRace.paymentStatus}, payment ${dwOrderAfterRace.payments[0]?.status}, escrow ${dwOrderAfterRace.escrowHolds.length}, stock ${dwStockAfterRace.quantity}/${dwStockAfterRace.reserved}`
+  );
+  record(
+    "drive-wins (controlled): wallet ends 20,000 available and 155,000 held",
+    dwAfterRace.availableKobo === EXPECTED_AVAILABLE_KOBO && dwAfterRace.heldKobo === DEMAND_KOBO,
+    `available ${dwAfterRace.availableKobo}, held ${dwAfterRace.heldKobo}`
+  );
+  await checkpoint("drive-wins hold", [dwWallet.id]);
+
+  /* ---- Safe retry of the losing shop payment after funding ---- */
+  await fundCustomer(prisma, {
+    customerWalletId: dwWallet.id,
+    systemWalletId: system.id,
+    amountKobo: DEMAND_KOBO,
+    reference: `WC-SPEND-DW-RETRY-${RUN_ID}`
+  });
+  const dwRetry = await confirmPayment({ reference: dwFixture.initialized.reference, provider: "wallet" });
+  const dwAfterRetry = await readWallet(prisma, dwWallet.id);
+  const dwOrderPaid = await readOrder(dwFixture.orderId);
+  const dwStockRetry = await readStock(dwFixture.product.id);
+  const dwHoldJournal = await prisma.walletTransaction.count({
+    where: { walletId: dwWallet.id, reference: `ESCROW-HOLD-${dwFixture.orderId}` }
+  });
+  record(
+    "drive-wins retry: the pending shop payment completes once",
+    dwRetry.duplicate === false &&
+      dwRetry.status === "COMPLETED" &&
+      dwOrderPaid.paymentStatus === "paid" &&
+      dwOrderPaid.payments[0]?.status === "COMPLETED" &&
+      dwOrderPaid.escrowHolds.length === 1 &&
+      dwOrderPaid.escrowHolds[0]?.status === "held" &&
+      dwOrderPaid.deliveries.length === 1 &&
+      dwStockRetry.quantity === 2 &&
+      dwStockRetry.reserved === 0 &&
+      dwHoldJournal === 1,
+    `duplicate ${dwRetry.duplicate}, order ${dwOrderPaid.paymentStatus}, escrow ${dwOrderPaid.escrowHolds[0]?.status ?? "none"}, stock ${dwStockRetry.quantity}/${dwStockRetry.reserved}, hold journals ${dwHoldJournal}`
+  );
+  record(
+    "drive-wins retry: wallet 20,000 available and 310,000 held (ride + escrow)",
+    dwAfterRetry.availableKobo === EXPECTED_AVAILABLE_KOBO && dwAfterRetry.heldKobo === DEMAND_KOBO * BigInt(2),
+    `available ${dwAfterRetry.availableKobo}, held ${dwAfterRetry.heldKobo}`
+  );
+  const dwRetryAgain = await confirmPayment({ reference: dwFixture.initialized.reference, provider: "wallet" });
+  const dwAfterRetryAgain = await readWallet(prisma, dwWallet.id);
+  const dwHoldJournalAgain = await prisma.walletTransaction.count({
+    where: { walletId: dwWallet.id, reference: `ESCROW-HOLD-${dwFixture.orderId}` }
+  });
+  record(
+    "drive-wins retry: a replay is a duplicate with no second debit",
+    dwRetryAgain.duplicate === true &&
+      dwAfterRetryAgain.availableKobo === dwAfterRetry.availableKobo &&
+      dwAfterRetryAgain.heldKobo === dwAfterRetry.heldKobo &&
+      dwHoldJournalAgain === 1,
+    `duplicate ${dwRetryAgain.duplicate}, available ${dwAfterRetryAgain.availableKobo}, held ${dwAfterRetryAgain.heldKobo}, hold journals ${dwHoldJournalAgain}`
+  );
+  await checkpoint("two legitimate open holds", [dwWallet.id]);
+
+  /* ---- Partial refund against an open escrow ---- */
+  const dwPartial = await refundPayment({
+    orderId: dwFixture.orderId,
+    actorId: dwCustomer.id,
+    reason: "Acceptance partial refund before release",
+    amountKobo: 55_000n
+  });
+  const dwAfterPartial = await readWallet(prisma, dwWallet.id);
+  const dwOrderAfterPartial = await readOrder(dwFixture.orderId);
+  const dwVendorAfterPartial = await vendorWalletOf(dwFixture.vendor.id);
+  record(
+    "drive-wins refund: a 55,000 partial refund reduces both sides of the open escrow",
+    dwPartial.refundedKobo === "55000" &&
+      dwAfterPartial.availableKobo === BigInt(75_000) &&
+      dwAfterPartial.heldKobo === BigInt(255_000) &&
+      dwOrderAfterPartial.refundedKobo === BigInt(55_000) &&
+      dwOrderAfterPartial.escrowHolds[0]?.status === "held" &&
+      (dwVendorAfterPartial?.heldKobo ?? BigInt(-1)) === BigInt(100_000),
+    `refunded ${dwPartial.refundedKobo}, wallet ${dwAfterPartial.availableKobo}/${dwAfterPartial.heldKobo}, order refunded ${dwOrderAfterPartial.refundedKobo}, escrow ${dwOrderAfterPartial.escrowHolds[0]?.status}, vendor held ${dwVendorAfterPartial?.heldKobo?.toString() ?? "none"}`
+  );
+  await checkpoint("partial refund against an open escrow", [dwWallet.id]);
+
+  /* ---- Full refund of the remainder ---- */
+  const dwFull = await refundPayment({
+    orderId: dwFixture.orderId,
+    actorId: dwCustomer.id,
+    reason: "Acceptance full refund before release",
+    amountKobo: 100_000n
+  });
+  const dwAfterFull = await readWallet(prisma, dwWallet.id);
+  const dwOrderAfterFull = await readOrder(dwFixture.orderId);
+  const dwVendorAfterFull = await vendorWalletOf(dwFixture.vendor.id);
+  record(
+    "drive-wins refund: the remainder closes the escrow and leaves only the ride hold",
+    dwFull.refundedKobo === "100000" &&
+      dwAfterFull.availableKobo === BigInt(175_000) &&
+      dwAfterFull.heldKobo === DEMAND_KOBO &&
+      dwOrderAfterFull.paymentStatus === "refunded" &&
+      dwOrderAfterFull.escrowHolds[0]?.status === "refunded" &&
+      (dwVendorAfterFull?.heldKobo ?? BigInt(-1)) === BigInt(0),
+    `refunded ${dwFull.refundedKobo}, wallet ${dwAfterFull.availableKobo}/${dwAfterFull.heldKobo}, order ${dwOrderAfterFull.paymentStatus}, escrow ${dwOrderAfterFull.escrowHolds[0]?.status}, vendor held ${dwVendorAfterFull?.heldKobo?.toString() ?? "none"}`
+  );
+  await checkpoint("full refund against an open escrow", [dwWallet.id]);
+
+  /* ---- Ride cancellation releases the remaining hold ---- */
+  const { cancelRide } = await import("../lib/services/core/drive.service");
+  const dwRide = await prisma.ride.findFirstOrThrow({
+    where: { riderId: dwCustomer.id, paymentStatus: "held" }
+  });
+  await cancelRide({
+    actorId: dwCustomer.id,
+    isAdmin: false,
+    rideId: dwRide.id,
+    reason: "Acceptance release of the drive hold"
+  });
+  const dwAfterCancel = await readWallet(prisma, dwWallet.id);
+  const dwRideAfter = await prisma.ride.findUniqueOrThrow({ where: { id: dwRide.id } });
+  record(
+    "drive-wins cancel: the ride hold returns to the rider exactly once",
+    dwAfterCancel.availableKobo === BigInt(330_000) &&
+      dwAfterCancel.heldKobo === BigInt(0) &&
+      dwRideAfter.paymentStatus === "refunded",
+    `available ${dwAfterCancel.availableKobo}, held ${dwAfterCancel.heldKobo}, ride ${dwRideAfter.paymentStatus}`
+  );
+  await checkpoint("ride cancel", [dwWallet.id]);
+
+  /* ---- Controlled Shop-wins: shop released first, drive 500 ms later ---- */
+  const swCustomer = await createFixtureUser(prisma, "shop-wins");
+  const swWallet = await ensureWallet(prisma, { userId: swCustomer.id, ownerType: "CUSTOMER" });
+  await fundCustomer(prisma, {
+    customerWalletId: swWallet.id,
+    systemWalletId: system.id,
+    amountKobo: FUNDING_KOBO,
+    reference: `WC-SPEND-SW-FUND-${RUN_ID}`
+  });
+  const swAfterFunding = await readWallet(prisma, swWallet.id);
+  const swFixture = await createShopFixture(prisma, { customerId: swCustomer.id, label: "shop-wins" });
+  const swSystemBeforeRace = await readWallet(prisma, system.id);
+  const swRace = await runRace(prisma, "shop-wins", [
+    {
+      role: "shop",
+      kind: "shop",
+      userId: swCustomer.id,
+      walletId: swWallet.id,
+      reference: swFixture.initialized.reference,
+      delayMs: 0
+    },
+    { role: "drive", kind: "drive", userId: swCustomer.id, walletId: swWallet.id, delayMs: 500 }
+  ]);
+  const swShop = swRace.results.find((result) => result.role === "shop") ?? null;
+  const swDrive = swRace.results.find((result) => result.role === "drive") ?? null;
+  if (!swShop?.ok) {
+    process.stderr.write(
+      `shop-wins diagnostics: ${JSON.stringify(
+        {
+          releasedAt: swRace.releasedAt,
+          shop: swShop ? describeWorker(swShop) : null,
+          drive: swDrive ? describeWorker(swDrive) : null
+        },
+        bigintReplacer
+      )}\n`
+    );
+  }
+  const swAfterRace = await readWallet(prisma, swWallet.id);
+  const swOrder = await readOrder(swFixture.orderId);
+  const swStock = await readStock(swFixture.product.id);
+  const swVendorWallet = await vendorWalletOf(swFixture.vendor.id);
+  const swSystemAfterRace = await readWallet(prisma, system.id);
+  const swRides = await prisma.ride.count({ where: { riderId: swCustomer.id } });
+  record(
+    "shop-wins (controlled): the real shop payment commits and Drive is refused",
+    swShop?.ok === true &&
+      !swShop.harnessError &&
+      swDrive?.error?.status === 402 &&
+      swDrive?.error?.code === "insufficient_wallet",
+    `shop ${swShop?.ok ? "COMMITTED" : swShop?.error?.code ?? "missing"}, drive ${swDrive?.error?.status ?? "?"} ${swDrive?.error?.code ?? "?"}`
+  );
+  record(
+    "shop-wins (controlled): order paid, escrow held, delivery created, stock committed",
+    swOrder.paymentStatus === "paid" &&
+      swOrder.status === "vendor_notified" &&
+      swOrder.payments[0]?.status === "COMPLETED" &&
+      swOrder.escrowHolds.length === 1 &&
+      swOrder.escrowHolds[0]?.status === "held" &&
+      swOrder.escrowHolds[0]?.amountKobo === DEMAND_KOBO &&
+      swOrder.deliveries.length === 1 &&
+      swStock.quantity === 2 &&
+      swStock.reserved === 0,
+    `order ${swOrder.status}/${swOrder.paymentStatus}, escrow ${swOrder.escrowHolds[0]?.status}, deliveries ${swOrder.deliveries.length}, stock ${swStock.quantity}/${swStock.reserved}`
+  );
+  record(
+    "shop-wins (controlled): wallet 20,000 available, vendor holds 155,000, no ride row",
+    swAfterRace.availableKobo === EXPECTED_AVAILABLE_KOBO &&
+      swAfterRace.heldKobo === DEMAND_KOBO &&
+      (swVendorWallet?.heldKobo ?? BigInt(-1)) === DEMAND_KOBO &&
+      swSystemAfterRace.heldKobo === swSystemBeforeRace.heldKobo &&
+      swRides === 0,
+    `customer ${swAfterRace.availableKobo}/${swAfterRace.heldKobo}, vendor held ${swVendorWallet?.heldKobo?.toString() ?? "none"}, SYSTEM held ${swSystemAfterRace.heldKobo}, rides ${swRides}`
+  );
+  await checkpoint("shop escrow hold", [swWallet.id]);
+  const swDuplicate = await confirmPayment({ reference: swFixture.initialized.reference, provider: "wallet" }).then(
+    (result) => result,
+    (error: unknown) => ({ duplicate: false, error: String(error) })
+  );
+  const swAfterDuplicate = await readWallet(prisma, swWallet.id);
+  record(
+    "shop-wins retry: confirming the paid order again is a duplicate with no debit",
+    swDuplicate.duplicate === true &&
+      swAfterDuplicate.availableKobo === swAfterRace.availableKobo &&
+      swAfterDuplicate.heldKobo === swAfterRace.heldKobo,
+    `duplicate ${swDuplicate.duplicate}, wallet ${swAfterDuplicate.availableKobo}/${swAfterDuplicate.heldKobo}${"error" in swDuplicate ? `, error ${swDuplicate.error}` : ""}`
+  );
+
+  /* ---- Escrow release, then a full refund after release ---- */
+  const { completeOrder } = await import("../lib/services/core/order.service");
+  const platformBeforeRelease = await readWallet(prisma, system.id);
+  // Fixture precondition: the delivery service has already delivered the order.
+  await prisma.order.update({ where: { id: swFixture.orderId }, data: { status: "delivered" } });
+  await completeOrder(swCustomer.id, swFixture.orderId);
+  const swAfterRelease = await readWallet(prisma, swWallet.id);
+  const swOrderAfterRelease = await readOrder(swFixture.orderId);
+  const swVendorAfterRelease = await vendorWalletOf(swFixture.vendor.id);
+  const swSystemAfterRelease = await readWallet(prisma, system.id);
+  const swPayable = swOrder.subtotalKobo - swOrder.commissionKobo + swOrder.deliveryFeeKobo;
+  const swPlatformCut = swOrder.totalKobo - swPayable;
+  record(
+    "shop release: escrow moves to the seller net of commission exactly once",
+    swAfterRelease.availableKobo === EXPECTED_AVAILABLE_KOBO &&
+      swAfterRelease.heldKobo === BigInt(0) &&
+      swOrderAfterRelease.status === "completed" &&
+      swOrderAfterRelease.escrowHolds[0]?.status === "released" &&
+      (swVendorAfterRelease?.availableKobo ?? BigInt(-1)) === swPayable &&
+      (swVendorAfterRelease?.heldKobo ?? BigInt(-1)) === BigInt(0) &&
+      swSystemAfterRelease.availableKobo === platformBeforeRelease.availableKobo + swPlatformCut,
+    `buyer ${swAfterRelease.availableKobo}/${swAfterRelease.heldKobo}, order ${swOrderAfterRelease.status}, escrow ${swOrderAfterRelease.escrowHolds[0]?.status}, vendor ${swVendorAfterRelease?.availableKobo?.toString() ?? "none"}/${swVendorAfterRelease?.heldKobo?.toString() ?? "none"}, platform +${swSystemAfterRelease.availableKobo - platformBeforeRelease.availableKobo}`
+  );
+  await checkpoint("escrow release", [swWallet.id, swVendorWallet?.id ?? ""].filter(Boolean));
+  // A full refund after release must debit the seller's payable and the
+  // platform's commission/fee. The TEST SYSTEM wallet is negative because every
+  // test funding debits it, so the guarded platform-share debit must refuse
+  // instead of overdrawing. The claim and the PENDING refund row are written in
+  // the same transaction as the wallet movement, so a refusal leaves nothing
+  // claimed: refundedKobo, refund rows, journals and wallets must be unchanged.
+  const swRefundKey = `wc-spend-refund-${RUN_ID}`;
+  const swRefundError = await refundPayment({
+    orderId: swFixture.orderId,
+    actorId: swCustomer.id,
+    reason: "Acceptance full refund after release",
+    idempotencyKey: swRefundKey
+  }).then(
+    () => null,
+    (error: unknown) => error as { status?: number; code?: string; message?: string }
+  );
+  const swAfterRefundAttempt = await readWallet(prisma, swWallet.id);
+  const swVendorAfterRefundAttempt = await vendorWalletOf(swFixture.vendor.id);
+  const swOrderAfterRefundAttempt = await readOrder(swFixture.orderId);
+  const swRefundRows = await prisma.refund.count({ where: { orderId: swFixture.orderId } });
+  const swRefundJournals = await prisma.walletTransaction.count({
+    where: { orderId: swFixture.orderId, reference: { startsWith: "REFUND-" } }
+  });
+  record(
+    "shop refund after release: the guarded platform-share debit refuses instead of overdrawing SYSTEM",
+    swRefundError?.status === 409 &&
+      swRefundError?.code === "refund_conflict" &&
+      swAfterRefundAttempt.availableKobo === swAfterRelease.availableKobo &&
+      swAfterRefundAttempt.heldKobo === BigInt(0) &&
+      (swVendorAfterRefundAttempt?.availableKobo ?? BigInt(-1)) === swPayable &&
+      swOrderAfterRefundAttempt.refundedKobo === BigInt(0) &&
+      swOrderAfterRefundAttempt.paymentStatus === "paid" &&
+      swRefundRows === 0 &&
+      swRefundJournals === 0,
+    `${swRefundError?.status ?? "?"} ${swRefundError?.code ?? "?"}, buyer ${swAfterRefundAttempt.availableKobo}/${swAfterRefundAttempt.heldKobo}, vendor ${swVendorAfterRefundAttempt?.availableKobo?.toString() ?? "none"}, refundedKobo ${swOrderAfterRefundAttempt.refundedKobo}, refund rows ${swRefundRows}, journals ${swRefundJournals}`
+  );
+  await checkpoint("refused refund after release", [swWallet.id, swVendorWallet?.id ?? ""].filter(Boolean));
+
+  /* ---- Unpaid checkout cancellation releases the reservation ---- */
+  const cancelCustomer = await createFixtureUser(prisma, "cancel-checkout");
+  const cancelFixture = await createShopFixture(prisma, { customerId: cancelCustomer.id, label: "cancel-checkout" });
+  const cancelStockBefore = await readStock(cancelFixture.product.id);
+  const cancelOutcome = await cancelOrder({
+    orderId: cancelFixture.orderId,
+    userId: cancelCustomer.id,
+    reason: "Acceptance cancellation before payment"
+  });
+  const cancelOrderRow = await readOrder(cancelFixture.orderId);
+  const cancelStockAfter = await readStock(cancelFixture.product.id);
+  const cancelJournals = await prisma.walletTransaction.count({ where: { orderId: cancelFixture.orderId } });
+  const cancelRetry = await confirmPayment({ reference: cancelFixture.initialized.reference, provider: "wallet" }).then(
+    () => null,
+    (error: unknown) => error as { status?: number; code?: string }
+  );
+  record(
+    "checkout cancel: reserved stock is released and the order closes without money moving",
+    cancelStockBefore.quantity === 3 &&
+      cancelStockBefore.reserved === 1 &&
+      cancelStockAfter.quantity === 3 &&
+      cancelStockAfter.reserved === 0 &&
+      cancelOrderRow.status === "cancelled" &&
+      cancelOrderRow.paymentStatus === "pending" &&
+      cancelOrderRow.payments[0]?.status === "FAILED" &&
+      cancelOrderRow.escrowHolds.length === 0 &&
+      cancelOrderRow.deliveries.length === 0 &&
+      cancelJournals === 0,
+    `stock ${cancelStockBefore.quantity}/${cancelStockBefore.reserved} -> ${cancelStockAfter.quantity}/${cancelStockAfter.reserved}, order ${cancelOrderRow.status}, payment ${cancelOrderRow.payments[0]?.status}, journals ${cancelJournals}, cancelled ${cancelOutcome.cancelled}`
+  );
+  record(
+    "checkout cancel: confirming the cancelled payment is refused",
+    cancelRetry?.status === 409 && cancelRetry?.code === "payment_failed",
+    `${cancelRetry?.status ?? "?"} ${cancelRetry?.code ?? "?"}`
+  );
+
+  /* ---- Abandoned checkout expiry ---- */
+  const { expireAbandonedCheckouts } = await import("../lib/services/core/checkout.service");
+  const expireCustomer = await createFixtureUser(prisma, "expire-checkout");
+  const expireFixture = await createShopFixture(prisma, { customerId: expireCustomer.id, label: "expire-checkout" });
+  const backdate = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  await prisma.$executeRaw`UPDATE "Order" SET "createdAt" = ${backdate}, "updatedAt" = ${backdate} WHERE id = ${expireFixture.orderId}`;
+  const sweep = await expireAbandonedCheckouts({
+    olderThanMs: 60 * 60 * 1000,
+    limit: 10,
+    orderIds: [expireFixture.orderId]
+  });
+  const expireOrderRow = await readOrder(expireFixture.orderId);
+  const expireStock = await readStock(expireFixture.product.id);
+  const expireJournals = await prisma.walletTransaction.count({ where: { orderId: expireFixture.orderId } });
+  const sweepAgain = await expireAbandonedCheckouts({
+    olderThanMs: 60 * 60 * 1000,
+    limit: 10,
+    orderIds: [expireFixture.orderId]
+  });
+  record(
+    "checkout expiry: an abandoned order is cancelled and its reserved stock released",
+    sweep.expired.some((row) => row.orderId === expireFixture.orderId) &&
+      expireOrderRow.status === "cancelled" &&
+      expireOrderRow.payments[0]?.status === "FAILED" &&
+      expireStock.quantity === 3 &&
+      expireStock.reserved === 0 &&
+      expireOrderRow.escrowHolds.length === 0 &&
+      expireOrderRow.deliveries.length === 0 &&
+      expireJournals === 0 &&
+      sweepAgain.expired.length === 0,
+    `expired ${sweep.expired.length}, second sweep ${sweepAgain.expired.length}, order ${expireOrderRow.status}, payment ${expireOrderRow.payments[0]?.status}, stock ${expireStock.quantity}/${expireStock.reserved}, journals ${expireJournals}`
+  );
+
+  /* ---- Expiry must never touch a paid order ---- */
+  const guardCustomer = await createFixtureUser(prisma, "expiry-paid-guard");
+  const guardWallet = await ensureWallet(prisma, { userId: guardCustomer.id, ownerType: "CUSTOMER" });
+  await fundCustomer(prisma, {
+    customerWalletId: guardWallet.id,
+    systemWalletId: system.id,
+    amountKobo: DEMAND_KOBO,
+    reference: `WC-SPEND-GUARD-FUND-${RUN_ID}`
+  });
+  const guardFixture = await createShopFixture(prisma, { customerId: guardCustomer.id, label: "expiry-paid-guard" });
+  await confirmPayment({ reference: guardFixture.initialized.reference, provider: "wallet" });
+  await prisma.$executeRaw`UPDATE "Order" SET "createdAt" = ${backdate}, "updatedAt" = ${backdate} WHERE id = ${guardFixture.orderId}`;
+  const guardSweep = await expireAbandonedCheckouts({
+    olderThanMs: 60 * 60 * 1000,
+    limit: 10,
+    orderIds: [guardFixture.orderId]
+  });
+  const guardOrderRow = await readOrder(guardFixture.orderId);
+  const guardStock = await readStock(guardFixture.product.id);
+  record(
+    "checkout expiry: a paid order is never expired or restocked",
+    guardSweep.inspected === 0 &&
+      guardSweep.expired.length === 0 &&
+      guardOrderRow.paymentStatus === "paid" &&
+      guardOrderRow.escrowHolds[0]?.status === "held" &&
+      guardOrderRow.deliveries.length === 1 &&
+      guardStock.quantity === 2 &&
+      guardStock.reserved === 0,
+    `inspected ${guardSweep.inspected}, expired ${guardSweep.expired.length}, order ${guardOrderRow.paymentStatus}, escrow ${guardOrderRow.escrowHolds[0]?.status}, stock ${guardStock.quantity}/${guardStock.reserved}`
+  );
+
+  /* ---- Expiry racing the payment that makes the order paid ---- */
+  const raceCustomer = await createFixtureUser(prisma, "expiry-payment-race");
+  const raceWallet = await ensureWallet(prisma, { userId: raceCustomer.id, ownerType: "CUSTOMER" });
+  await fundCustomer(prisma, {
+    customerWalletId: raceWallet.id,
+    systemWalletId: system.id,
+    amountKobo: DEMAND_KOBO,
+    reference: `WC-SPEND-EXPIRY-RACE-FUND-${RUN_ID}`
+  });
+  const raceFixture = await createShopFixture(prisma, { customerId: raceCustomer.id, label: "expiry-payment-race" });
+  await prisma.$executeRaw`UPDATE "Order" SET "createdAt" = ${backdate}, "updatedAt" = ${backdate} WHERE id = ${raceFixture.orderId}`;
+  const [racePayment, raceSweep] = await Promise.allSettled([
+    confirmPayment({ reference: raceFixture.initialized.reference, provider: "wallet" }),
+    expireAbandonedCheckouts({ olderThanMs: 60 * 1000, limit: 10, orderIds: [raceFixture.orderId] })
+  ]);
+  const racedOrder = await readOrder(raceFixture.orderId);
+  const racedStock = await readStock(raceFixture.product.id);
+  const racedWallet = await readWallet(prisma, raceWallet.id);
+  const racedPayment = racedOrder.payments[0];
+  const paid = racedOrder.paymentStatus === "paid";
+  const cancelled = racedOrder.status === "cancelled";
+  record(
+    "expiry/payment race: exactly one terminal outcome, never both",
+    (paid || cancelled) && !(paid && cancelled) && raceSweep.status === "fulfilled",
+    `order ${racedOrder.status}/${racedOrder.paymentStatus}, payment ${racedPayment?.status}, sweep ${raceSweep.status}, pay ${racePayment.status}`
+  );
+  record(
+    "expiry/payment race: a paid order keeps escrow, delivery and committed stock",
+    !paid ||
+      (racedPayment?.status === "COMPLETED" &&
+        racedOrder.escrowHolds.length === 1 &&
+        racedOrder.escrowHolds[0]?.status === "held" &&
+        racedOrder.deliveries.length === 1 &&
+        racedStock.quantity === 2 &&
+        racedStock.reserved === 0 &&
+        racedWallet.availableKobo === BigInt(0) &&
+        racedWallet.heldKobo === DEMAND_KOBO),
+    `order ${racedOrder.paymentStatus}, escrow ${racedOrder.escrowHolds.length}, deliveries ${racedOrder.deliveries.length}, stock ${racedStock.quantity}/${racedStock.reserved}, wallet ${racedWallet.availableKobo}/${racedWallet.heldKobo}`
+  );
+  record(
+    "expiry/payment race: a cancelled order releases stock with no escrow, delivery or debit",
+    !cancelled ||
+      (racedPayment?.status === "FAILED" &&
+        racedOrder.escrowHolds.length === 0 &&
+        racedOrder.deliveries.length === 0 &&
+        racedStock.quantity === 3 &&
+        racedStock.reserved === 0 &&
+        racedWallet.availableKobo === DEMAND_KOBO &&
+        racedWallet.heldKobo === BigInt(0)),
+    `order ${racedOrder.status}, payment ${racedPayment?.status}, escrow ${racedOrder.escrowHolds.length}, deliveries ${racedOrder.deliveries.length}, stock ${racedStock.quantity}/${racedStock.reserved}, wallet ${racedWallet.availableKobo}/${racedWallet.heldKobo}`
+  );
+
+  /* ---- Checker accuracy: deliberately corrupted fixtures must be REVIEW ---- */
+  const corruptCustomer = await createFixtureUser(prisma, "corrupt-available");
+  const corruptWallet = await ensureWallet(prisma, { userId: corruptCustomer.id, ownerType: "CUSTOMER" });
+  await fundCustomer(prisma, {
+    customerWalletId: corruptWallet.id,
+    systemWalletId: system.id,
+    amountKobo: BigInt(100_000),
+    reference: `WC-SPEND-CORRUPT-AVAILABLE-${RUN_ID}`
+  });
+  await prisma.wallet.update({ where: { id: corruptWallet.id }, data: { availableKobo: { increment: 7_777n } } });
+  const corruptAvailableReport = await runReconcile(url);
+  const corruptAvailableRow = walletMismatchRows(corruptAvailableReport, corruptWallet.id)[0];
+  const corruptAvailableIssues = await reconciliationModule.reconcile();
+  const availableIssue = corruptAvailableIssues.issues.find(
+    (issue) => issue.subject === corruptWallet.id && issue.kind === "wallet_available_delta"
+  );
+  record(
+    "checker accuracy: an altered available projection is REVIEW, not CLEAN",
+    corruptAvailableReport.status === "REVIEW" &&
+      corruptAvailableReport.mismatches !== 0 &&
+      Number(corruptAvailableRow?.availableDifference) === 7_777,
+    `status ${corruptAvailableReport.status}, mismatches ${corruptAvailableReport.mismatches}, row ${JSON.stringify(corruptAvailableRow ?? null)}`
+  );
+  record(
+    "checker accuracy: reconciliation-correct emits wallet_available_delta for the altered projection",
+    availableIssue !== undefined && availableIssue.severity === "broken" && Number(availableIssue.deltaKobo) === 7_777,
+    availableIssue ? `${availableIssue.kind}/${availableIssue.severity} ${availableIssue.deltaKobo}` : "no issue"
+  );
+  await prisma.wallet.update({ where: { id: corruptWallet.id }, data: { availableKobo: { decrement: 7_777n } } });
+
+  const orphanCustomer = await createFixtureUser(prisma, "corrupt-orphan-hold");
+  const orphanWallet = await ensureWallet(prisma, { userId: orphanCustomer.id, ownerType: "CUSTOMER" });
+  await fundCustomer(prisma, {
+    customerWalletId: orphanWallet.id,
+    systemWalletId: system.id,
+    amountKobo: FUNDING_KOBO,
+    reference: `WC-SPEND-CORRUPT-HOLD-${RUN_ID}`
+  });
+  const { requestRide } = await import("../lib/services/core/drive.service");
+  await requestRide({
+    riderId: orphanCustomer.id,
+    pickupId: DRIVE_ROUTE.pickupId,
+    dropoffId: DRIVE_ROUTE.dropoffId,
+    vehicleClassId: DRIVE_ROUTE.vehicleClassId,
+    paymentMethod: "wallet"
+  });
+  const orphanRide = await prisma.ride.findFirstOrThrow({ where: { riderId: orphanCustomer.id } });
+  // The wallet still holds 155,000 and the journal still exists; only the
+  // business record that justifies the hold is removed. This is the corruption
+  // fixture: the checker must notice the held balance has no open record.
+  await prisma.ride.delete({ where: { id: orphanRide.id } });
+  const orphanReport = await runReconcile(url);
+  const orphanRow = walletMismatchRows(orphanReport, orphanWallet.id)[0];
+  const orphanIssues = await reconciliationModule.reconcile();
+  const orphanHeldIssue = orphanIssues.issues.find(
+    (issue) => issue.subject === orphanWallet.id && issue.kind === "wallet_held_delta"
+  );
+  record(
+    "checker accuracy: a held balance without its business record is REVIEW, not CLEAN",
+    orphanReport.status === "REVIEW" &&
+      orphanReport.mismatches !== 0 &&
+      Number(orphanRow?.heldDifference) === 155_000 &&
+      Number(orphanRow?.availableDifference) === 0,
+    `status ${orphanReport.status}, mismatches ${orphanReport.mismatches}, row ${JSON.stringify(orphanRow ?? null)}`
+  );
+  record(
+    "checker accuracy: reconciliation-correct emits wallet_held_delta for the orphaned hold",
+    orphanHeldIssue !== undefined &&
+      orphanHeldIssue.severity === "unexplained" &&
+      Number(orphanHeldIssue.deltaKobo) === 155_000,
+    orphanHeldIssue ? `${orphanHeldIssue.kind}/${orphanHeldIssue.severity} ${orphanHeldIssue.deltaKobo}` : "no issue"
+  );
+
+  /* ---- Repeatability: remove every fixture this run created ---- */
+  const cleanup = await cleanupRun(prisma);
+  const postCleanupReport = await runReconcile(url);
+  const postCleanupIssues = await reconciliationModule.reconcile();
+  record(
+    "repeatability: cleanup removes every row tagged with this run id",
+    cleanup.leftovers === 0,
+    JSON.stringify(cleanup)
+  );
+  record(
+    "repeatability: the books are CLEAN again after cleanup",
+    postCleanupReport.status === "CLEAN" &&
+      postCleanupReport.mismatches === 0 &&
+      postCleanupReport.unattributedHolds === 0 &&
+      postCleanupIssues.issues.length === 0,
+    `reconcile ${postCleanupReport.status}/${postCleanupReport.mismatches}, issues ${postCleanupIssues.issues.length}`
+  );
+
   const report = {
     database: DB,
     runId: RUN_ID,
@@ -1174,6 +2100,7 @@ async function main() {
       releasedAt: cross.releasedAt,
       overlapMs: cross.overlapMs,
       results: cross.results.map(describeWorker),
+      lockContention: summarizeLocks(cross),
       shopFixture: {
         orderId,
         paymentId: pendingPayment.id,
@@ -1198,9 +2125,117 @@ async function main() {
       releasedAt: rideRace.releasedAt,
       overlapMs: rideRace.overlapMs,
       results: rideRace.results.map(describeWorker),
+      lockContention: summarizeLocks(rideRace),
       projections: finalProjections,
       journalTotals: finalJournals,
       reconcile: reconcileFinal
+    },
+    controlledWinners: {
+      driveWins: {
+        afterFunding: snapshot(dwAfterFunding),
+        afterRace: snapshot(dwAfterRace),
+        afterRetry: snapshot(dwAfterRetry),
+        afterPartialRefund: snapshot(dwAfterPartial),
+        afterFullRefund: snapshot(dwAfterFull),
+        afterRideCancel: snapshot(dwAfterCancel),
+        drive: dwDrive ? describeWorker(dwDrive) : null,
+        shop: dwShop ? describeWorker(dwShop) : null,
+        loserOrder: {
+          orderId: dwFixture.orderId,
+          status: dwOrderAfterRace.status,
+          paymentStatus: dwOrderAfterRace.paymentStatus,
+          paymentStatusRow: dwOrderAfterRace.payments[0]?.status ?? null,
+          reservedStock: dwStockAfterRace.reserved
+        },
+        lockContention: summarizeLocks(dwRace)
+      },
+      shopWins: {
+        afterFunding: snapshot(swAfterFunding),
+        afterRace: snapshot(swAfterRace),
+        afterRelease: snapshot(swAfterRelease),
+        afterRefundAttempt: snapshot(swAfterRefundAttempt),
+        refundRefusal: swRefundError,
+        refundRowsAfterRefusal: swRefundRows,
+        shop: swShop ? describeWorker(swShop) : null,
+        drive: swDrive ? describeWorker(swDrive) : null,
+        vendorHeldAfterHold: swVendorWallet?.heldKobo?.toString() ?? null,
+        vendorAvailableAfterRelease: swVendorAfterRelease?.availableKobo?.toString() ?? null,
+        payableKobo: swPayable.toString(),
+        platformCutKobo: swPlatformCut.toString(),
+        lockContention: summarizeLocks(swRace)
+      }
+    },
+    failedCheckout: {
+      retry: {
+        walletBeforeRetry: snapshot(dwAfterRace),
+        walletAfterRetry: snapshot(dwAfterRetry),
+        walletAfterReplay: snapshot(dwAfterRetryAgain),
+        orderStatusAfterRetry: dwOrderPaid.status,
+        paymentStatusAfterRetry: dwOrderPaid.paymentStatus,
+        escrowStatus: dwOrderPaid.escrowHolds[0]?.status ?? null,
+        deliveries: dwOrderPaid.deliveries.length,
+        stock: `${dwStockRetry.quantity}/${dwStockRetry.reserved}`,
+        holdJournals: dwHoldJournal
+      },
+      cancellation: {
+        orderStatus: cancelOrderRow.status,
+        paymentStatus: cancelOrderRow.payments[0]?.status ?? null,
+        stockBefore: `${cancelStockBefore.quantity}/${cancelStockBefore.reserved}`,
+        stockAfter: `${cancelStockAfter.quantity}/${cancelStockAfter.reserved}`,
+        walletJournals: cancelJournals,
+        confirmAfterCancel: cancelRetry
+      },
+      expiry: {
+        expired: sweep.expired.length,
+        secondSweepExpired: sweepAgain.expired.length,
+        orderStatus: expireOrderRow.status,
+        paymentStatus: expireOrderRow.payments[0]?.status ?? null,
+        stock: `${expireStock.quantity}/${expireStock.reserved}`,
+        walletJournals: expireJournals
+      },
+      paidOrderGuard: {
+        inspected: guardSweep.inspected,
+        expired: guardSweep.expired.length,
+        orderPaymentStatus: guardOrderRow.paymentStatus,
+        escrowStatus: guardOrderRow.escrowHolds[0]?.status ?? null,
+        deliveries: guardOrderRow.deliveries.length,
+        stock: `${guardStock.quantity}/${guardStock.reserved}`
+      },
+      expiryPaymentRace: {
+        orderStatus: racedOrder.status,
+        paymentStatus: racedOrder.paymentStatus,
+        paymentRowStatus: racedPayment?.status ?? null,
+        escrow: racedOrder.escrowHolds.length,
+        deliveries: racedOrder.deliveries.length,
+        stock: `${racedStock.quantity}/${racedStock.reserved}`,
+        wallet: snapshot(racedWallet),
+        sweep: raceSweep.status,
+        payment: racePayment.status
+      }
+    },
+    checkerAccuracy: {
+      alteredAvailable: {
+        reportStatus: corruptAvailableReport.status,
+        row: corruptAvailableRow ?? null,
+        issue: availableIssue ? { kind: availableIssue.kind, severity: availableIssue.severity, deltaKobo: availableIssue.deltaKobo } : null
+      },
+      orphanedHold: {
+        reportStatus: orphanReport.status,
+        row: orphanRow ?? null,
+        issue: orphanHeldIssue
+          ? { kind: orphanHeldIssue.kind, severity: orphanHeldIssue.severity, deltaKobo: orphanHeldIssue.deltaKobo }
+          : null
+      }
+    },
+    repeatability: {
+      runId: RUN_ID,
+      cleanup,
+      postCleanup: {
+        reconcileStatus: postCleanupReport.status,
+        mismatches: postCleanupReport.mismatches,
+        unattributedHolds: postCleanupReport.unattributedHolds,
+        issues: postCleanupIssues.issues.length
+      }
     },
     checks,
     failures,
@@ -1212,13 +2247,63 @@ async function main() {
 
 /* ---------------------------------------------------------------- dispatch --- */
 
+/**
+ * Recovery path for a run whose process died before cleanup. The run id is the
+ * identity tag every fixture carries, so this removes exactly that run and no
+ * other. cleanupRun reverses the shared SYSTEM wallet's stored effect first, so
+ * deleting the journals cannot leave SYSTEM out of balance.
+ */
+async function runCleanupOnly() {
+  const runId = process.env.WC_CLEANUP_RUN_ID;
+  if (!runId) throw new Error("WC_CLEANUP_RUN_ID is required when WC_CLEANUP_ONLY=1.");
+  process.env.VALKEY_URL = "";
+  const url = acceptanceUrl();
+  process.env.DATABASE_URL = url;
+  const { prisma } = await import("../lib/prisma");
+  try {
+    const db = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
+    assert(db[0]?.db === DB, `wrong database ${db[0]?.db ?? "unknown"}, expected ${DB}`);
+    const cleanup = await cleanupRun(prisma, runId);
+    console.log(JSON.stringify({ mode: "cleanup-only", database: DB, runId, ...cleanup }, null, 2));
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+async function runAcceptance() {
+  process.env.DRIVE_SWEEP_DISABLED = "1";
+  // Post-commit notifications must not wait on an absent Valkey in this isolated
+  // run; the financial services under test are unchanged.
+  process.env.VALKEY_URL = "";
+  const url = acceptanceUrl();
+  process.env.DATABASE_URL = url;
+  const { prisma } = await import("../lib/prisma");
+  try {
+    await main(prisma, url);
+  } catch (error) {
+    // Best-effort cleanup of this run's fixtures; never mask the original failure.
+    try {
+      const cleanup = await cleanupRun(prisma);
+      process.stderr.write(`cleanup after failure: ${JSON.stringify(cleanup)}\n`);
+    } catch (cleanupError) {
+      process.stderr.write(`cleanup after failure failed: ${redact(String(cleanupError))}\n`);
+    }
+    throw error;
+  }
+}
+
 if (process.env.WC_WORKER === "1") {
   workerMain().catch((error) => {
     process.stderr.write(`${redact(String(error))}\n`);
     process.exit(4);
   });
+} else if (process.env.WC_CLEANUP_ONLY === "1") {
+  runCleanupOnly().catch((error) => {
+    process.stderr.write(`${redact(error instanceof Error ? error.stack ?? error.message : String(error))}\n`);
+    process.exit(1);
+  });
 } else {
-  main()
+  runAcceptance()
     .catch(async (error) => {
       process.stderr.write(`${redact(error instanceof Error ? error.stack ?? error.message : String(error))}\n`);
       process.exit(1);

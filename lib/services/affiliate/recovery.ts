@@ -54,12 +54,21 @@ export async function collectRecovery(input: {
 
   const outcome = await prisma.$transaction(async (tx) => {
     const affiliateWallet = await ensureWallet(tx, { userId: affiliate.userId, ownerType: "CUSTOMER" });
-    const wallet = await tx.wallet.findUniqueOrThrow({ where: { id: affiliateWallet.id } });
     const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
+
+    // Lock the wallet row before reading the spendable balance. Two collectors
+    // working on different recovery debts would otherwise both read the same
+    // balance and both debit it, leaving availableKobo negative and collecting
+    // more than the wallet held. The lock serialises them, so the second caller
+    // sees the post-commit balance and is bounded by what actually remains.
+    const locked = await tx.$queryRaw<Array<{ availableKobo: bigint }>>`
+      SELECT "availableKobo" FROM "Wallet" WHERE id = ${affiliateWallet.id} FOR UPDATE
+    `;
+    const availableKobo = locked[0]?.availableKobo ?? BigInt(0);
 
     // Bounded by what the wallet actually holds: recovering more than exists
     // would create a negative balance, which the platform does not allow.
-    const amount = wallet.availableKobo < requested ? wallet.availableKobo : requested;
+    const amount = availableKobo < requested ? availableKobo : requested;
     if (amount <= 0n) return { ok: false as const, reason: "no_available_funds" };
 
     // Conditional claim: only one caller can move this much of the outstanding
@@ -73,20 +82,29 @@ export async function collectRecovery(input: {
     });
     if (claimed.count === 0) return { ok: false as const, reason: "contended" };
 
-    await tx.wallet.update({ where: { id: wallet.id }, data: { availableKobo: { decrement: amount } } });
+    // Conditional decrement is the second guard: even if another writer changed
+    // the balance between the lock and here, this can never overdraw the wallet.
+    const debited = await tx.wallet.updateMany({
+      where: { id: affiliateWallet.id, availableKobo: { gte: amount } },
+      data: { availableKobo: { decrement: amount } }
+    });
+    if (debited.count === 0) {
+      // Abort the whole transaction: the claimed debt increment rolls back too.
+      throw new ApiError(409, "recovery_conflict", "The affiliate wallet balance changed during collection. Reload and retry.");
+    }
     await tx.wallet.update({ where: { id: platform.id }, data: { availableKobo: { increment: amount } } });
 
     const reference = `AFF-REC-${recovery.id}-${Date.now().toString(36)}`;
     const transaction = await postBalancedTransaction({
       tx,
       actorId: input.actorId,
-      walletId: wallet.id,
+      walletId: affiliateWallet.id,
       type: "debit",
       amountKobo: amount,
       reference,
       description: `Affiliate commission shortfall recovery ${recovery.id}`,
       entries: [
-        { walletId: wallet.id, direction: "DEBIT", amountKobo: amount, memo: "Commission shortfall recovered" },
+        { walletId: affiliateWallet.id, direction: "DEBIT", amountKobo: amount, memo: "Commission shortfall recovered" },
         { walletId: platform.id, direction: "CREDIT", amountKobo: amount, memo: "Commission shortfall recovered" }
       ]
     });
