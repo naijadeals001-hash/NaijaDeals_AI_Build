@@ -1,0 +1,23 @@
+{
+  "provider": "kie.ai",
+  "model": "gpt-image-2-text-to-image",
+  "size": "1K",
+  "assets": [
+    {
+      "id": "partners-delivery",
+      "path": "/generated/eats/partners-delivery.png",
+      "prompt": "Photorealistic editorial photograph, Lagos Nigeria. Three African food delivery partners standing together: a smiling man in a deep forest-green uniform and helmet seated on a red motorbike with a large insulated green food bag, a smiling woman in the same uniform on a bicycle with a green insulated delivery backpack, and a smiling man beside a silver hatchback holding a green insulated food bag. Bright daylight, leafy modern Lagos street cafe backdrop, authentic Nigerian people, realistic faces, natural skin tones, premium brand campaign photography, shallow depth of field. No text, no logos, no watermarks.",
+      "created": "2026-11-11",
+      "credits": 6,
+      "costUsd": 0.03
+    },
+    {
+      "id": "partners-restaurant",
+      "path": "/generated/eats/partners-restaurant.png",
+      "prompt": "Photorealistic editorial photograph inside a warm Nigerian restaurant. A Nigerian female chef in a white chef jacket and apron smiling as she hands a plain kraft paper takeaway bag to a Nigerian male delivery rider in a deep forest-green uniform holding a green insulated food bag. Shelves of ingredients behind them, warm natural window light, authentic faces, premium brand campaign photography. No text, no logos, no watermarks.",
+      "created": "2026-11-11",
+      "credits": 6,
+      "costUsd": 0.03
+    }
+  ]
+}

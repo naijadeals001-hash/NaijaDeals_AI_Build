@@ -71,13 +71,16 @@ export function EatsLandingExtras() {
       </section>
 
       <section className="mt-10 bg-[#0b3d24] py-10 text-white">
-        <div className="mx-auto max-w-[1180px] px-4">
-          <h2 className="font-display text-2xl font-extrabold">Deliver food. Move your way.</h2>
-          <p className="mt-1 max-w-xl text-sm text-white/80">Join our delivery community with an approved transport option in your city.</p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <Link href="/naijaeats/courier" className="rounded-full bg-white px-5 py-2.5 text-sm font-extrabold text-[#0b3d24]">Become a delivery partner</Link>
-            <a href="#delivery-transport" className="rounded-full border border-white/50 px-5 py-2.5 text-sm font-extrabold text-white">Explore transport options</a>
+        <div className="mx-auto grid max-w-[1180px] items-center gap-6 px-4 md:grid-cols-2">
+          <div>
+            <h2 className="font-display text-2xl font-extrabold">Deliver food. Move your way.</h2>
+            <p className="mt-1 max-w-xl text-sm text-white/80">Join our delivery community with an approved transport option in your city.</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href="/naijaeats/courier" className="rounded-full bg-white px-5 py-2.5 text-sm font-extrabold text-[#0b3d24]">Become a delivery partner</Link>
+              <a href="#delivery-transport" className="rounded-full border border-white/50 px-5 py-2.5 text-sm font-extrabold text-white">Explore transport options</a>
+            </div>
           </div>
+          <img src="/generated/eats/partners-delivery.png" alt="Three NaijaEats delivery partners with a motorbike, bicycle and car, each carrying an insulated food bag" loading="lazy" className="h-56 w-full rounded-2xl object-cover md:h-64" />
         </div>
       </section>
 
@@ -98,10 +101,13 @@ export function EatsLandingExtras() {
       </section>
 
       <section className="mx-auto mt-8 grid w-full max-w-[1180px] gap-4 px-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[#e4e9e5] bg-white p-5">
-          <h2 className="font-display text-xl font-extrabold text-[#14241b]">Your kitchen. More customers.</h2>
-          <p className="mt-1 text-sm text-[#6b7a70]">List your restaurant on NaijaEats and reach more food lovers in your city.</p>
-          <Link href="/partner" className="mt-3 inline-flex rounded-full bg-[#0b5c33] px-5 py-2.5 text-sm font-extrabold text-white">Partner your restaurant</Link>
+        <div className="overflow-hidden rounded-2xl border border-[#e4e9e5] bg-white">
+          <img src="/generated/eats/partners-restaurant.png" alt="A Nigerian chef handing a takeaway bag to a NaijaEats delivery rider inside a restaurant" loading="lazy" className="h-44 w-full object-cover" />
+          <div className="p-5">
+            <h2 className="font-display text-xl font-extrabold text-[#14241b]">Your kitchen. More customers.</h2>
+            <p className="mt-1 text-sm text-[#6b7a70]">List your restaurant on NaijaEats and reach more food lovers in your city.</p>
+            <Link href="/partner" className="mt-3 inline-flex rounded-full bg-[#0b5c33] px-5 py-2.5 text-sm font-extrabold text-white">Partner your restaurant</Link>
+          </div>
         </div>
         <div className="rounded-2xl border border-[#e4e9e5] bg-white p-5">
           <h2 className="font-display text-xl font-extrabold text-[#14241b]">Your cravings, closer.</h2>
