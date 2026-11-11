@@ -14,6 +14,7 @@ import {
 } from "@/components/eats/eats-sections";
 import { EatsBottomNav } from "@/components/eats/eats-bottom-nav";
 import { EatsFooter } from "@/components/eats/eats-footer";
+import { EatsLandingExtras } from "@/components/eats/eats-landing-extras";
 import { listCuisineRail, listDishCategoryRail, listFeaturedDishes, listStorefrontRestaurants } from "@/lib/services/eats/storefront";
 
 export const dynamic = "force-dynamic";
@@ -104,6 +105,7 @@ export default async function NaijaEatsPage() {
           ))}
         </Rail>
 
+        <EatsLandingExtras />
         <MoreWays />
         <AppBanner />
       </main>
