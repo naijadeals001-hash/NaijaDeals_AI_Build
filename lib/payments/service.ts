@@ -45,9 +45,14 @@ export function availablePaymentMethods(countryCode: string) {
 }
 
 export async function ensureWallet(tx: Db, input: { userId?: string; vendorId?: string; ownerType: "CUSTOMER" | "VENDOR" | "COURIER" | "DRIVER" | "SYSTEM" }) {
-  const existing = await tx.wallet.findFirst({
-    where: input.userId ? { userId: input.userId } : input.vendorId ? { vendorId: input.vendorId } : { ownerType: "SYSTEM" }
-  });
+  // Resolve by owner type as well as identity: one user can hold CUSTOMER,
+  // DRIVER and COURIER wallets, and paying the wrong one is a financial bug.
+  const identity = input.userId
+    ? { userId: input.userId, ownerType: input.ownerType }
+    : input.vendorId
+      ? { vendorId: input.vendorId, ownerType: input.ownerType }
+      : { ownerType: "SYSTEM" as const };
+  const existing = await tx.wallet.findFirst({ where: identity });
   if (existing) return existing;
   return tx.wallet.create({
     data: {
