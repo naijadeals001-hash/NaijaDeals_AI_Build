@@ -3291,3 +3291,184 @@ projections reconcile. No cleanup or database reset was performed.
 Code commits: `8868df93e124708d3fcf428e7f9b13adf4a328cc` (acceptance suite and reconciliation fix)
 and `c7190b1941d281b813820b3d1cdca6d23c354218` (same-database/wallet identity assertions; final
 33/33 run).
+
+## 2026-11-11 — Wallet reconciliation unification, failed-checkout lifecycle, contention and partial recovery (PASS)
+
+Base `e35bf87` on `naijashop-marketplace`. All work ran against the isolated
+`naijadeals_wallet_acceptance` database. Each entry point derives the URL from `.env` by replacing
+only the database path, guards `current_database()`, and prints no credentials. No real charge,
+payout, migration, push or deployment happened. `naijadeals_affiliate_test` and disputed historical
+records were not touched.
+
+### One reconciliation interpretation
+
+`lib/services/core/reconciliation-correct.ts` now owns the interpretation as exported helpers
+(`loadOpenHoldLedger`, `expectedPosition`, `compareWalletProjection`), and
+`scripts/wallet-reconcile.ts` imports them. There is no reference-name regex left.
+
+    availableKobo == ledgerNet - open counterparty hold credits
+    heldKobo      == open buyer holds + open counterparty hold credits
+
+Open holds come from the rows that own them: wallet-paid `Ride` rows with `paymentStatus = held`
+(rider = buyer, SYSTEM = counterparty) and `EscrowHold` rows in an open status (buyer wallet =
+buyer, vendor wallet = counterparty, exposure = `amountKobo - Order.refundedKobo`, clamped at 0 so
+a partial refund reduces both sides). A hold whose buyer/counterparty wallet cannot be resolved is
+reported as REVIEW, never dropped.
+
+| lifecycle phase | buyer available | buyer held | counterparty available | counterparty held |
+|---|---|---|---|---|
+| wallet TEST funding | +amount | 0 | -amount | 0 |
+| ride hold / shop escrow hold | -amount | +amount | 0 | +amount |
+| ride cancel | +refund | -fare | +fee | -fare |
+| ride completed | 0 | -fare | 0 (debit leg) | -fare |
+| shop escrow release | 0 | -amount | 0 | -amount |
+| partial refund, hold open | +refund | -refund | 0 | -refund |
+| full refund | +remaining | -remaining | 0 | -remaining |
+| partner settlement / recovery | no hold effect | no hold effect | no hold effect | no hold effect |
+
+Correction stays disabled: `correctException()` still throws `manual_review_required`, and no
+reconciliation path writes balances.
+
+### Commands and verification
+
+- `npx tsc --noEmit` -> exit 0.
+- `npm run build` -> exit 0 (production build completed).
+- `DATABASE_URL=<acceptance URL from .env> RECONCILE_DB=naijadeals_wallet_acceptance npx tsx scripts/wallet-reconcile.ts`
+  -> `{"status":"CLEAN","wallets":17,"openRides":8,"openEscrows":0,"unattributedRides":0,"unattributedHolds":0,"mismatches":0,"duplicateIdentities":0}`.
+- In-process `reconcile()` -> 0 issues; totals `creditKobo = debitKobo = 2,640,000`, 32 entries.
+- `npx tsx scripts/wallet-spend-concurrency-acceptance.ts` -> **PASS 78/78** twice:
+  runs `20261111184056-b22ff0ad` and `20261111184120-f681693d`.
+- `npx tsx scripts/wallet-partial-recovery-acceptance.ts` -> **PASS 13/13** twice:
+  runs `20261111184316-70860b2f` and `20261111184620-ecd0c75e`.
+
+### Contention winners and balances
+
+The 155,000-kobo fixture is the smallest real demand on both services: Surulere -> Apapa bike quotes
+155,000, and shop subtotal 4,951 + Lagos delivery 150,000 + 1% escrow 49 = 155,000. Funding is
+175,000 so one winner leaves 20,000. No quote, fee or pricing rule was overridden.
+
+- Simultaneous cross-service race (`run 20261111184120-f681693d`): **Drive won**
+  (`RIDE-cmwcgtcpy0001v4ogtw4g7jux-HOLD`); shop `confirmPayment` was refused 402
+  `insufficient_wallet`. Calls overlapped 54 ms; customer 175,000/0 -> **20,000 available /
+  155,000 held**; loser order `payment_pending`, payment `PENDING`, stock reserved 1, zero escrow,
+  zero delivery, zero wallet journal.
+- Controlled Drive-wins (drive released first, shop +500 ms): drive committed, shop 402; same loser
+  state. Retrying the losing payment after a 155,000 top-up completed once (`duplicate: false`):
+  wallet **20,000 / 310,000** (ride + escrow), order `paid`, one escrow hold, one delivery, stock
+  2/0, exactly one `ESCROW-HOLD-` journal. A replay was `duplicate: true` with no second debit.
+- Partial refund against that open escrow (55,000): wallet **75,000 / 255,000**, vendor held
+  100,000, order `refundedKobo = 55,000`, escrow still `held`. Full refund of the 100,000
+  remainder: wallet **175,000 / 155,000**, escrow `refunded`, vendor held 0. Cancelling the ride
+  then returned the fare: **330,000 available / 0 held**.
+- Controlled Shop-wins (shop released first, drive +500 ms): shop committed, drive 402; wallet
+  **20,000 / 155,000**, vendor held 155,000, stock 2/0, no ride row. Escrow release moved
+  `payableKobo 154,456` to the vendor and `544` (commission + escrow fee) to SYSTEM: buyer
+  20,000/0, vendor 154,456/0, escrow `released`, order `completed`.
+- Shop refund after release: refused 409 `refund_conflict` because the TEST SYSTEM wallet is
+  negative (every TEST funding debits it) and the guarded platform-share debit cannot overdraw it.
+  After the refusal: `refundedKobo = 0`, 0 refund rows, 0 `REFUND-` journals, buyer/vendor
+  unchanged. This is the guard working, not a completed refund; see remaining gaps.
+
+**Actual lock contention was observed.** In the simultaneous cross-service race one backend sat in
+`wait_event_type = Lock`, `wait_event = transactionid`, with `pg_blocking_pids` naming the other
+worker (PIDs 12000 blocked by 38852). That is a real row-lock wait on the shared wallet row, not
+just harness overlap. The same-rider race observed an `advisory` lock (the per-rider serialization),
+not the wallet row. The two controlled/staged races had no database-level overlap by construction,
+so no lock wait was captured there.
+
+### Failed-checkout reservation lifecycle
+
+- Retry after funding: one wallet debit, one escrow hold, one delivery, stock committed once;
+  replay is a duplicate with no debit.
+- `cancelOrder` on an unpaid checkout: order `cancelled`, payment `FAILED`, stock `3/1 -> 3/0`,
+  0 wallet journals, 0 escrow/delivery; confirming the failed payment returns 409
+  `payment_failed`.
+- New bounded `expireAbandonedCheckouts({ olderThanMs, limit, orderIds? })` in
+  `checkout.service.ts`: backdated unpaid order -> cancelled, payment `FAILED`, stock
+  `3/1 -> 3/0`, 0 journals/escrow/deliveries; a second sweep expires 0. It locks Payment rows
+  before the Order row (same order as `confirmPayment`) and skips on any COMPLETED payment,
+  escrow or delivery.
+- Paid-order guard: a backdated paid order is not a candidate (`inspected 0`), keeps its escrow,
+  delivery and committed stock 2/0.
+- Expiry racing payment: the sweep was `fulfilled` and cancellation won; payment row `FAILED`,
+  order `cancelled`, 0 escrow/deliveries, stock 3/0, wallet 155,000/0. The paid branch is also
+  asserted (escrow/delivery retained) if payment wins.
+
+### Partial recovery concurrency
+
+Fixture: one affiliate wallet with **100,000 available**, two separate **80,000** recovery debts,
+two workers with independent backends. Results: one recovery collected 80,000 (`COLLECTED`), the
+other 20,000 (`OUTSTANDING`, 60,000 left); **aggregate 100,000 = available at start**, final wallet
+**0/0**, never negative. Exactly two `AFF-REC-` journals, one per recovery, unique references,
+balanced. SYSTEM unchanged (-1,400,000/1,240,000 before and after); `wallet-reconcile` CLEAN with
+the partial debt outstanding. Calls overlapped 29 ms and a `transactionid` lock wait was observed
+(one collector blocked by the other). The fix is a `SELECT ... FOR UPDATE` on the wallet row plus a
+conditional `availableKobo >= amount` decrement and a rollback on claim conflict.
+
+### Checker accuracy — detection, not just clean output
+
+- Altered available projection (+7,777 with no journal): `wallet-reconcile` -> `REVIEW`,
+  `availableDifference = 7777`; `reconciliation-correct` -> `wallet_available_delta`, severity
+  `broken`, delta 7,777.
+- Real ride hold, then the `Ride` row deleted: the wallet still holds 155,000 and the journal
+  exists. `wallet-reconcile` -> `REVIEW`, `heldDifference = 155000`, `availableDifference = 0`;
+  `reconciliation-correct` -> `wallet_held_delta`, severity `unexplained`, delta 155,000.
+- Legitimate states were CLEAN at every checkpoint: one ride hold, two simultaneous holds, partial
+  refund on an open escrow, full refund, ride cancellation, shop escrow hold, escrow release, and
+  the refused post-release refund (both checkers, whole books, 0 issues).
+
+### Repeatability
+
+Every fixture carries `RUN_ID` (users `wc-spend-<RUN_ID>-*`, vendors/products/categories by slug,
+funding references, `wpr-<RUN_ID>-*` for recovery). Cleanup deletes only that run's rows and
+reverses the shared SYSTEM projection before deleting the journals. Both suites were run twice with
+identical check counts and PASS; cleanup reported `leftovers: 0` and post-cleanup `CLEAN`, 0 issues
+each time. `WC_CLEANUP_ONLY=1 WC_CLEANUP_RUN_ID=<id>` is the documented recovery path for a run
+whose process died.
+
+The acceptance database was repaired once, test-only: the first cleanup implementation deleted
+journals without reversing SYSTEM, leaving it at -7,697,824/3,720,000 against ledger net -160,000.
+Applying the shared invariant restored the pre-run -1,400,000/1,240,000 (8 open rides) and
+`wallet-reconcile` returned CLEAN. The committed cleanup now performs that reversal itself; no
+production database or wallet was touched.
+
+### Defects found and fixed
+
+- `reconciliation-correct.ts` missed `RIDE-...-HOLD` (its regex only matched `ESCROW-HOLD|RELEASE-`)
+  and compared `availableKobo` with the full journal net, flagging every SYSTEM hold; held was also
+  derived from journal magnitude instead of open records. Fixed by the shared structured model.
+- `collectRecovery` had no wallet row lock: two debts could both read the same balance and both
+  debit it (160,000 collected from 100,000, available -60,000). Fixed with the lock plus
+  conditional decrement.
+- `refundPayment` claimed `refundedKobo` and created a PENDING `Refund` before the wallet movement.
+  A refused debit (demonstrated by the negative SYSTEM balance) left the order reporting a refund
+  and a PENDING row with no money moved. Wallet refunds now claim and settle in one transaction.
+- No unpaid-checkout expiry existed. Added the bounded service; no scheduler is wired to it yet.
+- `notifyVendorOwner` reads the vendor through the global Prisma client while inside the payment
+  transaction. With `connection_limit=1` that query waits for the connection the transaction holds
+  and the payment dies at Prisma's 5 s transaction limit (P2028). Not changed (outside this slice);
+  the acceptance workers use `connection_limit=2` and disable Valkey so post-commit notifications
+  cannot wait on an absent queue.
+
+### Remaining funding/webhook/payout gaps
+
+- Only wallet-funded paths were exercised. The external-provider escrow branch (`recordEscrow`
+  non-wallet) credits platform available while posting a platform DEBIT, which does not fit the
+  wallet-only invariant; no paystack/flutterwave/test provider, webhook, settlement or payout ran,
+  and no credentials were used.
+- A refund after escrow release needs platform liquidity for the commission/fee share. On this
+  TEST database SYSTEM is negative from TEST funding, so the guard correctly refuses; a successful
+  post-release reversal is therefore BLOCKED here by fixture liquidity, not proven.
+- `expireAbandonedCheckouts` has no scheduler/route. Wiring it to a BullMQ schedule (like
+  `drive-expiry`) remains open; the service itself is tested directly.
+- Release after a partial refund was not exercised. `order.service.completeOrder` releases
+  `escrow.amountKobo` while `refundPayment` has already reduced held by the refunded amount, so that
+  combination needs a separate decision/test.
+- `naijadeals_affiliate_test` was deliberately not run; the existing affiliate suites there need a
+  separate pass against the locked `collectRecovery`.
+
+### Commits
+
+- `15d917308ca6bffc4fcd297e7dc3f840d1803be8` — reconciliation unification, expiry service,
+  atomic wallet refund claim, recovery wallet lock, contention/recovery acceptance suites
+  (local only; no push or deployment).
