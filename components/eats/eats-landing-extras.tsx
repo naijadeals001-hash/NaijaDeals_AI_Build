@@ -29,7 +29,7 @@ export function EatsLandingExtras() {
     <>
       <section className="mx-auto mt-8 w-full max-w-[1180px] px-4">
         <div className="grid items-center gap-4 sm:grid-cols-[180px_1fr]">
-          <img src="/generated/eats/africa-map.png" alt="Map of Africa showing the regions available for food discovery" loading="lazy" className="mx-auto h-auto w-[150px] rounded-xl sm:mx-0 sm:w-[180px]" />
+          <img src="/generated/eats/africa-map-v2.png" alt="Map of Africa showing the regions available for food discovery" loading="lazy" className="mx-auto h-auto w-[150px] rounded-xl sm:mx-0 sm:w-[180px]" />
           <div>
             <ul className="flex flex-wrap gap-2">
               {REGIONS.map((region) => (
@@ -72,7 +72,7 @@ export function EatsLandingExtras() {
               <a href="#delivery-transport" className="rounded-full border border-white/50 px-5 py-2.5 text-sm font-extrabold text-white">Explore transport options</a>
             </div>
           </div>
-          <img src="/generated/eats/partners-delivery.png" alt="Three NaijaEats delivery partners with a motorbike, bicycle and car, each carrying an insulated food bag" loading="lazy" className="h-auto w-full rounded-2xl object-contain" />
+          <img src="/generated/eats/partners-delivery-v2.png" alt="Three NaijaEats delivery partners with a motorbike, bicycle and car, each carrying an insulated food bag" loading="lazy" className="h-auto w-full rounded-2xl object-contain" />
         </div>
       </section>
 
@@ -94,7 +94,7 @@ export function EatsLandingExtras() {
 
       <section className="mx-auto mt-8 grid w-full max-w-[1180px] gap-4 px-4 sm:grid-cols-2">
         <div className="overflow-hidden rounded-2xl border border-[#e4e9e5] bg-white">
-          <img src="/generated/eats/partners-restaurant.png" alt="A Nigerian chef handing a takeaway bag to a NaijaEats delivery rider inside a restaurant" loading="lazy" className="h-auto w-full object-contain bg-[#f7f4ee]" />
+          <img src="/generated/eats/partners-restaurant-v2.png" alt="A Nigerian chef handing a takeaway bag to a NaijaEats delivery rider inside a restaurant" loading="lazy" className="h-auto w-full object-contain bg-[#f7f4ee]" />
           <div className="p-5">
             <h2 className="font-display text-xl font-extrabold text-[#14241b]">Your kitchen. More customers.</h2>
             <p className="mt-1 text-sm text-[#6b7a70]">List your restaurant on NaijaEats and reach more food lovers in your city.</p>
