@@ -3285,3 +3285,5 @@ after release (there is no buyer-side release ledger entry). The acceptance gate
 Each run creates a new customer, vendor, category, product (subtotal 4,951), cart/order/payment and
 two open wallet rides in the isolated acceptance database. Reruns accumulate these; all journals and
 projections reconcile. No cleanup or database reset was performed.
+
+Code commit: `8868df93e124708d3fcf428e7f9b13adf4a328cc`.
