@@ -298,7 +298,9 @@ export type AbandonedCheckoutSweep = {
  *    cancelled or restocked;
  *  - stock is released once through the shared `releaseReservedStock` helper.
  *
- * It is a service function, not a timer: no scheduler is wired to it yet.
+ * It is a service function with no HTTP route. The authenticated background
+ * worker (`scripts/infra-worker.ts`) runs it from the durable `checkout-expiry`
+ * BullMQ schedule; there is deliberately no unauthenticated cleanup endpoint.
  */
 export async function expireAbandonedCheckouts(
   input: { olderThanMs?: number; limit?: number; orderIds?: string[] } = {}

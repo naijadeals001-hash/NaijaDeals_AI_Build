@@ -4,8 +4,10 @@
  *   npx tsx scripts/infra-worker.ts
  *
  * Responsibilities:
- *  - registers the durable schedules (drive expiry, notification recovery)
- *  - consumes the notification, search-index and drive-expiry queues
+ *  - registers the durable schedules (drive expiry, checkout expiry,
+ *    notification recovery, search sync)
+ *  - consumes the notification, search-index, drive-expiry and checkout-expiry
+ *    queues
  *  - writes a heartbeat so /api/health can tell "queue up" from "worker alive"
  *  - moves permanently failed jobs to a dead-letter queue
  *
@@ -35,11 +37,13 @@ async function loadModules() {
       import("../lib/infra/cache"),
       import("../lib/infra/vectors")
     ]);
-  const [{ reindexCatalogue }, { processPendingSync }, { releaseExpiredAssignments }] = await Promise.all([
-    import("../lib/infra/catalogue-index"),
-    import("../lib/infra/search-sync"),
-    import("../lib/services/core/drive.service")
-  ]);
+  const [{ reindexCatalogue }, { processPendingSync }, { releaseExpiredAssignments }, { expireAbandonedCheckouts }] =
+    await Promise.all([
+      import("../lib/infra/catalogue-index"),
+      import("../lib/infra/search-sync"),
+      import("../lib/services/core/drive.service"),
+      import("../lib/services/core/checkout.service")
+    ]);
   const delivery = await import("../lib/services/core/notification-delivery.service");
   const { processIntents } = await import("../lib/notifications/intent.service");
   const { processReversalIntents } = await import("../lib/services/affiliate/reversal-processor");
@@ -56,6 +60,7 @@ async function loadModules() {
     reindexCatalogue,
     processPendingSync,
     releaseExpiredAssignments,
+    expireAbandonedCheckouts,
     deliverNotification: delivery.deliverNotification,
     flushDueNotifications: delivery.flushDueNotifications,
     recoverStuckSending: delivery.recoverStuckSending,
@@ -115,6 +120,54 @@ async function bootstrap() {
     { concurrency: 1 }
   );
 
+  /**
+   * Abandoned-checkout expiry.
+   *
+   * The durable scheduler emits one `expire` job per interval; BullMQ delivers
+   * it to exactly one worker. Inside that worker a second overlapping tick is
+   * refused by the in-process guard, and the service itself locks Payment rows
+   * before Order rows, so even two independently triggered sweeps cannot expire
+   * the same checkout twice or race a payment commit. `limit` is bounded by the
+   * service (max 100); the environment override only tunes the batch size.
+   */
+  let checkoutSweepRunning = false;
+  const checkoutWorker = m.startWorker(
+    m.QUEUE_NAMES.checkoutExpiry,
+    async (job) => {
+      if (job.name !== "expire") throw new Error(`unknown_job:${job.name}`);
+      if (checkoutSweepRunning) {
+        structured("checkout.expiry", job, { outcome: "overlap_skipped" });
+        return { skipped: "overlap" };
+      }
+      checkoutSweepRunning = true;
+      try {
+        const configured = Number(process.env.CHECKOUT_EXPIRY_BATCH ?? 25);
+        const batch = Number.isFinite(configured) ? Math.min(Math.max(Math.trunc(configured), 1), 100) : 25;
+        // Production jobs carry no orderIds. An isolated acceptance schedule may
+        // carry a bounded scope, which the service already enforces.
+        const scoped = (job.data as { orderIds?: unknown }).orderIds;
+        const orderIds = Array.isArray(scoped) ? scoped.map((value) => String(value)).slice(0, 100) : undefined;
+        const sweep = await m.expireAbandonedCheckouts({ limit: batch, orderIds });
+        structured("checkout.expiry", job, {
+          inspected: sweep.inspected,
+          expired: sweep.expired.length,
+          skipped: sweep.skipped.length,
+          batch
+        });
+        if (sweep.expired.length > 0) {
+          m.log.info("checkout.expired", {
+            count: sweep.expired.length,
+            orderIds: sweep.expired.slice(0, 10).map((row) => row.orderId)
+          });
+        }
+        return { inspected: sweep.inspected, expired: sweep.expired.length, skipped: sweep.skipped.length };
+      } finally {
+        checkoutSweepRunning = false;
+      }
+    },
+    { concurrency: 1 }
+  );
+
   const notificationWorker = m.startWorker(
     m.QUEUE_NAMES.notifications,
     async (job) => {
@@ -156,7 +209,7 @@ async function bootstrap() {
     { concurrency: 1 }
   );
 
-  const workers = [driveWorker, notificationWorker, searchWorker].filter(Boolean);
+  const workers = [driveWorker, checkoutWorker, notificationWorker, searchWorker].filter(Boolean);
   if (workers.length === 0) {
     process.stderr.write("Valkey is not configured (VALKEY_URL); the worker has nothing to do.\n");
     await m.closeCache();

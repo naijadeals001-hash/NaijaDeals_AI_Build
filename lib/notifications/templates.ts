@@ -40,6 +40,21 @@ export const TEMPLATES: Record<string, TemplateDefinition> = {
     sms: { body: "NaijaDeals: order {{orderNumber}} confirmed. {{total}} held in escrow." },
     push: { title: "Order confirmed", body: "{{orderNumber}} · {{total}} held in escrow" }
   },
+  "order.paid.vendor": {
+    key: "order.paid.vendor",
+    category: "ORDERS",
+    required: ["orderNumber"],
+    inApp: {
+      title: "New paid order",
+      body: "Order {{orderNumber}} is ready to accept. The customer's payment is held in escrow until delivery."
+    },
+    email: {
+      subject: "New paid order {{orderNumber}}",
+      body: "Hello,\n\nOrder {{orderNumber}} has been paid and is ready to accept. The payment is held in escrow until delivery.\n\nNaijaDeals"
+    },
+    sms: { body: "NaijaDeals: order {{orderNumber}} is paid and ready to accept." },
+    push: { title: "New paid order", body: "{{orderNumber}} is ready to accept" }
+  },
   "order.status_changed": {
     key: "order.status_changed",
     category: "ORDERS",

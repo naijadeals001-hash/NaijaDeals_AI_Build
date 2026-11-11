@@ -549,6 +549,33 @@ export async function confirmPayment(input: { reference: string; provider: Adapt
   return { status: "COMPLETED" as const, orderId: payment.orderId, duplicate: false };
 }
 
+/**
+ * Split a refund between the seller and the platform.
+ *
+ * The split is the *increment* of each party's cumulative share, not a fresh
+ * proportional calculation for every request. Two independent floor divisions
+ * (one per refund) can allocate one kobo more than the released payable over a
+ * sequence of refunds, which matters because the refund path only has the
+ * released payable and platform cut to reverse. The cumulative form makes the
+ * shares of a fully refunded order add up exactly to `payableKobo` and
+ * `totalKobo - payableKobo`.
+ */
+export function allocateRefundShares(input: {
+  totalKobo: bigint;
+  payableKobo: bigint;
+  alreadyRefundedKobo: bigint;
+  requestedKobo: bigint;
+}) {
+  const { totalKobo, payableKobo, alreadyRefundedKobo, requestedKobo } = input;
+  if (totalKobo <= BigInt(0)) {
+    return { vendorShareKobo: BigInt(0), platformShareKobo: requestedKobo };
+  }
+  const priorVendor = (payableKobo * alreadyRefundedKobo) / totalKobo;
+  const cumulativeVendor = (payableKobo * (alreadyRefundedKobo + requestedKobo)) / totalKobo;
+  const vendorShareKobo = cumulativeVendor - priorVendor;
+  return { vendorShareKobo, platformShareKobo: requestedKobo - vendorShareKobo };
+}
+
 export async function refundPayment(input: {
   orderId: string;
   actorId: string;
@@ -658,10 +685,14 @@ export async function refundPayment(input: {
   const escrow = order.escrowHolds[0];
   const escrowReleased = escrow?.status === "released";
   const payable = order.subtotalKobo - order.commissionKobo + order.deliveryFeeKobo;
-  const vendorShare = order.totalKobo === BigInt(0) ? BigInt(0) : (payable * requested) / order.totalKobo;
-  const platformShare = requested - vendorShare;
+  const { vendorShareKobo: vendorShare, platformShareKobo: platformShare } = allocateRefundShares({
+    totalKobo: order.totalKobo,
+    payableKobo: payable,
+    alreadyRefundedKobo: alreadyRefunded,
+    requestedKobo: requested
+  });
 
-  return prisma.$transaction(async (tx) => {
+  const settle = () => prisma.$transaction(async (tx) => {
     const buyerWallet = await ensureWallet(tx, { userId: order.customerId, ownerType: "CUSTOMER" });
     const vendorWallet = await ensureWallet(tx, { vendorId: order.vendorId, ownerType: "VENDOR" });
     const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
@@ -839,6 +870,31 @@ export async function refundPayment(input: {
 
     return { orderId: order.id, refundedKobo: requested.toString(), totalRefundedKobo: (alreadyRefunded + requested).toString(), refundId: refund.id };
   });
+
+  try {
+    return await settle();
+  } catch (error) {
+    // Two concurrent requests can carry the same idempotency key. The order-row
+    // claim (or the unique Refund key) lets exactly one win; the loser must
+    // return the winner's result instead of surfacing a raw constraint error.
+    // A conflict caused by a *different* refund has no row under this key and is
+    // rethrown unchanged.
+    const sameKeyConflict = (error as { code?: string }).code === "P2002" ||
+      (!external && error instanceof ApiError && error.code === "refund_conflict");
+    if (sameKeyConflict) {
+      const raced = await prisma.refund.findUnique({ where: { idempotencyKey } });
+      if (raced?.status === "COMPLETED") {
+        return { orderId: raced.orderId, refundedKobo: raced.amountKobo.toString(), idempotent: true, refundId: raced.id };
+      }
+      if (raced?.status === "PENDING") {
+        throw new ApiError(409, "refund_pending", "An identical refund request is still being settled. Reload before retrying.");
+      }
+      if (raced?.status === "FAILED") {
+        throw new ApiError(409, "refund_failed", "This refund attempt failed. Use a new idempotency key.");
+      }
+    }
+    throw error;
+  }
 }
 
 export async function processWebhook(provider: "paystack" | "flutterwave", rawBody: string, headers: Headers) {

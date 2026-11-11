@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { log } from "@/lib/infra/logger";
 import { infraMetrics } from "@/lib/infra/metrics";
 import { notifyShipmentStatus } from "./domain-events";
+import { deliverNotification, notify } from "@/lib/services/core/notification-delivery.service";
 
 /**
  * Transactional notification outbox.
@@ -22,7 +23,7 @@ const BACKOFF_MS = [15_000, 60_000, 300_000, 900_000, 3_600_000];
 
 export type IntentPayload = Record<string, unknown>;
 
-type Tx = Prisma.TransactionClient;
+type Tx = PrismaClient | Prisma.TransactionClient;
 
 export type IntentInput = {
   dedupeKey: string;
@@ -151,6 +152,33 @@ async function deliver(intent: ClaimedIntent): Promise<void> {
         String(intent.payload.label ?? intent.eventType.replace("shipment.", ""))
       );
       return;
+    case "order.paid.vendor": {
+      // The vendor notification is recorded in the payment transaction as an
+      // intent, not written through a nested Prisma client. Delivery happens
+      // here, after the financial transaction has committed.
+      const created = await notify({
+        userId: intent.recipientUserId,
+        channel: "IN_APP",
+        templateKey: "order.paid.vendor",
+        eventType: "order.paid.vendor",
+        entityType: intent.entityType,
+        entityId: intent.entityId,
+        data: {
+          orderNumber: String(intent.payload.orderNumber ?? ""),
+          href: String(intent.payload.href ?? "/seller")
+        },
+        dedupeKey: `notification:${intent.dedupeKey}`
+      });
+      if (created.notification.status === "SUPPRESSED") return;
+      const outcome = await deliverNotification(created.notification.id);
+      // A skipped delivery is already SENT (a retry replayed the same intent) or
+      // not due yet. A FAILED delivery is surfaced so the intent is retried and
+      // eventually reported DEAD instead of being marked processed silently.
+      if (outcome.status === "FAILED" || outcome.status === "missing") {
+        throw new Error(`notification_delivery_${outcome.status}:${outcome.error ?? "unknown"}`);
+      }
+      return;
+    }
     default:
       throw new Error(`unsupported_intent_event:${intent.eventType}`);
   }

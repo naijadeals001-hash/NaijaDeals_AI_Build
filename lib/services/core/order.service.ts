@@ -2,7 +2,7 @@ import type { OrderStatus, Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { recordAudit } from "./audit.service";
-import { notifyVendorOwner } from "./notification.service";
+import { enqueueVendorNotification } from "./notification.service";
 import { notifyEscrowReleased, notifyOrderStatus } from "@/lib/notifications/domain-events";
 import { recordSystemEvent } from "./event.service";
 import { assertOrderTransition } from "./state-machines";
@@ -81,12 +81,18 @@ export async function updateOrderStatus(input: {
   });
 
   if (input.status === "vendor_notified") {
-    await notifyVendorOwner({
+    // Durable outbox: the intent is written in this transaction, so a rollback
+    // removes it and a committed payment always has exactly one delivery job.
+    // No notification is sent while the financial transaction holds its
+    // connection, which keeps connection_limit=1 pools deadlock-free.
+    await enqueueVendorNotification({
       tx: db,
       vendorId: order.vendorId,
-      kind: "order_paid",
-      title: "New paid order",
-      body: `Order ${order.orderNumber} is ready to accept.`,
+      eventType: "order.paid.vendor",
+      dedupeKey: `order.paid.vendor:${order.id}`,
+      entityType: "Order",
+      entityId: order.id,
+      orderNumber: order.orderNumber,
       href: "/seller"
     });
   }

@@ -25,6 +25,7 @@ export function queuePrefix(): string {
 
 export const QUEUE_NAMES = {
   driveExpiry: "drive-expiry",
+  checkoutExpiry: "checkout-expiry",
   searchIndex: "search-index",
   notifications: "notifications",
   deadLetter: "dead-letter"
