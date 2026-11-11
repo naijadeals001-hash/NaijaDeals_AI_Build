@@ -3125,3 +3125,31 @@ None. No remote repository access, no hosted provider, no real payment.
 - Stay/ride/gig attribution: business rules above.
 - Mid-flight provider outage with a real configured provider (fault injection only).
 - More than two unsettled reversals and multi-refund compounding.
+
+---
+
+## 2026-11-05 — Supported-vertical enforcement (b42a955)
+
+`lib/services/affiliate/verticals.ts` is the single capability registry: `["shop"]`.
+It is consulted by campaign creation (400 `unsupported_vertical`), activation (409), discovery
+(SQL filter), link creation (409, API and service), `/r` touch resolution (redirect home, no touch),
+checkout attribution (skip) and `recordConversion` (`unsupported_vertical`).
+
+`scripts/affiliate-vertical-audit.ts` is dry-run by default. `--apply` pauses unsupported campaigns
+and deactivates their links with one audit row per link; `--restore` reactivates only links disabled
+by that audit and returns campaigns to DRAFT (never ACTIVE). Nothing is deleted. Dry run on
+`naijadeals_affiliate_test` found one unsupported campaign (a test fixture).
+
+`scripts/affiliate-vertical-enforcement.ts` passes five checks: create rejected, stale activation
+rejected, discovery/link creation refused through both API and service, stale link redirects home
+with zero touches and a directly-inserted touch still cannot convert, and a shop campaign still
+creates and activates a link.
+
+Still open: compound recovery with three or more reversals, collection between settlement and a
+later reversal, and backfill concurrency. The previous 25-record backfill ran only against
+`naijadeals_affiliate_test` (isolated local database); no other database was touched.
+
+Production test-provider safety is unchanged: `streamCompletion` selects the deterministic provider
+only when `AURA_TEST_PROVIDER=1`, and `testProviderRefusal` additionally requires
+`AURA_TEST_ALLOW_PRODUCTION_BUILD=1` when `NODE_ENV=production`. The 3017 preview runs without
+those flags. A deployable standalone artifact was not built or exercised separately.
