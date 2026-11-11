@@ -3472,3 +3472,248 @@ production database or wallet was touched.
 - `15d917308ca6bffc4fcd297e7dc3f840d1803be8` — reconciliation unification, expiry service,
   atomic wallet refund claim, recovery wallet lock, contention/recovery acceptance suites
   (local only; no push or deployment).
+
+
+
+## 2026-11-11 — Post-release refunds, notification outbox, expiry scheduler, funding webhooks and payout inspection
+
+Base `ed5e1e149867bac5628bd596c6a1eaa80ec31890` on `naijashop-marketplace`. All execution ran
+against `naijadeals_wallet_acceptance` only. Each entry point derives the URL from `.env` by
+replacing only the database path, guards `select current_database()`, and prints no credentials.
+No production database, real charge, payout, provider call, push or deployment happened.
+`naijadeals_affiliate_test` was not opened.
+
+### 1. SYSTEM position — invalid fixture, projection bug or overloaded model?
+
+**Verdict: overloaded account model.** The stored position is not an invalid fixture row and not a
+projection-maintenance defect. Measured on the acceptance database before any new fixture:
+
+- SYSTEM `availableKobo = -1,400,000`, `heldKobo = 1,240,000`.
+- Ledger net `-160,000`; open counterparty holds (8 ride fares) `1,240,000`.
+- Expected available `ledgerNet - counterpartyHeld = -1,400,000`; expected held `1,240,000`.
+  Both differences are **0 kobo**, so the projection is maintained correctly.
+- Every SYSTEM ledger leg is classified: TEST funding debit `1,400,000` (8
+  `WC-SPEND-(RIDE-)FUND-*` rows) and ride-hold credit `1,240,000` (8 `RIDE-*-HOLD` rows).
+  No unclassified rows.
+
+The deficit is the arithmetic of TEST money issued *from* SYSTEM. SYSTEM is simultaneously the TEST
+funding source, the platform revenue account (a release credits the cut to SYSTEM — observed after
+the release scenario: +544 kobo), the ride-escrow counterparty (held balance) and payout/escrow
+clearing. A post-release refund needs platform liquidity for the commission/fee share; because the
+same account is overdrawn by every TEST kobo ever issued, the guarded platform-share debit refuses
+even though the specific released cut is still in SYSTEM.
+
+A correct fix needs a product/accounting decision, not a balance patch: separate the TEST funding
+equity from platform revenue (dedicated funding/equity account, or a separate platform revenue
+wallet), and model external provider cash with a non-wallet clearing account. `correctException()`
+still throws `manual_review_required`; no reconciliation path writes balances.
+
+### 2. Legitimately funded cycle and post-release refusal
+
+Funding used the real funding service (`createTopUp` + `creditTopUp`, local test provider,
+TEST-classified database), not a direct balance patch. The order is the real 155,000-kobo checkout
+(subtotal 4,951 + Lagos delivery 150,000 + 1% escrow 49), paid from the wallet, released through
+`completeOrder`.
+
+| step | buyer available/held | seller available/held | SYSTEM available |
+|---|---|---|---|
+| after funding 175,000 | 175,000 / 0 | 0 / 0 | -1,575,000 |
+| after wallet payment | 20,000 / 155,000 | 0 / 155,000 | -1,575,000 |
+| after release | 20,000 / 0 | 154,456 / 0 | -1,574,456 (+544 cut) |
+| post-release partial refund 55,000 | refused 409 `refund_conflict` | unchanged | unchanged |
+
+The refusal left `refundedKobo = 0`, zero `Refund` rows, zero `REFUND-` journals, the escrow still
+`released`, the payment `COMPLETED` and every wallet unchanged. A full-refund attempt and a retry
+with the same idempotency key were refused identically. This is the specified refusal behaviour, not
+a completed refund: the platform share is BLOCKED by the account model above.
+
+**Recovery that existing policy does support** was proven against an open escrow: partial 55,000 then
+remaining 100,000 credited the buyer exactly (0/155,000 -> 55,000/100,000 -> 155,000/0), reduced the
+seller's held balance to zero, left SYSTEM untouched, created two balanced refund journals and
+closed the escrow (`refunded`) and order (`refunded`). Duplicate requests, an over-remaining amount,
+an unpaid order, two concurrent refunds with different keys (one 409 `refund_conflict`) and two
+concurrent requests with the same key (one settlement, two idempotent responses) all left exact
+balances and no duplicate journal.
+
+### 3. Refund allocation defect fixed
+
+`refundPayment` previously computed the seller/platform split independently for each request:
+`floor(payable * requested / total)` and `requested - that`. Over 55,000 + 100,000 the seller share
+summed to 154,455 against a 154,456 payable and the platform share to 545 against a 544 cut — a
+1-kobo over-recovery that would make the last post-release refund fail even on a funded platform.
+`allocateRefundShares` now allocates the *increment of each cumulative share*, so a fully refunded
+order sums exactly to the released payable and platform cut (verified: 54,806 + 99,650 = 154,456;
+194 + 350 = 544; 3-way split also exact). Duplicate-key concurrency now returns the winner's result
+instead of surfacing a Prisma P2002.
+
+
+### 4. Notification outbox (`notifyVendorOwner` inside the payment transaction)
+
+The old vendor notification looked up the vendor with the **global** Prisma client while the payment
+transaction held its connection. With `connection_limit=1` that waits on itself and the payment died
+at Prisma's 5 s transaction limit (P2028). Now `updateOrderStatus(vendor_notified)` writes a
+`NotificationIntent` (`order.paid.vendor`) in the same transaction through the transaction client;
+the worker's `processIntents` delivers it through the notification engine (IN_APP feed) with a
+dedupe key and lease-token fencing. No provider call or unrelated query runs inside the payment
+transaction.
+
+Verified by `scripts/wallet-notification-outbox-acceptance.ts` (**12/12 PASS**) with
+`connection_limit=1`:
+
+- the real wallet payment committed (`paymentStatus paid`, one escrow, one delivery) — no P2028;
+- exactly one PENDING intent addressed to the vendor owner; no feed row before the worker ran;
+- a synthetic intent with a missing recipient failed and retried while the committed payment and
+  escrow stayed untouched (`lastError` recorded; no silent swallow);
+- the worker delivered one SENT notification and one feed row, marked the intent PROCESSED;
+- replaying a delivered intent and repeating `confirmPayment` produced no second feed row;
+- a rolled-back payment (insufficient wallet) and a forced-rollback status transaction left zero
+  intents and no notification;
+- cleanup `leftovers: 0`, SYSTEM restored, `reconcile()` 0 issues, `wallet-reconcile` CLEAN.
+
+### 5. Checkout expiry scheduling
+
+`expireAbandonedCheckouts` is now a durable BullMQ schedule (`checkout-expiry`, job `expire`) on the
+authenticated background worker, not a direct function call:
+
+- `lib/infra/queue.ts` new queue `checkout-expiry`; `lib/infra/schedules.ts` registers it with
+  `attempts: 3`, exponential backoff 5 s and `removeOnComplete/removeOnFail` retention.
+- `scripts/infra-worker.ts` consumes it with concurrency 1, a per-process overlap guard, bounded
+  batch (`CHECKOUT_EXPIRY_BATCH`, default 25, max 100), structured `job.processed` counters
+  (`inspected/expired/skipped/batch`) and a `checkout.expired` summary. The service still locks
+  Payment rows before Order rows, so even two sweeps cannot race a payment or expire twice.
+- No API route calls the sweep (checked by scanning `app/api`); there is still no unauthenticated
+  cleanup endpoint.
+
+Scheduler evidence (`scripts/wallet-checkout-expiry-scheduler-acceptance.ts`, **9/9 PASS**): a real
+worker registered the schedule in Valkey as `checkout-expiry:ok` with `every 30000ms, attempts 3,
+backoff {type: exponential, delay: 5000}`; a scheduled tick ran with
+`inspected 1, expired 1, skipped 0, batch 5`; the order became `cancelled`, stock `3/0`, one
+`order.expired` audit and one terminal status path; a second tick was idempotent; four unrelated
+abandoned fixtures were unchanged. The acceptance job uses the service's existing bounded `orderIds`
+scope so it cannot expire those prior evidence fixtures; production leaves the scope unset and
+sweeps globally.
+
+**Production configuration (not deployed):** run `scripts/infra-worker.ts` under the worker
+container/supervisor with `VALKEY_URL` and the production `QUEUE_PREFIX` (default `nd`). Defaults:
+checkout expiry every 60 s (`CHECKOUT_EXPIRY_INTERVAL_MS`, min 30 s), batch 25
+(`CHECKOUT_EXPIRY_BATCH`), notification/search/drive schedules as before. `INFRA_WORKER_SCHEDULES`
+and `CHECKOUT_EXPIRY_ACCEPTANCE_ORDER_IDS` are isolation-only knobs and must be **unset** in
+production. No production worker configuration file exists in the repository yet; this is a
+remaining deployment task, not a deployed change.
+
+### 6. Funding webhooks (mocked provider integration)
+
+`scripts/payments-funding-webhook-acceptance.ts` (**24/24 PASS**) is a **MOCKED INTEGRATION
+ACCEPTANCE**: every fetch is intercepted; any non-Paystack/Flutterwave URL aborts, so no real
+provider call occurred. Synthetic `sk_test_*`/`FLWSECK_TEST*` secrets and a synthetic webhook hash
+were used only in-process.
+
+Verified for order funding: real initiation records one PENDING payment with the server's amount,
+currency and reference; a valid paystack HMAC success is verified through the mocked provider verify
+and credits escrow once; duplicate and delayed webhooks are no-ops; amount and currency mismatches
+and a declined verification fail the attempt, release stock and create no escrow; a provider timeout
+leaves the payment PENDING and the webhook `failed`, and retrying the same event after recovery
+completes exactly once; a success followed by a late failure stays COMPLETED; a failure followed by a
+success stays terminally FAILED; an invalid signature is 401, an unknown reference is 404, and a
+payload naming another customer/vendor cannot redirect the credit. Flutterwave's wrong hash is
+rejected and a signed success completes.
+
+Wallet top-up funding was verified at the authoritative service boundary (`createTopUp` /
+`creditTopUp` / `failTopUp`): intended wallet only, duplicate replay, amount/currency mismatch,
+failed top-up, unknown reference and two concurrent confirmations crediting once, with a balanced
+journal. **Gap:** no provider-initiated top-up checkout or top-up webhook route exists; the route
+returns `url: null, "Sandbox checkout is not wired yet"` for paystack/flutterwave and nothing calls
+`creditTopUp` from a provider webhook. Real provider sandbox: **BLOCKED** (no credentials, no
+provider calls).
+
+**Gap found, not repaired:** the external-payment branch increments SYSTEM `availableKobo` while
+posting a SYSTEM **DEBIT** leg (plus a vendor CREDIT). Each successful external payment therefore
+leaves SYSTEM's projection 2× the amount away from its journal; four mocked successes produced
+620,000 kobo of this gap (`SYSTEM -1,400,000 -> -820,000`, journal opposite). This is the same
+overloaded/external-clearing account design problem as §1 and must be resolved before live provider
+money; cleanup removes the fixtures and restores SYSTEM exactly.
+
+
+### 7. Payout lifecycle inspection
+
+`scripts/payout-lifecycle-inspection.ts` (**8/8 inspection PASS**) establishes what exists:
+
+- Manual admin settlement exists: `createPayout` builds a PENDING row from paid orders in a period;
+  `markPayoutPaid` claims PENDING/APPROVED atomically, conditionally debits vendor available and
+  credits SYSTEM clearing in one transaction. Both call `assertLiveFinancialOperations`.
+- Provider payout lifecycle does **not** exist. `Payout` has only
+  `id, vendorId, amountKobo, status, reference, periodStart, periodEnd, createdAt, paidAt`; missing
+  `provider, providerReference, providerStatus, currency, requestedBy, approvedBy, reservationId,
+  attemptedAt, confirmedAt, failureCode, idempotencyKey, bankAccountReference`. Statuses are
+  `PENDING/APPROVED/PAID/REJECTED`; there is no SUBMITTED/PROVIDER_PENDING/CONFIRMED/DEFINITIVE_FAILURE.
+- Creation does not reserve vendor funds; it also ignores prior payouts, refunded/partially refunded
+  orders and overlapping periods. There is no provider submission, callback, ambiguous-timeout
+  policy or reconciliation.
+- On the TEST acceptance database both creation and settlement (including two concurrent calls)
+  returned 403 `test_funds_boundary`; payout count stayed 0, the probed vendor wallet stayed 0/0.
+
+Payout request -> eligibility -> atomic reservation -> provider submission -> pending/confirmed/
+definitive failure -> reconciliation is **BLOCKED** by missing schema and policy. Nothing was
+invented and no live payout was attempted.
+
+### 8. Final acceptance
+
+- `npx tsc --noEmit` -> exit 0.
+- `npm run build` -> exit 0 (production build completed).
+- `DATABASE_URL=<acceptance URL derived from .env> RECONCILE_DB=naijadeals_wallet_acceptance npx tsx scripts/wallet-reconcile.ts`
+  -> `{"status":"CLEAN","wallets":17,"openRides":8,"openEscrows":0,"unattributedRides":0,"unattributedHolds":0,"mismatches":0,"duplicateIdentities":0}`.
+- In-process `reconcile()` after every suite: 0 issues; totals `creditKobo = debitKobo = 2,640,000`,
+  32 entries.
+- `npx tsx scripts/wallet-spend-concurrency-acceptance.ts` -> **PASS 78/78**.
+- `npx tsx scripts/wallet-partial-recovery-acceptance.ts` -> **PASS 13/13**.
+- `npx tsx scripts/wallet-notification-outbox-acceptance.ts` -> **PASS 12/12**.
+- `npx tsx scripts/wallet-checkout-expiry-scheduler-acceptance.ts` -> **PASS 9/9** (real Valkey
+  schedule and worker).
+- `npx tsx scripts/wallet-post-release-refund-acceptance.ts` -> **PASS 20/20**.
+- `npx tsx scripts/payments-funding-webhook-acceptance.ts` -> **PASS 24/24** (mocked provider only).
+- `npx tsx scripts/payout-lifecycle-inspection.ts` -> **PASS (inspection) 8/8**.
+- Cleanup: every suite reported `leftovers: 0`; acceptance DB returned to 17 wallets, 8 open rides,
+  0 open escrows, SYSTEM `-1,400,000 / 1,240,000`, 0 duplicate identities. The 12 pre-existing
+  `wc-spend-*` users are the deliberate prior evidence fixtures; the new suites leave none.
+- The concurrency suite's cleanup now also deletes its own `NotificationIntent` rows (the vendor
+  outbox is new); the 4 orphan intents from its first post-change run were removed as fixture
+  cleanup only.
+
+### 9. One-time SYSTEM test repair — cause and evidence
+
+Earlier in this phase the first cleanup implementation deleted its wallet journals without reversing
+the shared SYSTEM projection. SYSTEM drifted to `-7,697,824 available / 3,720,000 held` while the
+ledger net stayed `-160,000`; `wallet-reconcile` reported REVIEW. Applying the shared invariant
+(`available = ledgerNet - open counterparty holds`, `held = open holds`) restored the pre-run
+`-1,400,000 / 1,240,000` and reconcile returned CLEAN. The committed cleanup now computes and
+reverses the exact stored SYSTEM effect before deleting its journals. **Direct balance repair is a
+one-time test-fixture recovery, not a production method.** Production corrections require an
+operator-reviewed `LedgerAdjustment` with both books and an audit trail; `correctException()` still
+refuses automatic correction.
+
+### 10. Remaining gaps
+
+- Post-release refunds of the platform share are BLOCKED by the SYSTEM overloaded-account model.
+  Needs a dedicated funding/equity account or separate platform revenue wallet (and an external
+  clearing account for provider cash); no direct balance patch is acceptable.
+- External provider escrow credits SYSTEM available against its journal (2× projection gap). This
+  affects real Paystack/Flutterwave payments and must be fixed before live money.
+- Top-up provider initiation and a top-up webhook route are not implemented.
+- Provider payout lifecycle (request, reservation, submission, confirmation/failure, reconciliation)
+  is not implemented; the exact missing schema/policy is listed in §7.
+- Release after a partial refund is still unaddressed: `completeOrder` releases `escrow.amountKobo`
+  while a partial refund has already reduced the held amount.
+- Real provider sandbox execution remains BLOCKED: no sandbox credentials were present and no
+  provider call was made.
+- The background worker must run for outbox delivery and checkout expiry; no production worker
+  service definition exists in the repository (configuration documented in §5, not deployed).
+
+### Commits
+
+- `b9e7e0c` — cumulative refund allocation, duplicate-key result return, durable vendor
+  notification outbox, checkout-expiry schedule/worker wiring.
+- `5efc2db` — five acceptance/inspection suites and the contention-suite notification-intent
+  cleanup.
+- This handoff section is a separate local commit on `naijashop-marketplace`. Local only; no push
+  or deployment. GitHub preservation remote: not pushed in this increment (no push authorization and
+  no deployment review of this branch).
