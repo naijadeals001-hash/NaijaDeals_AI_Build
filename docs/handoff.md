@@ -3240,22 +3240,24 @@ production database, real charge, payout, push or deployment was touched.
 ### Commands and outcomes
 
 - `npx tsc --noEmit` -> exit 0.
-- `npx tsx scripts/wallet-spend-concurrency-acceptance.ts` -> PASS 31/31 checks.
-  - Cross-service: drive won a 155,000-kobo fare hold (`RIDE-cmwcfu37i0001v4t4tznk73p0-HOLD`);
+- `npx tsx scripts/wallet-spend-concurrency-acceptance.ts` -> PASS 33/33 checks.
+  - Cross-service: drive won a 155,000-kobo fare hold (`RIDE-cmwcfxirq0001v4cc34e7issn-HOLD`);
     shop `confirmPayment` was rejected 402 `insufficient_wallet` ("NaijaPay wallet balance is
     insufficient for this order.").
-  - Overlap: 64 ms; separate worker/backend PIDs 67144/59552 and 39504/46004.
+  - Overlap: 64 ms; separate worker/backend PIDs 15996/65400 and 79832/69812; both workers
+    independently reported `naijadeals_wallet_acceptance` and the same customer wallet id.
   - Customer: 0/0 -> funded 175,000 available/0 held -> 20,000 available/155,000 held after the race.
   - Shop loser retained only its deliberate checkout fixture: order `payment_pending`, payment
     `PENDING`, zero escrow, zero delivery, stock still reserved (5 quantity/1 reserved), and no
     wallet journal.
-  - Exactly one hold journal existed; every journal balances; NGN ledger net 0; 14 wallets reconciled;
+  - Exactly one hold journal existed; every journal balances; NGN ledger net 0; 16 wallets reconciled;
     `wallet-reconcile` CLEAN.
-  - Same-rider: two `requestRide` calls overlapped 67 ms (backend PIDs 66696/87480); exactly one ride
-    (`NDR-CFU4KU-404F23`) committed, the other returned 409 `active_ride_exists`; one hold journal,
-    no duplicate posting, wallet 20,000/155,000, reconcile CLEAN.
+  - Same-rider: two `requestRide` calls overlapped 36 ms (backend PIDs 78004/51924, same rider and
+    wallet); exactly one ride (`NDR-CFXK1V-DDFF59`) committed, the other returned 409
+    `active_ride_exists`; one hold journal, no duplicate posting, wallet 20,000/155,000, reconcile
+    CLEAN.
 - `DATABASE_URL=<acceptance URL derived from .env> RECONCILE_DB=naijadeals_wallet_acceptance npx tsx scripts/wallet-reconcile.ts`
-  -> `{"status":"CLEAN","wallets":15,"openRides":6,"openEscrows":0,"unattributedRides":0,"mismatches":0,"duplicateIdentities":0}`.
+  -> `{"status":"CLEAN","wallets":17,"openRides":8,"openEscrows":0,"unattributedRides":0,"mismatches":0,"duplicateIdentities":0}`.
 
 ### Defect found and fixed
 
@@ -3286,4 +3288,6 @@ Each run creates a new customer, vendor, category, product (subtotal 4,951), car
 two open wallet rides in the isolated acceptance database. Reruns accumulate these; all journals and
 projections reconcile. No cleanup or database reset was performed.
 
-Code commit: `8868df93e124708d3fcf428e7f9b13adf4a328cc`.
+Code commits: `8868df93e124708d3fcf428e7f9b13adf4a328cc` (acceptance suite and reconciliation fix)
+and `c7190b1941d281b813820b3d1cdca6d23c354218` (same-database/wallet identity assertions; final
+33/33 run).
