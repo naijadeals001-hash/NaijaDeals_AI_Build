@@ -90,6 +90,12 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
     return <>{children}</>;
   }
 
+  // NaijaDrive owns its booking-led landing chrome and the driver workspace's
+  // white sidebar. The ecosystem header/sidebar would duplicate both.
+  if (pathname?.startsWith("/naijadrive") || pathname?.startsWith("/driver")) {
+    return <>{children}</>;
+  }
+
   // The storefront and NaijaEats landing use the full-bleed layout; the ecosystem
   // sidebar starts on the remaining inner routes.
   const isHome = pathname === "/" || pathname === "/naijaeats" || pathname === "/naijashop";

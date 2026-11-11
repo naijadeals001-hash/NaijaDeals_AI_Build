@@ -24,9 +24,22 @@ type PlacePickerProps = {
   recentIds?: string[];
   /** The other end of the trip; offered but marked, never silently excluded. */
   counterpartId?: string;
+  /** Compact inline field used by the approved landing booking card. */
+  compact?: boolean;
+  placeholder?: string;
 };
 
-export function PlacePicker({ id, label, value, onChange, accent, recentIds = [], counterpartId }: PlacePickerProps) {
+export function PlacePicker({
+  id,
+  label,
+  value,
+  onChange,
+  accent,
+  recentIds = [],
+  counterpartId,
+  compact = false,
+  placeholder
+}: PlacePickerProps) {
   const selected = useMemo(() => DRIVE_PLACES.find((place) => place.id === value) ?? null, [value]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -132,11 +145,14 @@ export function PlacePicker({ id, label, value, onChange, accent, recentIds = []
 
   return (
     <div ref={rootRef} className="relative">
-      <label htmlFor={id} className="text-xs font-black uppercase tracking-wide text-muted">
+      <label
+        htmlFor={id}
+        className={compact ? "sr-only" : "text-xs font-black uppercase tracking-wide text-muted"}
+      >
         {label}
       </label>
 
-      <div className="relative mt-1">
+      <div className={compact ? "relative" : "relative mt-1"}>
         <span
           aria-hidden="true"
           className={`pointer-events-none absolute left-3 top-1/2 z-10 h-3 w-3 -translate-y-1/2 bg-current rtl:left-auto rtl:right-3 ${accentRing} ${
@@ -160,7 +176,7 @@ export function PlacePicker({ id, label, value, onChange, accent, recentIds = []
           autoComplete="off"
           spellCheck={false}
           value={open ? query : (selected?.label ?? "")}
-          placeholder={selected ? selected.label : "Search a Lagos landmark"}
+          placeholder={placeholder ?? (selected ? selected.label : "Search a Lagos landmark")}
           onChange={(event) => {
             setQuery(event.target.value);
             setActiveIndex(0);
@@ -168,7 +184,11 @@ export function PlacePicker({ id, label, value, onChange, accent, recentIds = []
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          className="min-h-12 w-full rounded-xl border border-border-soft bg-surface-low pl-8 pr-9 text-sm font-semibold outline-none focus:border-primary focus:bg-canvas rtl:pl-9 rtl:pr-8"
+          className={
+            compact
+              ? "min-h-12 w-full rounded-[10px] border border-[#e2e6e3] bg-white pl-9 pr-9 text-[13px] font-semibold text-[#14241b] outline-none placeholder:text-[#7d8a81] focus:border-[#0b5c33] focus:ring-1 focus:ring-[#0b5c33]/25 rtl:pl-9 rtl:pr-8"
+              : "min-h-12 w-full rounded-xl border border-border-soft bg-surface-low pl-8 pr-9 text-sm font-semibold outline-none focus:border-primary focus:bg-canvas rtl:pl-9 rtl:pr-8"
+          }
         />
       </div>
 
