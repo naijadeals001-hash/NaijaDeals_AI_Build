@@ -209,6 +209,8 @@ type WorkerOutput = {
   durationMs: number;
   readyAt: number;
   pid: number;
+  database: string | null;
+  walletId: string | null;
   backendPidBefore: number;
   backendPidAfter: number;
   walletBefore: WalletSnapshot | null;
@@ -233,6 +235,8 @@ function harnessOutput(role: string, kind: string, pid: number, message: string)
     durationMs: 0,
     readyAt: 0,
     pid,
+    database: null,
+    walletId: null,
     backendPidBefore: 0,
     backendPidAfter: 0,
     walletBefore: null,
@@ -484,6 +488,8 @@ async function workerMain() {
       durationMs: endedAt - startedAt,
       readyAt,
       pid: process.pid,
+      database: db[0]?.db ?? expectedDb,
+      walletId,
       backendPidBefore,
       backendPidAfter,
       walletBefore: snapshot(wallet),
@@ -650,6 +656,8 @@ function describeWorker(result: WorkerOutput) {
     startedAt: result.startedAt,
     endedAt: result.endedAt,
     pid: result.pid,
+    database: result.database,
+    walletId: result.walletId,
     backendPid: result.backendPidBefore,
     walletBefore: result.walletBefore,
     walletAfter: result.walletAfter,
@@ -857,6 +865,11 @@ async function main() {
     cross.results.map((result) => `${result.role}:pid=${result.pid}/backend=${result.backendPidBefore}`).join(", ")
   );
   record(
+    "cross-service: both workers targeted the same database and wallet",
+    cross.results.every((result) => result.database === DB && result.walletId === customerWallet.id),
+    cross.results.map((result) => `${result.role}:${result.database}/${result.walletId}`).join(", ")
+  );
+  record(
     "cross-service: exactly one financial operation commits",
     crossSuccesses.length === 1 && crossFailures.length === 1,
     cross.results
@@ -1048,6 +1061,11 @@ async function main() {
     new Set(rideRace.results.map((result) => result.backendPidBefore)).size === rideRace.results.length &&
       rideRace.results.every((result) => result.backendPidBefore > 0),
     rideRace.results.map((result) => `${result.role}:backend=${result.backendPidBefore}`).join(", ")
+  );
+  record(
+    "same-rider: both workers targeted the same database and wallet",
+    rideRace.results.every((result) => result.database === DB && result.walletId === riderWallet.id),
+    rideRace.results.map((result) => `${result.role}:${result.database}/${result.walletId}`).join(", ")
   );
   record(
     "same-rider: exactly one ride commits",
