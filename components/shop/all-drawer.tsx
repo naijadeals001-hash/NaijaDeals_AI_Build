@@ -421,7 +421,7 @@ export function AllDrawer({
       initialFocusRef={closeButtonRef}
       returnFocusRef={returnFocusRef}
     >
-      <header className="shrink-0 bg-[#07351f] px-4 pb-3.5 pt-4 text-white">
+      <div className="shrink-0 bg-[#07351f] px-4 pb-3.5 pt-4 text-white">
         <div className="flex items-start gap-2.5">
           {view === "departments" ? (
             <button
@@ -459,7 +459,7 @@ export function AllDrawer({
             <X className="h-5 w-5" aria-hidden />
           </button>
         </div>
-      </header>
+      </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         {view === "main" ? (

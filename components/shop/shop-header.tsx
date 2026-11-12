@@ -485,8 +485,16 @@ function ShopHeader() {
               <ChevronDown className="h-3 w-3" aria-hidden />
             </button>
 
-            {/* One scrollable row: the rail must stay a fixed height however many departments exist. */}
-            <div className="hidden min-w-0 flex-1 flex-nowrap items-center gap-x-0.5 overflow-x-auto [scrollbar-width:none] xl:flex">
+            {/* One scrollable row: the rail must stay a fixed height however many departments exist.
+                The rail is a named, focusable region so keyboard and screen-reader users can
+                reach the horizontal list and scroll it with the arrow keys. */}
+            <div
+              role="region"
+              aria-label="Marketplace departments"
+              tabIndex={0}
+              data-shop-department-rail
+              className="hidden min-w-0 flex-1 flex-nowrap items-center gap-x-0.5 overflow-x-auto [scrollbar-width:none] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0b5c33] xl:flex"
+            >
               {categories.map((category) => (
                 <Link
                   key={category.id}
