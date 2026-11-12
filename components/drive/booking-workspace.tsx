@@ -29,6 +29,7 @@ import {
 import { SavedPlaces } from "@/components/functional/saved-places";
 import { TripMap } from "./trip-map";
 import {
+  DriveApiError,
   getAllQuotes,
   getPublicRoute,
   getRideReceipt,
@@ -225,16 +226,15 @@ export function BookingWorkspace({
         .catch((caught) => {
           if (cancelled) return;
           setVerification(null);
-          setVerificationError(
-            caught instanceof ApiRequestError
-              ? { code: caught.code, message: caught.message }
-              : {
-                  message:
-                    caught instanceof Error
-                      ? caught.message
-                      : "The pickup code could not be loaded."
-                }
-          );
+          const code =
+            caught instanceof ApiRequestError || caught instanceof DriveApiError
+              ? caught.code
+              : undefined;
+          setVerificationError({
+            code,
+            message:
+              caught instanceof Error ? caught.message : "The pickup code could not be loaded."
+          });
         });
     };
     void load();
