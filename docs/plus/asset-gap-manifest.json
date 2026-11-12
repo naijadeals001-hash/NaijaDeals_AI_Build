@@ -1,0 +1,314 @@
+{
+  "schemaVersion": 1,
+  "kind": "naijashop-catalogue-expansion-batch",
+  "generatedAt": "2026-11-12",
+  "source": {
+    "repository": "C:\\Users\\User\\Documents\\naijadeals.com",
+    "head": "cff0f0a498812c1307ed4892a01505eb87b78b66",
+    "database": "naijadeals_review",
+    "classification": "REVIEW",
+    "audit": {
+      "categories": {
+        "total": 21,
+        "active": 7,
+        "inactive": 14,
+        "isDemoTrue": 21,
+        "isDemoFalse": 0
+      },
+      "products": {
+        "total": 48,
+        "active": 23,
+        "draft": 8,
+        "archived": 17,
+        "isDemoTrue": 48,
+        "isDemoFalse": 0
+      },
+      "metadataMismatches": 0,
+      "taxonomyMismatches": 0,
+      "imageryMismatches": 0,
+      "browserNaturalWidthChecks": 30,
+      "browserNaturalWidthFailures": 0
+    }
+  },
+  "publicationBoundary": {
+    "publisher": "Control Center catalogue workflow",
+    "thisAgentPublishesRows": false,
+    "demoVendorSlug": "demo-catalogue-review",
+    "productDefaults": {
+      "status": "ACTIVE",
+      "isDemo": true,
+      "isSample": false,
+      "saleMode": "escrow",
+      "countryCode": "NG"
+    },
+    "priceNote": "Prices are demonstration prices in integer kobo for owner review, not market quotes.",
+    "stockNote": "Inventory quantity remains a Control Center demo setting. This batch does not claim real stock.",
+    "assetNote": "Only existing assets recorded in scripts/image-registry.json are used. No image generation was performed."
+  },
+  "departments": [
+    {
+      "action": "create",
+      "name": "Power & Solar",
+      "slug": "power-solar",
+      "description": "DEMO department — demonstration power and solar inventory for owner review, not live supply.",
+      "imageUrl": "/generated/shop/category-power-solar.webp",
+      "imageAlt": "Solar panel, portable power station and power bank on a pale blue surface",
+      "sortOrder": 30,
+      "isActive": true,
+      "isDemo": true,
+      "provenance": {
+        "registryId": "shop-category-power-solar",
+        "servedDimensions": "1024x576"
+      }
+    },
+    {
+      "action": "create",
+      "name": "Gaming",
+      "slug": "gaming",
+      "description": "DEMO department — demonstration gaming inventory for owner review, not live supply.",
+      "imageUrl": "/generated/shop/category-gaming.webp",
+      "imageAlt": "Game controller, mechanical keyboard and headset on a dark surface",
+      "sortOrder": 31,
+      "isActive": true,
+      "isDemo": true,
+      "provenance": {
+        "registryId": "shop-category-gaming",
+        "servedDimensions": "1024x576"
+      }
+    },
+    {
+      "action": "update-image-alt",
+      "name": "Groceries & Household Essentials",
+      "slug": "groceries-household",
+      "description": "DEMO department — demonstration groceries for owner review, not live supply.",
+      "imageUrl": "/generated/shop/category-groceries.webp",
+      "imageAlt": "Basket of fresh tomatoes, peppers, leafy greens and onions",
+      "sortOrder": 20,
+      "isActive": true,
+      "isDemo": true,
+      "note": "The department already exists. Only the null imageAlt backfill is proposed.",
+      "provenance": {
+        "registryId": "shop-category-groceries",
+        "servedDimensions": "1024x1066"
+      }
+    }
+  ],
+  "products": [
+    {
+      "id": "batch-groceries-red-bell-peppers",
+      "name": "DEMO — Red bell peppers, 500g",
+      "slug": "demo-red-bell-peppers-500g",
+      "departmentSlug": "groceries-household",
+      "priceKobo": 180000,
+      "currency": "NGN",
+      "imageUrl": "/generated/shop/product-red-bell-pepper-500g.webp",
+      "imageAlt": "Demonstration product image of red bell peppers",
+      "description": "Demonstration listing. Representative produce image; grade, pack weight and availability are illustrative.",
+      "provenance": {
+        "registryId": "shop-product-red-bell-pepper-500g",
+        "registryStatus": "generated",
+        "qualityReview": "pending-owner-review",
+        "model": "gpt-image-2-text-to-image",
+        "generatedAt": "2026-11-08T23:29:28.373Z",
+        "taskId": "ba8feb3b0fe357deec67a6087c708f60",
+        "sourcePng": "public/generated/shop/product-red-bell-pepper-500g.png",
+        "servedWebp": "public/generated/shop/product-red-bell-pepper-500g.webp",
+        "servedDimensions": "1024x768",
+        "subjectCheck": "Three glossy red bell peppers with green stems on a grey studio background; matches the item and the registry prompt."
+      }
+    },
+    {
+      "id": "batch-groceries-diced-onions",
+      "name": "DEMO — Diced onions, 500g",
+      "slug": "demo-diced-onions-500g",
+      "departmentSlug": "groceries-household",
+      "priceKobo": 220000,
+      "currency": "NGN",
+      "imageUrl": "/generated/shop/product-diced-onions-500g.webp",
+      "imageAlt": "Demonstration product image of diced onions",
+      "description": "Demonstration listing. Representative produce image; grade, pack weight and availability are illustrative.",
+      "provenance": {
+        "registryId": "shop-product-diced-onions-500g",
+        "registryStatus": "generated",
+        "qualityReview": "pending-owner-review",
+        "model": "gpt-image-2-text-to-image",
+        "generatedAt": "2026-11-08T23:30:29.512Z",
+        "taskId": "61fe27a5390eb9d84a6faebf3b4db08b",
+        "sourcePng": "public/generated/shop/product-diced-onions-500g.png",
+        "servedWebp": "public/generated/shop/product-diced-onions-500g.webp",
+        "servedDimensions": "1024x1024",
+        "subjectCheck": "Diced white onions in a bowl with a whole onion beside them; matches the item and the registry prompt."
+      }
+    },
+    {
+      "id": "batch-groceries-green-beans",
+      "name": "DEMO — Green beans, 500g",
+      "slug": "demo-green-beans-500g",
+      "departmentSlug": "groceries-household",
+      "priceKobo": 150000,
+      "currency": "NGN",
+      "imageUrl": "/generated/shop/product-green-beans-500g.webp",
+      "imageAlt": "Demonstration product image of green beans",
+      "description": "Demonstration listing. Representative produce image; grade, pack weight and availability are illustrative.",
+      "provenance": {
+        "registryId": "shop-product-green-beans-500g",
+        "registryStatus": "generated",
+        "qualityReview": "pending-owner-review",
+        "model": "gpt-image-2-text-to-image",
+        "generatedAt": "2026-11-08T23:31:30.639Z",
+        "taskId": "1a0f8e34a4bade4d4b6a1933d6f33b8c",
+        "sourcePng": "public/generated/shop/product-green-beans-500g.png",
+        "servedWebp": "public/generated/shop/product-green-beans-500g.webp",
+        "servedDimensions": "1024x1024",
+        "subjectCheck": "Heap of trimmed green beans on a grey studio background; matches the item and the registry prompt."
+      }
+    },
+    {
+      "id": "batch-power-solar-inverter",
+      "name": "DEMO — Solar power inverter",
+      "slug": "demo-solar-power-inverter",
+      "departmentSlug": "power-solar",
+      "priceKobo": 28500000,
+      "currency": "NGN",
+      "imageUrl": "/generated/shop/product-solar-power-inverter.webp",
+      "imageAlt": "Demonstration product image of a solar power inverter with an LCD panel and power outlets",
+      "description": "Demonstration listing. Representative inverter image; capacity, socket configuration and included accessories are illustrative and not a seller specification.",
+      "provenance": {
+        "registryId": "shop-product-solar-power-inverter",
+        "registryStatus": "generated",
+        "qualityReview": "pending-owner-review",
+        "model": "gpt-image-2-text-to-image",
+        "generatedAt": "2026-11-08T23:32:31.756Z",
+        "taskId": "556a6b1d2fc7c8695371dca533b5595b",
+        "sourcePng": "public/generated/shop/product-solar-power-inverter.png",
+        "servedWebp": "public/generated/shop/product-solar-power-inverter.webp",
+        "servedDimensions": "1024x820",
+        "subjectCheck": "Grey inverter unit with LCD panel, sockets and USB ports; matches the item and the registry prompt."
+      }
+    },
+    {
+      "id": "batch-power-solar-panel-array",
+      "name": "DEMO — Rooftop solar panel array with mounting frame",
+      "slug": "demo-rooftop-solar-panel-array",
+      "departmentSlug": "power-solar",
+      "priceKobo": 42000000,
+      "currency": "NGN",
+      "imageUrl": "/generated/shop/product-rooftop-solar-panel-array.webp",
+      "imageAlt": "Demonstration product image of three solar panels on a mounting frame",
+      "description": "Demonstration listing. Representative solar array image; panel count and mounting configuration are illustrative and not a seller specification.",
+      "provenance": {
+        "registryId": "shop-product-rooftop-solar-panel-array",
+        "registryStatus": "generated",
+        "qualityReview": "pending-owner-review",
+        "model": "gpt-image-2-text-to-image",
+        "generatedAt": "2026-11-08T23:34:33.916Z",
+        "taskId": "baea78f062e4938687fec6c1e559652f",
+        "sourcePng": "public/generated/shop/product-rooftop-solar-panel-array.png",
+        "servedWebp": "public/generated/shop/product-rooftop-solar-panel-array.webp",
+        "servedDimensions": "1024x682",
+        "subjectCheck": "Three solar panels on an aluminium mounting frame; matches the item and the registry prompt."
+      }
+    },
+    {
+      "id": "batch-power-solar-charging-station",
+      "name": "DEMO — Portable solar battery charging station",
+      "slug": "demo-portable-solar-charging-station",
+      "departmentSlug": "power-solar",
+      "priceKobo": 19500000,
+      "currency": "NGN",
+      "imageUrl": "/generated/shop/product-solar-battery-charging-station.webp",
+      "imageAlt": "Demonstration product image of a portable battery station with two fold-out solar panels",
+      "description": "Demonstration listing. Representative portable battery image; capacity, ports and included panels are illustrative and not a seller specification.",
+      "provenance": {
+        "registryId": "shop-product-solar-battery-charging-station",
+        "registryStatus": "generated",
+        "qualityReview": "pending-owner-review",
+        "model": "gpt-image-2-text-to-image",
+        "generatedAt": "2026-11-08T23:35:35.097Z",
+        "taskId": "d77faf6dbafaa6e61d0cadb52b259bc6",
+        "sourcePng": "public/generated/shop/product-solar-battery-charging-station.png",
+        "servedWebp": "public/generated/shop/product-solar-battery-charging-station.webp",
+        "servedDimensions": "1024x682",
+        "subjectCheck": "Portable battery station with carry handle, two fold-out solar panels and USB ports; matches the item and the registry prompt."
+      }
+    },
+    {
+      "id": "batch-gaming-controller-pair",
+      "name": "DEMO — Wireless game controllers, black and white pair",
+      "slug": "demo-wireless-game-controllers-pair",
+      "departmentSlug": "gaming",
+      "priceKobo": 5200000,
+      "currency": "NGN",
+      "imageUrl": "/generated/shop/product-ps4-and-xbox-one-controllers.webp",
+      "imageAlt": "Demonstration product image of two wireless game controllers, one black and one white",
+      "description": "Demonstration listing. Representative controller image; connectivity, compatibility and battery life are illustrative and not a seller specification.",
+      "provenance": {
+        "registryId": "shop-product-ps4-and-xbox-one-controllers",
+        "registryStatus": "generated",
+        "qualityReview": "pending-owner-review",
+        "model": "gpt-image-2-text-to-image",
+        "generatedAt": "2026-11-08T23:36:36.149Z",
+        "taskId": "025772a02ff543249f3ea69dfc20872e",
+        "sourcePng": "public/generated/shop/product-ps4-and-xbox-one-controllers.png",
+        "servedWebp": "public/generated/shop/product-ps4-and-xbox-one-controllers.webp",
+        "servedDimensions": "1024x682",
+        "subjectCheck": "Two generic unbranded wireless controllers in black and white; the stated pair matches the image. The registry filename mentions console families, so the product name deliberately avoids compatibility claims."
+      }
+    },
+    {
+      "id": "batch-gaming-controller-coloured-buttons",
+      "name": "DEMO — Game controller with coloured buttons",
+      "slug": "demo-game-controller-coloured-buttons",
+      "departmentSlug": "gaming",
+      "priceKobo": 2900000,
+      "currency": "NGN",
+      "imageUrl": "/generated/shop/product-xbox-360-controller.webp",
+      "imageAlt": "Demonstration product image of a white and grey game controller with coloured action buttons",
+      "description": "Demonstration listing. Representative controller image; connectivity, compatibility and button layout are illustrative and not a seller specification.",
+      "provenance": {
+        "registryId": "shop-product-xbox-360-controller",
+        "registryStatus": "generated",
+        "qualityReview": "pending-owner-review",
+        "model": "gpt-image-2-text-to-image",
+        "generatedAt": "2026-11-08T23:39:39.921Z",
+        "taskId": "c7568d139e4acfa26f8845c216b8e857",
+        "sourcePng": "public/generated/shop/product-xbox-360-controller.png",
+        "servedWebp": "public/generated/shop/product-xbox-360-controller.webp",
+        "servedDimensions": "1024x682",
+        "subjectCheck": "White and grey generic unbranded controller with coloured face buttons; product name avoids the registry filename's console-family wording."
+      }
+    }
+  ],
+  "gaps": [
+    {
+      "id": "grocery-household-cleaning-supplies",
+      "departmentSlug": "groceries-household",
+      "intendedProduct": "DEMO — Household cleaning supplies",
+      "missingSubject": "Multi-surface household cleaner bottle with a cloth or sponge set",
+      "reason": "The department covers Household Essentials, but the registry contains only produce product images. No approved household-cleaning product asset exists.",
+      "existingNearMatch": null,
+      "recommendedAction": "Prepare an original image through the approved Kie.ai workflow after explicit generation authorization; do not substitute generic stock imagery.",
+      "blockedBy": "No approved asset in scripts/image-registry.json and no generation authorization."
+    },
+    {
+      "id": "gaming-headset",
+      "departmentSlug": "gaming",
+      "intendedProduct": "DEMO — Gaming headset",
+      "missingSubject": "Over-ear gaming headset with boom microphone",
+      "reason": "The Gaming department has controller assets only. The headset in category-gaming.webp is part of a department banner composition, not a standalone product image.",
+      "existingNearMatch": "/generated/shop/category-gaming.webp",
+      "recommendedAction": "Prepare a standalone product image through the approved Kie.ai workflow after explicit generation authorization; do not crop the department banner into a product image.",
+      "blockedBy": "No standalone approved product asset and no generation authorization."
+    },
+    {
+      "id": "gaming-console",
+      "departmentSlug": "gaming",
+      "intendedProduct": "DEMO — Game console",
+      "missingSubject": "Home game console with one controller",
+      "reason": "No console asset exists in scripts/image-registry.json or public/generated/shop.",
+      "existingNearMatch": null,
+      "recommendedAction": "Prepare an original image through the approved Kie.ai workflow after explicit generation authorization; do not reuse a controller image as a console.",
+      "blockedBy": "No approved asset in scripts/image-registry.json and no generation authorization."
+    }
+  ]
+}
