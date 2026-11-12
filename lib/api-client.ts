@@ -334,7 +334,10 @@ export type ApiRideVerificationState = {
   attemptsRemaining: number;
   expiresAt: string | null;
   verifiedAt: string | null;
+  /** Only the one-time pre-enforcement assignment marker can set this. */
   legacy: boolean;
+  /** A post-enforcement assignment is missing its protected record; support must act. */
+  recoveryRequired: boolean;
 };
 
 export type ApiRideVerificationSupportRow = {
@@ -537,10 +540,19 @@ export const apiClient = {
   adminRideVerificationQueue: () =>
     requestJson<{ rides: ApiRideVerificationSupportRow[] }>("/api/admin/rides/verification"),
   adminRideVerificationAction: (id: string, action: "reset" | "verify", reason: string) =>
-    requestJson<{ rideId: string; action: string; verification: ApiRideVerificationState }>(
-      `/api/drive/rides/${id}/verification/support`,
-      { method: "POST", body: JSON.stringify({ action, reason }) }
-    )
+    requestJson<{
+      rideId: string;
+      action: string;
+      verification: ApiRideVerificationState;
+      rateLimit: {
+        windowSeconds: number;
+        rideActionsRemaining: number;
+        operatorActionsRemaining: number;
+      };
+    }>(`/api/drive/rides/${id}/verification/support`, {
+      method: "POST",
+      body: JSON.stringify({ action, reason })
+    })
 };
 
 export function koboToNaira(value: ApiMoney, currency = "NGN") {

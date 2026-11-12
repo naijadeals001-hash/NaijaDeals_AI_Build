@@ -118,6 +118,7 @@ export function BookingWorkspace({
   const [error, setError] = useState("");
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [verification, setVerification] = useState<RideVerification | null>(null);
+  const [verificationError, setVerificationError] = useState<{ code?: string; message: string } | null>(null);
   const [verificationTouched, setVerificationTouched] = useState(0);
 
   const pickupPlace = useMemo(() => findPlace(pickup), [pickup]);
@@ -209,16 +210,31 @@ export function BookingWorkspace({
   useEffect(() => {
     if (!activeRide || activeRide.status === "requested" || !viewer) {
       setVerification(null);
+      setVerificationError(null);
       return;
     }
     let cancelled = false;
     const load = () => {
       getRideVerification(activeRide.id)
         .then((result) => {
-          if (!cancelled) setVerification(result);
+          if (!cancelled) {
+            setVerification(result);
+            setVerificationError(null);
+          }
         })
-        .catch(() => {
-          if (!cancelled) setVerification(null);
+        .catch((caught) => {
+          if (cancelled) return;
+          setVerification(null);
+          setVerificationError(
+            caught instanceof ApiRequestError
+              ? { code: caught.code, message: caught.message }
+              : {
+                  message:
+                    caught instanceof Error
+                      ? caught.message
+                      : "The pickup code could not be loaded."
+                }
+          );
         });
     };
     void load();
@@ -649,6 +665,7 @@ export function BookingWorkspace({
           onCancel={() => void cancelRide(activeRide)}
           onRefresh={() => void loadRides()}
           verification={verification}
+          verificationError={verificationError}
           onVerificationChanged={() => setVerificationTouched((current) => current + 1)}
         />
       ) : (
@@ -718,6 +735,7 @@ function ActiveTripPanel({
   onCancel,
   onRefresh,
   verification,
+  verificationError,
   onVerificationChanged
 }: {
   ride: ApiRide;
@@ -727,6 +745,7 @@ function ActiveTripPanel({
   onCancel: () => void;
   onRefresh: () => void;
   verification: RideVerification | null;
+  verificationError: { code?: string; message: string } | null;
   onVerificationChanged: () => void;
 }) {
   const [tracking, setTracking] = useState<DriveTracking | null>(null);
@@ -736,6 +755,20 @@ function ActiveTripPanel({
   const [resetBusy, setResetBusy] = useState(false);
   const [resetError, setResetError] = useState("");
   const lastCapturedRef = useRef<string | null>(null);
+  const recoveryNotice = (
+    <>
+      <p role="status" className="mt-1 text-[11.5px] leading-5 text-[#b91c1c]">
+        The protected pickup-code record is missing for this trip. The driver cannot start until
+        NaijaDrive support issues a replacement code.
+      </p>
+      <Link
+        href="/naijadrive/help#support"
+        className="mt-1.5 inline-flex min-h-9 items-center rounded-lg border border-[#b91c1c]/30 bg-[#fee2e2] px-3 text-[10.5px] font-extrabold text-[#b91c1c]"
+      >
+        Contact NaijaDrive support
+      </Link>
+    </>
+  );
 
   const shouldTrack = ["driver_assigned", "driver_arriving", "in_progress"].includes(ride.status);
 
@@ -884,10 +917,14 @@ function ActiveTripPanel({
                     : ""}
                 </p>
               </>
+            ) : verificationError?.code === "verification_record_missing" ? (
+              recoveryNotice
+            ) : verification?.recoveryRequired ? (
+              recoveryNotice
             ) : verification?.legacy ? (
               <p className="mt-1 text-[11.5px] leading-5 text-[#5d6d64]">
-                This trip was matched before protected pickup verification was introduced, so no pickup
-                code is required. NaijaDrive support can still issue one if needed.
+                This trip was matched before protected pickup verification was enforced, so that
+                assignment has no pickup code. NaijaDrive support can still issue one if needed.
               </p>
             ) : verification?.expired || verification?.locked ? (
               <>

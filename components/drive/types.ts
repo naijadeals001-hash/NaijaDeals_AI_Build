@@ -75,8 +75,10 @@ export type DriverVerification = {
   attemptsRemaining: number;
   expiresAt: string | null;
   verifiedAt: string | null;
-  /** The ride was assigned before protected pickup verification existed. */
+  /** Only the one-time pre-enforcement assignment marker can set this. */
   legacy: boolean;
+  /** A post-enforcement assignment lost its protected record; support must issue one. */
+  recoveryRequired: boolean;
 };
 
 export type DriverBoardRide = ApiRide & {
@@ -149,8 +151,10 @@ export type RideVerification = {
   locked: boolean;
   attemptsRemaining: number;
   required: boolean;
-  /** Matched before protected pickup verification existed; no code is required. */
+  /** Matched before protected pickup verification was enforced; no code is required. */
   legacy: boolean;
+  /** The protected record is missing on a post-enforcement assignment; contact support. */
+  recoveryRequired: boolean;
   verifiedAt?: string | null;
 };
 

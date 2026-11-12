@@ -7,6 +7,13 @@
  *   - the rider-only endpoint returns the raw 4-digit code; driver endpoints never do;
  *   - wrong code, expiry, attempt lock, cooldown, repeated and concurrent submissions;
  *   - the authoritative start transition refuses an unverified trip;
+ *   - bounded pre-enforcement legacy: only the cutover marker, never a missing row,
+ *     can authorise a start; post-enforcement missing rows fail closed into the
+ *     audited support recovery flow; reassignment/expiry end the exemption;
+ *   - every start records its authorization basis (passenger_code, support_override
+ *     or pre_enforcement_assignment);
+ *   - support reset/verify is RBAC/explicit at the route, reason-bound, audited and
+ *     rate-limited per ride and per operator from durable audit rows;
  *   - audited support reset/verify actions;
  *   - one rating per participant per completed trip, bounds, idempotency, aggregate;
  *   - receipt fare components and cancellation/refund adjustments;
@@ -605,6 +612,18 @@ async function main() {
     "verification_expired"
   );
 
+  await expectError(
+    "support reset requires a reason",
+    () =>
+      drive.overrideRideVerification({
+        adminId: admin.id,
+        rideId: rideB.id,
+        action: "reset",
+        reason: "   "
+      }),
+    400,
+    "invalid_reason"
+  );
   const beforeReset = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideB.id } });
   const reset = await drive.overrideRideVerification({
     adminId: admin.id,
@@ -1127,14 +1146,37 @@ async function main() {
   await start(driverB.user.id, rideSuspended.id);
   await complete(driverB.user.id, rideSuspended.id);
 
-  /* ----------------------------------- M. legacy active-ride transition --- */
+  /* ------------------ M. bounded pre-enforcement compatibility and recovery --- */
+  // Only the enforcement migration writes this marker, and only for rides already
+  // assigned at the cutover. The fixture reproduces that exact database state:
+  // an assigned ride with no protected record and a one-time marker.
+  async function markPreEnforcementAssignment(rideId: string, driverProfileId: string) {
+    const markerAt = new Date(Date.now() - 60 * 60 * 1000);
+    await prisma.ride.update({
+      where: { id: rideId },
+      data: {
+        driverId: driverProfileId,
+        status: "driver_assigned",
+        acceptedAt: new Date(markerAt.getTime() - 5 * 60 * 1000),
+        assignmentExpiresAt: new Date(Date.now() + 30 * 60 * 1000),
+        pickupVerificationLegacyAt: markerAt
+      }
+    });
+    return markerAt;
+  }
+
   const legacyRide = await newRide(riderG.id, "cash");
-  await assign(driverA.user.id, legacyRide.id);
-  await prisma.rideVerification.delete({ where: { rideId: legacyRide.id } });
+  const legacyMarkerAt = await markPreEnforcementAssignment(legacyRide.id, driverA.profile.id);
+  check(
+    "pre-enforcement fixture has the durable marker and no protected record",
+    (await prisma.rideVerification.count({ where: { rideId: legacyRide.id } })) === 0 &&
+      (await prisma.ride.findUniqueOrThrow({ where: { id: legacyRide.id } })).pickupVerificationLegacyAt !== null
+  );
   const legacyCode = await drive.getRideVerificationCode({ userId: riderG.id, rideId: legacyRide.id });
   check(
-    "a legacy assignment reports no code and does not create a record retroactively",
+    "a genuine pre-enforcement assignment reports no code and does not create a record",
     legacyCode.legacy === true &&
+      legacyCode.recoveryRequired === false &&
       legacyCode.code === null &&
       legacyCode.required === false &&
       (await prisma.rideVerification.count({ where: { rideId: legacyRide.id } })) === 0,
@@ -1142,34 +1184,81 @@ async function main() {
   );
   await drive.getRideVerificationCode({ userId: riderG.id, rideId: legacyRide.id });
   check(
-    "opening the trip screen again still does not create a retroactive record",
+    "opening a legacy trip screen again still does not create a record",
     (await prisma.rideVerification.count({ where: { rideId: legacyRide.id } })) === 0
   );
   const legacyBoard = await drive.listDriverRides(driverA.user.id);
   const legacyRow = legacyBoard.active.find((ride) => ride.id === legacyRide.id);
   check(
-    "the driver board marks a missing record as legacy, not as verified",
+    "the driver board marks the marked pre-enforcement ride as legacy, not verified",
     legacyRow?.verification?.legacy === true &&
+      legacyRow?.verification?.recoveryRequired === false &&
       legacyRow?.verification?.required === false &&
       legacyRow?.verification?.verified === false,
     safeJson(legacyRow?.verification)
   );
   await expectError(
-    "a legacy ride has no code for the driver to submit",
+    "a pre-enforcement ride has no code for the driver to submit",
     () => drive.verifyPassenger({ userId: driverA.user.id, rideId: legacyRide.id, code: "1234" }),
     409,
     "verification_not_required"
   );
   await arrive(driverA.user.id, legacyRide.id);
-  const legacyStarted = await start(driverA.user.id, legacyRide.id);
-  check("a legacy trip reaches the pick-up and starts without retroactive verification", legacyStarted.status === "in_progress");
+
+  const legacyStarts = await Promise.allSettled([
+    start(driverA.user.id, legacyRide.id),
+    start(driverA.user.id, legacyRide.id)
+  ]);
   check(
-    "the legacy start wrote an explicit event and audit row",
-    (await prisma.rideEvent.count({ where: { rideId: legacyRide.id, label: "Legacy pickup start" } })) === 1 &&
-      (await prisma.auditLog.count({
-        where: { action: "ride.legacy_pickup_start_without_verification", entityId: legacyRide.id }
-      })) === 1
+    "concurrent legacy starts move the ride exactly once",
+    legacyStarts.some((entry) => entry.status === "fulfilled") &&
+      (await prisma.ride.findUniqueOrThrow({ where: { id: legacyRide.id }, select: { status: true } })).status ===
+        "in_progress" &&
+      (await prisma.rideEvent.count({ where: { rideId: legacyRide.id, label: "Legacy pickup start" } })) === 1
   );
+  const legacyStartAudits = await prisma.auditLog.findMany({
+    where: { action: "ride.in_progress", entityId: legacyRide.id }
+  });
+  const legacyAudit = await prisma.auditLog.findFirst({
+    where: { action: "ride.legacy_pickup_start_without_verification", entityId: legacyRide.id }
+  });
+  check(
+    "the exceptional start records its authorization basis and marker",
+    legacyAudit !== null &&
+      (legacyAudit.metadata as Record<string, unknown>).authorizationBasis ===
+        "pre_enforcement_assignment" &&
+      (legacyAudit.metadata as Record<string, unknown>).legacyMarkerAt === legacyMarkerAt.toISOString() &&
+      legacyStartAudits.length === 1 &&
+      (legacyStartAudits[0].metadata as Record<string, unknown>).authorizationBasis ===
+        "pre_enforcement_assignment",
+    safeJson({ legacyAudit: legacyAudit?.metadata, startAudit: legacyStartAudits[0]?.metadata })
+  );
+  check(
+    "the legacy start wrote the explicit event once",
+    (await prisma.rideEvent.count({ where: { rideId: legacyRide.id, label: "Legacy pickup start" } })) === 1
+  );
+
+  // Durability across a fresh database client: there is no in-memory legacy set.
+  // The marker and its audit trail survive independently of the service module.
+  const { PrismaClient } = await import("@prisma/client");
+  const freshClient = new PrismaClient();
+  try {
+    const reloadedRide = await freshClient.ride.findUniqueOrThrow({
+      where: { id: legacyRide.id },
+      select: { pickupVerificationLegacyAt: true, status: true }
+    });
+    const reloadedAudit = await freshClient.auditLog.count({
+      where: { action: "ride.legacy_pickup_start_without_verification", entityId: legacyRide.id }
+    });
+    check(
+      "legacy evidence is durable in the database, not process memory",
+      reloadedRide.pickupVerificationLegacyAt?.getTime() === legacyMarkerAt.getTime() &&
+        reloadedRide.status === "in_progress" &&
+        reloadedAudit === 1
+    );
+  } finally {
+    await freshClient.$disconnect();
+  }
   check(
     "a ride already in progress is not requeued or blocked by verification",
     (await drive.driverUpdateRideStatus({
@@ -1179,13 +1268,139 @@ async function main() {
     })).status === "completed"
   );
 
-  // Support may explicitly opt a legacy ride into verification. That is a
-  // deliberate support action, not a retroactive requirement.
-  const legacySupport = await newRide(riderH.id, "cash");
-  await assign(driverB.user.id, legacySupport.id);
-  await prisma.rideVerification.delete({ where: { rideId: legacySupport.id } });
+  // A genuinely in-progress trip that predates enforcement (or lost its row) must
+  // still be completable. Completion never requires a pickup code; only a start
+  // does. This fixture deliberately has neither a record nor a marker.
+  const inProgressRide = await newRide(riderE.id, "cash");
+  await assign(driverA.user.id, inProgressRide.id);
+  await arrive(driverA.user.id, inProgressRide.id);
+  await prisma.ride.update({
+    where: { id: inProgressRide.id },
+    data: { status: "in_progress", startedAt: new Date(), assignmentExpiresAt: null }
+  });
+  await prisma.rideVerification.delete({ where: { rideId: inProgressRide.id } });
+  check(
+    "a genuinely in-progress trip with no record and no marker can still complete",
+    (await complete(driverA.user.id, inProgressRide.id)).status === "completed" &&
+      (await prisma.ride.findUniqueOrThrow({ where: { id: inProgressRide.id } })).pickupVerificationLegacyAt ===
+        null
+  );
+
+  // A post-enforcement assignment with a deleted record is not legacy. Every read
+  // and transition fails closed until support performs an audited recovery.
+  const missingRide = await newRide(riderH.id, "cash");
+  await assign(driverB.user.id, missingRide.id);
+  await prisma.rideVerification.delete({ where: { rideId: missingRide.id } });
+  check(
+    "deleting a post-enforcement record leaves no legacy marker",
+    (await prisma.ride.findUniqueOrThrow({ where: { id: missingRide.id } })).pickupVerificationLegacyAt === null
+  );
   await expectError(
-    "a legacy rider cannot reset a code that never existed",
+    "the rider endpoint refuses a missing post-enforcement record instead of deriving a code",
+    () => drive.getRideVerificationCode({ userId: riderH.id, rideId: missingRide.id }),
+    409,
+    "verification_record_missing"
+  );
+  await expectError(
+    "the rider cannot self-reset a missing post-enforcement record",
+    () => drive.resetRideVerificationByRider({ userId: riderH.id, rideId: missingRide.id }),
+    409,
+    "verification_record_missing"
+  );
+  await arrive(driverB.user.id, missingRide.id);
+  const missingBoard = await drive.listDriverRides(driverB.user.id);
+  const missingRow = missingBoard.active.find((ride) => ride.id === missingRide.id);
+  check(
+    "the driver board flags the missing record as recovery-required, not legacy",
+    missingRow?.verification?.recoveryRequired === true &&
+      missingRow?.verification?.legacy === false &&
+      missingRow?.verification?.required === false,
+    safeJson(missingRow?.verification)
+  );
+  await expectError(
+    "the driver cannot submit a code for a missing record",
+    () => drive.verifyPassenger({ userId: driverB.user.id, rideId: missingRide.id, code: "1234" }),
+    409,
+    "verification_record_missing"
+  );
+  await expectError(
+    "the start transition fails closed when the record is missing",
+    () => start(driverB.user.id, missingRide.id),
+    409,
+    "verification_record_missing"
+  );
+  check(
+    "failed reads and starts did not auto-create a record",
+    (await prisma.rideVerification.count({ where: { rideId: missingRide.id } })) === 0
+  );
+
+  const recoveryIssue = await drive.overrideRideVerification({
+    adminId: admin.id,
+    rideId: missingRide.id,
+    action: "reset",
+    reason: "Protected record missing after assignment; rider present"
+  });
+  const recoveryAudit = await prisma.auditLog.findFirstOrThrow({
+    where: { action: "ride.verification_support_reset", entityId: missingRide.id }
+  });
+  check(
+    "support recovery issues a record for a missing assignment and audits its basis",
+    recoveryIssue.verification.required === true &&
+      recoveryIssue.verification.recoveryRequired === false &&
+      (await prisma.rideVerification.count({ where: { rideId: missingRide.id } })) === 1 &&
+      (recoveryAudit.metadata as Record<string, unknown>).authorizationBasis === "support_recovery" &&
+      (recoveryAudit.metadata as Record<string, unknown>).previousState === "missing_record",
+    safeJson(recoveryAudit.metadata)
+  );
+  const recoveryCode = await drive.getRideVerificationCode({ userId: riderH.id, rideId: missingRide.id });
+  check("the recovered code is usable by the rider", /^\d{4}$/.test(recoveryCode.code ?? ""));
+  const recoveryVerify = await drive.verifyPassenger({
+    userId: driverB.user.id,
+    rideId: missingRide.id,
+    code: recoveryCode.code!
+  });
+  check("the recovered code verifies normally", recoveryVerify.verified === true);
+  await start(driverB.user.id, missingRide.id);
+  const recoveryStartAudit = await prisma.auditLog.findFirstOrThrow({
+    where: { action: "ride.in_progress", entityId: missingRide.id }
+  });
+  check(
+    "a normal start after recovery records passenger_code as its basis",
+    (recoveryStartAudit.metadata as Record<string, unknown>).authorizationBasis === "passenger_code",
+    safeJson(recoveryStartAudit.metadata)
+  );
+  await complete(driverB.user.id, missingRide.id);
+
+  // Support may attest verification for a missing record instead of issuing a
+  // code. The start is then recorded as a support override, not a normal code.
+  const missingVerifyRide = await newRide(riderG.id, "cash");
+  await assign(driverA.user.id, missingVerifyRide.id);
+  await prisma.rideVerification.delete({ where: { rideId: missingVerifyRide.id } });
+  const supportVerifyMissing = await drive.overrideRideVerification({
+    adminId: admin.id,
+    rideId: missingVerifyRide.id,
+    action: "verify",
+    reason: "Record missing; rider identity checked at pick-up"
+  });
+  check("support can attest verification for a missing record", supportVerifyMissing.verification.verified === true);
+  await arrive(driverA.user.id, missingVerifyRide.id);
+  await start(driverA.user.id, missingVerifyRide.id);
+  const supportStartAudit = await prisma.auditLog.findFirstOrThrow({
+    where: { action: "ride.in_progress", entityId: missingVerifyRide.id }
+  });
+  check(
+    "a support-attested start records support_override and the verifying operator",
+    (supportStartAudit.metadata as Record<string, unknown>).authorizationBasis === "support_override" &&
+      (supportStartAudit.metadata as Record<string, unknown>).verifiedByUserId === admin.id,
+    safeJson(supportStartAudit.metadata)
+  );
+  await complete(driverA.user.id, missingVerifyRide.id);
+
+  // A pre-enforcement ride can be explicitly opted into verification by support.
+  const legacySupport = await newRide(riderH.id, "cash");
+  await markPreEnforcementAssignment(legacySupport.id, driverB.profile.id);
+  await expectError(
+    "a pre-enforcement rider cannot reset a code that never existed",
     () => drive.resetRideVerificationByRider({ userId: riderH.id, rideId: legacySupport.id }),
     409,
     "verification_not_required"
@@ -1194,16 +1409,19 @@ async function main() {
     adminId: admin.id,
     rideId: legacySupport.id,
     action: "reset",
-    reason: "Legacy ride opt-in to pickup verification"
+    reason: "Pre-enforcement ride opt-in to pickup verification"
   });
   check(
-    "support can explicitly issue a code for a legacy ride",
+    "support can explicitly issue a code for a pre-enforcement ride and ends the exemption",
     supportIssue.verification.required === true &&
-      (await prisma.rideVerification.count({ where: { rideId: legacySupport.id } })) === 1
+      supportIssue.verification.legacy === false &&
+      (await prisma.rideVerification.count({ where: { rideId: legacySupport.id } })) === 1 &&
+      (await prisma.ride.findUniqueOrThrow({ where: { id: legacySupport.id } })).pickupVerificationLegacyAt ===
+        null
   );
   await arrive(driverB.user.id, legacySupport.id);
   await expectError(
-    "after the support opt-in the start is gated by the issued code",
+    "after support opt-in the start is gated by the issued code",
     () => start(driverB.user.id, legacySupport.id),
     409,
     "passenger_verification_required"
@@ -1217,6 +1435,105 @@ async function main() {
   check("the support-issued code verifies normally", legacySupportVerify.verified === true);
   await start(driverB.user.id, legacySupport.id);
   await complete(driverB.user.id, legacySupport.id);
+
+  // Reassignment must not revive the pre-enforcement exemption. Release clears
+  // the marker; the pre-enforcement fixture never had a record to invalidate, and
+  // the next acceptance must issue a real one.
+  const legacyReassign = await newRide(riderG.id, "cash");
+  await markPreEnforcementAssignment(legacyReassign.id, driverA.profile.id);
+  await drive.releaseRide({
+    userId: driverA.user.id,
+    rideId: legacyReassign.id,
+    reason: "Pre-enforcement reassignment boundary"
+  });
+  check(
+    "release clears the pre-enforcement marker and leaves no protected record",
+    (await prisma.ride.findUniqueOrThrow({ where: { id: legacyReassign.id } })).pickupVerificationLegacyAt === null &&
+      (await prisma.rideVerification.count({ where: { rideId: legacyReassign.id } })) === 0
+  );
+  await assign(driverB.user.id, legacyReassign.id);
+  const reassignedLegacyRecord = await prisma.rideVerification.findUniqueOrThrow({
+    where: { rideId: legacyReassign.id }
+  });
+  check(
+    "reassignment issues a new active record after the marker is cleared",
+    reassignedLegacyRecord.invalidatedAt === null && reassignedLegacyRecord.verifiedAt === null
+  );
+  await prisma.rideVerification.delete({ where: { rideId: legacyReassign.id } });
+  await expectError(
+    "a missing record after reassignment fails closed, not as legacy",
+    () => drive.getRideVerificationCode({ userId: riderG.id, rideId: legacyReassign.id }),
+    409,
+    "verification_record_missing"
+  );
+  await drive.cancelRide({
+    actorId: riderG.id,
+    isAdmin: false,
+    rideId: legacyReassign.id,
+    reason: "Reassignment-boundary cleanup"
+  });
+
+  // Assignment expiry releases the ride, clears the marker, invalidates the code,
+  // and a later acceptance starts from a fresh protected record.
+  const expiryRide = await newRide(riderG.id, "cash");
+  await assign(driverA.user.id, expiryRide.id);
+  const expiryRecordBefore = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: expiryRide.id } });
+  await prisma.ride.update({
+    where: { id: expiryRide.id },
+    data: { assignmentExpiresAt: new Date(Date.now() - 1_000) }
+  });
+  const releasedIds = await drive.releaseExpiredAssignments();
+  const expiredRide = await prisma.ride.findUniqueOrThrow({ where: { id: expiryRide.id } });
+  const expiryRecordAfter = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: expiryRide.id } });
+  check(
+    "assignment expiry returns the ride, clears the marker and invalidates the record",
+    releasedIds.includes(expiryRide.id) &&
+      expiredRide.status === "requested" &&
+      expiredRide.acceptedAt === null &&
+      expiredRide.pickupVerificationLegacyAt === null &&
+      expiryRecordAfter.invalidatedAt !== null &&
+      expiryRecordAfter.salt === expiryRecordBefore.salt
+  );
+  await assign(driverB.user.id, expiryRide.id);
+  const expiryRecordReissued = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: expiryRide.id } });
+  check(
+    "acceptance after expiry issues a fresh active record",
+    expiryRecordReissued.invalidatedAt === null &&
+      expiryRecordReissued.verifiedAt === null &&
+      expiryRecordReissued.salt !== expiryRecordAfter.salt
+  );
+  await drive.cancelRide({
+    actorId: riderG.id,
+    isAdmin: false,
+    rideId: expiryRide.id,
+    reason: "Expiry-boundary cleanup"
+  });
+
+  const legacyExpiry = await newRide(riderH.id, "cash");
+  await markPreEnforcementAssignment(legacyExpiry.id, driverA.profile.id);
+  await prisma.ride.update({
+    where: { id: legacyExpiry.id },
+    data: { assignmentExpiresAt: new Date(Date.now() - 1_000) }
+  });
+  await drive.releaseExpiredAssignments();
+  check(
+    "assignment expiry clears a pre-enforcement marker",
+    (await prisma.ride.findUniqueOrThrow({ where: { id: legacyExpiry.id } })).pickupVerificationLegacyAt === null
+  );
+  await assign(driverB.user.id, legacyExpiry.id);
+  await prisma.rideVerification.delete({ where: { rideId: legacyExpiry.id } });
+  await expectError(
+    "the expired-and-reaccepted ride cannot reuse the pre-enforcement exemption",
+    () => drive.getRideVerificationCode({ userId: riderH.id, rideId: legacyExpiry.id }),
+    409,
+    "verification_record_missing"
+  );
+  await drive.cancelRide({
+    actorId: riderH.id,
+    isAdmin: false,
+    rideId: legacyExpiry.id,
+    reason: "Legacy-expiry cleanup"
+  });
 
   // Awaiting assignment is unchanged: no record exists, and the rider is told why.
   const awaitingRide = await newRide(riderG.id, "cash");
@@ -1237,23 +1554,145 @@ async function main() {
     reason: "Awaiting-assignment cleanup"
   });
 
-  /* ------------------------------- N. Control Center support queue shape --- */
+  /* ------------------------ N. support rate limits and queue shape --- */
+  const rateAdmin = await createUser("CUSTOMER", "rate-admin");
+  const boundaryAdmin = await createUser("CUSTOMER", "boundary-admin");
+  const supportAction = "ride.verification_support_reset";
+
+  const rateRideLimit = await newRide(riderG.id, "cash");
+  await assign(driverA.user.id, rateRideLimit.id);
+  await prisma.auditLog.createMany({
+    data: Array.from({ length: drive.RIDE_VERIFICATION_SUPPORT_MAX_PER_RIDE }, (_, index) => ({
+      actorId: rateAdmin.id,
+      action: supportAction,
+      entity: "Ride",
+      entityId: rateRideLimit.id,
+      metadata: { seededRateLimitRow: index }
+    }))
+  });
+  await expectError(
+    "support actions are rate-limited per ride",
+    () =>
+      drive.overrideRideVerification({
+        adminId: rateAdmin.id,
+        rideId: rateRideLimit.id,
+        action: "reset",
+        reason: "Per-ride rate-limit check"
+      }),
+    429,
+    "verification_support_ride_rate_limited"
+  );
+  await drive.cancelRide({
+    actorId: riderG.id,
+    isAdmin: false,
+    rideId: rateRideLimit.id,
+    reason: "Rate-limit cleanup"
+  });
+
+  const rateOperatorRide = await newRide(riderH.id, "cash");
+  await assign(driverB.user.id, rateOperatorRide.id);
+  await prisma.auditLog.createMany({
+    data: Array.from({ length: drive.RIDE_VERIFICATION_SUPPORT_MAX_PER_OPERATOR }, (_, index) => ({
+      actorId: rateAdmin.id,
+      action: supportAction,
+      entity: "Ride",
+      entityId: `rate-limit-operator-seed-${index}`,
+      metadata: { seededRateLimitRow: index }
+    }))
+  });
+  await expectError(
+    "support actions are rate-limited per operator across rides",
+    () =>
+      drive.overrideRideVerification({
+        adminId: rateAdmin.id,
+        rideId: rateOperatorRide.id,
+        action: "verify",
+        reason: "Per-operator rate-limit check"
+      }),
+    429,
+    "verification_support_operator_rate_limited"
+  );
+  await drive.cancelRide({
+    actorId: riderH.id,
+    isAdmin: false,
+    rideId: rateOperatorRide.id,
+    reason: "Rate-limit cleanup"
+  });
+
+  // Two concurrent support actions at the boundary must not both commit: the
+  // operator and ride advisory locks serialise the count.
+  const rateBoundaryRide = await newRide(riderG.id, "cash");
+  await assign(driverA.user.id, rateBoundaryRide.id);
+  await prisma.auditLog.createMany({
+    data: Array.from(
+      { length: drive.RIDE_VERIFICATION_SUPPORT_MAX_PER_RIDE - 1 },
+      (_, index) => ({
+        actorId: boundaryAdmin.id,
+        action: supportAction,
+        entity: "Ride",
+        entityId: rateBoundaryRide.id,
+        metadata: { seededRateLimitRow: index }
+      })
+    )
+  });
+  const boundaryResults = await Promise.allSettled([
+    drive.overrideRideVerification({
+      adminId: boundaryAdmin.id,
+      rideId: rateBoundaryRide.id,
+      action: "reset",
+      reason: "Concurrent boundary reset"
+    }),
+    drive.overrideRideVerification({
+      adminId: boundaryAdmin.id,
+      rideId: rateBoundaryRide.id,
+      action: "reset",
+      reason: "Concurrent boundary reset"
+    })
+  ]);
+  const boundaryStatuses = boundaryResults.map((entry) =>
+    entry.status === "fulfilled" ? "ok" : ((entry.reason as { code?: string }).code ?? "error")
+  );
+  check(
+    "concurrent support actions cannot exceed the per-ride limit",
+    boundaryStatuses.filter((status) => status === "ok").length === 1 &&
+      boundaryStatuses.filter((status) => status === "verification_support_ride_rate_limited").length === 1 &&
+      (await prisma.auditLog.count({ where: { entityId: rateBoundaryRide.id, action: supportAction } })) ===
+        drive.RIDE_VERIFICATION_SUPPORT_MAX_PER_RIDE,
+    JSON.stringify(boundaryStatuses)
+  );
+  await drive.cancelRide({
+    actorId: riderG.id,
+    isAdmin: false,
+    rideId: rateBoundaryRide.id,
+    reason: "Boundary-rate cleanup"
+  });
+
   const queueNormal = await newRide(riderG.id, "cash");
   await assign(driverA.user.id, queueNormal.id);
-  const queueLegacy = await newRide(riderH.id, "cash");
-  await assign(driverB.user.id, queueLegacy.id);
-  await prisma.rideVerification.delete({ where: { rideId: queueLegacy.id } });
+  const queueRecovery = await newRide(riderH.id, "cash");
+  await assign(driverB.user.id, queueRecovery.id);
+  await prisma.rideVerification.delete({ where: { rideId: queueRecovery.id } });
+  const queueLegacy = await newRide(riderF.id, "cash");
+  await markPreEnforcementAssignment(queueLegacy.id, driverA.profile.id);
+
   const queue = await drive.listRideVerificationSupport();
   const normalRow = queue.find((row) => row.rideId === queueNormal.id);
+  const recoveryRow = queue.find((row) => row.rideId === queueRecovery.id);
   const legacyQueueRow = queue.find((row) => row.rideId === queueLegacy.id);
   const queueSerialized = safeJson(queue);
   check(
-    "the Control Center queue lists active assigned trips with legacy state",
+    "the Control Center queue distinguishes active, recovery-required and pre-enforcement rows",
     Boolean(normalRow) &&
       normalRow?.verification.required === true &&
       normalRow?.verification.legacy === false &&
+      normalRow?.verification.recoveryRequired === false &&
+      recoveryRow?.verification.recoveryRequired === true &&
+      recoveryRow?.verification.legacy === false &&
+      recoveryRow?.verification.required === false &&
       legacyQueueRow?.verification.legacy === true &&
-      legacyQueueRow?.verification.required === false
+      legacyQueueRow?.verification.recoveryRequired === false &&
+      legacyQueueRow?.verification.required === false,
+    safeJson({ normal: normalRow?.verification, recovery: recoveryRow?.verification, legacy: legacyQueueRow?.verification })
   );
   check(
     "the Control Center queue never contains a raw code, salt or hash",
@@ -1270,6 +1709,12 @@ async function main() {
   });
   await drive.cancelRide({
     actorId: riderH.id,
+    isAdmin: false,
+    rideId: queueRecovery.id,
+    reason: "Support-queue cleanup"
+  });
+  await drive.cancelRide({
+    actorId: riderF.id,
     isAdmin: false,
     rideId: queueLegacy.id,
     reason: "Support-queue cleanup"

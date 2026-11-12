@@ -492,6 +492,10 @@ export async function acceptRide(input: { userId: string; rideId: string }) {
         driverId: driver.id,
         status: "driver_assigned",
         acceptedAt: new Date(),
+        // A new assignment always issues a protected record below. The
+        // pre-enforcement marker belongs to the enforcement-time assignment only,
+        // so it must not survive into this one.
+        pickupVerificationLegacyAt: null,
         // The clock starts now: arrive, or the ride goes back to the queue.
         assignmentExpiresAt: nextAssignmentDeadline()
       }
@@ -627,14 +631,13 @@ export async function driverUpdateRideStatus(input: {
     if (input.status === "completed") {
       if (ride.status !== "in_progress") throw new ApiError(409, "trip_not_started", "Start the trip before completing it.");
     }
-    let legacyVerificationStart = false;
+    let startAuthorization: StartAuthorizationBasis | null = null;
     if (input.status === "in_progress") {
       // Authoritative gate: the protected record must show a successful code
-      // verification in the same transaction that moves the ride forward. A ride
-      // with no record at all predates this feature and is allowed to start with
-      // an audit record instead of a retroactive block.
-      const check = await requireVerifiedRide(tx, ride.id);
-      legacyVerificationStart = check.legacy;
+      // verification in the same transaction that moves the ride forward. Only the
+      // one-time pre-enforcement marker can authorise a missing record; every other
+      // missing record is refused and needs the audited support recovery flow.
+      startAuthorization = await requireVerifiedRide(tx, ride, driver.userId);
     }
 
     const now = new Date();
@@ -702,16 +705,16 @@ export async function driverUpdateRideStatus(input: {
       description,
       actorId: input.userId
     });
-    if (legacyVerificationStart) {
-      // Backward-compatible transition: the ride was accepted before protected
-      // pickup verification existed, so there is nothing to verify. Record the
-      // exception explicitly instead of pretending a code was checked.
+    if (startAuthorization?.basis === "pre_enforcement_assignment") {
+      // Bounded compatibility transition: the assignment existed when enforcement
+      // began, so there is nothing to verify. Record the exception with its exact
+      // basis and marker timestamp instead of pretending a code was checked.
       await addRideEvent(tx, {
         rideId: ride.id,
         status: "in_progress",
         label: "Legacy pickup start",
         description:
-          "This trip was matched before protected pickup verification was introduced. No pickup code existed, and the start was recorded as a legacy exception.",
+          "This trip was matched before protected pickup verification was enforced. No pickup code was issued for that assignment, and the start was recorded as a pre-enforcement exception.",
         actorId: input.userId
       });
       await recordAudit({
@@ -720,7 +723,13 @@ export async function driverUpdateRideStatus(input: {
         action: "ride.legacy_pickup_start_without_verification",
         entity: "Ride",
         entityId: ride.id,
-        metadata: { rideNumber: ride.rideNumber, reason: "no_verification_record_for_pre_feature_assignment" }
+        metadata: {
+          rideNumber: ride.rideNumber,
+          reason: "no_verification_record_for_pre_enforcement_assignment",
+          authorizationBasis: "pre_enforcement_assignment",
+          legacyMarkerAt: startAuthorization.legacyMarkerAt.toISOString(),
+          assignedAt: ride.acceptedAt?.toISOString() ?? null
+        }
       });
     }
     await recordSystemEvent({
@@ -729,7 +738,10 @@ export async function driverUpdateRideStatus(input: {
       actorId: input.userId,
       entity: "Ride",
       entityId: ride.id,
-      payload: { paymentReference }
+      payload: {
+        paymentReference,
+        ...(startAuthorization ? { authorizationBasis: startAuthorization.basis } : {})
+      }
     });
     await recordAudit({
       tx,
@@ -737,7 +749,10 @@ export async function driverUpdateRideStatus(input: {
       action: `ride.${input.status}`,
       entity: "Ride",
       entityId: ride.id,
-      metadata: { paymentReference }
+      metadata: {
+        paymentReference,
+        ...(startAuthorization ? startAuthorizationMetadata(startAuthorization) : {})
+      }
     });
 
     return { outcome: "ok" as const, ride: await loadRide(tx, ride.id) };
@@ -773,7 +788,10 @@ export async function releaseRide(input: { userId: string; rideId: string; reaso
         driverId: null,
         acceptedAt: null,
         arrivedAt: null,
-        assignmentExpiresAt: null
+        assignmentExpiresAt: null,
+        // The pre-enforcement exemption is bound to the assignment that existed at
+        // enforcement. Once that assignment ends it cannot authorise this ride again.
+        pickupVerificationLegacyAt: null
       }
     });
     if (updated.count === 0) throw new ApiError(409, "ride_changed", "The ride changed while releasing. Reload and try again.");
@@ -859,7 +877,9 @@ async function releaseExpiredRide(
       driverId: null,
       acceptedAt: null,
       arrivedAt: null,
-      assignmentExpiresAt: null
+      assignmentExpiresAt: null,
+      // The pre-enforcement exemption ends with the assignment it described.
+      pickupVerificationLegacyAt: null
     }
   });
   if (updated.count === 0) return null;
@@ -987,7 +1007,12 @@ export async function listDriverRides(userId: string) {
           invalidatedAt: true
         }
       });
-      return { ...ride, verification: safeVerification(record, now, { legacy: !record }) };
+      return {
+        ...ride,
+        verification: safeVerification(record, now, {
+          legacyEligible: Boolean(ride.pickupVerificationLegacyAt)
+        })
+      };
     })
   );
 
@@ -1056,6 +1081,7 @@ export async function listRideVerificationSupport() {
       status: true,
       acceptedAt: true,
       assignmentExpiresAt: true,
+      pickupVerificationLegacyAt: true,
       rider: { select: { id: true, name: true } },
       driver: { select: { id: true, vehiclePlate: true, user: { select: { id: true, name: true } } } }
     },
@@ -1092,7 +1118,9 @@ export async function listRideVerificationSupport() {
             vehiclePlate: ride.driver.vehiclePlate
           }
         : null,
-      verification: safeVerification(record, now, { legacy: !record })
+      verification: safeVerification(record, now, {
+        legacyEligible: Boolean(ride.pickupVerificationLegacyAt)
+      })
     };
   });
 }
@@ -1123,15 +1151,58 @@ const PASSENGER_VERIFIED_LABEL = "Passenger verified";
 /* --------------------------------------------------- pickup verification --- */
 
 /**
- * The four-digit pickup code is a random per-ride secret, not a value stored in
- * plain text or in an event payload. A random per-record salt is persisted and
- * the code is derived server-side from that salt; only its salted scrypt hash is
- * compared, and only the authenticated rider may read the derived code. Drivers
- * receive state (required/verified/expired/locked) and never the salt or code.
+ * PICKUP-CODE STORAGE AND THE RIDER READ PATH — read this before changing it.
  *
- * A four-digit code has 10,000 possible values. This is only acceptable because
- * the authoritative service also enforces a short expiry, a five-attempt cap, a
- * per-record cooldown and a single-use transition, all inside one transaction.
+ * `RideVerification` stores `salt` (16 CSPRNG bytes, hex) and `codeHash`
+ * (`scrypt(code, salt, 32)`, hex). It does not store the four digits. When the
+ * rider's own endpoint is called, `getRideVerificationCode` re-derives the exact
+ * code from the stored salt and the ride id:
+ *
+ *   verificationCodeFor(salt, rideId, algorithm)
+ *     = HMAC-SHA256(key = salt, message = `${rideId}:naijadrive-pickup-verification[:counter]`)
+ *       rejection-sampled from 32 bits into 0000..9999.
+ *
+ * The derivation is deterministic and the salt is stored next to the hash, so the
+ * salt provides no confidentiality. The rider endpoint can print a usable code
+ * while only a hash is stored because it recomputes the code; it does not decrypt
+ * it. Anyone who can read the `RideVerification` row and this algorithm can
+ * recompute every active code. The value space is only 10,000, so the stored
+ * `scrypt` hash does not make the code non-recoverable either; it only provides a
+ * constant-time server-side comparison. Never describe this code as encrypted,
+ * non-recoverable or secret from a database operator. Database read access is
+ * equivalent to knowledge of every live pickup code.
+ *
+ * What this design does protect: the code is not put in API responses to the
+ * driver, an unrelated account or an administrator; it is not written to event or
+ * audit payloads; and a compromised driver session cannot read it. The short
+ * expiry, five-attempt cap, per-record cooldown, single-use start transition and
+ * support rate limits remain mandatory because a 4-digit code is guessable and a
+ * database reader can derive it.
+ *
+ * SERVER-SECRET (PEPPER) DESIGN — ASSESSED, NOT IMPLEMENTED.
+ * A pepper held outside the database would stop a DB-only reader from deriving a
+ * code only if BOTH the derivation and the stored verifier are keyed by it:
+ *   1. derive `HMAC(pepperVersion, `${salt}:${rideId}:${counter}`)` and store the
+ *      record's key version (the existing `algorithm` column cannot carry a key
+ *      id without ambiguity, so a dedicated `keyVersion` column would be needed);
+ *   2. verify with a keyed verifier such as `HMAC(pepperVersion, `${code}|${salt}`)`
+ *      (or scrypt with the pepper mixed into the salt), because the current
+ *      unkeyed `scrypt(code, salt)` lets a DB reader brute-force all 10,000
+ *      candidates offline even when the derivation is peppered;
+ *   3. keep a versioned keyring, issue new records with the current version, derive
+ *      and verify outstanding records with their recorded version, and retire an
+ *      old version only after every record that used it has expired or been
+ *      invalidated (maximum TTL plus assignment grace);
+ *   4. fail closed if the current or a record's key version is absent or
+ *      unparseable: do not issue, do not derive, return a 503
+ *      `verification_key_unavailable`, and let support reissue the code under the
+ *      current version. Never fall back to the public salt derivation, because
+ *      that would silently restore the DB-recoverable property.
+ * This repository has no server-secret/keyring mechanism (no app secret, no key
+ * version storage, no rotation procedure), and adding a new credential requires
+ * explicit authorization. No half-measure (for example reusing the session secret)
+ * is implemented here because that secret has no versioning or rotation policy and
+ * would create a false sense that the code is no longer DB-recoverable.
  */
 export const RIDE_VERIFICATION_CODE_LENGTH = 4;
 export const RIDE_VERIFICATION_MAX_ATTEMPTS = 5;
@@ -1144,6 +1215,19 @@ export const RIDE_VERIFICATION_ATTEMPT_COOLDOWN_MS = 1_500;
  */
 export const RIDE_VERIFICATION_MAX_RIDER_RESETS_PER_WINDOW = 3;
 export const RIDE_VERIFICATION_RIDER_RESET_WINDOW_MS = 10 * 60 * 1000;
+/**
+ * Support reset/verify is privileged and audited, but it also rotates or bypasses
+ * a rider's pickup code. Bound it per ride and per operator using the AuditLog
+ * rows every successful action already writes, so the limiter has no separate
+ * in-memory state and survives a process restart.
+ */
+export const RIDE_VERIFICATION_SUPPORT_WINDOW_MS = 10 * 60 * 1000;
+export const RIDE_VERIFICATION_SUPPORT_MAX_PER_RIDE = 3;
+export const RIDE_VERIFICATION_SUPPORT_MAX_PER_OPERATOR = 20;
+export const RIDE_VERIFICATION_SUPPORT_ACTIONS = [
+  "ride.verification_support_reset",
+  "ride.verification_support_verified"
+] as const;
 /**
  * Algorithm versioning is deliberate. `v1` derived the code from a single HMAC
  * block with a modulo reduction; `v2` keeps the same construction but uses
@@ -1175,11 +1259,17 @@ export type SafeRideVerification = {
   expiresAt: string | null;
   verifiedAt: string | null;
   /**
-   * True when the ride was assigned before protected pickup verification existed
-   * and therefore has no RideVerification record. Such a trip is not forced to
-   * verify retroactively; starting it is audited as a legacy exception.
+   * True only when the ride carries the one-time enforcement marker written by the
+   * cutover migration AND has no active record. Such a pre-enforcement assignment
+   * is not forced to verify retroactively; starting it is audited as an exception.
    */
   legacy: boolean;
+  /**
+   * True when this assignment should have a protected record but none exists and
+   * it is not pre-enforcement. The server refuses to start or issue a code on its
+   * own; an authorised support reset/verify is required.
+   */
+  recoveryRequired: boolean;
 };
 
 const RIDE_VERIFICATION_CODE_SPACE = 10 ** RIDE_VERIFICATION_CODE_LENGTH;
@@ -1232,9 +1322,13 @@ function hashVerificationCode(code: string, salt: string) {
 function safeVerification(
   record: VerificationRecord | null,
   now: Date = new Date(),
-  options: { legacy?: boolean } = {}
+  options: { legacyEligible?: boolean } = {}
 ): SafeRideVerification {
   if (!record) {
+    // Absence is no longer enough to call a ride legacy. Only the durable
+    // pre-enforcement marker authorises that transition; every other missing
+    // record fails closed and requires the audited support recovery flow.
+    const legacy = Boolean(options.legacyEligible);
     return {
       required: false,
       verified: false,
@@ -1243,7 +1337,8 @@ function safeVerification(
       attemptsRemaining: 0,
       expiresAt: null,
       verifiedAt: null,
-      legacy: Boolean(options.legacy)
+      legacy,
+      recoveryRequired: !legacy
     };
   }
   const active = !record.invalidatedAt;
@@ -1258,7 +1353,8 @@ function safeVerification(
     attemptsRemaining: Math.max(0, record.maxAttempts - record.attemptCount),
     expiresAt: active ? record.expiresAt.toISOString() : null,
     verifiedAt: verified && record.verifiedAt ? record.verifiedAt.toISOString() : null,
-    legacy: false
+    legacy: false,
+    recoveryRequired: false
   };
 }
 
@@ -1328,22 +1424,64 @@ async function invalidateRideVerification(tx: Db, rideId: string, reason: string
 }
 
 /**
- * The start transition is gated by the protected row inside the caller's
- * transaction. A code that is expired, locked or merely missing is refused.
- *
- * The one deliberate exception is a ride assigned before this feature existed: it
- * has no RideVerification row at all. Absence is the legacy discriminator because
- * every current acceptance creates the row in the same transaction. Such a trip
- * is allowed to start and the caller records an explicit audit event; it is never
- * silently treated as verified. An invalidated row is not legacy and remains a
- * refusal.
+ * The authorization basis recorded for every start. `passenger_code` is the
+ * normal driver-entered code; `support_override` is an administrator who marked
+ * the passenger verified; `pre_enforcement_assignment` is the only compatibility
+ * path, and only the cutover marker can produce it. `verified_record` is a
+ * verified row whose actor is no longer identifiable, retained so the value can
+ * never be silently reported as a normal passenger-code start.
  */
-async function requireVerifiedRide(tx: Db, rideId: string): Promise<{ legacy: boolean }> {
-  await lockRideVerification(tx, rideId);
-  const record = await tx.rideVerification.findUnique({ where: { rideId } });
+type StartAuthorizationBasis =
+  | { basis: "pre_enforcement_assignment"; legacyMarkerAt: Date }
+  | { basis: "passenger_code"; verifiedAt: Date; verifiedByUserId: string | null }
+  | { basis: "support_override"; verifiedAt: Date; verifiedByUserId: string }
+  | { basis: "verified_record"; verifiedAt: Date; verifiedByUserId: null };
+
+function startAuthorizationMetadata(authorization: StartAuthorizationBasis) {
+  switch (authorization.basis) {
+    case "pre_enforcement_assignment":
+      return {
+        authorizationBasis: authorization.basis,
+        legacyMarkerAt: authorization.legacyMarkerAt.toISOString()
+      };
+    case "passenger_code":
+    case "support_override":
+    case "verified_record":
+      return {
+        authorizationBasis: authorization.basis,
+        verifiedAt: authorization.verifiedAt.toISOString(),
+        verifiedByUserId: authorization.verifiedByUserId
+      };
+  }
+}
+
+/**
+ * The start transition is gated by the protected row inside the caller's
+ * transaction. A code that is expired, locked or invalidated is refused.
+ *
+ * A missing row is refused unless the ride carries the durable marker written by
+ * the enforcement migration for assignments that predate enforcement. That marker
+ * is the only legacy evidence; a missing row on a newer assignment is an anomaly
+ * and enters the audited support recovery flow instead of silently starting. The
+ * caller writes the returned authorization basis to the ride event/audit trail.
+ */
+async function requireVerifiedRide(
+  tx: Db,
+  ride: { id: string; pickupVerificationLegacyAt: Date | null },
+  driverUserId: string
+): Promise<StartAuthorizationBasis> {
+  await lockRideVerification(tx, ride.id);
+  const record = await tx.rideVerification.findUnique({ where: { rideId: ride.id } });
   const now = new Date();
   if (!record) {
-    return { legacy: true };
+    if (ride.pickupVerificationLegacyAt) {
+      return { basis: "pre_enforcement_assignment", legacyMarkerAt: ride.pickupVerificationLegacyAt };
+    }
+    throw new ApiError(
+      409,
+      "verification_record_missing",
+      "The protected pickup code record is missing for this assignment. Support must issue a new code before this trip can start; the trip was not started."
+    );
   }
   if (record.invalidatedAt) {
     throw new ApiError(
@@ -1352,7 +1490,15 @@ async function requireVerifiedRide(tx: Db, rideId: string): Promise<{ legacy: bo
       "The passenger has to open their trip screen to receive a pickup code before the trip can start."
     );
   }
-  if (record.verifiedAt) return { legacy: false };
+  if (record.verifiedAt) {
+    if (record.verifiedByUserId === driverUserId) {
+      return { basis: "passenger_code", verifiedAt: record.verifiedAt, verifiedByUserId: record.verifiedByUserId };
+    }
+    if (record.verifiedByUserId) {
+      return { basis: "support_override", verifiedAt: record.verifiedAt, verifiedByUserId: record.verifiedByUserId };
+    }
+    return { basis: "verified_record", verifiedAt: record.verifiedAt, verifiedByUserId: null };
+  }
   if (record.expiresAt.getTime() <= now.getTime()) {
     throw new ApiError(
       409,
@@ -2097,23 +2243,32 @@ export async function getRideVerificationCode(input: { userId: string; rideId: s
 
   let record = await prisma.rideVerification.findUnique({ where: { rideId: ride.id } });
   if (!record) {
-    // Deliberate legacy transition: a ride assigned before protected pickup
-    // verification existed has no record. Opening the trip screen must not create
-    // one and retroactively force verification on a trip already in motion or
-    // waiting with the passenger. Support can still issue a code explicitly.
-    return {
-      rideId: ride.id,
-      code: null,
-      issuedAt: null,
-      expiresAt: null,
-      verified: false,
-      expired: false,
-      locked: false,
-      attemptsRemaining: 0,
-      required: false,
-      legacy: true,
-      verifiedAt: null
-    };
+    if (ride.pickupVerificationLegacyAt) {
+      // Bounded pre-enforcement transition: this assignment existed when pickup
+      // verification was enforced and had no record. Opening the trip screen must
+      // not create one retroactively. Support can still issue a code explicitly.
+      return {
+        rideId: ride.id,
+        code: null,
+        issuedAt: null,
+        expiresAt: null,
+        verified: false,
+        expired: false,
+        locked: false,
+        attemptsRemaining: 0,
+        required: false,
+        legacy: true,
+        recoveryRequired: false,
+        verifiedAt: null
+      };
+    }
+    // A post-enforcement assignment must have a record. Do not auto-issue one:
+    // recovery is an authorised support action with a reason and an audit row.
+    throw new ApiError(
+      409,
+      "verification_record_missing",
+      "The protected pickup code record is missing. Contact NaijaDrive support; they must issue a new code before this trip can start."
+    );
   }
   if (record.invalidatedAt) {
     // An invalidated record means the previous assignment ended. If the ride is
@@ -2141,6 +2296,7 @@ export async function getRideVerificationCode(input: { userId: string; rideId: s
     attemptsRemaining: state.attemptsRemaining,
     required: true,
     legacy: false,
+    recoveryRequired: false,
     verifiedAt: state.verifiedAt
   };
 }
@@ -2153,6 +2309,7 @@ type VerificationOutcome =
   | { outcome: "expired" }
   | { outcome: "not_issued" }
   | { outcome: "legacy" }
+  | { outcome: "missing_record" }
   | { outcome: "rate_limited" };
 
 /**
@@ -2190,7 +2347,9 @@ export async function verifyPassenger(input: { userId: string; rideId: string; c
     }
 
     const record = await tx.rideVerification.findUnique({ where: { rideId: ride.id } });
-    if (!record) return { outcome: "legacy" };
+    if (!record) {
+      return { outcome: ride.pickupVerificationLegacyAt ? "legacy" : "missing_record" };
+    }
     if (record.invalidatedAt) return { outcome: "not_issued" };
     const now = new Date();
     if (record.verifiedAt) {
@@ -2305,7 +2464,13 @@ export async function verifyPassenger(input: { userId: string; rideId: string; c
       throw new ApiError(
         409,
         "verification_not_required",
-        "This trip was matched before protected pickup verification was introduced, so it has no pickup code. Start the trip normally; the legacy exception is recorded."
+        "This trip was matched before protected pickup verification was enforced, so that assignment has no pickup code. Start the trip normally; the pre-enforcement exception is recorded."
+      );
+    case "missing_record":
+      throw new ApiError(
+        409,
+        "verification_record_missing",
+        "The protected pickup code record is missing for this assignment. Support must issue a new code before this trip can start."
       );
     case "rate_limited":
       throw new ApiError(
@@ -2316,10 +2481,36 @@ export async function verifyPassenger(input: { userId: string; rideId: string; c
   }
 }
 
+function verificationStateKey(
+  record: {
+    invalidatedAt: Date | null;
+    verifiedAt: Date | null;
+    expiresAt: Date;
+    attemptCount: number;
+    maxAttempts: number;
+  } | null,
+  legacyEligible: boolean
+) {
+  if (!record) return legacyEligible ? "pre_enforcement_no_record" : "missing_record";
+  if (record.invalidatedAt) return "invalidated";
+  if (record.verifiedAt) return "verified";
+  if (record.expiresAt.getTime() <= Date.now()) return "expired";
+  if (record.attemptCount >= record.maxAttempts) return "locked";
+  return "active";
+}
+
 /**
  * Audited exceptional support handling. An administrator can rotate the code or
  * mark the passenger verified without ever seeing the raw code. The action is
- * refused once the trip is moving or closed and always writes an AuditLog row.
+ * refused once the trip is moving or closed, requires a reason, and always writes
+ * an AuditLog row that records the previous state and the authorization basis.
+ *
+ * Every call is rate-limited twice from those same AuditLog rows:
+ *  - per ride, so a single assignment cannot be reset/verified in a loop;
+ *  - per operator, so one compromised staff session cannot sweep the queue.
+ * The counts run under operator and ride advisory locks, so concurrent calls
+ * cannot both slip through at the boundary. There is no in-memory counter, so a
+ * process restart does not reset the limit.
  */
 export async function overrideRideVerification(input: {
   adminId: string;
@@ -2333,6 +2524,9 @@ export async function overrideRideVerification(input: {
   }
 
   return prisma.$transaction(async (tx) => {
+    // Operator first, then ride: every verification path takes the ride lock, and
+    // only support actions take the operator lock, so this ordering cannot deadlock.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`ride-verification-support:operator:${input.adminId}`}))`;
     await lockRideVerification(tx, input.rideId);
     const ride = await loadRide(tx, input.rideId);
     if (!["driver_assigned", "driver_arriving"].includes(ride.status)) {
@@ -2343,7 +2537,45 @@ export async function overrideRideVerification(input: {
       );
     }
 
+    const now = new Date();
+    const windowStart = new Date(now.getTime() - RIDE_VERIFICATION_SUPPORT_WINDOW_MS);
+    const [rideActions, operatorActions] = await Promise.all([
+      tx.auditLog.count({
+        where: {
+          entity: "Ride",
+          entityId: ride.id,
+          action: { in: [...RIDE_VERIFICATION_SUPPORT_ACTIONS] },
+          createdAt: { gte: windowStart }
+        }
+      }),
+      tx.auditLog.count({
+        where: {
+          actorId: input.adminId,
+          action: { in: [...RIDE_VERIFICATION_SUPPORT_ACTIONS] },
+          createdAt: { gte: windowStart }
+        }
+      })
+    ]);
+    if (rideActions >= RIDE_VERIFICATION_SUPPORT_MAX_PER_RIDE) {
+      throw new ApiError(
+        429,
+        "verification_support_ride_rate_limited",
+        "This trip has had several pickup-code support actions recently. Wait for the rate-limit window before trying again."
+      );
+    }
+    if (operatorActions >= RIDE_VERIFICATION_SUPPORT_MAX_PER_OPERATOR) {
+      throw new ApiError(
+        429,
+        "verification_support_operator_rate_limited",
+        "You have performed several pickup-code support actions recently. Wait for the rate-limit window before trying again."
+      );
+    }
+
     let record = await tx.rideVerification.findUnique({ where: { rideId: ride.id } });
+    const previousState = verificationStateKey(record, Boolean(ride.pickupVerificationLegacyAt));
+    const authorizationBasis =
+      !record || record.invalidatedAt ? "support_recovery" : "support_override";
+
     if (input.action === "reset") {
       record = await issueRideVerification(tx, ride.id);
     } else {
@@ -2351,12 +2583,22 @@ export async function overrideRideVerification(input: {
       record = await tx.rideVerification.update({
         where: { id: record.id },
         data: {
-          verifiedAt: new Date(),
+          verifiedAt: now,
           verifiedByUserId: input.adminId,
           attemptCount: 0,
           lastAttemptAt: null,
-          expiresAt: new Date(Date.now() + RIDE_VERIFICATION_TTL_MS)
+          expiresAt: new Date(now.getTime() + RIDE_VERIFICATION_TTL_MS)
         }
+      });
+    }
+    if (ride.pickupVerificationLegacyAt) {
+      // Explicit support opt-in ends the pre-enforcement exemption permanently.
+      // If this record is ever lost after the opt-in, the ride fails closed rather
+      // than silently reverting to a legacy start. The audit row above captured the
+      // marker timestamp before this update.
+      await tx.ride.update({
+        where: { id: ride.id },
+        data: { pickupVerificationLegacyAt: null }
       });
     }
 
@@ -2366,13 +2608,29 @@ export async function overrideRideVerification(input: {
       action: input.action === "reset" ? "ride.verification_support_reset" : "ride.verification_support_verified",
       entity: "Ride",
       entityId: ride.id,
-      metadata: { rideNumber: ride.rideNumber, reason, action: input.action }
+      metadata: {
+        rideNumber: ride.rideNumber,
+        reason,
+        action: input.action,
+        authorizationBasis,
+        previousState,
+        legacyMarkerAt: ride.pickupVerificationLegacyAt?.toISOString() ?? null,
+        operatorId: input.adminId
+      }
     });
 
     return {
       rideId: ride.id,
       action: input.action,
-      verification: safeVerification(record)
+      verification: safeVerification(record),
+      rateLimit: {
+        windowSeconds: RIDE_VERIFICATION_SUPPORT_WINDOW_MS / 1000,
+        rideActionsRemaining: Math.max(0, RIDE_VERIFICATION_SUPPORT_MAX_PER_RIDE - rideActions - 1),
+        operatorActionsRemaining: Math.max(
+          0,
+          RIDE_VERIFICATION_SUPPORT_MAX_PER_OPERATOR - operatorActions - 1
+        )
+      }
     };
   });
 }
@@ -2404,10 +2662,17 @@ export async function resetRideVerificationByRider(input: { userId: string; ride
 
     const record = await tx.rideVerification.findUnique({ where: { rideId: ride.id } });
     if (!record) {
+      if (ride.pickupVerificationLegacyAt) {
+        throw new ApiError(
+          409,
+          "verification_not_required",
+          "This trip was matched before protected pickup verification was enforced, so it has no code to reset."
+        );
+      }
       throw new ApiError(
         409,
-        "verification_not_required",
-        "This trip was matched before protected pickup verification was introduced, so it has no code to reset."
+        "verification_record_missing",
+        "The protected pickup code record is missing. Contact NaijaDrive support; only an authorised support action can issue a replacement code."
       );
     }
     if (record.invalidatedAt) {

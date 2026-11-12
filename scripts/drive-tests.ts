@@ -554,13 +554,22 @@ async function main() {
     const ride = request.body as Json;
     isStatus(await driver1.post(`/api/drive/driver/rides/${ride.id}/accept`), 200, "legacy ride accept");
 
-    // Simulate an assignment created before the protected-record feature existed.
+    // Simulate the exact state the enforcement migration left for a ride that was
+    // already assigned when the feature was cut over: no protected record plus the
+    // one-time durable marker. A deleted record alone is no longer legacy.
     await db.rideVerification.deleteMany({ where: { rideId: ride.id } });
+    await db.ride.update({
+      where: { id: ride.id },
+      data: { pickupVerificationLegacyAt: new Date(Date.now() - 60 * 60 * 1000) }
+    });
     const legacy = await customer.get(`/api/drive/rides/${ride.id}/verification`);
     isStatus(legacy, 200, "legacy verification state");
     const legacyBody = legacy.body as Json;
     assert(legacyBody.legacy === true, `legacy state not reported: ${JSON.stringify(legacyBody)}`);
-    assert(legacyBody.code === null && legacyBody.required === false, "legacy ride exposed a code");
+    assert(
+      legacyBody.code === null && legacyBody.required === false && legacyBody.recoveryRequired === false,
+      "legacy ride exposed a code or was marked recovery-required"
+    );
     assert(
       (await db.rideVerification.count({ where: { rideId: ride.id } })) === 0,
       "opening the legacy trip screen created a retroactive record"
@@ -587,6 +596,75 @@ async function main() {
       where: { action: "ride.legacy_pickup_start_without_verification", entityId: ride.id }
     });
     assert(events === 1 && audits === 1, `legacy exception was not audited (events ${events}, audits ${audits})`);
+    const audit = await db.auditLog.findFirst({
+      where: { action: "ride.legacy_pickup_start_without_verification", entityId: ride.id }
+    });
+    assert(
+      (audit?.metadata as Record<string, unknown> | null)?.authorizationBasis === "pre_enforcement_assignment",
+      "legacy start did not record its authorization basis"
+    );
+  });
+
+  await step("A deleted record on a current assignment fails closed until audited support recovery", async () => {
+    const request = await customer.post("/api/drive/rides", {
+      pickupId: "yaba-tejuosho",
+      dropoffId: "lekki-phase-1",
+      vehicleClass: "economy",
+      paymentMethod: "cash"
+    });
+    isStatus(request, 201, "missing-record ride request");
+    const ride = request.body as Json;
+    isStatus(await driver1.post(`/api/drive/driver/rides/${ride.id}/accept`), 200, "missing-record accept");
+    await db.rideVerification.deleteMany({ where: { rideId: ride.id } });
+
+    const missing = await customer.get(`/api/drive/rides/${ride.id}/verification`);
+    isStatus(missing, 409, "missing record rider read");
+    assert(
+      (missing.body as Json).code === "verification_record_missing",
+      `wrong missing-record error: ${JSON.stringify(missing.body)}`
+    );
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "driver_arriving" }),
+      200,
+      "missing-record arriving"
+    );
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "in_progress" }),
+      409,
+      "missing-record start refused"
+    );
+
+    const recovery = await admin.post(`/api/drive/rides/${ride.id}/verification/support`, {
+      action: "reset",
+      reason: "Protected record missing after assignment"
+    });
+    isStatus(recovery, 200, "support recovery issue");
+    const reissued = await customer.get(`/api/drive/rides/${ride.id}/verification`);
+    isStatus(reissued, 200, "recovered rider code");
+    const code = (reissued.body as Json).code as string;
+    assert(typeof code === "string" && /^\d{4}$/.test(code), "recovery did not issue a usable code");
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/verify`, { code }),
+      200,
+      "recovered code verifies"
+    );
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "in_progress" }),
+      200,
+      "recovered trip starts"
+    );
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "completed" }),
+      200,
+      "recovered trip completes"
+    );
+    const audit = await db.auditLog.findFirst({
+      where: { action: "ride.verification_support_reset", entityId: ride.id }
+    });
+    assert(
+      (audit?.metadata as Record<string, unknown> | null)?.authorizationBasis === "support_recovery",
+      "support recovery did not record its authorization basis"
+    );
   });
 
   await step("Control Center pickup-code support is permission-gated and never returns a code", async () => {
@@ -607,7 +685,9 @@ async function main() {
     const row = queueRows.find((item) => item.rideId === ride.id);
     assert(row, "assigned ride missing from the support queue");
     assert(
-      row.verification.required === true && row.verification.legacy === false,
+      row.verification.required === true &&
+        row.verification.legacy === false &&
+        row.verification.recoveryRequired === false,
       `support queue state is wrong: ${JSON.stringify(row.verification)}`
     );
     const serialized = JSON.stringify(queue.body);

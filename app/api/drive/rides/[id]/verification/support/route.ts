@@ -16,7 +16,10 @@ export const dynamic = "force-dynamic";
  *
  * Only Control Center staff with `rides:write` may reset or verify a code. The
  * raw code is never returned here; the rider's own endpoint shows the new code
- * after a reset. Every call writes an AuditLog row with the reason.
+ * after a reset. Every call requires a reason, writes an AuditLog row with the
+ * previous state and authorization basis, and is rate-limited per ride and per
+ * operator from those audit rows. This is also the authorized recovery path for
+ * a post-enforcement assignment whose protected record is missing.
  */
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {

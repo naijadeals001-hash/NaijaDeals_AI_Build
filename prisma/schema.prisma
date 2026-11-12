@@ -842,6 +842,18 @@ model Ride {
   assignmentExpiresAt DateTime?
   /** Retained from the fare hold when the rider cancels after the driver set off. */
   cancellationFeeKobo BigInt          @default(0)
+  /**
+   * Bounded pre-enforcement compatibility marker for protected pickup verification.
+   *
+   * Null for every ride assigned after enforcement. The enforcement migration set
+   * this exactly once for rides that were already assigned (`driver_assigned` or
+   * `driver_arriving`) and had no `RideVerification` record at that moment. It is
+   * the only evidence that lets such an assignment start without a code; runtime
+   * code must never set it. A missing record without this marker fails closed and
+   * needs the audited support recovery action. Release, expiry, cancellation and
+   * reassignment clear it so it can never authorise a later assignment.
+   */
+  pickupVerificationLegacyAt DateTime?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   rider              User              @relation("RiderRides", fields: [riderId], references: [id])

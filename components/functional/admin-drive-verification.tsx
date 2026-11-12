@@ -13,7 +13,8 @@ const focus =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00E676]";
 
 function stateLabel(verification: ApiRideVerificationState) {
-  if (verification.legacy) return "Legacy ride · no code required";
+  if (verification.recoveryRequired) return "Missing record · recovery required";
+  if (verification.legacy) return "Pre-enforcement assignment · no code";
   if (verification.verified) return "Passenger verified";
   if (verification.locked) return "Locked after too many attempts";
   if (verification.expired) return "Code expired";
@@ -22,6 +23,7 @@ function stateLabel(verification: ApiRideVerificationState) {
 }
 
 function stateClasses(verification: ApiRideVerificationState) {
+  if (verification.recoveryRequired) return "border-crimson/40 bg-crimson/10 text-crimson";
   if (verification.verified) return "border-[#00E676]/40 bg-[#00E676]/10 text-[#00E676]";
   if (verification.locked || verification.expired) return "border-crimson/40 bg-crimson/10 text-crimson";
   if (verification.legacy) return "border-[#8B949E]/40 bg-[#8B949E]/10 text-[#8B949E]";
@@ -34,7 +36,9 @@ function stateClasses(verification: ApiRideVerificationState) {
  * Every row comes from `/api/admin/rides/verification`, which requires
  * `rides:write` and never returns a raw code, salt or hash. Reset rotates the code
  * and clears attempts; verify marks the passenger verified without revealing a
- * code. Both write an AuditLog row with the operator's reason.
+ * code. Both require a reason, write an AuditLog row and are rate-limited per ride
+ * and per operator. A missing record on a post-enforcement assignment is shown as
+ * recovery-required; it is not treated as a legacy ride.
  */
 export function AdminDriveVerification({ canModerate }: { canModerate: boolean }) {
   const [rows, setRows] = useState<ApiRideVerificationSupportRow[]>([]);
@@ -77,12 +81,12 @@ export function AdminDriveVerification({ canModerate }: { canModerate: boolean }
     }
     setBusy(`${row.rideId}:${action}`);
     try {
-      await apiClient.adminRideVerificationAction(row.rideId, action, reason);
+      const result = await apiClient.adminRideVerificationAction(row.rideId, action, reason);
       setReasons((current) => ({ ...current, [row.rideId]: "" }));
       setNotice(
         action === "reset"
-          ? `Pickup code reset for ${row.rideNumber}. The rider sees the new code on their trip screen.`
-          : `Passenger marked verified for ${row.rideNumber}. The driver can start the trip.`
+          ? `Pickup code reset for ${row.rideNumber}. The rider sees the new code on their trip screen. ${result.rateLimit.rideActionsRemaining} action(s) remain for this ride in this ${result.rateLimit.windowSeconds}s window.`
+          : `Passenger marked verified for ${row.rideNumber}. The driver can start the trip. ${result.rateLimit.operatorActionsRemaining} operator action(s) remain in this ${result.rateLimit.windowSeconds}s window.`
       );
       await load();
     } catch (caught) {
@@ -108,9 +112,10 @@ export function AdminDriveVerification({ canModerate }: { canModerate: boolean }
           </h2>
           <p className="mt-1 max-w-3xl text-xs leading-5 text-[#8B949E]">
             Assigned NaijaDrive trips that have not started. A reset rotates the code and clears attempts;
-            verify marks the passenger verified. Raw codes are never shown here, and every action requires a
-            reason and writes an audit row. Requires the <code className="text-[#F0F6FC]">rides:write</code>{" "}
-            permission.
+            verify marks the passenger verified. A missing record on a post-enforcement assignment is
+            recovery-required, never legacy. Raw codes are never shown here; every action requires a reason,
+            writes an audit row and is rate-limited per ride and per operator. Requires the{" "}
+            <code className="text-[#F0F6FC]">rides:write</code> permission.
           </p>
         </div>
         <button
@@ -198,6 +203,51 @@ export function AdminDriveVerification({ canModerate }: { canModerate: boolean }
                   <p className="mt-2 text-[11px] text-[#8B949E]">
                     This passenger is verified. No further pickup-code action is needed.
                   </p>
+                ) : verification.recoveryRequired ? (
+                  <div className="mt-2 space-y-2 rounded-lg border border-crimson/30 bg-crimson/10 p-2">
+                    <p className="text-[11px] font-bold leading-4 text-crimson">
+                      This assignment must have a protected record but none exists. It is not a legacy
+                      ride and the server will refuse to start it. Issue a recovery code or mark the
+                      passenger verified with a reason; both actions are audited and rate-limited.
+                    </p>
+                    <div>
+                      <label htmlFor={reasonId} className="block text-[10px] font-bold text-[#8B949E]">
+                        Reason for this recovery action (required, written to audit log)
+                      </label>
+                      <input
+                        id={reasonId}
+                        value={reasons[row.rideId] ?? ""}
+                        onChange={(event) =>
+                          setReasons((current) => ({ ...current, [row.rideId]: event.target.value.slice(0, 300) }))
+                        }
+                        maxLength={300}
+                        placeholder="e.g. Record missing after assignment; rider present"
+                        aria-invalid={Boolean(rowError)}
+                        aria-describedby={rowError ? errorId : undefined}
+                        className={`mt-0.5 min-h-9 w-full rounded-lg border border-[#21262D] bg-[#161B22] px-2 text-xs text-[#F0F6FC] ${focus}`}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void act(row, "reset")}
+                        disabled={busy === `${row.rideId}:reset`}
+                        className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#58A6FF]/40 bg-[#58A6FF]/10 px-2.5 text-xs font-bold text-[#58A6FF] hover:bg-[#58A6FF]/20 disabled:opacity-50 ${focus}`}
+                      >
+                        {busy === `${row.rideId}:reset` ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+                        Issue recovery code
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void act(row, "verify")}
+                        disabled={busy === `${row.rideId}:verify`}
+                        className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#00E676]/40 bg-[#00E676]/10 px-2.5 text-xs font-bold text-[#00E676] hover:bg-[#00E676]/20 disabled:opacity-50 ${focus}`}
+                      >
+                        {busy === `${row.rideId}:verify` ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+                        Mark passenger verified
+                      </button>
+                    </div>
+                  </div>
                 ) : verification.legacy ? (
                   <div className="mt-2 flex flex-wrap items-end gap-2">
                     <div className="min-w-[200px] flex-1">

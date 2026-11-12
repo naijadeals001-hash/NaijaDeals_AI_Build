@@ -1306,6 +1306,7 @@ function ActiveTripPanel({
   const verificationExpired = Boolean(ride.verification?.expired);
   const verificationLocked = Boolean(ride.verification?.locked);
   const legacyVerification = Boolean(ride.verification?.legacy);
+  const verificationRecoveryRequired = Boolean(ride.verification?.recoveryRequired);
   const attemptsRemaining = ride.verification?.attemptsRemaining ?? 0;
   const verificationBlocked = verificationExpired || verificationLocked;
   const target =
@@ -1394,7 +1395,7 @@ function ActiveTripPanel({
         </p>
       ) : null}
 
-      {verificationRequired && !verified ? (
+      {ride.status !== "in_progress" && verificationRequired && !verified ? (
         <div className="mt-2 rounded-lg bg-[#fff3e8] p-2.5">
           <p className="text-[10.5px] font-extrabold text-[#a3480f]">Ask the passenger for their 4-digit pickup code</p>
           {verificationExpired ? (
@@ -1444,10 +1445,17 @@ function ActiveTripPanel({
             </p>
           ) : null}
         </div>
-      ) : legacyVerification ? (
+      ) : ride.status !== "in_progress" && verificationRecoveryRequired ? (
+        <p role="status" className="mt-2 rounded-lg bg-[#fee2e2] p-2 text-[10.5px] font-semibold leading-4 text-[#b91c1c]">
+          The protected pickup-code record is missing for this assignment. The server refuses to start
+          the trip. Contact NaijaDrive support; an authorised agent must issue a new code before you can
+          start.
+        </p>
+      ) : ride.status !== "in_progress" && legacyVerification ? (
         <p className="mt-2 rounded-lg bg-[#f2f7f2] p-2 text-[10.5px] leading-4 text-[#5d6d64]">
-          This trip was matched before protected pickup verification was introduced, so there is no code
-          to enter. Starting it is allowed and the legacy exception is written to the trip audit trail.
+          This trip was matched before protected pickup verification was enforced, so there is no code
+          to enter. Starting it is allowed and the pre-enforcement exception is written to the trip audit
+          trail.
         </p>
       ) : ride.status === "driver_arriving" ? (
         <p className="mt-2 rounded-lg bg-[#f2f7f2] p-2 text-[10.5px] leading-4 text-[#5d6d64]">
@@ -1464,7 +1472,8 @@ function ActiveTripPanel({
             onClick={() => onAdvance(nextAction.status)}
             disabled={
               busy === `status-${nextAction.status}` ||
-              (nextAction.status === "in_progress" && verificationRequired && !verified)
+              (nextAction.status === "in_progress" &&
+                (verificationRecoveryRequired || (verificationRequired && !verified)))
             }
             className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-[#16a34a] px-3 text-[11.5px] font-extrabold text-white hover:bg-[#128a3f] disabled:opacity-50"
           >
