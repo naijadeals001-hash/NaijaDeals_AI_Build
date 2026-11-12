@@ -22,11 +22,12 @@ import {
   Store,
   Truck,
   User,
-  Wallet,
-  X
+  Wallet
 } from "lucide-react";
 import { apiClient, type ApiCategory, type ApiProduct, type SessionUser } from "@/lib/api-client";
 import { NaijaDealsLogo } from "@/components/brand/naijadeals-logo";
+import { AllDrawer, type ShopDepartment } from "./all-drawer";
+import { AccountMenu, rememberRecentlyViewed } from "./account-menu";
 import { MarketplaceProductCard } from "./marketplace-card";
 
 /**
@@ -42,12 +43,7 @@ type StorefrontConfig = {
   shelfLimit?: number;
 };
 
-type Department = {
-  id: string;
-  name: string;
-  slug: string;
-  imageUrl?: string | null;
-};
+type Department = ShopDepartment;
 
 type Notice = { text: string; tone: "success" | "error" } | null;
 
@@ -89,13 +85,13 @@ export function NaijaDealsMarketplace() {
   const [addingId, setAddingId] = useState("");
   const [addedId, setAddedId] = useState("");
   const [destination, setDestination] = useState("Lagos, Nigeria");
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [openPanel, setOpenPanel] = useState<"all" | "account" | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [config, setConfig] = useState<StorefrontConfig>({});
   const [scope, setScope] = useState("");
   const [missingArt, setMissingArt] = useState<Record<string, boolean>>({});
-  const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const allReturnFocusRef = useRef<HTMLElement | null>(null);
+  const accountReturnFocusRef = useRef<HTMLElement | null>(null);
 
   const markMissing = (key: string) => setMissingArt((current) => (current[key] ? current : { ...current, [key]: true }));
 
@@ -181,24 +177,6 @@ export function NaijaDealsMarketplace() {
       active = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeButtonRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMenuOpen(false);
-        menuTriggerRef.current?.focus();
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [menuOpen]);
 
   const showHero = config.showHero !== false;
   const showShelves = config.showShelves !== false;
@@ -313,20 +291,28 @@ export function NaijaDealsMarketplace() {
     }
   }
 
-  function openMenu(trigger: HTMLButtonElement) {
-    menuTriggerRef.current = trigger;
-    setMenuOpen(true);
+  function openAll(trigger: HTMLElement) {
+    allReturnFocusRef.current = trigger;
+    setOpenPanel("all");
   }
 
-  function closeMenu() {
-    setMenuOpen(false);
-    menuTriggerRef.current?.focus();
+  function openAccount(trigger: HTMLElement) {
+    accountReturnFocusRef.current = trigger;
+    setOpenPanel("account");
   }
 
   const firstName = sessionUser?.name?.split(" ")[0] ?? null;
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const [slug, items] of byCategory) counts[slug] = items.length;
+    return counts;
+  }, [byCategory]);
 
   return (
-    <div className="w-full max-w-full bg-[#f4f7f2] text-[#14241b]">
+    <div
+      className="w-full max-w-full bg-[#f4f7f2] text-[#14241b]"
+      onClickCapture={(event) => rememberRecentlyViewed(event.target)}
+    >
       <a
         href="#shop-main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[100] focus:rounded-full focus:bg-[#07351f] focus:px-4 focus:py-2 focus:text-[12px] focus:font-bold focus:text-white"
@@ -367,16 +353,17 @@ export function NaijaDealsMarketplace() {
           <div className="flex items-center gap-2 py-3 sm:gap-3 lg:gap-5">
             <button
               type="button"
-              onClick={(event) => openMenu(event.currentTarget)}
-              aria-label="Open marketplace menu"
-              aria-expanded={menuOpen}
-              aria-controls="marketplace-menu"
+              onClick={(event) => openAll(event.currentTarget)}
+              aria-label="Open All departments menu"
+              aria-haspopup="dialog"
+              aria-expanded={openPanel === "all"}
+              aria-controls="shop-all-panel"
               className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[#07351f] transition hover:bg-[#eef4ea] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] lg:hidden"
             >
               <Menu className="h-5 w-5" aria-hidden />
             </button>
 
-            <Link href="/naijashop" aria-label="NaijaDeals Marketplace home" className="flex shrink-0 flex-col">
+            <Link href="/naijashop" aria-label="NaijaDeals Marketplace home" className="flex min-w-0 shrink-0 flex-col">
               <NaijaDealsLogo tone="onLight" size="md" />
               <span className="mt-0.5 text-[8.5px] font-bold uppercase tracking-[0.2em] text-[#0f7a4a]">Marketplace</span>
             </Link>
@@ -408,32 +395,34 @@ export function NaijaDealsMarketplace() {
               </Link>
               <span className="mx-1 hidden h-8 w-px bg-[#e1e8de] xl:block" aria-hidden />
 
-              <Link
-                href={sessionUser === null ? "/login" : "/account"}
+              <button
+                type="button"
+                onClick={(event) => openAccount(event.currentTarget)}
                 aria-label={
                   sessionUser
-                    ? `Account for ${sessionUser.name}`
+                    ? `Account and lists for ${sessionUser.name}`
                     : sessionUser === null
-                      ? "Sign in to your account"
-                      : "Your NaijaDeals account"
+                      ? "Account and lists. Sign in"
+                      : "Account and lists"
                 }
-                className="flex items-center gap-1.5 rounded-full px-2 py-1.5 transition hover:bg-[#eef4ea] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
+                aria-haspopup="dialog"
+                aria-expanded={openPanel === "account"}
+                aria-controls="shop-account-panel"
+                className="flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 transition hover:bg-[#eef4ea] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
               >
-                <User className="h-5 w-5 text-[#0b5c33]" aria-hidden />
-                <span className="hidden flex-col leading-tight lg:flex">
-                  <span className="text-[9.5px] font-semibold text-[#566359]">
-                    {sessionUser ? `Hello, ${firstName}` : sessionUser === null ? "Welcome" : "Your account"}
+                <User className="h-5 w-5 shrink-0 text-[#0b5c33]" aria-hidden />
+                <span className="hidden flex-col text-left leading-tight lg:flex">
+                  <span className="max-w-[9rem] truncate text-[9.5px] font-semibold text-[#566359]">
+                    {sessionUser ? `Hello, ${firstName}` : sessionUser === null ? "Hello, sign in" : "Hello"}
                   </span>
-                  <span className="text-[11.5px] font-extrabold text-[#14241b]">
-                    {sessionUser ? "Account" : sessionUser === null ? "Sign in" : "Account"}
-                  </span>
+                  <span className="text-[11.5px] font-extrabold text-[#14241b]">Account &amp; Lists</span>
                 </span>
-              </Link>
+              </button>
 
               <Link
                 href="/orders"
                 aria-label="Returns and orders"
-                className="flex items-center gap-1.5 rounded-full px-2 py-1.5 transition hover:bg-[#eef4ea] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
+                className="hidden items-center gap-1.5 rounded-full px-2 py-1.5 transition hover:bg-[#eef4ea] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] md:flex"
               >
                 <Package className="h-5 w-5 text-[#0b5c33]" aria-hidden />
                 <span className="hidden flex-col leading-tight lg:flex">
@@ -490,13 +479,21 @@ export function NaijaDealsMarketplace() {
         </div>
 
         <nav aria-label="Marketplace departments" className="border-t border-[#eef3ec] bg-[#f7faf4]">
-          <div className="mx-auto flex max-w-[1440px] items-center gap-0.5 overflow-x-auto px-2 [scrollbar-width:none] sm:px-5 lg:px-8">
+          {/*
+            Deliberate small-screen pattern: the three core actions wrap instead
+            of scrolling sideways, so nothing is clipped at 320px. Departments
+            are always one tap away in the ALL drawer, and appear inline from
+            768px where there is room for a wrapped two/three-row list.
+          */}
+          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-0.5 px-2 sm:px-5 lg:px-8">
             <button
               type="button"
-              onClick={(event) => openMenu(event.currentTarget)}
-              aria-expanded={menuOpen}
-              aria-controls="marketplace-menu"
-              className="flex shrink-0 items-center gap-1.5 px-2 py-2.5 text-[11.5px] font-extrabold text-[#07351f] hover:text-[#0b5c33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
+              onClick={(event) => openAll(event.currentTarget)}
+              aria-label="Open all departments"
+              aria-haspopup="dialog"
+              aria-expanded={openPanel === "all"}
+              aria-controls="shop-all-panel"
+              className="flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2 py-2.5 text-[11.5px] font-extrabold text-[#07351f] hover:text-[#0b5c33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
             >
               <Grid2x2 className="h-3.5 w-3.5" aria-hidden />
               All departments
@@ -504,125 +501,61 @@ export function NaijaDealsMarketplace() {
             <span className="h-4 w-px shrink-0 bg-[#dbe5d7]" aria-hidden />
             <Link
               href="/naijashop/deals"
-              className="shrink-0 px-2 py-2.5 text-[11.5px] font-extrabold text-[#b8440a] hover:text-[#8f3508]"
+              className="shrink-0 whitespace-nowrap px-2 py-2.5 text-[11.5px] font-extrabold text-[#b8440a] hover:text-[#8f3508]"
             >
               Price drops
             </Link>
-            <Link href="/naijashop/bestsellers" className="shrink-0 px-2 py-2.5 text-[11.5px] font-semibold text-[#3d4f43] hover:text-[#0b5c33]">
+            <Link
+              href="/naijashop/bestsellers"
+              className="shrink-0 whitespace-nowrap px-2 py-2.5 text-[11.5px] font-semibold text-[#3d4f43] hover:text-[#0b5c33]"
+            >
               Bestsellers
             </Link>
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={`/naijashop/c/${category.slug}`}
-                className="shrink-0 px-2 py-2.5 text-[11.5px] font-semibold text-[#3d4f43] hover:text-[#0b5c33]"
-              >
-                {category.name}
-              </Link>
-            ))}
             <Link
               href="/sell"
-              className="ml-auto hidden shrink-0 items-center gap-1 px-2 py-2.5 text-[11.5px] font-extrabold text-[#0b5c33] hover:text-[#07351f] sm:flex"
+              className="ml-auto hidden shrink-0 items-center gap-1 whitespace-nowrap px-2 py-2.5 text-[11.5px] font-extrabold text-[#0b5c33] hover:text-[#07351f] sm:flex xl:order-4"
             >
               Sell on NaijaDeals
               <ArrowRight className="h-3 w-3" aria-hidden />
             </Link>
+            <div className="hidden min-w-0 basis-full flex-wrap items-center gap-x-0.5 md:flex md:border-t md:border-[#eef3ec] md:pt-0.5 xl:order-3 xl:basis-auto xl:flex-1 xl:border-t-0 xl:pt-0">
+              {categories.map((category) => (
+                <Link
+                  key={category.id}
+                  href={`/naijashop/c/${category.slug}`}
+                  className="shrink-0 whitespace-nowrap px-2 py-2.5 text-[11.5px] font-semibold text-[#3d4f43] hover:text-[#0b5c33]"
+                >
+                  {category.name}
+                </Link>
+              ))}
+            </div>
           </div>
         </nav>
       </header>
 
-      {menuOpen ? (
-        <div className="fixed inset-0 z-[60] flex" role="dialog" aria-modal="true" aria-labelledby="marketplace-menu-title" id="marketplace-menu">
-          <button type="button" aria-label="Close marketplace menu" onClick={closeMenu} className="absolute inset-0 bg-[#041f12]/65" />
-          <div className="relative flex h-full w-[88%] max-w-sm flex-col overflow-y-auto bg-white shadow-2xl">
-            <div className="flex items-start justify-between gap-3 bg-[#07351f] p-4 text-white">
-              <div>
-                <NaijaDealsLogo tone="onDark" size="sm" />
-                <p id="marketplace-menu-title" className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#b9d5bd]">
-                  Marketplace menu
-                </p>
-              </div>
-              <button
-                ref={closeButtonRef}
-                type="button"
-                onClick={closeMenu}
-                aria-label="Close menu"
-                className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5b52e]"
-              >
-                <X className="h-4 w-4" aria-hidden />
-              </button>
-            </div>
+      <AllDrawer
+        open={openPanel === "all"}
+        onClose={() => setOpenPanel(null)}
+        returnFocusRef={allReturnFocusRef}
+        departments={departments}
+        categoryCounts={categoryCounts}
+        departmentsStatus={categoriesStatus}
+        countsAvailable={status === "ready"}
+        signedIn={sessionUser === undefined ? null : sessionUser !== null}
+      />
 
-            <div className="p-4">
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">Shop by department</p>
-              <ul className="mt-2 divide-y divide-[#eef3ec]">
-                {departments.map((department) => {
-                  const count = byCategory.get(department.slug)?.length ?? 0;
-                  return (
-                    <li key={department.id}>
-                      <Link
-                        href={`/naijashop/c/${department.slug}`}
-                        onClick={closeMenu}
-                        className="flex items-center justify-between gap-2 py-2 text-[12.5px] font-semibold text-[#14241b] hover:text-[#0b5c33]"
-                      >
-                        <span>{department.name}</span>
-                        <span className="text-[10.5px] font-normal text-[#566359]">{count > 0 ? `${count} listings` : "No stock yet"}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <Link href="/naijashop/categories" onClick={closeMenu} className="rounded-xl bg-[#eef4ea] px-3 py-2 text-[11.5px] font-extrabold text-[#0b5c33]">
-                  All departments
-                </Link>
-                <Link href="/naijashop/deals" onClick={closeMenu} className="rounded-xl bg-[#eef4ea] px-3 py-2 text-[11.5px] font-extrabold text-[#0b5c33]">
-                  Price drops
-                </Link>
-                <Link href="/naijashop/bestsellers" onClick={closeMenu} className="rounded-xl bg-[#eef4ea] px-3 py-2 text-[11.5px] font-extrabold text-[#0b5c33]">
-                  Bestsellers
-                </Link>
-                <Link href="/naijashop/plus" onClick={closeMenu} className="rounded-xl bg-[#eef4ea] px-3 py-2 text-[11.5px] font-extrabold text-[#0b5c33]">
-                  Plus membership
-                </Link>
-              </div>
-
-              <p className="mt-5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">Your NaijaDeals</p>
-              <ul className="mt-1">
-                {[
-                  { label: "Account and addresses", href: "/account" },
-                  { label: "Orders and returns", href: "/orders" },
-                  { label: "Your cart", href: "/cart" },
-                  { label: "NaijaPay wallet", href: "/wallet" }
-                ].map((item) => (
-                  <li key={item.href}>
-                    <Link href={item.href} onClick={closeMenu} className="block py-2 text-[12.5px] font-semibold text-[#14241b] hover:text-[#0b5c33]">
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-
-              <p className="mt-5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">Bulk and selling</p>
-              <ul className="mt-1">
-                {[
-                  { label: "Request a bulk produce quote", href: "/naijafresh/business" },
-                  { label: "Get a freight quote", href: "/naijasend/quote" },
-                  { label: "Sell on NaijaDeals", href: "/sell" },
-                  { label: "Marketplace help", href: "/naijashop/help" }
-                ].map((item) => (
-                  <li key={item.href}>
-                    <Link href={item.href} onClick={closeMenu} className="block py-2 text-[12.5px] font-semibold text-[#14241b] hover:text-[#0b5c33]">
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <AccountMenu
+        open={openPanel === "account"}
+        onClose={() => setOpenPanel(null)}
+        returnFocusRef={accountReturnFocusRef}
+        user={sessionUser}
+        onSignedOut={() => {
+          setSessionUser(null);
+          setCartCount(0);
+          setDestination("Lagos, Nigeria");
+          setNotice(null);
+        }}
+      />
 
       <main id="shop-main" className="mx-auto w-full max-w-[1440px] px-3 pb-10 sm:px-6 lg:px-8">
         {notice ? (
@@ -1103,25 +1036,68 @@ export function NaijaDealsMarketplace() {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dce6d8] bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
         <ul className="grid grid-cols-4">
-          {[
-            { label: "Home", href: "/naijashop", icon: HomeIcon, current: true },
-            { label: "Departments", href: "/naijashop/categories", icon: Grid2x2, current: false },
-            { label: "Cart", href: "/cart", icon: ShoppingCart, current: false },
-            { label: "Account", href: "/account", icon: User, current: false }
-          ].map((item) => (
-            <li key={item.label}>
-              <Link
-                href={item.href}
-                aria-current={item.current ? "page" : undefined}
-                className={`flex flex-col items-center gap-0.5 py-2 text-[9.5px] font-bold ${
-                  item.current ? "text-[#0b5c33]" : "text-[#5d6d64] hover:text-[#0b5c33]"
-                }`}
-              >
-                <item.icon className="h-5 w-5" aria-hidden />
-                {item.label}
-              </Link>
-            </li>
-          ))}
+          <li>
+            <Link
+              href="/naijashop"
+              aria-current="page"
+              className="flex min-h-12 flex-col items-center justify-center gap-0.5 py-2 text-[9.5px] font-bold text-[#0b5c33]"
+            >
+              <HomeIcon className="h-5 w-5" aria-hidden />
+              Home
+            </Link>
+          </li>
+          <li>
+            <button
+              type="button"
+              onClick={(event) => openAll(event.currentTarget)}
+              aria-label="Open all departments"
+              aria-haspopup="dialog"
+              aria-expanded={openPanel === "all"}
+              aria-controls="shop-all-panel"
+              className="flex min-h-12 w-full flex-col items-center justify-center gap-0.5 py-2 text-[9.5px] font-bold text-[#5d6d64] transition hover:text-[#0b5c33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0b5c33]"
+            >
+              <Grid2x2 className="h-5 w-5" aria-hidden />
+              Departments
+            </button>
+          </li>
+          <li>
+            <Link
+              href="/cart"
+              aria-label={`Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}`}
+              className="flex min-h-12 flex-col items-center justify-center gap-0.5 py-2 text-[9.5px] font-bold text-[#5d6d64] transition hover:text-[#0b5c33]"
+            >
+              <span className="relative">
+                <ShoppingCart className="h-5 w-5" aria-hidden />
+                <span
+                  className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[#f26b21] px-1 text-[9px] font-black leading-none text-white"
+                  aria-hidden
+                >
+                  {cartCount}
+                </span>
+              </span>
+              Cart
+            </Link>
+          </li>
+          <li>
+            <button
+              type="button"
+              onClick={(event) => openAccount(event.currentTarget)}
+              aria-label={
+                sessionUser
+                  ? `Open account and lists for ${sessionUser.name}`
+                  : sessionUser === null
+                    ? "Open account and lists to sign in"
+                    : "Open account and lists"
+              }
+              aria-haspopup="dialog"
+              aria-expanded={openPanel === "account"}
+              aria-controls="shop-account-panel"
+              className="flex min-h-12 w-full flex-col items-center justify-center gap-0.5 py-2 text-[9.5px] font-bold text-[#5d6d64] transition hover:text-[#0b5c33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0b5c33]"
+            >
+              <User className="h-5 w-5" aria-hidden />
+              Account
+            </button>
+          </li>
         </ul>
       </nav>
     </div>

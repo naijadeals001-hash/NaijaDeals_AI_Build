@@ -100,3 +100,81 @@ a {
 .aura-type {
   font-family: "Inter Variable", "Inter", "Helvetica Neue", Arial, system-ui, sans-serif;
 }
+
+/* NaijaDeals Marketplace navigation panels (ALL and Account & Lists).
+   Scoped to the storefront only; no other vertical uses these classes. */
+@keyframes shop-nav-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shop-nav-sheet-in {
+  from {
+    opacity: 0.7;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shop-nav-drawer-left-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes shop-nav-drawer-right-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.shop-nav-overlay {
+  animation: shop-nav-fade-in 180ms ease-out both;
+}
+
+.shop-nav-sheet {
+  animation: shop-nav-sheet-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (max-width: 1023px) {
+  .shop-nav-drawer-left,
+  .shop-nav-drawer-right {
+    animation: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .shop-nav-sheet {
+    animation: none;
+  }
+
+  .shop-nav-drawer-left {
+    animation: shop-nav-drawer-left-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .shop-nav-drawer-right {
+    animation: shop-nav-drawer-right-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-nav-overlay,
+  .shop-nav-sheet,
+  .shop-nav-drawer-left,
+  .shop-nav-drawer-right {
+    animation: none !important;
+  }
+}
