@@ -4508,3 +4508,22 @@ same flags rather than inventing plans. Separately: owner review of the reverse-
 proposal in `docs/decisions.md`; rerun `scripts/escrow-completion-acceptance.ts` when the
 local PostgreSQL connection budget is available; and keep the preview on 3047 (the
 `.next-programme` build at `5a51d1f`).
+
+## Catalogue administration + financial boundary (2026-11-12, final candidate)
+
+- Source HEAD `5742c72`; served build `YS15nTxgRfMp-uylrbp_X`; canonical
+  `http://localhost:3047/naijashop` on `naijadeals_review` (REVIEW).
+- Financial boundary: classification is re-read per operation and only explicit TEST/LIVE
+  are permitted; missing/empty/ambiguous/unreadable fails closed. Guards cover seven
+  service entry points, `postBalancedTransaction`, `jsonRequest` and `postEscrowRelease`;
+  payouts retain the LIVE-only boundary. `scripts/review-financial-refusal.ts` 46/46 with
+  `boundaryComplete true`, zero provider calls and zero prohibited writes.
+- Catalogue workflow at `/admin/catalogue`: department create/edit with slug, ordering,
+  imagery and alt; product create/edit with demo classification, currency-derived price,
+  inventory, gallery images and alt; validate, draft preview, publish, unpublish, archive;
+  audited; `products:read`/`products:moderate`; inactive departments excluded from Shop
+  navigation and product queries; public DEMO badges on cards and product detail.
+- `Category.imageAlt` migration applied to REVIEW and TEST.
+- Suites: catalogue workflow 61/61, smoke clean+returning 12/12, basket 10/10, financial
+  46/46. Independent reviewer must re-run these on the frozen build.
+- Accepted baseline preserved: 7 active departments, 23 active DEMO products, 0 CRF records.
