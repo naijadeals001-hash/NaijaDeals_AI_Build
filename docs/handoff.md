@@ -4040,3 +4040,204 @@ previous note: future financial acceptance runs must set an explicit `TEST_DATAB
   `lib/services/core/order.service.ts` and the escrow `releaseObligation` call sites were also
   present; none are part of this slice's commit and all were left unstaged. The guard, CLI, tests
   and guard-entrypoint edits add no type errors of their own.
+
+## 2026-11-12 — Unified refund-aware escrow release and external refund recovery states (fca1755)
+
+Base at the start of this slice was `3f3d00d0f7f550abd4524f266a2db6cef09a3f9f` on
+`naijashop-marketplace`. Two concurrent commits landed before this slice's commit:
+`d16bf95` (fail-closed isolated test database guard) and `e2ad734` (drive pickup verification).
+Code and tests were committed as `fca1755d37a9f7462b72e427c6309212b62cf93e`, whose parent is
+`e2ad734`; the slice diff itself is the 11 files listed below and does not include those two
+commits. This handoff section is a separate documentation commit. Nothing was pushed and no
+deployment was triggered. No schema, migration, drive, affiliate, eats or UI file was changed by
+this slice.
+
+Scope: `lib/payments/adapters.ts`, `lib/payments/service.ts`, `lib/payments/refund-lifecycle.ts`
+(new), `lib/services/core/order.service.ts`, `lib/services/core/dispute.service.ts`,
+`lib/services/core/reconciliation-correct.ts`, `scripts/wallet-reconcile.ts`,
+`scripts/escrow-completion-acceptance.ts`, `scripts/escrow-refund-release-acceptance.ts` (new),
+`scripts/escrow-refund-interruption-child.ts` (new) and `.env.example`.
+
+### 1. One release calculation and one posting path
+
+`lib/services/core/order.service.ts` now owns both halves of the release decision:
+
+- `releaseObligation(...)` derives the remaining obligation from frozen state:
+  `escrow.amountKobo - SUM(Refund.amountKobo WHERE status = COMPLETED) - previouslyReleasedKobo`.
+  It returns `remainingEscrowObligationKobo`, `vendorProceedsKobo`, `platformShareKobo`,
+  `otherAllocatedKobo` (always zero; no other allocation policy is approved) and
+  `totalReleasedKobo`.
+- `loadOrderReleaseState(tx, orderId)` reads the order, the escrow, the completed refund sum and
+  prior release journals under the order row lock. Pending refunds are returned as a separate count
+  because they block release without changing the arithmetic.
+- `postEscrowRelease(tx, ...)` is the only escrow release journal. `completeOrder` and
+  `resolveDispute({ decision: "release" })` both call it. The buyer of record is
+  `EscrowHold.buyerWalletId` (customer for wallet payments, SYSTEM for external payments), so the
+  old dispute-only `completed.provider` branch is gone.
+
+Important semantic correction: `Order.refundedKobo` is the **claimed/reserved** total. Only
+`COMPLETED` refunds have moved money. Subtracting `refundedKobo` from escrow exposure (the previous
+reconciliation convention) made every in-flight external claim look like a wallet discrepancy and
+would understate a release after a failed claim. Reconciliation now subtracts completed refunds and
+reports the reservation separately.
+
+`completeOrder` and the dispute release both refuse with **409 `refund_pending`** while any
+`Refund.status = PENDING` row exists. Duplicate completion/dispute resolution return the recorded
+journal breakdown (`duplicate: true`) instead of posting again. A lost race returns 409
+`escrow_conflict`; every wallet movement is conditional and every escrow claim is a compare-and-set.
+
+`resolveDispute` release was rewritten onto the shared helper and is **fail-closed**:
+`DISPUTE_RELEASE_ENABLED` must be exactly `"true"`. Without it the release decision returns **409
+`dispute_release_disabled`** and no money moves; the refund decision still works. `openDispute` now
+locks the order, rejects terminal orders (`order_closed`), rejects already-settled escrow
+(`escrow_not_disputable`) and rejects a duplicate open dispute (`dispute_exists`), and freezes
+`release_eligible`/`reserved` escrow as well as `held`/`pending`. The acceptance suite exercises the
+gate off and on and all 156 checks pass with it enabled.
+
+### 2. Explicit external-refund lifecycle
+
+`lib/payments/refund-lifecycle.ts` records an append-only lifecycle in `SystemEvent`
+(`type = refund.lifecycle`, `entity = Refund`). No schema change was needed and there is no second
+mutable status column competing with `Refund.status`.
+
+| State | Meaning | Release behaviour |
+| --- | --- | --- |
+| `reserved` | claim committed, no provider request sent | blocks release; safe to resume with the same idempotency key |
+| `submitted` + `acknowledged` | provider answered with its own pending status | blocks release; correctly accounted obligation |
+| `submitted` + unacknowledged | request sent, process died before the answer was recorded | blocks release; unknown outcome, never resubmitted |
+| `confirmed` | provider reported completion, local settlement may be missing | blocks release until settled; retry settles from stored evidence without a provider call |
+| `failed` | definitive rejection or operator-established non-processing | reservation released in the same transaction; no block |
+| `unknown` | transport/timeout/5xx; provider may or may not have processed | blocks release; never resubmitted; requires explicit reconciliation |
+
+`payments/service.ts` now separates reservation from submission and settlement:
+
+- `reserveExternalRefundClaim(...)` commits `Order.refundedKobo` + the `reserved` event.
+- `beginExternalRefundSubmission(...)` commits `submitted` **before** the provider call.
+- A completed response writes `confirmed` in its own transaction, then
+  `settleConfirmedExternalRefund(...)` posts the refund. The two-step confirmation is what makes the
+  confirmed-but-unsettled crash recoverable.
+- `isDefinitiveProviderRejection` (adapter-level `PaymentProviderError.httpStatus`) distinguishes a
+  4xx rejection from a timeout/5xx/network failure. A definitive rejection calls
+  `failExternalRefundReservation(...)`; an ambiguous one calls `markExternalRefundUnknown(...)` and
+  keeps the reservation.
+- `reconcileExternalRefundOutcome({ outcome: "confirmed" | "failed" })` is the operator recovery
+  path after checking the provider dashboard. It records the decision and settles or releases the
+  reservation; it never calls the provider.
+- A retry with the same idempotency key: `reserved` resumes submission; `confirmed` settles locally;
+  acknowledged `submitted` returns `refund_pending`; unacknowledged/`unknown` returns
+  `refund_unknown`; a PENDING row with no lifecycle returns `refund_pending` (legacy, not
+  resubmitted).
+- Post-release external refunds now post a balanced journal: vendor DEBIT vendor share, SYSTEM DEBIT
+  platform share, SYSTEM CREDIT refund amount, with the SYSTEM available movement netted to the
+  vendor share. The previous code emitted only debits for this path.
+
+### 3. Reconciliation semantics
+
+`lib/services/core/reconciliation-correct.ts` now exposes `loadRefundReconciliation(...)` and adds
+refund accounting to `reconcile()`; `scripts/wallet-reconcile.ts` prints the same distinction.
+
+Statuses: **CLEAN** only with no pending/uncertain/stale refund and no discrepancy. **PENDING**
+means only correctly accounted obligations (fresh `reserved`, provider-acknowledged `submitted`).
+**REVIEW** covers unknown/uncertain outcomes, stale reservations, legacy unclassified PENDING rows,
+`confirmed_not_settled`, `failed_but_reserved`, COMPLETED/FAILED rows contradicted by their
+lifecycle, and `Order.refundedKobo` not equal to the sum of its non-failed refund rows. A pending
+refund can therefore never produce CLEAN.
+
+Open escrow exposure is now `amountKobo - completed refunds`, never `amountKobo - Order.refundedKobo`.
+Whole-book wallet equality is unchanged:
+`availableKobo == ledgerNet - open counterparty hold credits` and
+`heldKobo == open buyer holds + open counterparty hold credits`.
+
+### 4. Verification (all on isolated databases)
+
+| Command | Result |
+| --- | --- |
+| `npx tsc --noEmit` | exit 0 (after all code changes) |
+| `npx tsx scripts/escrow-refund-release-acceptance.ts` | **PASS 156/156**, `leftovers: 0`, cleanup users 39 / wallets 38 / orders 19 / refunds 23, SYSTEM `0/0 → 0/0`, in-process `CLEAN` 0 issues, CLI `CLEAN`, `refundAccounting` `CLEAN` with 0 rows |
+| `npx tsx scripts/escrow-completion-acceptance.ts` | **PASS 89/89**, `leftovers: 0`, in-process issues 0, journal 2,640,000 = 2,640,000 (32 entries), CLI `CLEAN` |
+| `npx tsx scripts/payments-funding-webhook-acceptance.ts` | **PASS 24/24**, `leftovers: 0`, CLI `CLEAN` (two completed runs) |
+| `npx tsx scripts/wallet-post-release-refund-acceptance.ts` | **PASS 20/20**, `leftovers: 0`, CLI `CLEAN` |
+| `npx tsx scripts/wallet-spend-concurrency-acceptance.ts` | **PASS 78/78** |
+| `npx tsx scripts/naijapay-release-conservation-test.ts` | 8/8 PASS (own throwaway schema) |
+| `DATABASE_URL=<fresh> RECONCILE_DB=naijadeals_escrow_release_acceptance npx tsx scripts/wallet-reconcile.ts` | `status: CLEAN`, 1 wallet, 0 mismatches, 0 duplicate identities, 0 unattributed, refundAccounting CLEAN |
+| `DATABASE_URL=<acceptance> RECONCILE_DB=naijadeals_wallet_acceptance npx tsx scripts/wallet-reconcile.ts` | `status: CLEAN`, 17 wallets, 0 mismatches, 0 duplicate identities, 0 unattributed, refundAccounting CLEAN |
+
+The first funding-suite invocation in this session printed `status: FAIL`; the failing check detail
+was not captured and it did not reproduce. Two subsequent completed runs on the same isolated DB
+passed 24/24 with `leftovers: 0` and CLI `CLEAN`. The likely cause is contention on the shared
+acceptance database in the multi-agent workspace; the new suite therefore uses the fresh
+`naijadeals_escrow_release_acceptance` database, not `naijadeals_wallet_acceptance`.
+
+Database state: `naijadeals_escrow_release_acceptance` is a fresh database created with
+`prisma migrate deploy`; before the final run it had one SYSTEM wallet `0/0`, and after cleanup it
+had exactly that again. `naijadeals_wallet_acceptance` was restored by the suites to 17 wallets and
+SYSTEM `-1,400,000 / 1,240,000`, 0 escrow holds, 0 refund rows.
+
+### 5. Release evidence (separate amounts, all conserved)
+
+| Case | Remaining obligation | Vendor proceeds | Platform share | Other | Total released |
+| --- | --- | --- | --- | --- | --- |
+| wallet partial 55,000 then completion | 100,000 | 99,650 | 350 | 0 | 100,000 |
+| wallet 40,000 + 30,000 then completion | 85,000 | 84,702 | 298 | 0 | 85,000 |
+| dispute release, no refund | 155,000 | 154,456 | 544 | 0 | 155,000 |
+| dispute after 55,000 refund | 100,000 | 99,650 | 350 | 0 | 100,000 |
+| dispute after 40,000 + 30,000 | 85,000 | 84,702 | 298 | 0 | 85,000 |
+| external pending refund settled, then dispute | 100,000 | 99,650 | 350 | 0 | 100,000 |
+| external release, no refund | 155,000 | 154,456 | 544 | 0 | 155,000 |
+| three odd-kobo 33,333 refunds then completion | 55,001 | 54,808 | 193 | 0 | 55,001 |
+| external 50,000 claim fails, second settles, completion | 105,000 | 104,632 | 368 | 0 | 105,000 |
+| reserved-claim recovery then completion | 100,000 | 99,650 | 350 | 0 | 100,000 |
+| submitted-crash recovery then completion | 100,000 | 99,650 | 350 | 0 | 100,000 |
+| confirmed-crash recovery then completion | 100,000 | 99,650 | 350 | 0 | 100,000 |
+| definitive rejection then completion | 155,000 | 154,456 | 544 | 0 | 155,000 |
+| unknown outcome manually failed, then completion | 155,000 | 154,456 | 544 | 0 | 155,000 |
+
+In every row `totalReleased == vendorProceeds + platformShare + other`, `other == 0`, and no wallet
+ended negative. The case list also asserts full refund → no release (completion and dispute), no
+double earnings on duplicate/racing resolution, exactly one provider request across same-key retries,
+and balanced journals for every order transaction.
+
+Interruption evidence is produced by `scripts/escrow-refund-interruption-child.ts` running the real
+`refundPayment` in a separate process:
+
+- **Reserved** (process death after the claim): created by `reserveExternalRefundClaim`, provider
+  calls 0, completion 409; resuming with the same key called the provider once and settled.
+- **Submitted without acknowledgement**: child killed while the provider double held the request;
+  lifecycle `submitted`, acknowledged false, one provider request, reconciliation REVIEW/uncertain;
+  same-key retry returned 409 `refund_unknown` with no second request; operator confirmation settled
+  with no provider call.
+- **Confirmed before settlement**: parent held the vendor wallet row lock so the child died after the
+  `confirmed` event but before the refund journal; Refund stayed PENDING with no REFUND
+  WalletTransaction, reconciliation REVIEW/`confirmed_not_settled`; same-key retry settled from
+  stored confirmation with one provider request.
+
+### 6. Findings and remaining limitations
+
+- Disputed release now exists but remains **disabled by default**. Enabling `DISPUTE_RELEASE_ENABLED`
+  is an operator policy decision; the acceptance run sets it deliberately.
+- There is no provider refund-status API in the adapters. A provider-acknowledged PENDING refund
+  stays reserved until an operator calls `reconcileExternalRefundOutcome`; no polling worker exists.
+- Unknown submissions are deliberately never retried. `SystemEvent` is the durable record; there is
+  no scheduled escalation or finance notification beyond reconciliation. Fresh `reserved` claims
+  older than `REFUND_RESERVATION_STALE_MS` (default 15 minutes) are reported as stale.
+- `Order.refundedKobo` still means claimed/reserved, not settled. Any consumer that treats it as
+  "money returned" must use the completed refund sum instead. The admin overview already aggregates
+  refund rows separately.
+- Post-release refunds still need the vendor/platform available balance to reverse (wallet refunds
+  fail before any provider call; an external refund can be provider-confirmed and then fail local
+  settlement, which reconciliation reports as `confirmed_not_settled`). No operator adjustment or
+  recovery funding was invented.
+- Legacy external escrows with `buyerWalletId = customer` remain refused with `escrow_conflict`; no
+  data migration was attempted.
+- Disputes opened before this change while escrow was `release_eligible` were not frozen by the old
+  code; resolving them now returns `escrow_not_releasable` until their escrow state is reviewed.
+- Reconciliation now scans refund lifecycle events and refund reservations across the book. This is
+  correct for the isolated acceptance database but its performance on a large production ledger was
+  not measured.
+- The dispute resolution response is a union of refund and release shapes. The HTTP route serialises
+  it unchanged; callers must read `refundedKobo` or the release breakdown accordingly.
+- `.env.example` gained `DISPUTE_RELEASE_ENABLED=""`. No real credential, migration, push or
+  deployment was produced. Pre-existing working-tree changes in `scripts/marketplace-tests.ts`,
+  `scripts/optimize-photography.mjs`, drive files and unrelated untracked scripts were left
+  unstaged and untouched.
+
