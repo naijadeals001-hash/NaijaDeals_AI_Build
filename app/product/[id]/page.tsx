@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { ProductDetailClient } from "@/components/functional/product-detail-client";
 import { getPublicProductDetail, listRelatedProducts } from "@/lib/services/core/catalog.service";
 import { jsonSafe } from "@/lib/services/core/serialize";
@@ -34,15 +35,13 @@ export default async function ProductDetail({ params }: { params: { id: string }
 
   try {
     const product = await getPublicProductDetail(params.id);
-    if (!product) {
-      initialError = "This product is not available.";
-    } else {
-      initialProduct = jsonSafe(product) as unknown as ApiProduct;
-      initialRelated = jsonSafe(
-        await listRelatedProducts(product.category.slug, product.id).catch(() => [])
-      ) as unknown as ApiProduct[];
-    }
-  } catch {
+    if (!product) notFound();
+    initialProduct = jsonSafe(product) as unknown as ApiProduct;
+    initialRelated = jsonSafe(
+      await listRelatedProducts(product.category.slug, product.id).catch(() => [])
+    ) as unknown as ApiProduct[];
+  } catch (error) {
+    if ((error as { digest?: string })?.digest === "NEXT_NOT_FOUND") throw error;
     initialError = "Product not found.";
   }
 
