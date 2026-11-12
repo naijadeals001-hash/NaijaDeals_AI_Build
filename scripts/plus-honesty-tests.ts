@@ -85,6 +85,36 @@ async function browserConsoleCheck(): Promise<void> {
     await page.goto(PAGE_URL, { waitUntil: "networkidle", timeout: 30_000 });
     // Give hydration a beat after the network settles.
     await page.waitForTimeout(500);
+
+    // The original bug: a focused arrow that becomes disabled blurs to <body>.
+    // Drive the ecosystem rail to its end while the next arrow has focus and
+    // assert the same element is still active after aria-disabled flips.
+    const focusName = "focused carousel arrow keeps focus at the boundary";
+    const nextArrow = page.locator('button[data-plus-carousel-arrow="next"][aria-label="Show next NaijaDeals ecosystem services"]');
+    if ((await nextArrow.count()) === 0) {
+      skip(focusName, "new-build arrow markers not present");
+    } else {
+      const enabledBefore = (await nextArrow.getAttribute("aria-disabled")) === "false";
+      await nextArrow.focus();
+      const scrolled = await page.evaluate(() => {
+        const button = document.querySelector('button[data-plus-carousel-arrow="next"][aria-label="Show next NaijaDeals ecosystem services"]');
+        if (!(button instanceof HTMLElement)) return false;
+        const controls = button.getAttribute("aria-controls");
+        const track = controls ? document.getElementById(controls) : null;
+        if (!track) return false;
+        track.scrollLeft = track.scrollWidth;
+        return true;
+      });
+      await page.waitForTimeout(400);
+      const disabledAtEnd = (await nextArrow.getAttribute("aria-disabled")) === "true";
+      const activeArrow = await page.evaluate(() => document.activeElement?.getAttribute("data-plus-carousel-arrow") ?? null);
+      record(
+        focusName,
+        enabledBefore && scrolled && disabledAtEnd && activeArrow === "next",
+        `enabled before=${enabledBefore}, scrolled=${scrolled}, aria-disabled at end=${disabledAtEnd}, focused arrow=${activeArrow ?? "none"}`
+      );
+    }
+
     record(
       name,
       errors.length === 0,
