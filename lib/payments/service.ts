@@ -12,7 +12,7 @@ import type { PaymentVerifyResult } from "./types";
 import { updateOrderStatus } from "@/lib/services/core/order.service";
 import { recordAudit } from "@/lib/services/core/audit.service";
 import { recordSystemEvent } from "@/lib/services/core/event.service";
-import { createDelivery } from "@/lib/services/core/delivery.service";
+import { createDelivery, cancelOrderDeliveries } from "@/lib/services/core/delivery.service";
 import { notifyOrderPaid } from "@/lib/notifications/domain-events";
 import { recordConversion } from "@/lib/services/affiliate/service";
 import { log } from "@/lib/infra/logger";
@@ -1014,6 +1014,16 @@ async function settleRefund(
       });
     }
     if (input.restock) await restockOrderItems(tx, order.id);
+    // A fully refunded order has no goods to deliver. Cancel any open delivery
+    // in the same transaction, so it leaves the courier queue and tracking
+    // shows the refunded state instead of a stale pending_assignment. A
+    // delivery that already reached delivered/returned keeps its real history.
+    await cancelOrderDeliveries({
+      tx,
+      actorId: refund.actorId,
+      orderId: order.id,
+      reason: `Order refunded in full: ${input.reason}`
+    });
     await updateOrderStatus({
       tx,
       actorId: refund.actorId,

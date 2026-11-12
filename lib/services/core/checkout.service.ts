@@ -1,10 +1,12 @@
 import { randomBytes } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { commissionFor, deliveryQuote, escrowFee, getCountry } from "@/lib/config/commerce";
 import { recordAudit } from "./audit.service";
 import { recordSystemEvent } from "./event.service";
 import { updateOrderStatus } from "./order.service";
+import { cancelOrderDeliveries } from "./delivery.service";
 import { availablePaymentMethods } from "@/lib/payments/service";
 import { activationFor } from "./country.service";
 import { resolveCheckoutAttribution } from "@/lib/services/affiliate/service";
@@ -27,6 +29,96 @@ function formatAddress(address: CheckoutAddress) {
     .join(", ");
 }
 
+/**
+ * A retry of an already committed checkout is indistinguishable from a second
+ * deliberate submission once the only ACTIVE cart has been claimed. A short
+ * window lets the loser of a concurrent race report a coherent conflict instead
+ * of a misleading "empty cart", while an old checked-out cart still reports an
+ * empty cart normally.
+ */
+const CHECKOUT_CONFLICT_WINDOW_MS = 15 * 60 * 1000;
+
+type CheckoutOrderSummary = {
+  orderId: string;
+  orderNumber: string;
+  vendorId: string;
+  vendorName: string;
+  subtotalKobo: string;
+  deliveryFeeKobo: string;
+  escrowFeeKobo: string;
+  totalKobo: string;
+  currency: string;
+};
+
+function checkoutErrorCode(error: unknown): string {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === "string" ? code : "";
+}
+
+function checkoutSqlState(error: unknown): string {
+  const meta = (error as { meta?: { code?: unknown } } | null)?.meta;
+  return meta && typeof meta.code === "string" ? meta.code : "";
+}
+
+/**
+ * Map transient database failures to stable, retryable API errors.
+ *
+ * Concurrency conflicts are 409s; unavailable connections, pool waits, statement
+ * timeouts and transaction timeouts are 503s. Neither path may surface a raw 500
+ * to a checkout client, and neither claims an order exists when the commit
+ * result is unknown — the caller is told to reload before retrying.
+ */
+function mapCheckoutFailure(error: unknown): never {
+  if (error instanceof ApiError) throw error;
+  const code = checkoutErrorCode(error);
+  const sqlState = checkoutSqlState(error);
+  const message = error instanceof Error ? error.message : "";
+
+  if (code === "P2034" || sqlState === "40001" || sqlState === "40P01") {
+    throw new ApiError(
+      409,
+      "checkout_conflict",
+      "A concurrent checkout changed this cart. Reload your orders before retrying; a retry will not create a second order for the same cart."
+    );
+  }
+  if (
+    ["P1001", "P1002", "P1008", "P1017", "P2024", "P2028", "P2037"].includes(code) ||
+    ["57014", "55P03", "53300"].includes(sqlState) ||
+    /timed out fetching a new connection|transaction already closed|transaction api error|connection pool timeout|too many database connections/i.test(message)
+  ) {
+    throw new ApiError(
+      503,
+      "checkout_retry",
+      "Checkout could not finish because the database is busy. Reload your orders before retrying."
+    );
+  }
+  if (code === "P2002") {
+    throw new ApiError(
+      409,
+      "checkout_conflict",
+      "A duplicate checkout was detected. Reload your orders before retrying."
+    );
+  }
+  throw error;
+}
+
+/**
+ * Serialise checkout attempts for one customer.
+ *
+ * In READ COMMITTED Postgres re-evaluates the predicate after a concurrent
+ * writer commits, so a waiter that began by seeing an ACTIVE cart returns zero
+ * rows once the winner flips it to CHECKED_OUT. The caller then reports a
+ * conflict instead of creating a second order set.
+ */
+async function lockActiveCart(tx: Prisma.TransactionClient, userId: string) {
+  return tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM "Cart"
+    WHERE "userId" = ${userId} AND status = 'ACTIVE'
+    ORDER BY "createdAt" DESC, id DESC
+    FOR UPDATE
+  `;
+}
+
 export async function checkout(input: {
   userId: string;
   address: CheckoutAddress;
@@ -44,67 +136,111 @@ export async function checkout(input: {
     throw new ApiError(503, "delivery_unconfigured", `Delivery is not configured for ${country.name}. No order was created.`);
   }
 
-  const cart = await prisma.cart.findFirst({
-    where: { userId: input.userId, status: "ACTIVE" },
-    include: {
-      items: {
-        include: {
-          product: {
-            include: {
-              vendor: true,
-              images: { orderBy: { sortOrder: "asc" }, take: 1 },
-              variants: { where: { isActive: true } }
-            }
-          },
-          variant: true
-        }
-      }
-    }
-  });
-  if (!cart || cart.items.length === 0) throw new ApiError(400, "empty_cart", "Your cart is empty.");
-
-  const demoItem = cart.items.find((item) => item.product.isSample);
-  if (demoItem) {
-    throw new ApiError(409, "demo_inventory", "Demo inventory is for visual review only and cannot be purchased. Remove demo items before checking out.");
-  }
-
-  const unavailable = cart.items.find(
-    (item) =>
-      item.product.status !== "ACTIVE" ||
-      item.product.vendor.status !== "VERIFIED" ||
-      (item.variantId && (!item.variant || !item.variant.isActive)) ||
-      (!item.variantId && item.product.variants.length > 0)
-  );
-  if (unavailable) {
-    throw new ApiError(409, "item_unavailable", `${unavailable.product.name} is no longer available. Remove it from the cart.`);
-  }
-
-  const deliveryAddress = formatAddress(input.address);
-  const byVendor = new Map<string, typeof cart.items>();
-  for (const item of cart.items) {
-    const group = byVendor.get(item.product.vendorId) ?? [];
-    group.push(item);
-    byVendor.set(item.product.vendorId, group);
-  }
-
   // Resolved server-side before the order exists. The frozen row below is the
   // only thing payment-time commission creation reads.
   const attribution = await resolveCheckoutAttribution({ userId: input.userId, visitorKey: input.visitorKey ?? null });
 
-  const created = await prisma.$transaction(async (tx) => {
-    const orders: Array<{
-      orderId: string;
-      orderNumber: string;
-      vendorId: string;
-      vendorName: string;
-      subtotalKobo: string;
-      deliveryFeeKobo: string;
-      escrowFeeKobo: string;
-      totalKobo: string;
-      currency: string;
-    }> = [];
+  const deliveryAddress = formatAddress(input.address);
 
-    for (const [vendorId, items] of byVendor) {
+  // One interactive transaction owns the whole claim:
+  //
+  //  1. lock the user's ACTIVE cart row(s) so a second checkout waits here;
+  //  2. re-read and validate items under the lock (a stale read must never
+  //     authorize a second order);
+  //  3. flip the cart to CHECKED_OUT before any order or reservation exists.
+  //
+  // The loser therefore observes a claimed cart and returns a stable 409.
+  // Any later failure rolls the claim back with the orders and reservations.
+  const created = await prisma
+    .$transaction(
+      async (tx) => {
+        await lockActiveCart(tx, input.userId);
+
+        const cart = await tx.cart.findFirst({
+          where: { userId: input.userId, status: "ACTIVE" },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          include: {
+            items: {
+              include: {
+                product: {
+                  include: {
+                    vendor: true,
+                    images: { orderBy: { sortOrder: "asc" }, take: 1 },
+                    variants: { where: { isActive: true } }
+                  }
+                },
+                variant: true
+              }
+            }
+          }
+        });
+
+        if (!cart) {
+          // A concurrent or duplicate request reaches this branch only after the
+          // winner committed its claim. Report the completed checkout rather
+          // than a misleading empty-cart error.
+          const recent = await tx.cart.findFirst({
+            where: {
+              userId: input.userId,
+              status: "CHECKED_OUT",
+              updatedAt: { gte: new Date(Date.now() - CHECKOUT_CONFLICT_WINDOW_MS) }
+            },
+            orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+            select: { id: true }
+          });
+          if (recent) {
+            const orderCount = await tx.order.count({ where: { cartId: recent.id } });
+            throw new ApiError(
+              409,
+              "checkout_already_completed",
+              "This cart has already been checked out. Open your orders to see the result; retrying will not create another order.",
+              { cartId: recent.id, orderCount }
+            );
+          }
+          throw new ApiError(400, "empty_cart", "Your cart is empty.");
+        }
+        if (cart.items.length === 0) throw new ApiError(400, "empty_cart", "Your cart is empty.");
+
+        const demoItem = cart.items.find((item) => item.product.isSample);
+        if (demoItem) {
+          throw new ApiError(409, "demo_inventory", "Demo inventory is for visual review only and cannot be purchased. Remove demo items before checking out.");
+        }
+
+        const unavailable = cart.items.find(
+          (item) =>
+            item.product.status !== "ACTIVE" ||
+            item.product.vendor.status !== "VERIFIED" ||
+            (item.variantId && (!item.variant || !item.variant.isActive)) ||
+            (!item.variantId && item.product.variants.length > 0)
+        );
+        if (unavailable) {
+          throw new ApiError(409, "item_unavailable", `${unavailable.product.name} is no longer available. Remove it from the cart.`);
+        }
+
+        const byVendor = new Map<string, typeof cart.items>();
+        for (const item of cart.items) {
+          const group = byVendor.get(item.product.vendorId) ?? [];
+          group.push(item);
+          byVendor.set(item.product.vendorId, group);
+        }
+
+        // Claim the cart before creating anything. The conditional update is a
+        // second guard in case a future caller changes the lock discipline.
+        const claimed = await tx.cart.updateMany({
+          where: { id: cart.id, status: "ACTIVE" },
+          data: { status: "CHECKED_OUT" }
+        });
+        if (claimed.count !== 1) {
+          throw new ApiError(
+            409,
+            "checkout_conflict",
+            "Another checkout claimed this cart. Reload your orders before retrying."
+          );
+        }
+
+        const orders: CheckoutOrderSummary[] = [];
+
+        for (const [vendorId, items] of byVendor) {
       const subtotalKobo = items.reduce((total, item) => {
         const unit = item.variant ? item.variant.priceKobo : item.product.priceKobo;
         return total + unit * BigInt(item.quantity);
@@ -236,8 +372,6 @@ export async function checkout(input: {
       });
     }
 
-    await tx.cart.update({ where: { id: cart.id }, data: { status: "CHECKED_OUT" } });
-
     if (input.saveAddress) {
       await tx.address.create({
         data: {
@@ -254,8 +388,11 @@ export async function checkout(input: {
       });
     }
 
-    return orders;
-  });
+        return orders;
+      },
+      { maxWait: 10_000, timeout: 20_000 }
+    )
+    .catch(mapCheckoutFailure);
 
   return {
     orders: created,
@@ -418,6 +555,12 @@ export async function cancelOrder(input: { orderId: string; userId: string; reas
   const { releaseReservedStock } = await import("@/lib/payments/service");
   await prisma.$transaction(async (tx) => {
     await releaseReservedStock(tx, order.id);
+    await cancelOrderDeliveries({
+      tx,
+      actorId: input.userId,
+      orderId: order.id,
+      reason: `Order cancelled: ${input.reason}`
+    });
     await tx.payment.updateMany({
       where: { orderId: order.id, status: "PENDING" },
       data: { status: "FAILED", failureReason: "Order cancelled before payment." }

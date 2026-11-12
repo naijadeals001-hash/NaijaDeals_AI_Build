@@ -31,15 +31,16 @@ export const escrowTransitions: Record<EscrowStatus, EscrowStatus[]> = {
 };
 
 export const deliveryTransitions: Record<DeliveryStatus, DeliveryStatus[]> = {
-  pending_assignment: ["assigned", "failed"],
-  assigned: ["pickup_started", "failed"],
-  pickup_started: ["picked_up", "failed"],
-  picked_up: ["in_transit", "failed", "returned"],
-  in_transit: ["delivery_attempted", "delivered", "failed", "returned"],
-  delivery_attempted: ["delivered", "failed", "returned", "assigned"],
+  pending_assignment: ["assigned", "failed", "cancelled"],
+  assigned: ["pickup_started", "failed", "cancelled"],
+  pickup_started: ["picked_up", "failed", "cancelled"],
+  picked_up: ["in_transit", "failed", "returned", "cancelled"],
+  in_transit: ["delivery_attempted", "delivered", "failed", "returned", "cancelled"],
+  delivery_attempted: ["delivered", "failed", "returned", "assigned", "cancelled"],
   delivered: [],
-  failed: ["assigned", "returned"],
-  returned: []
+  failed: ["assigned", "returned", "cancelled"],
+  returned: [],
+  cancelled: []
 };
 
 export function assertOrderTransition(from: OrderStatus, to: OrderStatus) {

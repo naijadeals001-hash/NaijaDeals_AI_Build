@@ -74,6 +74,7 @@ enum DeliveryStatus {
   delivered
   failed
   returned
+  cancelled
 }
 
 enum DisputeStatus {

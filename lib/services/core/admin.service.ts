@@ -476,7 +476,7 @@ export async function assignCourier(input: { adminId: string; deliveryId: string
     })
   ]);
   if (!delivery) throw new ApiError(404, "delivery_not_found", "Delivery not found.");
-  if (["delivered", "returned"].includes(delivery.status)) {
+  if (["delivered", "returned", "cancelled"].includes(delivery.status)) {
     throw new ApiError(409, "delivery_closed", "This delivery is already closed and cannot be assigned.");
   }
   if (!courier || !courier.active) {
@@ -501,8 +501,41 @@ export async function assignCourier(input: { adminId: string; deliveryId: string
   }
 
   return prisma.$transaction(async (tx) => {
-    const previousCourierId = delivery.courierId;
-    await tx.delivery.update({ where: { id: delivery.id }, data: { courierId: courier.id } });
+    // Lock the order before the delivery, matching refundPayment's order ->
+    // delivery lock order. A refund that commits first is visible here and
+    // refuses the assignment instead of leaving a cancelled delivery assigned
+    // (or deadlocking the two transactions).
+    const lockedOrder = await tx.$queryRaw<Array<{ status: string }>>`
+      SELECT status FROM "Order" WHERE id = ${delivery.orderId} FOR UPDATE
+    `;
+    if (!lockedOrder[0]) throw new ApiError(404, "order_not_found", "Order not found.");
+    if (["cancelled", "refunded"].includes(lockedOrder[0].status)) {
+      throw new ApiError(409, "order_closed", "This order is closed and cannot be assigned.");
+    }
+    if (!["ready_for_pickup", "courier_assigned"].includes(lockedOrder[0].status)) {
+      throw new ApiError(409, "seller_not_ready", "The seller must mark the order ready for pickup before a courier is assigned.");
+    }
+
+    const lockedDelivery = await tx.$queryRaw<Array<{ status: string; courierId: string | null }>>`
+      SELECT status, "courierId" FROM "Delivery" WHERE id = ${delivery.id} FOR UPDATE
+    `;
+    const current = lockedDelivery[0];
+    if (!current) throw new ApiError(404, "delivery_not_found", "Delivery not found.");
+    if (["delivered", "returned", "cancelled"].includes(current.status)) {
+      throw new ApiError(409, "delivery_closed", "This delivery is already closed and cannot be assigned.");
+    }
+
+    const previousCourierId = current.courierId;
+    const assigned = await tx.delivery.updateMany({
+      where: {
+        id: delivery.id,
+        status: { in: ["pending_assignment", "assigned", "pickup_started", "picked_up", "in_transit", "delivery_attempted", "failed"] }
+      },
+      data: { courierId: courier.id }
+    });
+    if (assigned.count !== 1) {
+      throw new ApiError(409, "delivery_closed", "This delivery closed before it could be assigned.");
+    }
     await notifyUser({
       tx,
       userId: courier.userId,
@@ -511,10 +544,10 @@ export async function assignCourier(input: { adminId: string; deliveryId: string
       body: `${delivery.order.orderNumber}: ${delivery.pickupAddress} → ${delivery.dropoffAddress}`,
       href: "/courier"
     });
-    if (delivery.status === "pending_assignment" || delivery.status === "failed") {
+    if (current.status === "pending_assignment" || current.status === "failed") {
       await updateDeliveryStatus({ tx, actorId: input.adminId, deliveryId: delivery.id, status: "assigned", note: `Assigned to ${courier.name}.` });
     }
-    if (delivery.order.status === "ready_for_pickup") {
+    if (lockedOrder[0].status === "ready_for_pickup") {
       await updateOrderStatus({ tx, actorId: input.adminId, orderId: delivery.orderId, status: "courier_assigned", note: `Courier ${courier.name} assigned.` });
     }
     const updated = await tx.delivery.findUniqueOrThrow({ where: { id: delivery.id }, include: { courier: true } });
@@ -529,7 +562,7 @@ export async function assignCourier(input: { adminId: string; deliveryId: string
         courierId: courier.id,
         courierName: courier.name,
         previousCourierId,
-        before: { courierId: previousCourierId, status: delivery.status },
+        before: { courierId: previousCourierId, status: current.status },
         after: { courierId: courier.id, status: updated.status }
       }
     });
