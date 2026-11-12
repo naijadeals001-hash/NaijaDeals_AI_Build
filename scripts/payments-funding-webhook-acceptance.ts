@@ -414,11 +414,12 @@ async function cleanupRun(prisma: PrismaClient) {
     ...topUpIds
   ];
 
-  // External escrow credits SYSTEM available while journaling the opposite
-  // direction; top-ups debit SYSTEM available. Reverse only the stored effects
-  // this run created before deleting its journals.
+  // External escrow credits the vendor payable against a SYSTEM debit. The
+  // platform is the buyer of record, so its stored available falls and its held
+  // rises by exactly the journal amount — the previous 2× projection gap.
   const system = await prisma.wallet.findFirst({ where: { ownerType: "SYSTEM" }, select: { id: true } });
   let systemAvailableDelta = BigInt(0);
+  let systemHeldDelta = BigInt(0);
   if (system) {
     const fullTransactions = await prisma.walletTransaction.findMany({
       where: { id: { in: transactionIds } },
@@ -432,14 +433,21 @@ async function cleanupRun(prisma: PrismaClient) {
         systemAvailableDelta += debit?.amountKobo ?? BigInt(0);
       } else if (transaction.type === "hold" && transaction.reference.startsWith("ESCROW-HOLD-")) {
         const debit = legs.find((leg) => leg.direction === "DEBIT");
-        systemAvailableDelta -= debit?.amountKobo ?? BigInt(0);
+        systemAvailableDelta += debit?.amountKobo ?? BigInt(0);
+        systemHeldDelta -= debit?.amountKobo ?? BigInt(0);
       }
     }
   }
 
   await prisma.$transaction(async (tx) => {
-    if (system && systemAvailableDelta !== BigInt(0)) {
-      await tx.wallet.update({ where: { id: system.id }, data: { availableKobo: { increment: systemAvailableDelta } } });
+    if (system && (systemAvailableDelta !== BigInt(0) || systemHeldDelta !== BigInt(0))) {
+      await tx.wallet.update({
+        where: { id: system.id },
+        data: {
+          availableKobo: { increment: systemAvailableDelta },
+          heldKobo: { increment: systemHeldDelta }
+        }
+      });
     }
     await tx.notificationAttempt.deleteMany({
       where: { notification: { OR: [{ userId: { in: userIds } }, { entityId: { in: entityIds } }] } }
@@ -1002,7 +1010,7 @@ async function main(prisma: PrismaClient, url: string) {
     `${unknownTopUp.status} ${unknownTopUp.code}`
   );
 
-  /* ---- I. Observed external-funding projection gap (reported, not fixed) ---- */
+  /* ---- I. External-funding projection now matches the journal ---- */
   const systemAfterExternal = await walletView(prisma, system.id);
   const externalSystemLegs = await prisma.ledgerEntry.findMany({
     where: { walletId: system.id, transaction: { reference: { startsWith: "ESCROW-HOLD-" } } },
@@ -1011,10 +1019,41 @@ async function main(prisma: PrismaClient, url: string) {
   const externalTotal = externalSystemLegs
     .filter((leg) => leg.transaction.orderId && [success.orderId, timeout.orderId, intended.orderId, flutterwave.orderId].includes(leg.transaction.orderId))
     .reduce((sum, leg) => sum + leg.amountKobo, BigInt(0));
+  const { loadOpenHoldLedger, compareWalletProjection } = await import("../lib/services/core/reconciliation-correct");
+  const systemLedger = await prisma.ledgerEntry.findMany({
+    where: { walletId: system.id },
+    select: { direction: true, amountKobo: true, transaction: { select: { type: true, reference: true } } }
+  });
+  const systemLedgerNet = systemLedger.reduce(
+    (sum, leg) => sum + (leg.direction === "CREDIT" ? leg.amountKobo : -leg.amountKobo),
+    BigInt(0)
+  );
+  // This suite also credits top-ups, which debit SYSTEM available; isolate the
+  // external-escrow component so the assertion is about escrow, not top-ups.
+  const topUpDebitTotal = systemLedger
+    .filter(
+      (leg) =>
+        leg.direction === "DEBIT" &&
+        leg.transaction.type === "credit" &&
+        leg.transaction.reference.startsWith("TOPUP-") &&
+        leg.transaction.reference.includes(RUN_ID)
+    )
+    .reduce((sum, leg) => sum + leg.amountKobo, BigInt(0));
+  const externalProjection = compareWalletProjection({
+    walletId: system.id,
+    availableKobo: systemAfterExternal.availableKobo,
+    heldKobo: systemAfterExternal.heldKobo,
+    ledgerNetKobo: systemLedgerNet,
+    holds: await loadOpenHoldLedger(prisma)
+  });
   record(
-    "external provider funding is observed to move SYSTEM available against its journal (known account-model gap)",
-    externalTotal > BigInt(0) && systemAfterExternal.availableKobo > system.availableKobo,
-    `external escrow journal${externalTotal === BigInt(1) ? "" : "s"} total ${externalTotal}, SYSTEM available ${system.availableKobo} -> ${systemAfterExternal.availableKobo}; the missing external clearing account is reported in the handoff, not repaired`
+    "external provider funding moves SYSTEM available and held with its journal and open escrow",
+    externalTotal > BigInt(0) &&
+      systemAfterExternal.availableKobo === system.availableKobo - externalTotal - topUpDebitTotal &&
+      systemAfterExternal.heldKobo === system.heldKobo + externalTotal &&
+      externalProjection.availableDifferenceKobo === BigInt(0) &&
+      externalProjection.heldDifferenceKobo === BigInt(0),
+    `external escrow journal total ${externalTotal}, top-up SYSTEM debits ${topUpDebitTotal}, SYSTEM ${system.availableKobo}/${system.heldKobo} -> ${systemAfterExternal.availableKobo}/${systemAfterExternal.heldKobo}, projection difference ${externalProjection.availableDifferenceKobo}/${externalProjection.heldDifferenceKobo}`
   );
 
   /* ---- cleanup and reconciliation ---- */

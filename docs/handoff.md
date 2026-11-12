@@ -3889,3 +3889,123 @@ A concurrent uncommitted earnings-breakdown change appeared in the working tree 
 `driver-workspace.tsx` modification; a temporary app/e2e-earnings-preview route appeared and was
 removed). It is not part of HEAD `ecd0e54`, was not authored by this read-only pass and is not covered
 by the audit findings above. Final `npx tsc --noEmit` after the temporary route was removed: exit 0.
+
+## 2026-11-12 — Escrow completion after partial refunds and external escrow accounting
+
+Base HEAD `50813c00ff01be76f5cd43e7e671ab8ec93f6b72` on `naijashop-marketplace`. Scope was
+`lib/services/core/order.service.ts`, `lib/payments/service.ts`, the new
+`scripts/escrow-completion-acceptance.ts` and the existing
+`scripts/payments-funding-webhook-acceptance.ts`. No schema change, migration, drive, affiliate,
+eats, UI, push or deployment. Every acceptance run below used
+`naijadeals_wallet_acceptance` and `current_database()` as the hard guard; no live provider call
+was made (external fixtures intercept `fetch`).
+
+### 1. Completion now releases the remaining obligation, not `escrow.amountKobo`
+
+`EscrowHold.amountKobo` stays frozen at payment time while `Order.refundedKobo` accumulates.
+`completeOrder` now derives the release from both:
+
+- `releasableKobo = escrow.amountKobo - min(refundedKobo, escrow.amountKobo)`;
+- `payableKobo = frozenPayable - floor(frozenPayable × refundedKobo ÷ order.totalKobo)`
+  (the same cumulative split `allocateRefundShares` uses), clamped to the releasable amount;
+- the platform keeps `releasableKobo - payableKobo`.
+
+The release journal is `vendor DEBIT releasable / vendor CREDIT payable / platform CREDIT remainder`
+and is asserted balanced before insertion. Nothing reads the live fare or commission configuration.
+
+Concurrency and idempotency:
+
+- `completeOrder` and `refundPayment` both take `SELECT … FROM "Order" … FOR UPDATE` before reading
+  escrow/payment state; wallet refunds claim and settle in one transaction.
+- Wallet movements are conditional (`heldKobo >= amount`), so a lost race produces
+  `409 escrow_conflict`, never a negative hold.
+- A second completion returns the recorded `RELEASE-<orderId>` amount with `duplicate: true` and
+  sends no second notification. Two simultaneous completions produce one release row.
+- Completion refuses with `409 refund_pending` while any `Refund` row is `PENDING`; an external
+  refund reserves `refundedKobo` before its provider call, and releasing during that window would
+  strand the reservation.
+
+Example amounts on the 155,000-kobo fixture (payable 154,456): 55,000 refunded → release 99,650;
+40,000 + 30,000 refunded → release 84,702; full refund → no release.
+
+### 2. External `recordEscrow` projection corrected
+
+Previously the non-wallet branch incremented SYSTEM `availableKobo` while posting a SYSTEM DEBIT,
+leaving the stored position 2× the amount away from the journal. The corrected path:
+
+- SYSTEM is the buyer of record for a verified external payment: `availableKobo -= amount`,
+  `heldKobo += amount`, journal `SYSTEM DEBIT amount / vendor CREDIT amount`, and
+  `EscrowHold.buyerWalletId` is the SYSTEM wallet (no customer funds were ever held).
+- While the hold is open, a refund credits the buyer of record's available and debits its held,
+  plus the vendor hold (`SYSTEM CREDIT / vendor DEBIT`).
+- Release moves `remaining` out of both holds: vendor DEBIT remaining, vendor CREDIT payable,
+  platform CREDIT remainder. Full refund and cancellation restore the pre-payment SYSTEM position.
+- The stored projection now equals `ledgerNet − open counterparty holds` and
+  `held == open buyer + counterparty holds` at escrow creation, partial refund, release, full
+  refund and cancellation. `scripts/payments-funding-webhook-acceptance.ts` now asserts that
+  equality instead of the old gap.
+
+### 3. Verification (all isolated on `naijadeals_wallet_acceptance`)
+
+| Command | Result |
+| --- | --- |
+| `npx tsx scripts/escrow-completion-acceptance.ts` | **PASS 89/89**, `leftovers: 0`, cleanup users 18/wallets 18/orders 9/refunds 10, in-process reconciliation 0 issues (credit = debit = 2,640,000, 32 entries) |
+| `npx tsx scripts/payments-funding-webhook-acceptance.ts` | **PASS 24/24**, cleanup `leftovers: 0`, external projection difference 0/0 |
+| `npx tsx scripts/wallet-post-release-refund-acceptance.ts` | **PASS 20/20**, cleanup `leftovers: 0` |
+| `npx tsx scripts/wallet-spend-concurrency-acceptance.ts` | **PASS 78/78** |
+| `npx tsx scripts/naijapay-release-conservation-test.ts` | **PASS 8/8** (own throwaway schema) |
+| `DATABASE_URL=<acceptance URL> RECONCILE_DB=naijadeals_wallet_acceptance npx tsx scripts/wallet-reconcile.ts` | `status: CLEAN`, 17 wallets, 8 open rides, 0 open escrows, 0 unattributed holds, 0 mismatches, 0 duplicate identities |
+| `npx tsc --noEmit` | exit 0 |
+
+Acceptance database restored after the runs: 17 wallets, SYSTEM `-1,400,000 / 1,240,000`,
+0 escrow holds, 0 refund rows, 8 held rides, 4 pre-existing pending orders.
+
+Cases exercised by the new suite: wallet and external orders through one and two partial refunds
+to completion; full refund then completion attempt (409, no release); sequential and simultaneous
+duplicate completion; simultaneous completion/refund (both valid outcomes conserve the funded
+balance and produce exactly one release); external duplicate confirmation (one escrow, one journal);
+external cancellation through `adminUpdateOrderStatus` (full refund + restock); and a deterministic
+external refund held at the provider, during which completion returns `409 refund_pending` and moves
+nothing.
+
+### 4. Findings and remaining limitations
+
+- **Pending external refund window.** `Order.refundedKobo` is incremented at claim time, before the
+  provider confirms, while no wallet or journal movement has happened. `reconciliation-correct`
+  subtracts `refundedKobo` from open-escrow exposure, so during that window it reports a held/available
+  delta. Completion refuses (`refund_pending`) and the books reconcile again after settlement. A
+  reservation-aware exposure (for example settled `Refund` rows) or settlement inside the claim with
+  an explicit reversal journal would close the window; neither was implemented because the
+  reconciliation module is outside this slice's file ownership.
+- **Legacy external escrows** created before this change have `buyerWalletId` pointing at the customer
+  wallet with zero customer hold. Completion and refund now refuse them with `409 escrow_conflict`
+  rather than over-releasing. No data migration was attempted.
+- **Dispute release is still defective and outside this slice.** `lib/services/core/dispute.service.ts`
+  releases `escrow.amountKobo`, ignores `refundedKobo`, and uses the old external platform-debit
+  branch. Do not use dispute release on partially refunded or external escrow until it is fixed by
+  its owner.
+- **Post-release refunds** remain limited by SYSTEM liquidity under the overloaded-account model;
+  unchanged by this slice.
+- A post-release full refund now leaves an already `released` escrow as `released` (the refund is
+  recorded on the order and refund row) instead of rewriting its history to `refunded`.
+- No schema field was needed; no migration was created.
+
+### 5. Incident — legacy phase07 scripts are not database-isolated
+
+Before this was noticed, `scripts/phase07-partial-refund-tests.ts` and
+`scripts/phase07-wallet-refund-tests.ts` were run once **without** overriding `DATABASE_URL`.
+They construct `new PrismaClient()` from `.env` and select arbitrary paid orders from
+`naijadeals_core`. They fully refunded three development fixture orders —
+`ND-20261109-285D47` and `ND-20261109-619DAC` (`customer@naijadeals.local`) and
+`ND-20261109-373876` (`demo.stream.amaka@naijastream.demo`), all vendor Ikeja Mobile Hub. A second
+partial run left a PENDING 100-kobo claim on `ND-20261109-726639`; it was verified to have zero
+journal entries, zero audit rows and zero affiliate intents, and was reverted exactly
+(`refundedKobo` 100 → 0, `paymentStatus` stayed `paid`). The three full refunds moved wallet balances
+and were **not** reversed; they need operator review. Legacy phase07 scripts are **not** counted as
+acceptance evidence here, and future runs must set `DATABASE_URL` to an isolated database.
+
+### 6. Commits
+
+Scoped local commit on `naijashop-marketplace` (not pushed; no deployment). See the commit message
+for the exact SHA; unrelated working-tree changes were left unstaged.
+

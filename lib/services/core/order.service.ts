@@ -101,88 +101,180 @@ export async function updateOrderStatus(input: {
 }
 
 /**
+ * The remaining amount an escrow release may still pay out.
+ *
+ * `EscrowHold.amountKobo` is frozen when payment is verified. A partial refund
+ * reduces the money actually held (`Order.refundedKobo`) but leaves the hold row
+ * at its original amount, so releasing `escrow.amountKobo` after a refund would
+ * pay out money the buyer already received back. The seller's share is the
+ * unrefunded part of the frozen payable, using the same cumulative proportional
+ * split as `allocateRefundShares`, never the live fare/commission configuration.
+ */
+export function releaseObligation(input: {
+  escrowAmountKobo: bigint;
+  orderTotalKobo: bigint;
+  payableKobo: bigint;
+  refundedKobo: bigint;
+}) {
+  const basePayable = input.payableKobo > BigInt(0) ? input.payableKobo : BigInt(0);
+  const refunded = input.refundedKobo > BigInt(0) ? input.refundedKobo : BigInt(0);
+  const cappedRefunded = refunded > input.escrowAmountKobo ? input.escrowAmountKobo : refunded;
+  const releasableKobo = input.escrowAmountKobo - cappedRefunded;
+  const shareRefunded = cappedRefunded > input.orderTotalKobo ? input.orderTotalKobo : cappedRefunded;
+  const reversedPayableKobo =
+    input.orderTotalKobo > BigInt(0) ? (basePayable * shareRefunded) / input.orderTotalKobo : basePayable;
+  let payableKobo = basePayable - reversedPayableKobo;
+  if (payableKobo < BigInt(0)) payableKobo = BigInt(0);
+  if (payableKobo > releasableKobo) payableKobo = releasableKobo;
+  return {
+    releasableKobo,
+    payableKobo,
+    platformKobo: releasableKobo - payableKobo
+  };
+}
+
+/**
  * Customer confirms receipt. Escrow is released to the seller net of commission.
+ *
+ * Authoritative state is re-read under an order row lock inside the transaction,
+ * so a concurrent refund and a concurrent completion cannot both spend the same
+ * escrowed balance. A duplicate completion is idempotent: it returns the release
+ * already recorded and moves no money a second time.
  */
 export async function completeOrder(userId: string, orderId: string) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: { escrowHolds: true, payments: true }
-  });
-  if (!order) throw new ApiError(404, "order_not_found", "Order not found.");
-  if (order.customerId !== userId) throw new ApiError(403, "forbidden", "This order belongs to another account.");
-  if (order.status !== "delivered") throw new ApiError(409, "not_delivered", "Only delivered orders can be completed.");
+  const pre = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true, customerId: true } });
+  if (!pre) throw new ApiError(404, "order_not_found", "Order not found.");
+  if (pre.customerId !== userId) throw new ApiError(403, "forbidden", "This order belongs to another account.");
 
   const result = await prisma.$transaction(async (tx) => {
+    // Serialise with refundPayment, which takes the same lock before touching
+    // the order's escrow balances.
+    const locked = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM "Order" WHERE id = ${orderId} FOR UPDATE
+    `;
+    if (locked.length === 0) throw new ApiError(404, "order_not_found", "Order not found.");
+
+    const order = await tx.order.findUniqueOrThrow({
+      where: { id: orderId },
+      include: {
+        escrowHolds: { orderBy: { createdAt: "asc" } },
+        refunds: { where: { status: "PENDING" }, select: { id: true } }
+      }
+    });
+    if (order.customerId !== userId) throw new ApiError(403, "forbidden", "This order belongs to another account.");
+
     const escrow = order.escrowHolds[0];
-    const completedPayment = order.payments.find((payment) => payment.status === "COMPLETED");
-    const buyerWallet = await ensureWallet(tx, { userId: order.customerId, ownerType: "CUSTOMER" });
-    const vendorWallet = await ensureWallet(tx, { vendorId: order.vendorId, ownerType: "VENDOR" });
-    const payable = order.subtotalKobo - order.commissionKobo + order.deliveryFeeKobo;
+    const frozenPayable = order.subtotalKobo - order.commissionKobo + order.deliveryFeeKobo;
+    const obligation = escrow
+      ? releaseObligation({
+          escrowAmountKobo: escrow.amountKobo,
+          orderTotalKobo: order.totalKobo,
+          payableKobo: frozenPayable,
+          refundedKobo: order.refundedKobo
+        })
+      : {
+          releasableKobo: BigInt(0),
+          payableKobo: frozenPayable > BigInt(0) ? frozenPayable : BigInt(0),
+          platformKobo: BigInt(0)
+        };
+
+    if (order.status === "completed") {
+      if (escrow && escrow.status !== "released") {
+        throw new ApiError(409, "escrow_not_released", "This order is completed but its escrow state is inconsistent. Contact support.");
+      }
+      const release = await tx.walletTransaction.findFirst({
+        where: { orderId: order.id, reference: `RELEASE-${order.id}` },
+        select: { amountKobo: true }
+      });
+      return {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        totalKobo: order.totalKobo,
+        status: "completed" as const,
+        payableKobo: (release?.amountKobo ?? obligation.payableKobo).toString(),
+        duplicate: true
+      };
+    }
+    if (order.status !== "delivered") throw new ApiError(409, "not_delivered", "Only delivered orders can be completed.");
+    // An external refund reserves `refundedKobo` before its provider call. Until
+    // that call settles, the held amount has no open record to attribute it to,
+    // so completion must wait rather than release or strand it.
+    if (order.refunds.length > 0) {
+      throw new ApiError(409, "refund_pending", "A refund is still awaiting provider confirmation. Retry completion after it settles.");
+    }
 
     if (escrow) {
-      const platformCut = escrow.amountKobo - payable;
-      const platformWallet = await ensureWallet(tx, { ownerType: "SYSTEM" });
-      // Each branch moves stored balances by exactly what its journal entries say
-      // about that wallet. A stored/journal mismatch here is what previously left
-      // the seller short by the commission and the platform overstating its cut.
-      const entries = [
-        { walletId: vendorWallet.id, direction: "DEBIT" as const, amountKobo: escrow.amountKobo, memo: "Escrow payable cleared" },
-        { walletId: vendorWallet.id, direction: "CREDIT" as const, amountKobo: payable, memo: "Seller net proceeds credited" }
-      ];
-
-      if (completedPayment?.provider === "wallet") {
-        const buyerRelease = await tx.wallet.updateMany({
-          where: { id: buyerWallet.id, heldKobo: { gte: escrow.amountKobo } },
-          data: { heldKobo: { decrement: escrow.amountKobo } }
-        });
-        if (buyerRelease.count !== 1) throw new ApiError(409, "escrow_conflict", "The buyer's escrow hold is no longer available to release.");
-        // Seller: held -> zero for the escrow, payable becomes spendable.
-        const sellerRelease = await tx.wallet.updateMany({
-          where: { id: vendorWallet.id, heldKobo: { gte: escrow.amountKobo } },
-          data: { heldKobo: { decrement: escrow.amountKobo }, availableKobo: { increment: payable } }
-        });
-        if (sellerRelease.count !== 1) throw new ApiError(409, "escrow_conflict", "The seller's escrow hold is no longer available to release.");
-        // Platform: receives the commission, so both stored and journal credit it.
-        if (platformCut > BigInt(0)) {
-          await tx.wallet.update({ where: { id: platformWallet.id }, data: { availableKobo: { increment: platformCut } } });
-          entries.push({ walletId: platformWallet.id, direction: "CREDIT" as const, amountKobo: platformCut, memo: "Commission retained by NaijaDeals" });
-        }
-      } else {
-        // External payment: the platform already holds the full amount. Paying the
-        // seller moves `payable` out of the platform wallet; the commission stays
-        // behind, so the platform's stored balance only falls by `payable`.
-        const platformDebit = await tx.wallet.updateMany({
-          where: { id: platformWallet.id, availableKobo: { gte: payable } },
-          data: { availableKobo: { decrement: payable } }
-        });
-        if (platformDebit.count !== 1) throw new ApiError(409, "escrow_conflict", "The platform's escrow balance is no longer available to release.");
-        await tx.wallet.update({
-          where: { id: vendorWallet.id },
-          data: { heldKobo: { decrement: escrow.amountKobo }, availableKobo: { increment: payable } }
-        });
-        // Neutralise the platform's own commission leg: it debits the platform by
-        // the same amount it credits, so the platform's journal matches its stored
-        // balance change of -payable rather than jumping by the commission.
-        if (platformCut > BigInt(0)) {
-          entries.push({ walletId: platformWallet.id, direction: "DEBIT" as const, amountKobo: platformCut, memo: "Commission transfer within platform funds" });
-          entries.push({ walletId: platformWallet.id, direction: "CREDIT" as const, amountKobo: platformCut, memo: "Commission retained by NaijaDeals" });
-        }
+      if (!["held", "release_eligible"].includes(escrow.status)) {
+        throw new ApiError(409, "escrow_not_releasable", `Escrow is ${escrow.status} and cannot be released.`);
       }
+      if (obligation.releasableKobo <= BigInt(0)) {
+        throw new ApiError(409, "escrow_conflict", "The escrow has no releasable balance after its refunds.");
+      }
+
+      const claimed = await tx.escrowHold.updateMany({
+        where: { id: escrow.id, status: { in: ["held", "release_eligible"] } },
+        data: { status: "released" }
+      });
+      if (claimed.count !== 1) {
+        throw new ApiError(409, "escrow_conflict", "The escrow changed while completing this order. Reload and try again.");
+      }
+
+      const vendorWallet = await ensureWallet(tx, { vendorId: order.vendorId, ownerType: "VENDOR" });
+      // The buyer of record is the wallet that actually holds the escrow: the
+      // customer for wallet payments, the platform for verified external payments.
+      const buyerRelease = await tx.wallet.updateMany({
+        where: { id: escrow.buyerWalletId, heldKobo: { gte: obligation.releasableKobo } },
+        data: { heldKobo: { decrement: obligation.releasableKobo } }
+      });
+      if (buyerRelease.count !== 1) {
+        throw new ApiError(409, "escrow_conflict", "The remaining escrow hold is no longer available to release.");
+      }
+      const sellerRelease = await tx.wallet.updateMany({
+        where: { id: vendorWallet.id, heldKobo: { gte: obligation.releasableKobo } },
+        data: {
+          heldKobo: { decrement: obligation.releasableKobo },
+          availableKobo: { increment: obligation.payableKobo }
+        }
+      });
+      if (sellerRelease.count !== 1) {
+        throw new ApiError(409, "escrow_conflict", "The seller's remaining escrow hold is no longer available to release.");
+      }
+
+      const entries = [
+        { walletId: vendorWallet.id, direction: "DEBIT" as const, amountKobo: obligation.releasableKobo, memo: "Remaining escrow payable cleared" },
+        { walletId: vendorWallet.id, direction: "CREDIT" as const, amountKobo: obligation.payableKobo, memo: "Seller net proceeds credited" }
+      ];
+      if (obligation.platformKobo > BigInt(0)) {
+        const platformWallet = await ensureWallet(tx, { ownerType: "SYSTEM" });
+        await tx.wallet.update({
+          where: { id: platformWallet.id },
+          data: { availableKobo: { increment: obligation.platformKobo } }
+        });
+        entries.push({
+          walletId: platformWallet.id,
+          direction: "CREDIT" as const,
+          amountKobo: obligation.platformKobo,
+          memo: "Remaining commission and fees retained by NaijaDeals"
+        });
+      }
+
+      const debitKobo = entries.filter((entry) => entry.direction === "DEBIT").reduce((sum, entry) => sum + entry.amountKobo, BigInt(0));
+      const creditKobo = entries.filter((entry) => entry.direction === "CREDIT").reduce((sum, entry) => sum + entry.amountKobo, BigInt(0));
+      if (debitKobo !== creditKobo) throw new Error("Escrow release journal does not balance.");
 
       await tx.walletTransaction.create({
         data: {
           walletId: vendorWallet.id,
           orderId: order.id,
           type: "release",
-          amountKobo: payable,
+          amountKobo: obligation.payableKobo,
           reference: `RELEASE-${order.id}`,
           description: `Escrow released for ${order.orderNumber}`,
           ledger: { create: entries }
         }
       });
-      await tx.escrowHold.update({
-        where: { id: escrow.id },
-        data: { status: "released", events: { create: { from: escrow.status, to: "released", note: "Customer confirmed delivery." } } }
+      await tx.escrowEvent.create({
+        data: { escrowId: escrow.id, from: escrow.status, to: "released", note: "Customer confirmed delivery." }
       });
     }
 
@@ -193,20 +285,35 @@ export async function completeOrder(userId: string, orderId: string) {
       action: "order.completed",
       entity: "Order",
       entityId: order.id,
-      metadata: { payableKobo: payable.toString() }
+      metadata: {
+        payableKobo: obligation.payableKobo.toString(),
+        releasableKobo: obligation.releasableKobo.toString(),
+        platformKobo: obligation.platformKobo.toString(),
+        refundedKobo: order.refundedKobo.toString()
+      }
     });
-    return { orderId: order.id, status: "completed", payableKobo: payable.toString() };
+    return {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      totalKobo: order.totalKobo,
+      status: "completed" as const,
+      payableKobo: obligation.payableKobo.toString(),
+      duplicate: false
+    };
   });
 
-  // Post-commit: the customer is told the escrow moved and the order closed.
-  const facts = {
-    id: order.id,
-    orderNumber: order.orderNumber,
-    totalKobo: order.totalKobo,
-    customerId: order.customerId
-  };
-  await notifyEscrowReleased(facts, BigInt(result.payableKobo));
-  await notifyOrderStatus(facts, "completed");
+  // Post-commit: the customer is told the escrow moved and the order closed. An
+  // idempotent replay must not send a second notification for the same release.
+  if (!result.duplicate) {
+    const facts = {
+      id: result.orderId,
+      orderNumber: result.orderNumber,
+      totalKobo: result.totalKobo,
+      customerId: userId
+    };
+    await notifyEscrowReleased(facts, BigInt(result.payableKobo));
+    await notifyOrderStatus(facts, "completed");
+  }
 
   return result;
 }
