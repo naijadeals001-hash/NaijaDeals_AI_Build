@@ -123,7 +123,9 @@ async function main() {
       );
       record(
         "exclusive-benefits empty state present",
-        text.includes("No Plus+-exclusive benefits are configured yet.") && text.includes("Benefits register"),
+        (text.includes("No Plus+ member benefits are configured yet.") ||
+          text.includes("No Plus+-exclusive benefits are configured yet.")) &&
+          text.includes("Benefits register"),
         "empty register copy found"
       );
       const benefitCards = countMatches(html, /data-plus-benefit-card=/g);
