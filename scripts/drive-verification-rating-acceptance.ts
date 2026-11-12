@@ -35,6 +35,10 @@ import type { PrismaClient } from "@prisma/client";
 const DB = "naijadeals_wallet_acceptance";
 const RUN_ID = `drive-verify-${new Date().toISOString().replace(/\D/g, "").slice(0, 14)}-${randomBytes(4).toString("hex")}`;
 const REPO_ROOT = path.resolve(__dirname, "..");
+// Ephemeral acceptance keys. They exist only in this process environment and are
+// never written to the database, a file or the console.
+const TEST_KEY_V1 = `test-drive-key-v1-${randomBytes(16).toString("hex")}`;
+const TEST_KEY_V2 = `test-drive-key-v2-${randomBytes(16).toString("hex")}`;
 
 type Check = { name: string; pass: boolean; detail: string };
 const checks: Check[] = [];
@@ -54,13 +58,20 @@ const safeJson = (value: unknown) =>
   JSON.stringify(value, (_key, inner) => (typeof inner === "bigint" ? inner.toString() : inner));
 
 /**
- * Test-side derivation used only to construct known fixtures. It intentionally
- * mirrors the service so the suite can prove that a leading-zero code and a
- * pre-v2 (v1) record still verify. It is not used to implement production
- * behaviour.
+ * Test-side mirrors used only to construct known fixtures. Production behavior
+ * always comes from the service under test.
+ *
+ * `legacyDerivedCode`/`legacyHashFor` reproduce the pre-key salt-only scheme so
+ * the suite can create a legacy row and prove the runtime refuses it.
+ * `keyedCode`/`keyedHash` mirror the server-keyed scheme so a known leading-zero
+ * code or a record for a previous key version can be built.
  */
 const CODE_SPACE = 10_000;
-function derivedCode(salt: string, rideId: string, algorithm: "v1" | "v2") {
+const LEGACY_ALGORITHM_V2 = "scrypt-hmac-sha256-v2";
+const KEYED_ALGORITHM = "hmac-sha256-pepper-v1";
+const MESSAGE_DOMAIN = "naijadrive-pickup-verification:v1";
+
+function legacyDerivedCode(salt: string, rideId: string, algorithm: "v1" | "v2") {
   if (algorithm === "v1") {
     const digest = createHmac("sha256", salt).update(`${rideId}:naijadrive-pickup-verification`).digest();
     return String(digest.readUInt32BE(0) % CODE_SPACE).padStart(4, "0");
@@ -71,10 +82,40 @@ function derivedCode(salt: string, rideId: string, algorithm: "v1" | "v2") {
     const value = digest.readUInt32BE(0);
     if (value < limit) return String(value % CODE_SPACE).padStart(4, "0");
   }
-  throw new Error("fixture derivation exhausted its rejection loop");
+  throw new Error("legacy fixture derivation exhausted its rejection loop");
 }
-function hashFor(code: string, salt: string) {
+
+function legacyHashFor(code: string, salt: string) {
   return scryptSync(code, salt, 32).toString("hex");
+}
+
+function keyedCode(salt: string, rideId: string, keyVersion: number, secret: string) {
+  const limit = Math.floor(0x1_0000_0000 / CODE_SPACE) * CODE_SPACE;
+  const message = (counter: number | "fallback") =>
+    `${MESSAGE_DOMAIN}:k${keyVersion}:${rideId}:${salt}:${counter}`;
+  for (let counter = 0; counter < 32; counter += 1) {
+    const digest = createHmac("sha256", secret).update(message(counter)).digest();
+    const value = digest.readUInt32BE(0);
+    if (value < limit) return String(value % CODE_SPACE).padStart(4, "0");
+  }
+  return String(createHmac("sha256", secret).update(message("fallback")).digest().readUInt32BE(0) % CODE_SPACE).padStart(
+    4,
+    "0"
+  );
+}
+
+function keyedHashFor(code: string, salt: string, keyVersion: number, secret: string) {
+  return scryptSync(code, `naijadrive-pickup-verifier:v1:k${keyVersion}:${salt}:${secret}`, 32).toString("hex");
+}
+
+function useVerificationKeyVersion(version: 1 | 2) {
+  process.env.DRIVE_PICKUP_VERIFICATION_KEY_VERSION = String(version);
+}
+
+/** Restore an env var exactly, deleting it when it was originally unset. */
+function restoreEnv(name: string, value: string | undefined) {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
 }
 
 function acceptanceUrl() {
@@ -112,6 +153,11 @@ async function main() {
   process.env.DATABASE_URL = acceptanceUrl();
   process.env.ENABLE_TEST_PAYMENTS = "true";
   process.env.VALKEY_URL = "";
+  // Explicit, versioned key configuration. The service has no default: these are
+  // required before the module is imported and every call reads them lazily.
+  process.env.DRIVE_PICKUP_VERIFICATION_KEY_VERSION = "1";
+  process.env.DRIVE_PICKUP_VERIFICATION_KEY_V1 = TEST_KEY_V1;
+  process.env.DRIVE_PICKUP_VERIFICATION_KEY_V2 = TEST_KEY_V2;
 
   const { prisma } = await import("../lib/prisma");
   const drive = await import("../lib/services/core/drive.service");
@@ -315,8 +361,9 @@ async function main() {
   await assign(driverA.user.id, rideA.id);
   const recordA = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideA.id } });
   check(
-    "assignment creates one protected record with hash/salt/expiry/limits",
-    recordA.algorithm === "scrypt-hmac-sha256-v2" &&
+    "assignment creates one keyed record with hash/salt/key version/expiry/limits",
+    recordA.algorithm === KEYED_ALGORITHM &&
+      recordA.keyVersion === 1 &&
       recordA.codeHash.length === 64 &&
       recordA.salt.length === 32 &&
       recordA.expiresAt.getTime() > Date.now() &&
@@ -325,6 +372,7 @@ async function main() {
       recordA.verifiedAt === null,
     JSON.stringify({
       algorithm: recordA.algorithm,
+      keyVersion: recordA.keyVersion,
       hashLength: recordA.codeHash.length,
       saltLength: recordA.salt.length,
       maxAttempts: recordA.maxAttempts
@@ -339,12 +387,18 @@ async function main() {
   );
   const rawA = codeA.code!;
   check(
-    "stored hash is not the raw code",
-    recordA.codeHash !== rawA && !recordA.codeHash.includes(rawA) && recordA.salt !== rawA
+    "stored verifier is keyed by the server secret, not the salt-only scrypt hash",
+    recordA.codeHash === keyedHashFor(rawA, recordA.salt, 1, TEST_KEY_V1) &&
+      recordA.codeHash !== legacyHashFor(rawA, recordA.salt) &&
+      recordA.codeHash !== rawA &&
+      recordA.salt !== rawA,
+    JSON.stringify({ matchesKeyed: recordA.codeHash === keyedHashFor(rawA, recordA.salt, 1, TEST_KEY_V1) })
   );
   check(
-    "no SystemEvent row carries a verification salt",
-    (await prisma.systemEvent.count({ where: { type: "ride.verification_issued", entityId: rideA.id } })) === 0
+    "no SystemEvent row carries a verification salt or key material",
+    (await prisma.systemEvent.count({
+      where: { entityId: rideA.id, type: { contains: "verification" } }
+    })) === 0
   );
 
   const boardA = await drive.listDriverRides(driverA.user.id);
@@ -912,37 +966,122 @@ async function main() {
     "ride_not_completed"
   );
 
-  /* ------------------------------- K. raw-code compatibility and budget --- */
+  /* ---------------- K. server-key storage, rotation and legacy transition --- */
   const riderG = await createUser("CUSTOMER", "rider-g");
   const riderH = await createUser("CUSTOMER", "rider-h");
 
-  // A record issued by the previous algorithm version must keep working after
-  // deployment. The test constructs the v1 record the old service would have made.
-  const rideV1 = await newRide(riderG.id, "cash");
-  await assign(driverA.user.id, rideV1.id);
-  const v1Salt = randomBytes(16).toString("hex");
-  const v1Code = derivedCode(v1Salt, rideV1.id, "v1");
+  // A record written by the pre-key service (salt-only v2) must not verify. The
+  // runtime refuses it without consuming an attempt, and the rider's read path
+  // deliberately rotates it to a keyed record.
+  const rideLegacy = await newRide(riderG.id, "cash");
+  await assign(driverA.user.id, rideLegacy.id);
+  const legacySalt = randomBytes(16).toString("hex");
+  const legacyLiveCode = legacyDerivedCode(legacySalt, rideLegacy.id, "v2");
   await prisma.rideVerification.update({
-    where: { rideId: rideV1.id },
+    where: { rideId: rideLegacy.id },
     data: {
-      algorithm: "scrypt-hmac-sha256-v1",
-      salt: v1Salt,
-      codeHash: hashFor(v1Code, v1Salt)
+      algorithm: LEGACY_ALGORITHM_V2,
+      keyVersion: null,
+      salt: legacySalt,
+      codeHash: legacyHashFor(legacyLiveCode, legacySalt)
     }
   });
-  const codeV1 = await drive.getRideVerificationCode({ userId: riderG.id, rideId: rideV1.id });
-  check(
-    "a pre-v2 record still derives the code the old algorithm stored",
-    codeV1.code === v1Code && codeV1.required && !codeV1.legacy,
-    JSON.stringify({ returned: codeV1.code, expected: v1Code })
+  await expectError(
+    "a legacy salt-only code is refused by the driver",
+    () => drive.verifyPassenger({ userId: driverA.user.id, rideId: rideLegacy.id, code: legacyLiveCode }),
+    409,
+    "verification_reissue_required"
   );
-  const verifiedV1 = await drive.verifyPassenger({ userId: driverA.user.id, rideId: rideV1.id, code: v1Code });
-  check("a pre-v2 record still verifies", verifiedV1.verified === true);
-  await arrive(driverA.user.id, rideV1.id);
-  await start(driverA.user.id, rideV1.id);
-  await complete(driverA.user.id, rideV1.id);
+  const legacyUnchanged = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideLegacy.id } });
+  check(
+    "refusing a legacy code consumes no attempt and does not mark it verified",
+    legacyUnchanged.attemptCount === 0 && legacyUnchanged.verifiedAt === null && legacyUnchanged.keyVersion === null
+  );
 
-  // Leading zeros are valid digits, not a numeric value. Construct a v2 record
+  const legacyRider = await drive.getRideVerificationCode({ userId: riderG.id, rideId: rideLegacy.id });
+  const rotatedRecord = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideLegacy.id } });
+  check(
+    "opening the rider screen replaces a legacy row with a keyed record",
+    rotatedRecord.keyVersion === 1 &&
+      rotatedRecord.algorithm === KEYED_ALGORITHM &&
+      rotatedRecord.salt !== legacySalt &&
+      rotatedRecord.codeHash !== legacyHashFor(legacyLiveCode, legacySalt) &&
+      typeof legacyRider.code === "string" &&
+      /^\d{4}$/.test(legacyRider.code),
+    safeJson({ keyVersion: rotatedRecord.keyVersion, algorithm: rotatedRecord.algorithm })
+  );
+  check(
+    "the rotated row stores the keyed verifier, not the salt-only hash",
+    rotatedRecord.codeHash === keyedHashFor(legacyRider.code!, rotatedRecord.salt, 1, TEST_KEY_V1)
+  );
+  const legacyRotationAudit = await prisma.auditLog.findFirstOrThrow({
+    where: { action: "ride.verification_legacy_reissued", entityId: rideLegacy.id }
+  });
+  const legacyAuditText = safeJson(legacyRotationAudit.metadata);
+  check(
+    "the legacy rotation is audited without salt, code or key material",
+    !legacyAuditText.includes(legacySalt) &&
+      !legacyAuditText.includes(legacyLiveCode) &&
+      !legacyAuditText.includes(TEST_KEY_V1) &&
+      !legacyAuditText.includes(TEST_KEY_V2),
+    legacyAuditText
+  );
+  const legacyVerify = await drive.verifyPassenger({
+    userId: driverA.user.id,
+    rideId: rideLegacy.id,
+    code: legacyRider.code!
+  });
+  check("the rotated keyed code verifies", legacyVerify.verified === true);
+  await arrive(driverA.user.id, rideLegacy.id);
+  await start(driverA.user.id, rideLegacy.id);
+  await complete(driverA.user.id, rideLegacy.id);
+
+  // Database-only disclosure fixture: the live code is not reproducible from the
+  // stored salt, algorithm and key version, and the stored verifier is not the
+  // unkeyed scrypt hash. The two derivations differ for this fixture by
+  // construction, so the check is deterministic.
+  const rideDbOnly = await newRide(riderG.id, "cash");
+  await assign(driverA.user.id, rideDbOnly.id);
+  let dbSalt = "";
+  let dbCode = "";
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const candidate = randomBytes(16).toString("hex");
+    const candidateCode = keyedCode(candidate, rideDbOnly.id, 1, TEST_KEY_V1);
+    if (legacyDerivedCode(candidate, rideDbOnly.id, "v2") !== candidateCode) {
+      dbSalt = candidate;
+      dbCode = candidateCode;
+      break;
+    }
+  }
+  check("fixture found a keyed code that salt-only derivation does not reproduce", dbSalt !== "");
+  await prisma.rideVerification.update({
+    where: { rideId: rideDbOnly.id },
+    data: {
+      algorithm: KEYED_ALGORITHM,
+      keyVersion: 1,
+      salt: dbSalt,
+      codeHash: keyedHashFor(dbCode, dbSalt, 1, TEST_KEY_V1)
+    }
+  });
+  const dbRow = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideDbOnly.id } });
+  check(
+    "a database row alone does not yield a usable code",
+    legacyDerivedCode(dbRow.salt, rideDbOnly.id, "v2") !== dbCode &&
+      dbRow.codeHash !== legacyHashFor(dbCode, dbRow.salt) &&
+      dbRow.codeHash !== dbCode &&
+      dbRow.salt !== dbCode,
+    JSON.stringify({ algorithm: dbRow.algorithm, keyVersion: dbRow.keyVersion })
+  );
+  const codeDbOnly = await drive.getRideVerificationCode({ userId: riderG.id, rideId: rideDbOnly.id });
+  check("the rider still retrieves the keyed code", codeDbOnly.code === dbCode);
+  await drive.cancelRide({
+    actorId: riderG.id,
+    isAdmin: false,
+    rideId: rideDbOnly.id,
+    reason: "Database-only disclosure cleanup"
+  });
+
+  // Leading zeros are valid digits, not a numeric value. Construct a keyed record
   // whose real code starts with zero and prove both the endpoint and the driver
   // submission preserve it.
   const rideZero = await newRide(riderG.id, "cash");
@@ -951,7 +1090,7 @@ async function main() {
   let zeroCode = "";
   for (let attempt = 0; attempt < 500; attempt += 1) {
     const candidate = randomBytes(16).toString("hex");
-    const candidateCode = derivedCode(candidate, rideZero.id, "v2");
+    const candidateCode = keyedCode(candidate, rideZero.id, 1, TEST_KEY_V1);
     if (candidateCode.startsWith("0")) {
       zeroSalt = candidate;
       zeroCode = candidateCode;
@@ -961,7 +1100,12 @@ async function main() {
   check("fixture search found a leading-zero code", zeroSalt !== "" && zeroCode.startsWith("0"), zeroCode);
   await prisma.rideVerification.update({
     where: { rideId: rideZero.id },
-    data: { algorithm: "scrypt-hmac-sha256-v2", salt: zeroSalt, codeHash: hashFor(zeroCode, zeroSalt) }
+    data: {
+      algorithm: KEYED_ALGORITHM,
+      keyVersion: 1,
+      salt: zeroSalt,
+      codeHash: keyedHashFor(zeroCode, zeroSalt, 1, TEST_KEY_V1)
+    }
   });
   const codeZero = await drive.getRideVerificationCode({ userId: riderG.id, rideId: rideZero.id });
   check(
@@ -1011,7 +1155,8 @@ async function main() {
     reassignedRecord.salt !== releasedRecord.salt &&
       reassignedRecord.attemptCount === 1 &&
       reassignedRecord.verifiedAt === null &&
-      codeBudget2.code === derivedCode(reassignedRecord.salt, rideBudget.id, "v2"),
+      reassignedRecord.keyVersion === 1 &&
+      codeBudget2.code === keyedCode(reassignedRecord.salt, rideBudget.id, 1, TEST_KEY_V1),
     JSON.stringify({ attempts: reassignedRecord.attemptCount, code: codeBudget2.code })
   );
   const verifiedBudget = await drive.verifyPassenger({
@@ -1027,6 +1172,195 @@ async function main() {
   await arrive(driverA.user.id, rideBudget.id);
   await start(driverA.user.id, rideBudget.id);
   await complete(driverA.user.id, rideBudget.id);
+
+  /* ---------------- K2. key rotation and fail-closed configuration --- */
+  const rideRotateV1 = await newRide(riderG.id, "cash");
+  await assign(driverA.user.id, rideRotateV1.id);
+  const rotateV1Record = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideRotateV1.id } });
+  const rotateV1Code = await drive.getRideVerificationCode({ userId: riderG.id, rideId: rideRotateV1.id });
+  check(
+    "active version 1 issues a version-1 record derived with that key",
+    rotateV1Record.keyVersion === 1 &&
+      rotateV1Code.code === keyedCode(rotateV1Record.salt, rideRotateV1.id, 1, TEST_KEY_V1),
+    JSON.stringify({ keyVersion: rotateV1Record.keyVersion })
+  );
+
+  useVerificationKeyVersion(2);
+  const rideRotateV2 = await newRide(riderH.id, "cash");
+  await assign(driverB.user.id, rideRotateV2.id);
+  const rotateV2Record = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideRotateV2.id } });
+  const rotateV2Code = await drive.getRideVerificationCode({ userId: riderH.id, rideId: rideRotateV2.id });
+  check(
+    "new records use the new key version after rotation",
+    rotateV2Record.keyVersion === 2 &&
+      rotateV2Record.algorithm === KEYED_ALGORITHM &&
+      rotateV2Code.code === keyedCode(rotateV2Record.salt, rideRotateV2.id, 2, TEST_KEY_V2),
+    JSON.stringify({ keyVersion: rotateV2Record.keyVersion })
+  );
+  const rotatedVerifyV2 = await drive.verifyPassenger({
+    userId: driverB.user.id,
+    rideId: rideRotateV2.id,
+    code: rotateV2Code.code!
+  });
+  check("a version-2 record verifies with the version-2 key", rotatedVerifyV2.verified === true);
+  await arrive(driverB.user.id, rideRotateV2.id);
+  await start(driverB.user.id, rideRotateV2.id);
+  await complete(driverB.user.id, rideRotateV2.id);
+
+  const rotateV1Again = await drive.getRideVerificationCode({ userId: riderG.id, rideId: rideRotateV1.id });
+  check(
+    "a version-1 record still derives with its recorded key after rotation",
+    rotateV1Again.code === rotateV1Code.code,
+    JSON.stringify({ expected: rotateV1Code.code, returned: rotateV1Again.code })
+  );
+  const rotatedVerifyV1 = await drive.verifyPassenger({
+    userId: driverA.user.id,
+    rideId: rideRotateV1.id,
+    code: rotateV1Code.code!
+  });
+  check("a version-1 record still verifies after rotation", rotatedVerifyV1.verified === true);
+  await arrive(driverA.user.id, rideRotateV1.id);
+  await start(driverA.user.id, rideRotateV1.id);
+  await complete(driverA.user.id, rideRotateV1.id);
+
+  // Retiring a key while a record still references it must fail closed on every
+  // path that would derive or verify the code. No attempt is consumed.
+  const savedKeyV1 = process.env.DRIVE_PICKUP_VERIFICATION_KEY_V1;
+  delete process.env.DRIVE_PICKUP_VERIFICATION_KEY_V1;
+  try {
+    const retiredRide = await newRide(riderH.id, "cash");
+    await assign(driverA.user.id, retiredRide.id);
+    const retiredSalt = randomBytes(16).toString("hex");
+    const retiredCode = keyedCode(retiredSalt, retiredRide.id, 1, TEST_KEY_V1);
+    await prisma.rideVerification.update({
+      where: { rideId: retiredRide.id },
+      data: {
+        algorithm: KEYED_ALGORITHM,
+        keyVersion: 1,
+        salt: retiredSalt,
+        codeHash: keyedHashFor(retiredCode, retiredSalt, 1, TEST_KEY_V1)
+      }
+    });
+    await expectError(
+      "a retired key version fails closed on rider retrieval",
+      () => drive.getRideVerificationCode({ userId: riderH.id, rideId: retiredRide.id }),
+      503,
+      "verification_key_unavailable"
+    );
+    await expectError(
+      "a retired key version fails closed on driver verification",
+      () => drive.verifyPassenger({ userId: driverA.user.id, rideId: retiredRide.id, code: retiredCode }),
+      503,
+      "verification_key_unavailable"
+    );
+    const retiredRow = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: retiredRide.id } });
+    check(
+      "a missing key does not consume an attempt or mark the record verified",
+      retiredRow.attemptCount === 0 && retiredRow.verifiedAt === null
+    );
+    await arrive(driverA.user.id, retiredRide.id);
+    await expectError(
+      "start fails closed when the record's key is missing",
+      () => start(driverA.user.id, retiredRide.id),
+      503,
+      "verification_key_unavailable"
+    );
+    await drive.cancelRide({
+      actorId: riderH.id,
+      isAdmin: false,
+      rideId: retiredRide.id,
+      reason: "Retired-key cleanup"
+    });
+  } finally {
+    restoreEnv("DRIVE_PICKUP_VERIFICATION_KEY_V1", savedKeyV1);
+  }
+
+  // No active key version: acceptance must abort and leave the ride untouched,
+  // rather than issuing a salt-only record or silently skipping protection.
+  const noKeyRide = await newRide(riderF.id, "cash");
+  const noKeyResetRide = await newRide(riderH.id, "cash");
+  await assign(driverA.user.id, noKeyResetRide.id);
+  await prisma.rideVerification.update({
+    where: { rideId: noKeyResetRide.id },
+    data: { attemptCount: drive.RIDE_VERIFICATION_MAX_ATTEMPTS }
+  });
+  const savedKeyVersion = process.env.DRIVE_PICKUP_VERIFICATION_KEY_VERSION;
+  delete process.env.DRIVE_PICKUP_VERIFICATION_KEY_VERSION;
+  try {
+    await expectError(
+      "acceptance fails closed when the active key version is unset",
+      () => assign(driverB.user.id, noKeyRide.id),
+      503,
+      "verification_key_unavailable"
+    );
+    const untouched = await prisma.ride.findUniqueOrThrow({ where: { id: noKeyRide.id } });
+    check(
+      "the failed acceptance leaves the ride requested, unassigned and record-free",
+      untouched.status === "requested" &&
+        untouched.driverId === null &&
+        (await prisma.rideVerification.count({ where: { rideId: noKeyRide.id } })) === 0
+    );
+    await expectError(
+      "rider reset fails closed when the active key is unset",
+      () => drive.resetRideVerificationByRider({ userId: riderH.id, rideId: noKeyResetRide.id }),
+      503,
+      "verification_key_unavailable"
+    );
+    const resetRecord = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: noKeyResetRide.id } });
+    check(
+      "the failed reset leaves the locked record and attempt count untouched",
+      resetRecord.attemptCount === drive.RIDE_VERIFICATION_MAX_ATTEMPTS && resetRecord.verifiedAt === null
+    );
+  } finally {
+    restoreEnv("DRIVE_PICKUP_VERIFICATION_KEY_VERSION", savedKeyVersion);
+  }
+  await drive.cancelRide({
+    actorId: riderH.id,
+    isAdmin: false,
+    rideId: noKeyResetRide.id,
+    reason: "Fail-closed configuration cleanup"
+  });
+  await drive.cancelRide({
+    actorId: riderF.id,
+    isAdmin: false,
+    rideId: noKeyRide.id,
+    reason: "Fail-closed configuration cleanup"
+  });
+
+  // A configured but too-short key is invalid. Do not accept it as a weak key.
+  const shortKeyRide = await newRide(riderG.id, "cash");
+  await assign(driverA.user.id, shortKeyRide.id);
+  const shortKeyAcceptRide = await newRide(riderF.id, "cash");
+  const savedKeyV2 = process.env.DRIVE_PICKUP_VERIFICATION_KEY_V2;
+  process.env.DRIVE_PICKUP_VERIFICATION_KEY_V2 = "too-short";
+  try {
+    await expectError(
+      "a short key fails closed on rider retrieval",
+      () => drive.getRideVerificationCode({ userId: riderG.id, rideId: shortKeyRide.id }),
+      503,
+      "verification_key_unavailable"
+    );
+    await expectError(
+      "a short key fails closed on new acceptance",
+      () => assign(driverB.user.id, shortKeyAcceptRide.id),
+      503,
+      "verification_key_unavailable"
+    );
+  } finally {
+    restoreEnv("DRIVE_PICKUP_VERIFICATION_KEY_V2", savedKeyV2);
+  }
+  await drive.cancelRide({
+    actorId: riderG.id,
+    isAdmin: false,
+    rideId: shortKeyRide.id,
+    reason: "Fail-closed configuration cleanup"
+  });
+  await drive.cancelRide({
+    actorId: riderF.id,
+    isAdmin: false,
+    rideId: shortKeyAcceptRide.id,
+    reason: "Fail-closed configuration cleanup"
+  });
 
   /* ------------------------------- L. rider reset and suspended driver --- */
   const rideReset = await newRide(riderH.id, "cash");
@@ -1435,6 +1769,56 @@ async function main() {
   check("the support-issued code verifies normally", legacySupportVerify.verified === true);
   await start(driverB.user.id, legacySupport.id);
   await complete(driverB.user.id, legacySupport.id);
+
+  // Support reset must also retire an active salt-only row: it issues a keyed
+  // record under the active version and the old derived code stops working.
+  const legacySaltRide = await newRide(riderH.id, "cash");
+  await assign(driverA.user.id, legacySaltRide.id);
+  const legacyRowSalt = randomBytes(16).toString("hex");
+  const legacyRowCode = legacyDerivedCode(legacyRowSalt, legacySaltRide.id, "v2");
+  await prisma.rideVerification.update({
+    where: { rideId: legacySaltRide.id },
+    data: {
+      algorithm: LEGACY_ALGORITHM_V2,
+      keyVersion: null,
+      salt: legacyRowSalt,
+      codeHash: legacyHashFor(legacyRowCode, legacyRowSalt)
+    }
+  });
+  const legacySupportReset = await drive.overrideRideVerification({
+    adminId: admin.id,
+    rideId: legacySaltRide.id,
+    action: "reset",
+    reason: "Replace a pre-key salt-only record with a keyed record"
+  });
+  const legacySupportRecord = await prisma.rideVerification.findUniqueOrThrow({
+    where: { rideId: legacySaltRide.id }
+  });
+  check(
+    "support reset replaces a legacy salt-only row with a keyed record",
+    legacySupportReset.verification.required === true &&
+      legacySupportRecord.keyVersion === 2 &&
+      legacySupportRecord.algorithm === KEYED_ALGORITHM &&
+      legacySupportRecord.salt !== legacyRowSalt &&
+      legacySupportRecord.codeHash !== legacyHashFor(legacyRowCode, legacyRowSalt),
+    safeJson({ keyVersion: legacySupportRecord.keyVersion, algorithm: legacySupportRecord.algorithm })
+  );
+  const legacySupportReplacement = await drive.getRideVerificationCode({
+    userId: riderH.id,
+    rideId: legacySaltRide.id
+  });
+  check(
+    "the replacement code is derived from the keyed record, not the old salt",
+    legacySupportReplacement.code ===
+      keyedCode(legacySupportRecord.salt, legacySaltRide.id, 2, TEST_KEY_V2),
+    safeJson({ keyVersion: legacySupportRecord.keyVersion })
+  );
+  await drive.cancelRide({
+    actorId: riderH.id,
+    isAdmin: false,
+    rideId: legacySaltRide.id,
+    reason: "Legacy support-reset cleanup"
+  });
 
   // Reassignment must not revive the pre-enforcement exemption. Release clears
   // the marker; the pre-enforcement fixture never had a record to invalidate, and

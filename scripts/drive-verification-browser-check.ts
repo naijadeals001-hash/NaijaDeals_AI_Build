@@ -9,12 +9,21 @@
  * Usage:
  *   DATABASE_URL=<naijadeals_wallet_acceptance URL> TEST_BASE_URL=http://localhost:3037 \
  *     npx tsx scripts/drive-verification-browser-check.ts
+ *
+ * The preview server must be started with the same
+ * DRIVE_PICKUP_VERIFICATION_KEY_VERSION / DRIVE_PICKUP_VERIFICATION_KEY_V<version>
+ * pair this script generates below. The variables here cover only the script's
+ * direct service calls; they are never written to the database.
  */
 import { PrismaClient } from "@prisma/client";
 import { chromium, type Browser, type Page } from "playwright";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { randomBytes } from "node:crypto";
 import { hashPassword } from "../lib/auth/password";
+
+process.env.DRIVE_PICKUP_VERIFICATION_KEY_VERSION = "1";
+process.env.DRIVE_PICKUP_VERIFICATION_KEY_V1 = `test-browser-pickup-${randomBytes(16).toString("hex")}`;
 
 const BASE = (process.env.TEST_BASE_URL ?? "").replace(/\/$/, "");
 const DB = new URL(process.env.DATABASE_URL ?? "postgresql://invalid/invalid").pathname.replace(/^\//, "");

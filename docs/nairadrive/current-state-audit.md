@@ -21,6 +21,11 @@
   app/e2e-earnings-preview route also appeared and was removed during the pass. None of this is part
   of HEAD `ecd0e54` and it is not treated as verified state below. The audit describes HEAD; the final
   `npx tsc --noEmit` run, after the temporary preview route was removed, exited 0.
+- **Post-audit update (2026-11-12):** §3.11 and the associated test rows were revised when pickup
+  verification moved to server-keyed derivation (HMAC-SHA256 plus a peppered scrypt verifier,
+  recorded `keyVersion`, rotation and fail-closed 503). The rest of this audit still describes HEAD
+  `ecd0e54` plus the 2026-11-12 working-tree changes. The keyed design and its boundary are detailed
+  in `docs/nairadrive/pickup-verification-security.md`.
 
 Status vocabulary: **IMPLEMENTED**, **PARTIAL**, **BLOCKED**, **NOT IMPLEMENTED**, **NOT VERIFIED**.
 
@@ -40,7 +45,7 @@ Status vocabulary: **IMPLEMENTED**, **PARTIAL**, **BLOCKED**, **NOT IMPLEMENTED*
 | Notifications / support | PARTIAL | In-app feed and durable outbox exist. No real email/SMS/push provider; rider notification links point to a route that does not exist. |
 | GPS / navigation / tracking | PARTIAL | Browser geolocation, OSRM road routes and OSM tiles work locally; no background iOS tracking, no turn-by-turn guidance, no physical-device acceptance. |
 | Online time | IMPLEMENTED | Presence events produce today's online seconds and a pickup/driving/available split. Caveats in §3.10. |
-| Pickup verification | IMPLEMENTED | Protected 4-digit code, rider-only reveal, driver verification gate, expiry, lockout and support override. Recorded acceptance: 81/81. |
+| Pickup verification | IMPLEMENTED | Server-keyed protected 4-digit code, rider-only reveal, driver verification gate, expiry, lockout, support override, versioned rotation and fail-closed key configuration. Recorded acceptance: 172/172. |
 | Receipts / ratings | IMPLEMENTED | Itemised receipt, one rating per participant per completed trip, real-row aggregates. No moderation UI. |
 | Safety | PARTIAL | Report capture, code verification and text trip sharing exist. No SOS, triage screen, response SLA, insurance or incident workflow. |
 
@@ -114,8 +119,8 @@ Tested (recorded, not re-executed):
   booking, driver acceptance, tracking, verification, receipt and earnings. It was updated for the
   pickup code but **not executed** in the 2026-11-11 increment.
 - `scripts/drive-verification-rating-acceptance.ts` covers verification, receipts, ratings and
-  safety at service level: **81/81 on two consecutive runs** (2026-11-11, database
-  `naijadeals_wallet_acceptance`, RUN_ID `drive-verify-20261112022322-01bb3e18`).
+  safety at service level: **172/172 on four consecutive runs** (2026-11-12, database
+  `naijadeals_wallet_acceptance`, final RUN_ID `drive-verify-20261112051929-4b362c1a`).
 
 Blocked or missing:
 
@@ -193,7 +198,7 @@ Tested (recorded):
 - `scripts/drive-tests.ts` covers driver actions and authorization (28 steps; last pass 2026-11-03,
   not re-run after the pickup gate).
 - `scripts/drive-verification-rating-acceptance.ts` covers driver verification authorization and
-  concurrency (81/81, 2026-11-11).
+  concurrency (172/172, 2026-11-12).
 - `scripts/nairadrive-e2e.ts` covers online presence, acceptance, tracking, verification,
   completion, earnings and online-time persistence; **not executed** after the latest edit.
 
@@ -459,42 +464,72 @@ Caveats:
 
 ### 3.11 Pickup verification
 
-**Status: IMPLEMENTED and tested.**
+**Status: IMPLEMENTED and tested. Server-keyed as of 2026-11-12.**
 
 Implemented:
 
-- `RideVerification` table with `rideId @unique`, salted scrypt hash, algorithm tag, 2-hour expiry,
-  5-attempt cap, attempt count, last-attempt time, verifier and invalidation fields
-  (`prisma/schema.prisma:872-892`; migration
-  `prisma/migrations/20261111120000_drive_verification_ratings/migration.sql`).
-- `acceptRide` issues or rotates the record inside the acceptance transaction
-  (`drive.service.ts:440+`).
+- `RideVerification` table with `rideId @unique`, `salt`, keyed `codeHash`, `algorithm`,
+  `keyVersion`, 2-hour expiry, 5-attempt cap, attempt count, last-attempt time, verifier and
+  invalidation fields (`prisma/schema.prisma:885-906`; migrations
+  `prisma/migrations/20261111120000_drive_verification_ratings/migration.sql`,
+  `prisma/migrations/20261112130000_drive_pickup_verification_key_version/migration.sql` and
+  `prisma/migrations/20261112130100_drive_pickup_verification_legacy_cutover/migration.sql`).
+- The raw code is derived, never stored: HMAC-SHA256 over
+  `naijadrive-pickup-verification:v1:k{keyVersion}:{rideId}:{salt}:{counter}` with a secret held
+  outside the database, rejection-sampled to 0000–9999. The stored verifier is
+  `scrypt(code, salt + keyVersion + secret)`. A database-only reader has neither the code nor enough
+  information to brute-force the 10,000 candidates (`drive.service.ts:1153-1206`).
+- Required configuration: `DRIVE_PICKUP_VERIFICATION_KEY_VERSION` plus
+  `DRIVE_PICKUP_VERIFICATION_KEY_V<version>` (minimum 32 characters). There is no default and no
+  fallback. Issuance, rider retrieval, driver verification and start return
+  **503 `verification_key_unavailable`** when the active or recorded key is missing, invalid or too
+  short (`drive.service.ts:1290-1320`).
+- `acceptRide` issues or rotates the record inside the acceptance transaction; a missing active key
+  aborts the transaction and leaves the ride requested and unassigned (`:1421-1466`, `:489-512`).
 - `GET /api/drive/rides/[id]/verification` is the only endpoint returning the raw code, and only to
-  the rider (`drive.service.ts:1891-1953`).
+  the rider (`drive.service.ts:2375-2448`). It resolves an existing keyed record under the same ride
+  advisory lock used by every other verification mutation.
 - `POST /api/drive/driver/rides/[id]/verify` validates assignment, expiry, attempt cap and cooldown,
-  persists attempt increments and audits them (`:1954-2100`).
+  persists attempt increments and audits them (`:2464-2637`). A legacy salt-only record is refused
+  with **409 `verification_reissue_required`** and consumes no attempt.
 - `driverUpdateRideStatus(in_progress)` re-checks the record in the same transaction and refuses
-  `verification_not_issued`, `verification_expired`, `verification_locked` or
-  `passenger_verification_required` (`:581-626`).
-- Release, expiry and cancellation invalidate the record; re-assignment rotates salt, expiry and
-  attempts (`:1139-1155`).
-- Support override API requires `rides:write`, a reason and never returns a code (`:2101-2168`).
-- Rider and driver UI states cover verified, code, expired and locked
-  (`booking-workspace.tsx:837-889`; `driver-workspace.tsx:371-391`).
+  `verification_not_issued`, `verification_expired`, `verification_locked`,
+  `verification_reissue_required` or `passenger_verification_required` (`:1524-1576`).
+- Release, expiry and cancellation invalidate the record; re-assignment rotates salt, expiry,
+  keyed verifier and attempts (`:1468-1480`).
+- Support override API requires `rides:write`, a reason and never returns a code; reset reissues
+  under the active key and verify replaces an unkeyed row first (`:2670-2790`).
+- Rotation: new records use the active version; existing records keep verifying with the key named
+  by their recorded `keyVersion` until that key is removed. Removing a still-referenced key fails
+  closed. The drain window is the 2-hour code TTL plus the assignment grace.
+- Rider and driver UI states cover verified, code, expired, locked and a server error notice
+  (`booking-workspace.tsx:890-970`; `driver-workspace.tsx:371-391`).
 
-Tested: `scripts/drive-verification-rating-acceptance.ts` **81/81 on two consecutive runs**
-(2026-11-11): wrong, expired, locked and repeated codes; concurrent correct+wrong; concurrent starts;
-unauthorized reads/actions; driver payload free of code/hash/salt; support reset/verify audits;
-cleanup `leftovers: 0`; SYSTEM restored; reconciliation 0 issues.
+Tested: `scripts/drive-verification-rating-acceptance.ts` **172/172 on four consecutive runs**
+(2026-11-12, `naijadeals_wallet_acceptance`; final RUN_ID
+`drive-verify-20261112051929-4b362c1a`): keyed/peppered storage; a database row alone does not
+yield a usable code; legacy salt-only refusal and rider/support transition; key rotation verifying
+both v1 and v2 records; retired, unset and too-short keys returning 503 without consuming attempts
+or assigning the ride; wrong/expired/locked/repeated codes; concurrent correct+wrong; concurrent
+starts; unauthorized reads/actions; driver payload free of code/hash/salt; support reset/verify
+audits; leading-zero codes; cleanup `leftovers: 0`; SYSTEM restored; reconciliation 0 issues.
 
-Limitations (documented, not hidden):
+Boundary (documented, not hidden):
 
-- The raw code is derivable from the salt stored beside its hash if an attacker has both a full
-  database dump and this source. The design protects against driver/API exposure and event-log
-  leakage, not full DB+source compromise (handoff §5).
-- Pre-existing active rides assigned before the migration have no record; support reset or the rider
-  opening the trip screen issues one. This is safe but operationally relevant.
-- The support reset/verify action has no Control Center screen.
+- If the database **and** the server secret are both compromised, every active code is recoverable,
+  as is any environment where an attacker can execute code or read process memory on the app server.
+  The keyed design removes the database-only disclosure path; it does not make a 4-digit code
+  unguessable at the endpoint, so expiry, the attempt cap, cooldown, single-use start and support
+  rate limits remain mandatory. See `docs/nairadrive/pickup-verification-security.md`.
+- Pre-existing active rides assigned before the enforcement migration have no record; support reset
+  or the rider opening the trip screen issues one. This is safe but operationally relevant.
+- Pre-key records (`keyVersion IS NULL`) are never derived or verified. The cutover migration
+  invalidates every still-active unverified one, so no salt-only code survives deployment. An
+  active legacy row is otherwise replaced when the rider opens the trip screen (audited), by the
+  rider reset, or by a support reset; a verified or expired/locked legacy row is left as-is because
+  it cannot disclose a usable code.
+- The support reset/verify action has no Control Center screen, and there is no key-status screen.
+- Deployment is blocked until the key variables are configured; this is intentional.
 
 ### 3.12 Receipts and ratings
 
@@ -513,7 +548,7 @@ Implemented:
 - Driver and rider see only their own feedback text; aggregates are shown as counts/averages.
 
 Tested: receipts, refund adjustment, rating bounds, duplicates, authorization and aggregate
-real-row-only are part of the **81/81** acceptance suite.
+real-row-only are part of the **172/172** acceptance suite.
 
 Blocked or missing:
 
@@ -541,7 +576,7 @@ Implemented:
   (`app/naijadrive/help/page.tsx:27-32`, `:64-78`, `:106-115`).
 
 Tested: both participants can file, an unrelated account cannot, reports remain separate from
-ratings and report text is not emitted as public feedback (81/81 suite).
+ratings and report text is not emitted as public feedback (172/172 suite).
 
 Blocked or missing:
 
@@ -676,7 +711,7 @@ Read-only check performed for this audit:
 
 | Script | What it covers | Last recorded execution | Status at HEAD |
 | --- | --- | --- | --- |
-| `scripts/drive-verification-rating-acceptance.ts` | Verification, expiry, lockout, concurrency, support override, receipts, ratings, safety separation, cleanup, reconciliation | **81/81**, two consecutive runs, 2026-11-11, `naijadeals_wallet_acceptance`, RUN_ID `drive-verify-20261112022322-01bb3e18` | Current for the verification slice; not re-run in this read-only audit |
+| `scripts/drive-verification-rating-acceptance.ts` | Verification, expiry, lockout, concurrency, support override, keyed storage, rotation, fail-closed keys, receipts, ratings, safety separation, cleanup, reconciliation | **172/172**, four consecutive runs, 2026-11-12, `naijadeals_wallet_acceptance`, final RUN_ID `drive-verify-20261112051929-4b362c1a` | Current for the server-keyed verification slice |
 | `scripts/drive-tests.ts` | Quote, booking, hold, race, transitions, release, cancel, cash, release-to-queue, admin cancel, saved places, deadlines, expiry races | **28/28**, 2026-11-03 | Stale: file changed for the pickup gate on 2026-11-11 and **not executed since** |
 | `scripts/nairadrive-e2e.ts` | Browser landing, sign-in route preservation, wallet booking, presence, acceptance, tracking, verification, completion, receipt, earnings, online-time persistence, cross-account denial | Not recorded after the 2026-11-11 edit; handoff explicitly says it was not executed | Not current |
 | `scripts/drive-deadline-qa.mjs` | Assignment deadline UI/API | 9/9 (2026-11-03 era) | Historical |
@@ -797,6 +832,7 @@ The largest gaps are not visual:
    test.
 4. Safety and verification support are captured in data but cannot be triaged in the Control Center.
 5. The current 28/28 HTTP suite and the browser e2e are stale relative to HEAD; only the service-level
-   81/81 acceptance and the 9/9 visual check are current for the verification slice.
+   172/172 acceptance is current for the server-keyed verification slice. The 9/9 visual check
+   predates the keyed change and was not re-run.
 
 No fix, policy choice or commercial rate is made by this audit.

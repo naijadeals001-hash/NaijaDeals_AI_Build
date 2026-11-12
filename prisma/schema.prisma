@@ -878,15 +878,21 @@ enum RideParticipantRole {
 /// One protected pickup-verification record per ride.
 ///
 /// The raw code is never stored in this table or in an event payload. It is
-/// derived server-side from the random per-ride `salt`, and only the rider's
-/// authenticated endpoint may read it. `codeHash` is a salted scrypt hash used
-/// for constant-time comparison by the authoritative service.
+/// derived server-side from a per-ride random `salt` and a secret held outside
+/// the database (HMAC-SHA256 keyed by `keyVersion`). Only the rider's
+/// authenticated endpoint may read it. `codeHash` is a keyed (peppered) scrypt
+/// hash used for constant-time comparison by the authoritative service.
 model RideVerification {
   id                String    @id @default(cuid())
   rideId            String    @unique
   codeHash          String
   salt              String
   algorithm         String    @default("scrypt-hmac-sha256-v1")
+  /// Server-secret key version used to derive and verify this code. NULL on
+  /// records issued before server-keyed derivation: those are legacy salt-only
+  /// rows that the runtime refuses to derive or verify and replaces on read,
+  /// rider reset or support action. Never derive from a NULL version.
+  keyVersion        Int?
   expiresAt         DateTime
   attemptCount      Int       @default(0)
   maxAttempts       Int       @default(5)

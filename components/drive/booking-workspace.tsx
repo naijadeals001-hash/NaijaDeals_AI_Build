@@ -955,6 +955,11 @@ function ActiveTripPanel({
                   .
                 </p>
               </>
+            ) : verificationError ? (
+              <p role="alert" className="mt-1 text-[11.5px] leading-5 text-[#a3480f]">
+                {verificationError.message ||
+                  "The pickup code could not be loaded. Nothing was issued or changed; this screen retries automatically."}
+              </p>
             ) : (
               <p className="mt-1 text-[11.5px] leading-5 text-[#5d6d64]">
                 A pickup code appears here when a driver accepts. The server requires the code before

@@ -1151,58 +1151,53 @@ const PASSENGER_VERIFIED_LABEL = "Passenger verified";
 /* --------------------------------------------------- pickup verification --- */
 
 /**
- * PICKUP-CODE STORAGE AND THE RIDER READ PATH — read this before changing it.
+ * PICKUP-CODE SECURITY MODEL — read this before changing it.
  *
- * `RideVerification` stores `salt` (16 CSPRNG bytes, hex) and `codeHash`
- * (`scrypt(code, salt, 32)`, hex). It does not store the four digits. When the
- * rider's own endpoint is called, `getRideVerificationCode` re-derives the exact
- * code from the stored salt and the ride id:
+ * The four-digit code is derived, not stored:
  *
- *   verificationCodeFor(salt, rideId, algorithm)
- *     = HMAC-SHA256(key = salt, message = `${rideId}:naijadrive-pickup-verification[:counter]`)
+ *   verificationCodeFor(secretV, rideId, salt, keyVersion)
+ *     = HMAC-SHA256(key = secretV,
+ *                   message = `naijadrive-pickup-verification:v1:k{keyVersion}:{rideId}:{salt}:{counter}`)
  *       rejection-sampled from 32 bits into 0000..9999.
  *
- * The derivation is deterministic and the salt is stored next to the hash, so the
- * salt provides no confidentiality. The rider endpoint can print a usable code
- * while only a hash is stored because it recomputes the code; it does not decrypt
- * it. Anyone who can read the `RideVerification` row and this algorithm can
- * recompute every active code. The value space is only 10,000, so the stored
- * `scrypt` hash does not make the code non-recoverable either; it only provides a
- * constant-time server-side comparison. Never describe this code as encrypted,
- * non-recoverable or secret from a database operator. Database read access is
- * equivalent to knowledge of every live pickup code.
+ * `RideVerification.salt` is CSPRNG output, but it is public to the database. A
+ * database-only reader cannot compute the code because the HMAC key is a server
+ * secret that never enters the database or any response. The stored verifier is
+ * `scrypt(code, salt + keyVersion + secret)`, so the 10,000-candidate space
+ * cannot be brute-forced offline from a database dump either. `algorithm` and
+ * `keyVersion` are recorded so the exact key can be selected after rotation.
  *
- * What this design does protect: the code is not put in API responses to the
- * driver, an unrelated account or an administrator; it is not written to event or
- * audit payloads; and a compromised driver session cannot read it. The short
- * expiry, five-attempt cap, per-record cooldown, single-use start transition and
- * support rate limits remain mandatory because a 4-digit code is guessable and a
- * database reader can derive it.
+ * Key configuration is explicit and fail-closed:
+ *   - `DRIVE_PICKUP_VERIFICATION_KEY_VERSION` names the version used for new
+ *     records;
+ *   - `DRIVE_PICKUP_VERIFICATION_KEY_V<version>` supplies that version's secret
+ *     (minimum 32 characters; generate with `openssl rand -hex 32`).
+ * A missing, invalid or short key makes issuance, retrieval and verification
+ * return 503 `verification_key_unavailable`. There is deliberately no default
+ * and no fallback to the old salt-only derivation.
  *
- * SERVER-SECRET (PEPPER) DESIGN — ASSESSED, NOT IMPLEMENTED.
- * A pepper held outside the database would stop a DB-only reader from deriving a
- * code only if BOTH the derivation and the stored verifier are keyed by it:
- *   1. derive `HMAC(pepperVersion, `${salt}:${rideId}:${counter}`)` and store the
- *      record's key version (the existing `algorithm` column cannot carry a key
- *      id without ambiguity, so a dedicated `keyVersion` column would be needed);
- *   2. verify with a keyed verifier such as `HMAC(pepperVersion, `${code}|${salt}`)`
- *      (or scrypt with the pepper mixed into the salt), because the current
- *      unkeyed `scrypt(code, salt)` lets a DB reader brute-force all 10,000
- *      candidates offline even when the derivation is peppered;
- *   3. keep a versioned keyring, issue new records with the current version, derive
- *      and verify outstanding records with their recorded version, and retire an
- *      old version only after every record that used it has expired or been
- *      invalidated (maximum TTL plus assignment grace);
- *   4. fail closed if the current or a record's key version is absent or
- *      unparseable: do not issue, do not derive, return a 503
- *      `verification_key_unavailable`, and let support reissue the code under the
- *      current version. Never fall back to the public salt derivation, because
- *      that would silently restore the DB-recoverable property.
- * This repository has no server-secret/keyring mechanism (no app secret, no key
- * version storage, no rotation procedure), and adding a new credential requires
- * explicit authorization. No half-measure (for example reusing the session secret)
- * is implemented here because that secret has no versioning or rotation policy and
- * would create a false sense that the code is no longer DB-recoverable.
+ * Rotation: add the new version's key, point KEY_VERSION at it and restart. New
+ * records use the new key; records already issued keep verifying with the key
+ * named by their `keyVersion`. Keep an old key configured until every record
+ * that used it has expired or been invalidated (maximum code TTL plus the
+ * assignment grace). Removing a still-needed key fails closed and requires a
+ * rider/support reset.
+ *
+ * Legacy records (`keyVersion IS NULL`) were derived from the salt alone. The
+ * runtime never derives or verifies them. The rider's read path replaces an
+ * active legacy record with a keyed one (audited), the rider reset and support
+ * reset issue a keyed record, and the driver verification path returns 409
+ * `verification_reissue_required` without consuming an attempt. Records that
+ * are already verified or no longer active are left as-is because they cannot
+ * disclose a usable code.
+ *
+ * Boundary (not a claim of protection): if the database AND the server secret
+ * are both compromised, every active code is recoverable. So is the case where
+ * an attacker can execute code or read process memory on the application
+ * server. This design removes the database-only disclosure path; it does not
+ * make a 4-digit code cryptographically unguessable at the endpoint, so the
+ * expiry, five-attempt cap, per-record cooldown, single-use start transition
+ * and support rate limits remain mandatory.
  */
 export const RIDE_VERIFICATION_CODE_LENGTH = 4;
 export const RIDE_VERIFICATION_MAX_ATTEMPTS = 5;
@@ -1229,17 +1224,17 @@ export const RIDE_VERIFICATION_SUPPORT_ACTIONS = [
   "ride.verification_support_verified"
 ] as const;
 /**
- * Algorithm versioning is deliberate. `v1` derived the code from a single HMAC
- * block with a modulo reduction; `v2` keeps the same construction but uses
- * rejection sampling so every one of the 10,000 codes is equally likely. Existing
- * records stay on their recorded version, so deploying v2 does not invalidate a
- * code already shown to a rider.
+ * Algorithm versioning is deliberate. `scrypt-hmac-sha256-v1`/`-v2` were the
+ * pre-key salt-only schemes; they are recognised only so legacy rows can be
+ * replaced, never used to derive or verify. `hmac-sha256-pepper-v1` is the
+ * server-keyed scheme; the key itself is versioned separately in `keyVersion`.
  */
-const RIDE_VERIFICATION_ALGORITHM = "scrypt-hmac-sha256-v2";
-const RIDE_VERIFICATION_ALGORITHM_V1 = "scrypt-hmac-sha256-v1";
-const RIDE_VERIFICATION_ALGORITHM_V2 = RIDE_VERIFICATION_ALGORITHM;
+const RIDE_VERIFICATION_ALGORITHM = "hmac-sha256-pepper-v1";
+const RIDE_VERIFICATION_KEY_VERSION_ENV = "DRIVE_PICKUP_VERIFICATION_KEY_VERSION";
+const RIDE_VERIFICATION_KEY_ENV_PREFIX = "DRIVE_PICKUP_VERIFICATION_KEY_V";
+const RIDE_VERIFICATION_MIN_KEY_CHARS = 32;
 const RIDE_VERIFICATION_HASH_BYTES = 32;
-const RIDE_VERIFICATION_MESSAGE_SUFFIX = "naijadrive-pickup-verification";
+const RIDE_VERIFICATION_MESSAGE_DOMAIN = "naijadrive-pickup-verification:v1";
 
 type VerificationRecord = {
   expiresAt: Date;
@@ -1248,6 +1243,8 @@ type VerificationRecord = {
   verifiedAt: Date | null;
   invalidatedAt: Date | null;
   algorithm?: string;
+  /** Present on full records; partial UI selects may omit it. */
+  keyVersion?: number | null;
 };
 
 export type SafeRideVerification = {
@@ -1275,32 +1272,72 @@ export type SafeRideVerification = {
 const RIDE_VERIFICATION_CODE_SPACE = 10 ** RIDE_VERIFICATION_CODE_LENGTH;
 
 /**
- * Derive the 4-digit pickup code from the per-ride salt and algorithm version.
- *
- * The salt is CSPRNG output (16 random bytes). `v2` rejection-samples a 32-bit
- * HMAC block so the modulo reduction cannot bias any digit combination; `v1` is
- * retained only to read records issued before v2 was deployed.
+ * Fail closed with one stable, non-secret-revealing error. The message never
+ * includes an env value, a key version's secret or the configured env names.
  */
-function verificationCodeFor(salt: string, rideId: string, algorithm: string = RIDE_VERIFICATION_ALGORITHM) {
-  if (algorithm === RIDE_VERIFICATION_ALGORITHM_V1) {
-    const digest = createHmac("sha256", salt)
-      .update(`${rideId}:${RIDE_VERIFICATION_MESSAGE_SUFFIX}`)
-      .digest();
-    return String(digest.readUInt32BE(0) % RIDE_VERIFICATION_CODE_SPACE).padStart(
-      RIDE_VERIFICATION_CODE_LENGTH,
-      "0"
-    );
-  }
-  if (algorithm !== RIDE_VERIFICATION_ALGORITHM_V2) {
+function verificationKeyUnavailable() {
+  return new ApiError(
+    503,
+    "verification_key_unavailable",
+    "Pickup-code protection is temporarily unavailable on this server. Nothing was issued or verified; try again later or contact NaijaDrive support."
+  );
+}
+
+function parseVerificationKeyVersion(value: string | undefined): number | null {
+  const trimmed = value?.trim();
+  if (!trimmed || !/^[1-9]\d{0,5}$/.test(trimmed)) return null;
+  return Number(trimmed);
+}
+
+/** Read one version's secret. No default, no fallback, minimum length enforced. */
+function verificationKeySecret(version: number, env: NodeJS.ProcessEnv = process.env): string {
+  const secret = env[`${RIDE_VERIFICATION_KEY_ENV_PREFIX}${version}`]?.trim() ?? "";
+  if (secret.length < RIDE_VERIFICATION_MIN_KEY_CHARS) throw verificationKeyUnavailable();
+  return secret;
+}
+
+/** Current key for new records. Never cached: rotation is environment driven. */
+function activeVerificationKey(env: NodeJS.ProcessEnv = process.env) {
+  const version = parseVerificationKeyVersion(env[RIDE_VERIFICATION_KEY_VERSION_ENV]);
+  if (version === null) throw verificationKeyUnavailable();
+  return { version, secret: verificationKeySecret(version, env) };
+}
+
+/**
+ * Key for an existing record's recorded version. A NULL/unknown version is not
+ * resolvable on purpose: legacy salt-only rows must never be derived with a
+ * fallback key, and a retired key must fail closed rather than guess.
+ */
+function verificationKeyForRecord(
+  record: { keyVersion: number | null },
+  env: NodeJS.ProcessEnv = process.env
+) {
+  const version = record.keyVersion;
+  if (!version || !Number.isInteger(version) || version < 1) throw verificationKeyUnavailable();
+  return { version, secret: verificationKeySecret(version, env) };
+}
+
+/**
+ * Derive the 4-digit pickup code from the server secret, per-ride salt and
+ * recorded key version. The salt alone is public to the database, so the HMAC
+ * key is what makes a database dump insufficient. Rejection sampling keeps all
+ * 10,000 codes equally likely (rejection probability 0.00017%).
+ */
+function verificationCodeFor(input: {
+  secret: string;
+  salt: string;
+  rideId: string;
+  keyVersion: number;
+  algorithm: string;
+}) {
+  if (input.algorithm !== RIDE_VERIFICATION_ALGORITHM) {
     throw new ApiError(500, "verification_algorithm_unsupported", "This pickup code uses an unknown algorithm version.");
   }
-  // Reject the top 7,296 of the 2^32 values so the remaining range is an exact
-  // multiple of 10,000. The rejection probability is 0.00017%.
   const limit = Math.floor(0x1_0000_0000 / RIDE_VERIFICATION_CODE_SPACE) * RIDE_VERIFICATION_CODE_SPACE;
+  const message = (counter: number) =>
+    `${RIDE_VERIFICATION_MESSAGE_DOMAIN}:k${input.keyVersion}:${input.rideId}:${input.salt}:${counter}`;
   for (let counter = 0; counter < 32; counter += 1) {
-    const digest = createHmac("sha256", salt)
-      .update(`${rideId}:${RIDE_VERIFICATION_MESSAGE_SUFFIX}:${counter}`)
-      .digest();
+    const digest = createHmac("sha256", input.secret).update(message(counter)).digest();
     const value = digest.readUInt32BE(0);
     if (value < limit) {
       return String(value % RIDE_VERIFICATION_CODE_SPACE).padStart(RIDE_VERIFICATION_CODE_LENGTH, "0");
@@ -1308,15 +1345,23 @@ function verificationCodeFor(salt: string, rideId: string, algorithm: string = R
   }
   // Unreachable in practice (the chance of 32 consecutive rejections is ~1e-116).
   // Hashing another block keeps the function total without weakening the space.
-  const fallback = createHmac("sha256", salt)
-    .update(`${rideId}:${RIDE_VERIFICATION_MESSAGE_SUFFIX}:fallback`)
+  const fallback = createHmac("sha256", input.secret)
+    .update(`${RIDE_VERIFICATION_MESSAGE_DOMAIN}:k${input.keyVersion}:${input.rideId}:${input.salt}:fallback`)
     .digest()
     .readUInt32BE(0);
   return String(fallback % RIDE_VERIFICATION_CODE_SPACE).padStart(RIDE_VERIFICATION_CODE_LENGTH, "0");
 }
 
-function hashVerificationCode(code: string, salt: string) {
-  return scryptSync(code, salt, RIDE_VERIFICATION_HASH_BYTES).toString("hex");
+/**
+ * Keyed verifier: the pepper is mixed into the scrypt salt as well. Without the
+ * server secret a database reader cannot brute-force the 10,000 candidates
+ * offline, and the unkeyed `scrypt(code, salt)` hash of the real code does not
+ * match the stored value.
+ */
+function hashVerificationCode(code: string, salt: string, keyVersion: number, secret: string) {
+  return scryptSync(code, `naijadrive-pickup-verifier:v1:k${keyVersion}:${salt}:${secret}`, RIDE_VERIFICATION_HASH_BYTES).toString(
+    "hex"
+  );
 }
 
 function safeVerification(
@@ -1378,6 +1423,10 @@ async function issueRideVerification(
   rideId: string,
   options: { carryAttempts?: boolean } = {}
 ) {
+  // Resolve the key before writing anything. A missing or invalid active key must
+  // abort the enclosing transaction (acceptance, reset or support action) instead
+  // of creating a record that nobody can derive or verify.
+  const key = activeVerificationKey();
   const existing = options.carryAttempts
     ? await tx.rideVerification.findUnique({
         where: { rideId },
@@ -1388,12 +1437,19 @@ async function issueRideVerification(
     ? Math.min(existing.attemptCount, Math.max(existing.maxAttempts, RIDE_VERIFICATION_MAX_ATTEMPTS))
     : 0;
   const salt = randomBytes(16).toString("hex");
-  const code = verificationCodeFor(salt, rideId, RIDE_VERIFICATION_ALGORITHM);
+  const code = verificationCodeFor({
+    secret: key.secret,
+    salt,
+    rideId,
+    keyVersion: key.version,
+    algorithm: RIDE_VERIFICATION_ALGORITHM
+  });
   const now = new Date();
   const data = {
-    codeHash: hashVerificationCode(code, salt),
+    codeHash: hashVerificationCode(code, salt, key.version, key.secret),
     salt,
     algorithm: RIDE_VERIFICATION_ALGORITHM,
+    keyVersion: key.version,
     expiresAt: new Date(now.getTime() + RIDE_VERIFICATION_TTL_MS),
     attemptCount,
     maxAttempts: RIDE_VERIFICATION_MAX_ATTEMPTS,
@@ -1513,6 +1569,19 @@ async function requireVerifiedRide(
       "Too many incorrect pickup codes. The rider or support must reset the code before this trip can start."
     );
   }
+  // An unverified legacy row cannot authorise a start and cannot be derived
+  // safely. The rider's trip screen (or support) replaces it with a keyed record.
+  // A keyed row with an unexpected algorithm tag is treated the same way.
+  if (record.keyVersion === null || record.algorithm !== RIDE_VERIFICATION_ALGORITHM) {
+    throw new ApiError(
+      409,
+      "verification_reissue_required",
+      "This pickup code was issued before server-key protection was enabled and can no longer be used. Ask the rider to open their trip screen to receive a new code, or contact support."
+    );
+  }
+  // Do not tell the driver to enter a code that the server cannot verify because
+  // a key is missing or retired. Fail closed with the same 503 as the other paths.
+  verificationKeyForRecord(record);
   throw new ApiError(
     409,
     "passenger_verification_required",
@@ -2215,12 +2284,94 @@ export async function getRideTracking(input: {
 /* --------------------------------------------------- passenger verification --- */
 
 /**
+ * Resolve the rider's protected record, issuing a keyed replacement when the
+ * stored record cannot produce a usable, server-keyed code:
+ *
+ *  - invalidated: the assignment ended; a fresh code belongs to the new state;
+ *  - legacy `keyVersion IS NULL` and still active: deliberately rotate it under
+ *    the ride lock and audit the transition, so the salt-only code stops working;
+ *  - verified, expired or locked legacy rows are left untouched because they can
+ *    no longer disclose a usable code (the reset endpoint handles the latter two).
+ *
+ * Returns null only for a pre-enforcement assignment with no row. Every other
+ * missing row is an anomaly and fails closed. All issuance happens inside the
+ * caller's normal ride-verification lock order.
+ */
+async function resolveRiderVerificationRecord(rideId: string, riderUserId: string) {
+  const now = new Date();
+  const current = await prisma.rideVerification.findUnique({ where: { rideId } });
+  const rotateLegacy =
+    current !== null &&
+    !current.invalidatedAt &&
+    (current.keyVersion === null || current.algorithm !== RIDE_VERIFICATION_ALGORITHM) &&
+    !current.verifiedAt &&
+    current.expiresAt.getTime() > now.getTime() &&
+    current.attemptCount < current.maxAttempts;
+  if (current && !current.invalidatedAt && !rotateLegacy) return current;
+
+  return prisma.$transaction(async (tx) => {
+    await lockRideVerification(tx, rideId);
+    const ride = await tx.ride.findUnique({
+      where: { id: rideId },
+      select: { id: true, status: true, riderId: true, pickupVerificationLegacyAt: true }
+    });
+    if (!ride) throw new ApiError(404, "ride_not_found", "Ride not found.");
+    if (ride.riderId !== riderUserId) {
+      throw new ApiError(403, "forbidden", "Only the rider on this trip can see its pickup code.");
+    }
+    if (!["driver_assigned", "driver_arriving"].includes(ride.status)) {
+      throw new ApiError(409, "verification_not_available", "This trip is no longer waiting for pickup verification.");
+    }
+    const fresh = await tx.rideVerification.findUnique({ where: { rideId } });
+    if (!fresh) {
+      if (ride.pickupVerificationLegacyAt) return null;
+      throw new ApiError(
+        409,
+        "verification_record_missing",
+        "The protected pickup code record is missing. Contact NaijaDrive support; they must issue a new code before this trip can start."
+      );
+    }
+    if (fresh.invalidatedAt) {
+      // The previous assignment ended. The new assignment needs a fresh code;
+      // the attempt budget is carried across reassignment.
+      return issueRideVerification(tx, rideId, { carryAttempts: true });
+    }
+    if (fresh.keyVersion !== null && fresh.algorithm === RIDE_VERIFICATION_ALGORITHM) return fresh;
+    const checkedAt = new Date();
+    if (
+      fresh.verifiedAt ||
+      fresh.expiresAt.getTime() <= checkedAt.getTime() ||
+      fresh.attemptCount >= fresh.maxAttempts
+    ) {
+      return fresh;
+    }
+    const next = await issueRideVerification(tx, rideId, { carryAttempts: true });
+    await recordAudit({
+      tx,
+      actorId: riderUserId,
+      action: "ride.verification_legacy_reissued",
+      entity: "Ride",
+      entityId: rideId,
+      metadata: {
+        reason: "legacy_salt_only_record",
+        previousAlgorithm: fresh.algorithm,
+        newAlgorithm: next.algorithm,
+        newKeyVersion: next.keyVersion
+      }
+    });
+    return next;
+  });
+}
+
+/**
  * The rider's protected pickup code.
  *
  * This is the only endpoint allowed to return the raw four-digit code. The
  * driver, an unrelated account and an administrator are all refused; an
  * administrator uses the audited support reset instead. After verification the
- * code is no longer returned at all.
+ * code is no longer returned at all. Derivation requires the key version recorded
+ * on the row; if that key is missing (unconfigured or retired) the call fails
+ * closed with 503 rather than falling back to the salt-only derivation.
  */
 export async function getRideVerificationCode(input: { userId: string; rideId: string }) {
   const ride = await loadRide(prisma, input.rideId);
@@ -2241,60 +2392,49 @@ export async function getRideVerificationCode(input: { userId: string; rideId: s
     throw new ApiError(409, "verification_not_available", "This trip has already started.");
   }
 
-  let record = await prisma.rideVerification.findUnique({ where: { rideId: ride.id } });
+  const record = await resolveRiderVerificationRecord(ride.id, input.userId);
   if (!record) {
-    if (ride.pickupVerificationLegacyAt) {
-      // Bounded pre-enforcement transition: this assignment existed when pickup
-      // verification was enforced and had no record. Opening the trip screen must
-      // not create one retroactively. Support can still issue a code explicitly.
-      return {
-        rideId: ride.id,
-        code: null,
-        issuedAt: null,
-        expiresAt: null,
-        verified: false,
-        expired: false,
-        locked: false,
-        attemptsRemaining: 0,
-        required: false,
-        legacy: true,
-        recoveryRequired: false,
-        verifiedAt: null
-      };
-    }
-    // A post-enforcement assignment must have a record. Do not auto-issue one:
-    // recovery is an authorised support action with a reason and an audit row.
-    throw new ApiError(
-      409,
-      "verification_record_missing",
-      "The protected pickup code record is missing. Contact NaijaDrive support; they must issue a new code before this trip can start."
-    );
-  }
-  if (record.invalidatedAt) {
-    // An invalidated record means the previous assignment ended. If the ride is
-    // assigned again, a fresh code is required; the attempt budget is carried.
-    record = await prisma.$transaction(async (tx) => {
-      await lockRideVerification(tx, ride.id);
-      const fresh = await tx.rideVerification.findUnique({ where: { rideId: ride.id } });
-      if (fresh && !fresh.invalidatedAt) return fresh;
-      return issueRideVerification(tx, ride.id, { carryAttempts: true });
-    });
+    // Bounded pre-enforcement transition: this assignment existed when pickup
+    // verification was enforced and had no record. Opening the trip screen must
+    // not create one retroactively. Support can still issue a code explicitly.
+    return {
+      rideId: ride.id,
+      code: null,
+      issuedAt: null,
+      expiresAt: null,
+      verified: false,
+      expired: false,
+      locked: false,
+      attemptsRemaining: 0,
+      required: false,
+      legacy: true,
+      recoveryRequired: false,
+      verifiedAt: null
+    };
   }
 
   const state = safeVerification(record);
+  let code: string | null = null;
+  if (!state.verified && !state.expired && !state.locked && !record.invalidatedAt) {
+    const key = verificationKeyForRecord(record);
+    code = verificationCodeFor({
+      secret: key.secret,
+      salt: record.salt,
+      rideId: ride.id,
+      keyVersion: key.version,
+      algorithm: record.algorithm ?? RIDE_VERIFICATION_ALGORITHM
+    });
+  }
   return {
     rideId: ride.id,
-    code:
-      state.verified || state.expired || state.locked
-        ? null
-        : verificationCodeFor(record.salt, ride.id, record.algorithm ?? RIDE_VERIFICATION_ALGORITHM_V1),
+    code,
     issuedAt: record.createdAt.toISOString(),
     expiresAt: state.expiresAt,
     verified: state.verified,
     expired: state.expired,
     locked: state.locked,
     attemptsRemaining: state.attemptsRemaining,
-    required: true,
+    required: !record.invalidatedAt,
     legacy: false,
     recoveryRequired: false,
     verifiedAt: state.verifiedAt
@@ -2309,6 +2449,7 @@ type VerificationOutcome =
   | { outcome: "expired" }
   | { outcome: "not_issued" }
   | { outcome: "legacy" }
+  | { outcome: "reissue_required" }
   | { outcome: "missing_record" }
   | { outcome: "rate_limited" };
 
@@ -2365,8 +2506,17 @@ export async function verifyPassenger(input: { userId: string; rideId: string; c
     if (record.lastAttemptAt && now.getTime() - record.lastAttemptAt.getTime() < RIDE_VERIFICATION_ATTEMPT_COOLDOWN_MS) {
       return { outcome: "rate_limited" };
     }
+    // A legacy salt-only row can no longer be verified: doing so would restore
+    // exactly the database-only disclosure path this change removes. Refuse
+    // without consuming an attempt; the rider/support flow issues a keyed code.
+    if (record.keyVersion === null || record.algorithm !== RIDE_VERIFICATION_ALGORITHM) {
+      return { outcome: "reissue_required" };
+    }
 
-    const derived = hashVerificationCode(provided, record.salt);
+    // A missing or retired key must not be treated as a wrong code. Throwing
+    // rolls the transaction back, so no attempt is consumed by a misconfiguration.
+    const key = verificationKeyForRecord(record);
+    const derived = hashVerificationCode(provided, record.salt, key.version, key.secret);
     const expected = Buffer.from(record.codeHash, "hex");
     const actual = Buffer.from(derived, "hex");
     const matches = expected.length === actual.length && timingSafeEqual(expected, actual);
@@ -2465,6 +2615,12 @@ export async function verifyPassenger(input: { userId: string; rideId: string; c
         409,
         "verification_not_required",
         "This trip was matched before protected pickup verification was enforced, so that assignment has no pickup code. Start the trip normally; the pre-enforcement exception is recorded."
+      );
+    case "reissue_required":
+      throw new ApiError(
+        409,
+        "verification_reissue_required",
+        "This pickup code was issued before server-key protection was enabled and can no longer be used. Ask the rider to open their trip screen to receive a new code, or contact support."
       );
     case "missing_record":
       throw new ApiError(
@@ -2579,7 +2735,17 @@ export async function overrideRideVerification(input: {
     if (input.action === "reset") {
       record = await issueRideVerification(tx, ride.id);
     } else {
-      if (!record || record.invalidatedAt) record = await issueRideVerification(tx, ride.id);
+      // A legacy salt-only row is replaced with a keyed record even when the
+      // support action is "verify", so the database keeps no usable salt-only
+      // code after the action. No raw code is returned either way.
+      if (
+        !record ||
+        record.invalidatedAt ||
+        record.keyVersion === null ||
+        record.algorithm !== RIDE_VERIFICATION_ALGORITHM
+      ) {
+        record = await issueRideVerification(tx, ride.id);
+      }
       record = await tx.rideVerification.update({
         where: { id: record.id },
         data: {
