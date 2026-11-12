@@ -4006,6 +4006,8 @@ acceptance evidence here, and future runs must set `DATABASE_URL` to an isolated
 
 ### 6. Commits
 
-Scoped local commit on `naijashop-marketplace` (not pushed; no deployment). See the commit message
-for the exact SHA; unrelated working-tree changes were left unstaged.
-
+- `7a7147a451edfc7c2f37b9d1e80938e0c4157495` — escrow completion, external escrow accounting,
+  new acceptance suite and updated funding acceptance.
+- This handoff section is a separate documentation-only local commit on `naijashop-marketplace`.
+  Nothing was pushed and no deployment was triggered; unrelated working-tree changes (drive files,
+  admin UI, AGENTS.md and other pre-existing edits) were left unstaged.
