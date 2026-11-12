@@ -2,9 +2,24 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { assertSameOrigin, jsonError, readJson, requireAdminPermission } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
-import { createProduct, publishProduct, unpublishProduct, updateProduct } from "@/lib/services/core/catalogue-admin.service";
+import {
+  archiveProduct,
+  createProduct,
+  publishProduct,
+  unpublishProduct,
+  updateProduct,
+  validateProduct,
+  type CatalogueImageInput
+} from "@/lib/services/core/catalogue-admin.service";
 
 export const dynamic = "force-dynamic";
+
+function readImages(body: Record<string, unknown>): CatalogueImageInput[] | undefined {
+  if (!Array.isArray(body.images)) return undefined;
+  return body.images.map((entry) =>
+    entry && typeof entry === "object" ? (entry as CatalogueImageInput) : { url: entry }
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,11 +27,17 @@ export async function POST(request: NextRequest) {
     const admin = await requireAdminPermission("products:moderate");
     const body = await readJson<Record<string, unknown>>(request);
     const product = await createProduct({
-      actorId: admin.id,
+      actor: admin,
       name: String(body.name ?? ""),
+      slug: typeof body.slug === "string" ? body.slug : undefined,
       description: String(body.description ?? ""),
       priceKobo: body.priceKobo,
+      currency: typeof body.currency === "string" ? body.currency : undefined,
+      countryCode: typeof body.countryCode === "string" ? body.countryCode : undefined,
       categoryId: String(body.categoryId ?? ""),
+      quantity: body.quantity,
+      lowStockLevel: body.lowStockLevel,
+      images: readImages(body),
       imageUrl: typeof body.imageUrl === "string" ? body.imageUrl : undefined,
       imageAlt: typeof body.imageAlt === "string" ? body.imageAlt : undefined,
       isDemo: Boolean(body.isDemo)
@@ -34,16 +55,24 @@ export async function PATCH(request: NextRequest) {
     const body = await readJson<Record<string, unknown>>(request);
     const id = String(body.id ?? "");
     const action = typeof body.action === "string" ? body.action : "";
-    if (action === "publish") return NextResponse.json(jsonSafe(await publishProduct({ actorId: admin.id, id })));
-    if (action === "unpublish") return NextResponse.json(jsonSafe(await unpublishProduct({ actorId: admin.id, id })));
+    if (action === "validate") return NextResponse.json(jsonSafe(await validateProduct(admin, id)));
+    if (action === "publish") return NextResponse.json(jsonSafe(await publishProduct({ actor: admin, id })));
+    if (action === "unpublish") return NextResponse.json(jsonSafe(await unpublishProduct({ actor: admin, id })));
+    if (action === "archive") return NextResponse.json(jsonSafe(await archiveProduct({ actor: admin, id })));
     if (action) return NextResponse.json({ error: "Unsupported action.", code: "invalid_action" }, { status: 400 });
     const product = await updateProduct({
-      actorId: admin.id,
+      actor: admin,
       id,
       name: typeof body.name === "string" ? body.name : undefined,
+      slug: typeof body.slug === "string" ? body.slug : undefined,
       description: typeof body.description === "string" ? body.description : undefined,
       priceKobo: body.priceKobo,
+      currency: typeof body.currency === "string" ? body.currency : undefined,
+      countryCode: typeof body.countryCode === "string" ? body.countryCode : undefined,
       categoryId: typeof body.categoryId === "string" ? body.categoryId : undefined,
+      quantity: body.quantity,
+      lowStockLevel: body.lowStockLevel,
+      images: readImages(body),
       imageUrl: typeof body.imageUrl === "string" ? body.imageUrl : undefined,
       imageAlt: typeof body.imageAlt === "string" ? body.imageAlt : undefined,
       isDemo: typeof body.isDemo === "boolean" ? body.isDemo : undefined

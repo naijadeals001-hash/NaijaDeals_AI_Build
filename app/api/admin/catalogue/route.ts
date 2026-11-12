@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    await requireAdminPermission("products:read");
-    return NextResponse.json(jsonSafe(await listCatalogue()));
+    const admin = await requireAdminPermission("products:read");
+    return NextResponse.json(jsonSafe(await listCatalogue(admin)));
   } catch (error) {
     return jsonError(error);
   }

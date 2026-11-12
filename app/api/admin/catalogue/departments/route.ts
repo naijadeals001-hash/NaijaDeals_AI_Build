@@ -12,10 +12,13 @@ export async function POST(request: NextRequest) {
     const admin = await requireAdminPermission("products:moderate");
     const body = await readJson<Record<string, unknown>>(request);
     const department = await createDepartment({
-      actorId: admin.id,
+      actor: admin,
       name: String(body.name ?? ""),
+      slug: typeof body.slug === "string" ? body.slug : undefined,
       description: String(body.description ?? ""),
       imageUrl: typeof body.imageUrl === "string" ? body.imageUrl : undefined,
+      imageAlt: typeof body.imageAlt === "string" ? body.imageAlt : undefined,
+      sortOrder: body.sortOrder,
       isDemo: Boolean(body.isDemo)
     });
     return NextResponse.json(jsonSafe(department), { status: 201 });
@@ -30,11 +33,14 @@ export async function PATCH(request: NextRequest) {
     const admin = await requireAdminPermission("products:moderate");
     const body = await readJson<Record<string, unknown>>(request);
     const department = await updateDepartment({
-      actorId: admin.id,
+      actor: admin,
       id: String(body.id ?? ""),
       name: typeof body.name === "string" ? body.name : undefined,
+      slug: typeof body.slug === "string" ? body.slug : undefined,
       description: typeof body.description === "string" ? body.description : undefined,
       imageUrl: typeof body.imageUrl === "string" ? body.imageUrl : undefined,
+      imageAlt: typeof body.imageAlt === "string" ? body.imageAlt : undefined,
+      sortOrder: body.sortOrder,
       isActive: typeof body.isActive === "boolean" ? body.isActive : undefined,
       isDemo: typeof body.isDemo === "boolean" ? body.isDemo : undefined
     });
