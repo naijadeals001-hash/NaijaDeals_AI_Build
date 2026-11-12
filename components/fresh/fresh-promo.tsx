@@ -125,7 +125,7 @@ export function FreshAppBanner({ image }: { image: string | null }) {
       <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
           <h2 id="fresh-app" className="font-display text-[18px] font-extrabold sm:text-[21px]">Get the NaijaFresh App</h2>
-          <p className="mt-1 text-[11.5px] leading-snug text-white/85">Shop fresh produce, order from farms, track deliveries and enjoy exclusive app deals.</p>
+          <p className="mt-1 text-[11.5px] leading-snug text-white/85">Shop fresh produce, order from farms and track your deliveries.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link href="/naijafresh" className="flex items-center gap-1.5 rounded-lg bg-black px-3 py-1.5 text-[10.5px] font-semibold">
               <Apple className="h-4 w-4" aria-hidden /> <span>Download on the<br /><b className="text-[12px]">App Store</b></span>

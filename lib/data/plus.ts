@@ -16,6 +16,111 @@ import {
  * honestly with HTTP 200 instead of crashing or falling back to invented data.
  */
 
+/**
+ * Plus+-scoped service readiness.
+ *
+ * The shared service registry (`lib/data/public-services.ts`) carries catalogue
+ * statuses; this map is deliberately separate so the Plus+ page never inherits a
+ * blanket "LIVE" label. A label is only "Verified" when a recorded executed
+ * suite or document covers the service's main journey — see
+ * `docs/plus/service-readiness-audit.md` for the evidence and residual gaps.
+ *
+ * Readiness is not launch status and not country eligibility. Plus+ eligibility
+ * remains derived only from active plans (`lib/services/plus/availability.ts`).
+ */
+export type PlusServiceReadinessLabel = "Verified" | "Available — limited verification" | "Preview";
+
+export type PlusServiceReadiness = {
+  serviceKey: string;
+  label: PlusServiceReadinessLabel;
+  /** What the label covers, and what it explicitly does not claim. */
+  scope: string;
+  /** Exact suite or document supporting "Verified". */
+  evidence: string;
+  /** Known gap that remains even where the label is Verified. */
+  residualGap: string;
+  /**
+   * Plus+-scoped display copy used only when the registry description states a
+   * capability the implementation does not have. Other cards keep their
+   * Control Center description unchanged.
+   */
+  displayDescription?: string;
+};
+
+export const plusServiceReadiness: Record<string, PlusServiceReadiness> = {
+  shop: {
+    serviceKey: "shop",
+    label: "Available — limited verification",
+    scope: "Storefront and discovery suites passed; checkout was not re-run at this HEAD.",
+    evidence: "naijashop-qa.cjs 43/43, naijashop-four-card-qa.cjs 70/70, naijashop-mobile-qa.cjs 85/85; marketplace-tests.ts 13/13 and 12/13",
+    residualGap: "Full Shop suite not re-run after 2026-11-12 escrow repairs; seller payouts, receipts and wholesale pricing are not started.",
+  },
+  drive: {
+    serviceKey: "drive",
+    label: "Available — limited verification",
+    scope: "Pickup verification, receipts and ratings passed; the quote/dispatch suite predates the pickup gate.",
+    evidence: "drive-verification-rating-acceptance.ts 172/172; drive-tests.ts 28/28 recorded 2026-11-03",
+    residualGap: "Quote/dispatch journey not re-run at HEAD; rider notification route, driver documents and driver payouts are blocked.",
+  },
+  eats: {
+    serviceKey: "eats",
+    label: "Verified",
+    scope: "Discovery, basket, kitchen, dispatch, rider and onboarding journeys executed.",
+    evidence: "naijaeats-functional-check.cjs 23/23, naijaeats-cart-check.cjs 13/13, naijaeats-operator-check.cjs 9/9, naijaeats-delivery-e2e.cjs 22/22, naijaeats-dispatch-failure.cjs 6/6, partner-lifecycle-tests.mjs 9/9",
+    residualGap: "Demo kitchens only; no real restaurant onboarding run; no approved delivery fee.",
+  },
+  send: {
+    serviceKey: "send",
+    label: "Verified",
+    scope: "Marketplace booking, transport state machine, tracking and provider onboarding executed.",
+    evidence: "naijasend-e2e.cjs 46/46, naijasend-transport-e2e.cjs 37/37",
+    residualGap: "No contracted carrier APIs; enterprise, air/sea/rail and turn-by-turn navigation are blocked.",
+  },
+  gigs: {
+    serviceKey: "gigs",
+    label: "Verified",
+    scope: "Discovery, booking/escrow, professional verification, reviews and earnings executed.",
+    evidence: "gigs-e2e-tests.mjs 42/42, gigs-journey-browser.cjs 20/20",
+    residualGap: "No KYC/document verification or professional payouts; commission is inherited and unapproved.",
+  },
+  stay: {
+    serviceKey: "stay",
+    label: "Verified",
+    scope: "Discovery, atomic holds, payment, cancellation and reviews executed.",
+    evidence: "naijastay-e2e.cjs 25/25 including the simultaneous-hold race",
+    residualGap: "No real host supply or host payout; guest messaging and admin UI are not complete.",
+  },
+  fresh: {
+    serviceKey: "fresh",
+    label: "Verified",
+    scope: "Storefront, basket/checkout, farm dispatch and bulk quotes executed.",
+    evidence: "naijafresh-responsive-qa.cjs 401/401, naijafresh-e2e.cjs 51/51",
+    residualGap: "Demo farms/listings only; real farmer onboarding and commercial terms remain blocked.",
+  },
+  stream: {
+    serviceKey: "stream",
+    label: "Verified",
+    scope: "Catalogue/playback, playlists, creator upload, royalties and premium flows executed.",
+    evidence: "stream-tests.mjs 23/23, stream-upload-verify.cjs 11/11, stream-royalty-tests.ts 8/8, stream-royalty-flow.mjs 7/7, stream-premium-verify.cjs 11/11",
+    residualGap: "No licensed catalogue or artist payout; creator rooms are not implemented.",
+    displayDescription: "African music, playlists and creator uploads."
+  },
+  pay: {
+    serviceKey: "pay",
+    label: "Available — limited verification",
+    scope: "Wallet ledger, transfers, escrow, refunds and vendor payouts executed on the local test rail.",
+    evidence: "wallet-reconcile.ts CLEAN; payments-funding-webhook-acceptance.ts 24/24; pay-transfer-tests.ts 23/23; escrow suites 156/156, 89/89, 32/32",
+    residualGap: "No live payment provider; bills, withdrawals and MFA are not built.",
+  },
+  earn: {
+    serviceKey: "earn",
+    label: "Verified",
+    scope: "Enrolment, attribution, commission, settlement and recovery executed.",
+    evidence: "affiliate-verify.ts 12/12, affiliate-destination-verify.ts 11/11, affiliate-financial-acceptance.ts 6 checks, affiliate-settlement-verify.ts 10/10",
+    residualGap: "Only Shop orders are attributable; external affiliate payouts and KYC/tax onboarding are blocked.",
+  }
+};
+
 export type PlusAwarenessCard = {
   id: string;
   key: string;
@@ -26,6 +131,10 @@ export type PlusAwarenessCard = {
   href: string;
   serviceKey: string | null;
   countries: string[];
+  /** Plus+-scoped readiness; null for a general card or an unaudited service key. */
+  readiness: PlusServiceReadiness | null;
+  /** True when a service-keyed card has no audited readiness entry. */
+  readinessUnassessed: boolean;
 };
 
 export type PlusPublicBenefit = {
@@ -133,17 +242,24 @@ export async function loadPlusPublicData(now: Date = new Date()): Promise<PlusPu
           Boolean(card.imageAlt.trim()) &&
           isSafeHref(card.href)
       )
-      .map((card) => ({
-        id: card.id,
-        key: card.key,
-        title: card.title,
-        description: card.description,
-        imageUrl: card.imageUrl,
-        imageAlt: card.imageAlt,
-        href: card.href,
-        serviceKey: card.serviceKey,
-        countries: card.countries
-      }));
+      .map((card) => {
+        const readiness = card.serviceKey ? plusServiceReadiness[card.serviceKey] ?? null : null;
+        return {
+          id: card.id,
+          key: card.key,
+          title: card.title,
+          // A Plus+-scoped correction applies only where the registry copy
+          // states a capability the implementation does not have.
+          description: readiness?.displayDescription ?? card.description,
+          imageUrl: card.imageUrl,
+          imageAlt: card.imageAlt,
+          href: card.href,
+          serviceKey: card.serviceKey,
+          countries: card.countries,
+          readiness,
+          readinessUnassessed: Boolean(card.serviceKey) && readiness === null
+        };
+      });
 
     const planCountries = planCountryIndex(availability);
     const availablePlanById = new Map(availability.plans.map((plan) => [plan.id, plan]));
@@ -255,7 +371,7 @@ export function plusMembershipSummary(data: PlusPublicData): string {
   if (data.flags.membershipOpen) {
     return "At least one approved plan is enabled for a country. This page still has no checkout, so it cannot enrol you.";
   }
-  return "It is not open: no plan, price, exclusive benefit or billing setup has been approved for any country.";
+  return "It is not open: no plan, price, member benefit or billing setup has been approved for any country.";
 }
 
 export type PlusFaqItem = { question: string; answer: string };
@@ -272,9 +388,9 @@ export const plusFaqs: PlusFaqItem[] = [
       "No. This build contains no Plus+ billing form, trial or payment step, and it does not collect waitlist or email details."
   },
   {
-    question: "Which exclusive benefits are included?",
+    question: "Which member benefits are included?",
     answer:
-      "Only approved benefits attached to an available plan appear. Standard NaijaDeals services are not Plus+ benefits and are never relabelled as such."
+      "Only approved benefits attached to an available plan appear. They are member benefits, not standard NaijaDeals services, and no benefit is enforced as an entitlement in another service yet."
   },
   {
     question: "Which countries can join?",

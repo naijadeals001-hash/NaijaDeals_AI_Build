@@ -78,7 +78,11 @@ export default async function PlusPage() {
             <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
               <div className="min-w-0 p-5 sm:p-8 lg:p-10 xl:p-12">
                 <div className="flex flex-col items-start gap-2.5">
-                  <NaijaDealsLogo tone="onDark" size="xl" />
+                  <NaijaDealsLogo
+                    tone="onDark"
+                    size="xl"
+                    className="max-w-full !text-[min(2.4rem,10.5vw)] sm:!text-[min(3rem,10.5vw)] lg:!text-[min(3rem,6.5vw)]"
+                  />
                   <span className="rounded-full border border-[#E8C56A]/50 bg-[#E8C56A]/10 px-2.5 py-[3px] text-[10px] font-extrabold uppercase tracking-[0.28em] text-[#F2D48C]">
                     Plus+
                   </span>
@@ -142,7 +146,7 @@ export default async function PlusPage() {
                       <dd className="text-right font-bold text-[#F2D48C]">{status.plan}</dd>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <dt className="text-[#b9d5bd]">Exclusive benefits</dt>
+                      <dt className="text-[#b9d5bd]">Member benefits</dt>
                       <dd className="text-right font-bold text-white">{unavailable ? "Unavailable" : `${benefitCount} published`}</dd>
                     </div>
                     <div className="flex items-center justify-between gap-3">
@@ -191,7 +195,7 @@ export default async function PlusPage() {
             title="Membership, step by step"
             description="Only the first step exists today. The rest are marked with their actual server state rather than hidden."
           />
-          <ol className="mt-5 grid gap-3 lg:grid-cols-3">
+          <ol className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-3">
             <Step
               number="01"
               title="Use one NaijaDeals account"
@@ -271,7 +275,7 @@ export default async function PlusPage() {
             id="plus-awareness-heading"
             eyebrow="Awareness"
             title="What Plus+ is preparing"
-            description="Published awareness cards from the Control Center, filtered by their current schedule, language and country scope."
+            description="Published awareness cards from the Control Center, filtered by their current schedule, language and country scope. Each card carries the Plus+ readiness label from the audit, never the registry's blanket catalogue status."
             aside={<CountChip>{unavailable ? "Unavailable" : `${cardCount} ${cardCount === 1 ? "card" : "cards"}`}</CountChip>}
           />
           <div className="mt-5">
@@ -311,13 +315,20 @@ export default async function PlusPage() {
               </PlusCarousel>
             )}
           </div>
+          <p id="plus-readiness-note" className="mt-3 text-[11px] leading-5 text-[#4b5b51]">
+            Readiness describes recorded verification of each service&apos;s software. <strong className="font-extrabold">Verified</strong> means a
+            recorded executed suite covers the main journey; <strong className="font-extrabold">Available — limited verification</strong> means a
+            decisive suite is stale or covers only part of the journey; <strong className="font-extrabold">Preview</strong> means no executed
+            end-to-end result. A service without an audited entry shows <strong className="font-extrabold">Not assessed</strong>. This is not launch
+            status, supply or country eligibility; Plus+ country eligibility comes only from approved plans above.
+          </p>
         </section>
 
         <section aria-labelledby="plus-benefits-heading" className={SECTION_PAD}>
           <SectionHeading
             id="plus-benefits-heading"
             eyebrow="Benefits"
-            title="Plus+-exclusive benefits"
+            title="Plus+ member benefits"
             description={
               unavailable
                 ? "Benefit availability could not be read for this request."
@@ -342,14 +353,14 @@ export default async function PlusPage() {
                 testId="benefits-empty"
                 icon={<Sparkles className="h-5 w-5" aria-hidden="true" />}
                 eyebrow="Benefits register · empty"
-                title="No Plus+-exclusive benefits are configured yet."
+                title="No Plus+ member benefits are configured yet."
               >
                 Standard NaijaDeals services are not Plus+ benefits. When a benefit is published for an available plan, it will appear
                 here with its plan and eligible countries.
               </PlusEmptyState>
             ) : (
               <PlusCarousel
-                label="Plus+-exclusive benefits"
+                label="Plus+ member benefits"
                 hint="Swipe, scroll or use the arrow keys to browse approved benefits. Arrows appear only when the cards do not fit."
               >
                 {data.benefits.map((benefit) => (
@@ -421,7 +432,7 @@ export default async function PlusPage() {
             <dl className="mt-5 grid gap-3 sm:grid-cols-3">
               <RegisterCard
                 icon={<Sparkles className="h-4 w-4" aria-hidden="true" />}
-                label="Exclusive benefits"
+                label="Member benefits"
                 value={unavailable ? "Unavailable" : `${benefitCount} published`}
                 body="No benefit is created by visiting this page."
               />
@@ -609,7 +620,7 @@ function Step({
       : "bg-[#f2f4f2] text-[#4b5b51] ring-[#4b5b51]/10";
   return (
     <li className="flex h-full flex-col rounded-2xl border border-[#dbe6d8] bg-white p-5">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#07351f] font-display text-[13px] font-extrabold text-[#F2D48C]">
           {number}
         </span>

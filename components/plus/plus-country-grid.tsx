@@ -9,17 +9,17 @@ import type { PlusCountryAvailability } from "@/lib/services/plus/availability";
  */
 export function PlusCountryGrid({ countries }: { countries: PlusCountryAvailability[] }) {
   return (
-    <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {countries.map((country) => (
         <li
           key={country.code}
           data-plus-country={country.code}
           data-plus-country-status={country.available ? "available" : "not_available"}
-          className={`flex h-full flex-col rounded-2xl border p-4 ${
+          className={`flex h-full min-w-0 flex-col rounded-2xl border p-4 ${
             country.available ? "border-[#bfe0c4] bg-white" : "border-[#dbe6d8] bg-[#f7faf5]"
           }`}
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#e7f3e9] text-[#0b5c33]">
                 <Globe2 className="h-4 w-4" aria-hidden="true" />

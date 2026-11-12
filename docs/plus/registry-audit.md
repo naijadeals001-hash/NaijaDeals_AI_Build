@@ -29,7 +29,12 @@ catalogue's live label. Each destination route exists (`app/naijashop`, `app/nai
 - Cards are seeded from the canonical registry by `scripts/plus-awareness-seed.ts`
   (deterministic key `service:<key>`), so the landing content tracks the registry and
   remains editable or removable through the Control Center.
-- Nothing is labelled an exclusive Plus+ benefit; the benefits register is separate and
-  empty until a plan and genuine benefits are approved.
-- Proposed verticals must not be seeded. If one is added later, its card inherits the
-  registry's status label; the page must not upgrade it to "live".
+- No benefit is described as "Plus+-exclusive": entitlements are records only and are
+  not enforced in another vertical, so the page calls them member benefits. The benefits
+  register is separate and empty until a plan and genuine benefits are approved.
+- Each card renders a Plus+-scoped readiness label from `plusServiceReadiness` in
+  `lib/data/plus.ts`. The evidence and residual gaps are in
+  `docs/plus/service-readiness-audit.md`; the card never inherits the registry's blanket
+  catalogue status.
+- Proposed verticals must not be seeded. If a service-keyed card is added later without
+  an audited readiness entry, it renders "Not assessed" rather than a live label.
