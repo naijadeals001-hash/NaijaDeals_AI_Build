@@ -833,6 +833,14 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
                     : "Draft: the public product page returns 404 until it is published."}
               </p>
               <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold">
+                <a
+                  href={`/admin/catalogue/products/${preview.id}/preview`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[#58A6FF] underline"
+                >
+                  {preview.status === "DRAFT" ? "Open full draft preview" : "Open full preview"}
+                </a>
                 {preview.status === "ACTIVE" ? (
                   <a
                     href={`/product/${preview.slug}`}
@@ -900,9 +908,19 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
                   </td>
                   <td className="py-2 text-right">
                     <div className="flex flex-wrap justify-end gap-2 text-xs font-bold">
+                      {entry.status === "DRAFT" ? (
+                        <a
+                          href={`/admin/catalogue/products/${entry.id}/preview`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[#58A6FF] underline"
+                        >
+                          Preview draft
+                        </a>
+                      ) : null}
                       <button
                         type="button"
-                        disabled={!canWrite || busy}
+                        disabled={busy}
                         onClick={() => {
                           setPreview(entry);
                           setValidation(null);

@@ -1,8 +1,9 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { prisma } from "@/lib/prisma";
-import { ApiError } from "@/lib/auth/guard";
+import { ApiError, hasAdminConsoleAccess } from "@/lib/auth/guard";
 import type { SessionUser } from "@/lib/auth/session";
+import { permissionsFor } from "@/lib/auth/permissions";
 import { assertRegion, countryScopeWhere } from "@/lib/auth/scope";
 import { COUNTRIES } from "@/lib/config/commerce";
 import { markForIndex } from "@/lib/infra/search-sync";
@@ -236,6 +237,92 @@ export async function listCatalogue(actor: SessionUser) {
       currency: COUNTRIES[product.countryCode]?.currency ?? null
     })),
     demoVendor: vendor
+  };
+}
+
+function assertCataloguePreviewAccess(actor: SessionUser) {
+  if (!hasAdminConsoleAccess(actor)) {
+    throw new ApiError(403, "forbidden", "Control Center access is required to preview catalogue drafts.");
+  }
+  const granted = permissionsFor(actor);
+  if (!granted.includes("products:read") && !granted.includes("products:moderate")) {
+    throw new ApiError(
+      403,
+      "permission_denied",
+      'The "products:read" permission is required to preview catalogue drafts.'
+    );
+  }
+}
+
+export type CatalogueProductPreview = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  status: string;
+  isDemo: boolean;
+  moderationNote: string | null;
+  priceKobo: string;
+  currency: string | null;
+  countryCode: string;
+  createdAt: Date;
+  updatedAt: Date;
+  category: { id: string; name: string; slug: string; isActive: boolean; isDemo: boolean };
+  vendor: { name: string; slug: string; status: string };
+  images: Array<{ id: string; url: string; alt: string | null; sortOrder: number }>;
+  stock: { quantity: number; reserved: number; lowStockLevel: number } | null;
+  available: number;
+  validation: { valid: boolean; issues: ProductValidationIssue[] };
+};
+
+/**
+ * Complete, read-only view of a catalogue record for the Control Center.
+ *
+ * This is deliberately separate from the public product service: a draft,
+ * archived or suspended listing is returned here only after the caller has
+ * both Control Center access and catalogue read/moderate permission, and the
+ * product still has to be inside the caller's region scope. The public product
+ * route and `/api/products` continue to return nothing for non-ACTIVE rows.
+ */
+export async function getCatalogueProductPreview(actor: SessionUser, id: string): Promise<CatalogueProductPreview> {
+  assertCataloguePreviewAccess(actor);
+  if (!id) throw new ApiError(400, "validation_error", "Product id is required.");
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: {
+      category: { select: { id: true, name: true, slug: true, isActive: true, isDemo: true } },
+      vendor: { select: { name: true, slug: true, status: true } },
+      images: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+      stock: { select: { quantity: true, reserved: true, lowStockLevel: true } }
+    }
+  });
+  if (!product) throw new ApiError(404, "product_not_found", "Product not found.");
+  assertRegion(actor, { countryCode: product.countryCode });
+  const validation = await validateProduct(actor, product.id);
+  return {
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    description: product.description,
+    status: product.status,
+    isDemo: product.isDemo,
+    moderationNote: product.moderationNote,
+    priceKobo: product.priceKobo.toString(),
+    currency: COUNTRIES[product.countryCode]?.currency ?? null,
+    countryCode: product.countryCode,
+    createdAt: product.createdAt,
+    updatedAt: product.updatedAt,
+    category: product.category,
+    vendor: product.vendor,
+    images: product.images.map((image) => ({
+      id: image.id,
+      url: image.url,
+      alt: image.alt,
+      sortOrder: image.sortOrder
+    })),
+    stock: product.stock,
+    available: product.stock ? Math.max(product.stock.quantity - product.stock.reserved, 0) : 0,
+    validation: { valid: validation.valid, issues: validation.issues }
   };
 }
 

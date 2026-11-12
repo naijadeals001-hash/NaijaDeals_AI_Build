@@ -3,12 +3,27 @@
  *
  * Covers: department create/edit (editable slug, ordering, imagery) → product
  * draft with explicit currency, inventory and matching imagery → server
- * validation → admin preview → publish → public visibility/search/count →
- * editable published slug → unpublish → archive → removal from every public
- * surface. Invalid data and illegal state transitions are asserted too.
+ * validation → authorized Control Center preview → publish → public
+ * visibility/search/count → editable published slug → unpublish → archive →
+ * removal from every public surface. Invalid data and illegal state
+ * transitions are asserted too.
  *
- * Test records are RUN_ID/dated, left archived/inactive, and never touch the
- * accepted catalogue rows. No payment, provider call or live operation is made.
+ * Cleanup isolation: every record this workflow creates carries the unique
+ * RUN_ID in its name and slug. Cleanup only archives/deactivates records that
+ * contain that token, never a shared department or the approved catalogue.
+ * Shared department state is snapshotted before the run and compared (and, if
+ * a shared record was deliberately touched, restored exactly) afterwards.
+ * After the run-owned workflow records are removed the catalogue must be back
+ * at the approved REVIEW baseline of 7 active departments / 23 active products
+ * (or at the approved 9/31 expansion state on a subsequent run).
+ *
+ * The expansion phase publishes a fixed, idempotent DEMO batch across
+ * Groceries, Power & Solar and Gaming through the same Control Center API the
+ * admin UI uses, then exercises a dedicated publish → unpublish → exclusion
+ * acceptance product. Those expansion rows are deliberate catalogue content,
+ * not test residue, and are therefore not removed by cleanup.
+ *
+ * No payment, provider call or live operation is made.
  *
  * Usage:
  *   node scripts/review-catalogue-workflow.cjs
@@ -25,24 +40,153 @@ const EVIDENCE_FILE = "qa-artifacts/review-basket/catalogue-workflow.json";
 const SHOT_DIR = "qa-artifacts/visual/catalogue-workflow";
 const IMAGE_ONE = "/generated/shop/category-home-kitchen.webp";
 const IMAGE_TWO = "/generated/shop/product-retro-kitchen-blender.webp";
+const SEED_BASELINE = { departments: 7, products: 23 };
+const EXPANDED_BASELINE = { departments: 9, products: 31 };
+const DEMO_NOTE = "DEMO — demonstration inventory, not live supply";
 const [email, password] = fs.readFileSync(CREDENTIAL_FILE, "utf8").trim().split(/\r?\n/);
 
 const runId = `${new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14)}-${Math.random()
   .toString(36)
   .slice(2, 8)}`;
 const stamp = runId.replace(/[^a-z0-9]/gi, "").toLowerCase().slice(-10);
-const DEPT_NAME = `DEMO Review department ${stamp}`;
-const DEPT_SLUG = `demo-review-department-${stamp}`;
+const DEPT_NAME = `DEMO Review department ${runId}`;
+const DEPT_SLUG = `demo-review-department-${runId}`;
 const DEPT_SLUG_EDITED = `${DEPT_SLUG}-edited`;
-const PRODUCT_NAME = `DEMO — Review workflow blender ${stamp}`;
-const PRODUCT_SLUG = `demo-review-workflow-blender-${stamp}`;
-const INCOMPLETE_NAME = `DEMO — Incomplete workflow probe ${stamp}`;
+const PRODUCT_NAME = `DEMO — Review workflow blender ${runId}`;
+const PRODUCT_SLUG = `demo-review-workflow-blender-${runId}`;
+const INCOMPLETE_NAME = `DEMO — Incomplete workflow probe ${runId}`;
+
+const GROCERIES_IMAGE_ALT = "Basket of fresh tomatoes, peppers, leafy greens and onions";
+const EXPANSION_DEPARTMENTS = [
+  {
+    name: "Power & Solar",
+    slug: "power-solar",
+    description: "DEMO department — demonstration inventory for owner review, not live supply.",
+    imageUrl: "/generated/shop/category-power-solar.webp",
+    imageAlt: "Solar panel, portable power station and power bank on a pale blue surface",
+    sortOrder: 30
+  },
+  {
+    name: "Gaming",
+    slug: "gaming",
+    description: "DEMO department — demonstration inventory for owner review, not live supply.",
+    imageUrl: "/generated/shop/category-gaming.webp",
+    imageAlt: "Game controller, mechanical keyboard and headset on a dark surface",
+    sortOrder: 31
+  }
+];
+
+const EXPANSION_PRODUCTS = [
+  {
+    departmentSlug: "groceries-household",
+    name: "DEMO — Red bell peppers, 500g",
+    slug: "demo-red-bell-peppers-500g",
+    description:
+      "Demonstration listing. Representative produce image; grade, pack weight and availability are illustrative.",
+    priceKobo: 180000,
+    quantity: 25,
+    lowStockLevel: 3,
+    imageUrl: "/generated/shop/product-red-bell-pepper-500g.webp",
+    imageAlt: "Demonstration product image of red bell peppers"
+  },
+  {
+    departmentSlug: "groceries-household",
+    name: "DEMO — Diced onions, 500g",
+    slug: "demo-diced-onions-500g",
+    description:
+      "Demonstration listing. Representative produce image; grade, pack weight and availability are illustrative.",
+    priceKobo: 220000,
+    quantity: 25,
+    lowStockLevel: 3,
+    imageUrl: "/generated/shop/product-diced-onions-500g.webp",
+    imageAlt: "Demonstration product image of diced onions"
+  },
+  {
+    departmentSlug: "groceries-household",
+    name: "DEMO — Green beans, 500g",
+    slug: "demo-green-beans-500g",
+    description:
+      "Demonstration listing. Representative produce image; grade, pack weight and availability are illustrative.",
+    priceKobo: 150000,
+    quantity: 25,
+    lowStockLevel: 3,
+    imageUrl: "/generated/shop/product-green-beans-500g.webp",
+    imageAlt: "Demonstration product image of green beans"
+  },
+  {
+    departmentSlug: "power-solar",
+    name: "DEMO — Solar power inverter",
+    slug: "demo-solar-power-inverter",
+    description:
+      "Demonstration listing. Representative inverter image; capacity, socket configuration and included accessories are illustrative and not a seller specification.",
+    priceKobo: 28500000,
+    quantity: 25,
+    lowStockLevel: 3,
+    imageUrl: "/generated/shop/product-solar-power-inverter.webp",
+    imageAlt: "Demonstration product image of a solar power inverter with an LCD panel and power outlets"
+  },
+  {
+    departmentSlug: "power-solar",
+    name: "DEMO — Rooftop solar panel array with mounting frame",
+    slug: "demo-rooftop-solar-panel-array",
+    description:
+      "Demonstration listing. Representative solar array image; panel count and mounting configuration are illustrative and not a seller specification.",
+    priceKobo: 42000000,
+    quantity: 25,
+    lowStockLevel: 3,
+    imageUrl: "/generated/shop/product-rooftop-solar-panel-array.webp",
+    imageAlt: "Demonstration product image of three solar panels on a mounting frame"
+  },
+  {
+    departmentSlug: "power-solar",
+    name: "DEMO — Portable solar battery charging station",
+    slug: "demo-portable-solar-charging-station",
+    description:
+      "Demonstration listing. Representative portable battery image; capacity, ports and included panels are illustrative and not a seller specification.",
+    priceKobo: 19500000,
+    quantity: 25,
+    lowStockLevel: 3,
+    imageUrl: "/generated/shop/product-solar-battery-charging-station.webp",
+    imageAlt: "Demonstration product image of a portable battery station with two fold-out solar panels"
+  },
+  {
+    departmentSlug: "gaming",
+    name: "DEMO — Wireless game controllers, black and white pair",
+    slug: "demo-wireless-game-controllers-pair",
+    description:
+      "Demonstration listing. Representative controller image; connectivity, compatibility and battery life are illustrative and not a seller specification.",
+    priceKobo: 5200000,
+    quantity: 25,
+    lowStockLevel: 3,
+    imageUrl: "/generated/shop/product-ps4-and-xbox-one-controllers.webp",
+    imageAlt: "Demonstration product image of two wireless game controllers, one black and one white"
+  },
+  {
+    departmentSlug: "gaming",
+    name: "DEMO — Game controller with coloured buttons",
+    slug: "demo-game-controller-coloured-buttons",
+    description:
+      "Demonstration listing. Representative controller image; connectivity, compatibility and button layout are illustrative and not a seller specification.",
+    priceKobo: 2900000,
+    quantity: 25,
+    lowStockLevel: 3,
+    imageUrl: "/generated/shop/product-xbox-360-controller.webp",
+    imageAlt: "Demonstration product image of a white and grey game controller with coloured action buttons"
+  }
+];
+
 const checks = [];
 const skips = [];
 const observedDefects = [];
 const pageErrors = [];
 const createdProductIds = [];
+const expansionCreatedDepartments = [];
+const expansionCreatedProducts = [];
 let createdDepartmentId = null;
+let baseline = null;
+let baselineIsSeed = false;
+let finalCounts = null;
+
 
 function check(name, ok, detail = "") {
   checks.push({ name, ok: Boolean(ok), detail: String(detail ?? "") });
@@ -50,6 +194,24 @@ function check(name, ok, detail = "") {
 
 function skip(name, reason) {
   skips.push({ name, reason });
+}
+
+/** A record is run-owned only when its stored name or slug contains this run. */
+function isRunOwned(entry) {
+  if (!entry) return false;
+  const haystack = `${entry.name ?? ""} ${entry.slug ?? ""}`.toLowerCase();
+  return haystack.includes(runId.toLowerCase());
+}
+
+function activeCounts(catalogue) {
+  return {
+    departments: catalogue.departments.filter((entry) => entry.isActive).length,
+    products: catalogue.products.filter((entry) => entry.status === "ACTIVE").length
+  };
+}
+
+function countsLabel(counts) {
+  return `${counts.departments} active departments / ${counts.products} active products`;
 }
 
 function parse(response, body) {
@@ -112,7 +274,9 @@ function parse(response, body) {
     const result = await api(route, options);
     if (result.status === 200 || result.status === 201) {
       const id = result.body && typeof result.body === "object" ? result.body.id : null;
-      if (id) createdProductIds.push(id);
+      // A probe that unexpectedly succeeds must still never hand a shared row
+      // to the cleanup routine. Only run-owned ids are recorded.
+      if (id && isRunOwned(result.body)) createdProductIds.push(id);
     }
     check(
       label,
@@ -125,28 +289,582 @@ function parse(response, body) {
   const productSection = () => page.locator("section", { hasText: "2. Product" }).first();
   const departmentSection = () => page.locator("section", { hasText: "1. Department" }).first();
 
-  async function cleanup() {
+  async function snapshotCatalogue() {
+    const catalogue = await adminCatalogue();
+    const activeDepartments = catalogue.departments.filter((entry) => entry.isActive);
+    const activeProducts = catalogue.products.filter((entry) => entry.status === "ACTIVE");
+    return {
+      counts: {
+        departments: activeDepartments.length,
+        products: activeProducts.length
+      },
+      departments: catalogue.departments.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        slug: entry.slug,
+        description: entry.description,
+        imageUrl: entry.imageUrl,
+        imageAlt: entry.imageAlt,
+        sortOrder: entry.sortOrder,
+        isActive: entry.isActive,
+        isDemo: entry.isDemo
+      })),
+      activeDepartmentIds: activeDepartments.map((entry) => entry.id),
+      activeProductIds: activeProducts.map((entry) => entry.id),
+      activeProductSlugs: activeProducts.map((entry) => entry.slug)
+    };
+  }
+
+  async function restoreSharedDepartment(before) {
+    const result = await api("/api/admin/catalogue/departments", {
+      method: "PATCH",
+      data: {
+        id: before.id,
+        name: before.name,
+        slug: before.slug,
+        description: before.description ?? "",
+        imageUrl: before.imageUrl ?? "",
+        imageAlt: before.imageAlt ?? "",
+        sortOrder: before.sortOrder,
+        isActive: before.isActive,
+        isDemo: before.isDemo
+      }
+    });
+    const after = await adminCatalogue().catch(() => null);
+    const restored = after?.departments.find((entry) => entry.id === before.id);
+    check(
+      `shared department ${before.name} restored to captured state`,
+      result.status === 200 &&
+        restored?.isActive === before.isActive &&
+        restored?.slug === before.slug &&
+        restored?.sortOrder === before.sortOrder,
+      `status=${result.status} active=${restored?.isActive} slug=${restored?.slug}`
+    );
+  }
+
+  /**
+   * The workflow must not alter shared departments. If an earlier run (or a
+   * UI mistake) flipped one, restore the captured fields exactly rather than
+   * leaving the approved navigation changed.
+   */
+  async function guardSharedDepartments() {
+    if (!baseline) return;
+    const catalogue = await adminCatalogue().catch(() => null);
+    if (!catalogue) {
+      check("shared department state could be read after cleanup", false, "admin catalogue unavailable");
+      return;
+    }
+    const sharedBefore = baseline.departments.filter((entry) => !isRunOwned(entry));
+    const unexpected = [];
+    for (const before of sharedBefore) {
+      const current = catalogue.departments.find((entry) => entry.id === before.id);
+      if (!current) {
+        unexpected.push(`${before.name}: missing after run`);
+        continue;
+      }
+      const fields = ["name", "slug", "description", "imageUrl", "imageAlt", "sortOrder", "isDemo"];
+      const changedFields = fields.filter(
+        (field) => (current[field] ?? null) !== (before[field] ?? null)
+      );
+      if (current.isActive !== before.isActive || changedFields.length > 0) {
+        await restoreSharedDepartment(before);
+        const restored = (await adminCatalogue()).departments.find((entry) => entry.id === before.id);
+        if (restored?.isActive !== before.isActive || changedFields.some((field) => (restored?.[field] ?? null) !== (before[field] ?? null))) {
+          unexpected.push(`${before.name}: could not restore ${changedFields.join(",") || "active state"}`);
+        }
+      }
+    }
+    const after = await adminCatalogue();
+    const stillWrong = sharedBefore.filter((before) => {
+      const current = after.departments.find((entry) => entry.id === before.id);
+      return (
+        !current ||
+        current.isActive !== before.isActive ||
+        ["name", "slug", "description", "imageUrl", "imageAlt", "sortOrder", "isDemo"].some(
+          (field) => (current[field] ?? null) !== (before[field] ?? null)
+        )
+      );
+    });
+    check(
+      "shared departments and navigation are unchanged by the workflow",
+      unexpected.length === 0 && stillWrong.length === 0,
+      unexpected.length || stillWrong.length
+        ? [...unexpected, ...stillWrong.map((entry) => entry.name)].join(" | ")
+        : `${sharedBefore.length} shared departments verified`
+    );
+    check(
+      "baseline active products were not altered by the workflow",
+      baseline.activeProductIds.every((id) => {
+        const current = after.products.find((entry) => entry.id === id);
+        return current?.status === "ACTIVE";
+      }),
+      `${baseline.activeProductIds.length} baseline products checked`
+    );
+  }
+
+  /**
+   * Archive/deactivate only records whose name or slug contains this RUN_ID.
+   * A shared row is never passed to a mutation, even if an id was captured
+   * incorrectly by an unexpected API response.
+   */
+  async function cleanupRunRecords({ assertBaseline = false } = {}) {
     try {
-      for (const id of [...new Set(createdProductIds.filter(Boolean))]) {
-        const catalogue = await adminCatalogue().catch(() => null);
-        const entry = catalogue?.products.find((product) => product.id === id);
-        if (entry && entry.status !== "ARCHIVED") {
-          await api("/api/admin/catalogue/products", {
+      const catalogue = await adminCatalogue();
+      const runOwnedProductIds = catalogue.products.filter(isRunOwned).map((product) => product.id);
+      for (const id of [...new Set([...createdProductIds, ...runOwnedProductIds].filter(Boolean))]) {
+        const entry = catalogue.products.find((product) => product.id === id);
+        if (!entry) continue;
+        if (!isRunOwned(entry)) {
+          check("cleanup refused to archive a non-run-owned product", false, `${entry.name} / ${entry.slug}`);
+          continue;
+        }
+        if (entry.status !== "ARCHIVED") {
+          const archived = await api("/api/admin/catalogue/products", {
             method: "PATCH",
             data: { id, action: "archive" }
           });
+          check(
+            `cleanup archived run-owned product ${entry.slug}`,
+            archived.status === 200 && archived.body?.status === "ARCHIVED",
+            `status=${archived.status} product=${archived.body?.status ?? "none"}`
+          );
         }
       }
-      if (createdDepartmentId) {
-        await api("/api/admin/catalogue/departments", {
+
+      const runOwnedDepartments = (await adminCatalogue()).departments.filter(isRunOwned);
+      for (const entry of runOwnedDepartments) {
+        if (!entry.isActive) continue;
+        const deactivated = await api("/api/admin/catalogue/departments", {
           method: "PATCH",
-          data: { id: createdDepartmentId, isActive: false }
+          data: { id: entry.id, isActive: false }
         });
+        check(
+          `cleanup deactivated run-owned department ${entry.slug}`,
+          deactivated.status === 200 && deactivated.body?.isActive === false,
+          `status=${deactivated.status} active=${deactivated.body?.isActive}`
+        );
       }
-    } catch {
-      /* best-effort cleanup; reported checks already describe the run */
+
+      const after = await adminCatalogue();
+      const activeRunDepartments = after.departments.filter((entry) => isRunOwned(entry) && entry.isActive);
+      const unarchivedRunProducts = after.products.filter((entry) => isRunOwned(entry) && entry.status !== "ARCHIVED");
+      check(
+        "cleanup leaves no active run-owned departments",
+        activeRunDepartments.length === 0,
+        activeRunDepartments.map((entry) => entry.slug).join(",") || "none"
+      );
+      check(
+        "cleanup leaves no unarchived run-owned products",
+        unarchivedRunProducts.length === 0,
+        unarchivedRunProducts.map((entry) => entry.slug).join(",") || "none"
+      );
+
+      if (assertBaseline) {
+        const counts = activeCounts(after);
+        const expected = baseline?.counts ?? SEED_BASELINE;
+        check(
+          "cleanup restores the recorded catalogue baseline",
+          counts.departments === expected.departments && counts.products === expected.products,
+          `${countsLabel(counts)}; expected ${countsLabel(expected)}`
+        );
+        if (baselineIsSeed) {
+          check(
+            "cleanup restores the approved seed baseline (7 active departments / 23 active products)",
+            counts.departments === SEED_BASELINE.departments && counts.products === SEED_BASELINE.products,
+            countsLabel(counts)
+          );
+        } else {
+          skip(
+            "cleanup restores the approved seed baseline (7 active departments / 23 active products)",
+            `run started from the approved expansion state (${countsLabel(expected)}); recorded baseline restored instead`
+          );
+        }
+      }
+      finalCounts = activeCounts(after);
+    } catch (error) {
+      check("cleanup completed without error", false, error.message);
     }
   }
+
+  /**
+   * The approved batch also backfills the existing Groceries department image
+   * alt text. That is a deliberate shared-record change, so it is recorded in
+   * the baseline after success; the final shared-state guard then verifies the
+   * approved value instead of reverting it to the pre-run null.
+   */
+  async function ensureGroceriesImageAlt() {
+    const catalogue = await adminCatalogue();
+    const department = catalogue.departments.find((entry) => entry.slug === "groceries-household");
+    if (!department) {
+      check("approved Groceries department image alt is available to verify", false, "department missing");
+      return;
+    }
+    if (department.imageAlt === GROCERIES_IMAGE_ALT) {
+      check("Groceries department image alt matches the approved batch", true, GROCERIES_IMAGE_ALT);
+      return;
+    }
+    const updated = await api("/api/admin/catalogue/departments", {
+      method: "PATCH",
+      data: { id: department.id, imageAlt: GROCERIES_IMAGE_ALT }
+    });
+    check(
+      "Groceries department image alt backfilled through the Control Center API",
+      updated.status === 200 && updated.body?.imageAlt === GROCERIES_IMAGE_ALT,
+      `status=${updated.status} alt=${updated.body?.imageAlt ?? "none"}`
+    );
+    if (updated.status === 200 && updated.body?.imageAlt === GROCERIES_IMAGE_ALT && baseline) {
+      const baselineEntry = baseline.departments.find((entry) => entry.id === department.id);
+      if (baselineEntry) baselineEntry.imageAlt = GROCERIES_IMAGE_ALT;
+    }
+  }
+
+  async function ensureExpansionDepartment(spec) {
+    let catalogue = await adminCatalogue();
+    let existing = catalogue.departments.find((entry) => entry.slug === spec.slug);
+    if (existing) {
+      const matches =
+        existing.name === spec.name &&
+        existing.description === spec.description &&
+        existing.imageUrl === spec.imageUrl &&
+        existing.imageAlt === spec.imageAlt &&
+        existing.sortOrder === spec.sortOrder &&
+        existing.isActive === true &&
+        existing.isDemo === true;
+      if (!matches) {
+        const updated = await api("/api/admin/catalogue/departments", {
+          method: "PATCH",
+          data: { ...spec, id: existing.id, isActive: true, isDemo: true }
+        });
+        check(
+          `expansion department ${spec.slug} corrected and activated`,
+          updated.status === 200 && updated.body?.isActive === true,
+          `status=${updated.status} active=${updated.body?.isActive}`
+        );
+      } else {
+        check(`expansion department ${spec.slug} already present and active`, true, spec.name);
+      }
+      catalogue = await adminCatalogue();
+      existing = catalogue.departments.find((entry) => entry.slug === spec.slug);
+      return existing ?? null;
+    }
+
+    const created = await api("/api/admin/catalogue/departments", {
+      method: "POST",
+      data: { ...spec, isDemo: true }
+    });
+    check(
+      `expansion department ${spec.slug} created through the Control Center API`,
+      created.status === 201 && created.body?.isActive === true && created.body?.isDemo === true,
+      `status=${created.status} active=${created.body?.isActive} demo=${created.body?.isDemo}`
+    );
+    if (created.body?.id) expansionCreatedDepartments.push(created.body.id);
+    return created.body ?? null;
+  }
+
+  async function ensureExpansionProduct(spec, departmentId) {
+    let catalogue = await adminCatalogue();
+    let existing = catalogue.products.find((entry) => entry.slug === spec.slug);
+    if (existing) {
+      if (existing.status === "ARCHIVED") {
+        check(
+          `expansion product ${spec.slug} is publishable`,
+          false,
+          "record exists as ARCHIVED; this workflow cannot republish it without creating a duplicate"
+        );
+        return existing;
+      }
+      const matches =
+        existing.name === spec.name &&
+        existing.description === spec.description &&
+        existing.priceKobo === String(spec.priceKobo) &&
+        existing.categoryId === departmentId &&
+        existing.stock?.quantity === spec.quantity &&
+        existing.images.length === 1 &&
+        existing.images[0]?.url === spec.imageUrl &&
+        existing.images[0]?.alt === spec.imageAlt &&
+        existing.isDemo === true;
+      if (!matches) {
+        const updated = await api("/api/admin/catalogue/products", {
+          method: "PATCH",
+          data: {
+            id: existing.id,
+            name: spec.name,
+            slug: spec.slug,
+            description: spec.description,
+            priceKobo: spec.priceKobo,
+            currency: "NGN",
+            categoryId: departmentId,
+            quantity: spec.quantity,
+            lowStockLevel: spec.lowStockLevel,
+            images: [{ url: spec.imageUrl, alt: spec.imageAlt }],
+            isDemo: true
+          }
+        });
+        check(
+          `expansion product ${spec.slug} corrected through the Control Center API`,
+          updated.status === 200,
+          `status=${updated.status} code=${updated.body?.code ?? "none"}`
+        );
+        catalogue = await adminCatalogue();
+        existing = catalogue.products.find((entry) => entry.slug === spec.slug);
+      }
+      if (existing?.status === "DRAFT") {
+        const validation = await api("/api/admin/catalogue/products", {
+          method: "PATCH",
+          data: { id: existing.id, action: "validate" }
+        });
+        check(
+          `expansion draft ${spec.slug} passes server validation`,
+          validation.status === 200 && validation.body?.valid === true,
+          `valid=${validation.body?.valid} issues=${(validation.body?.issues ?? []).length}`
+        );
+        const published = await api("/api/admin/catalogue/products", {
+          method: "PATCH",
+          data: { id: existing.id, action: "publish" }
+        });
+        check(
+          `expansion product ${spec.slug} published through the Control Center API`,
+          published.status === 200 && published.body?.status === "ACTIVE",
+          `status=${published.status} product=${published.body?.status ?? "none"} code=${published.body?.code ?? "none"}`
+        );
+      } else {
+        check(
+          `expansion product ${spec.slug} remains published`,
+          existing?.status === "ACTIVE",
+          `status=${existing?.status ?? "missing"}`
+        );
+      }
+      return existing;
+    }
+
+    const created = await api("/api/admin/catalogue/products", {
+      method: "POST",
+      data: {
+        name: spec.name,
+        slug: spec.slug,
+        description: spec.description,
+        priceKobo: spec.priceKobo,
+        currency: "NGN",
+        countryCode: "NG",
+        categoryId: departmentId,
+        quantity: spec.quantity,
+        lowStockLevel: spec.lowStockLevel,
+        images: [{ url: spec.imageUrl, alt: spec.imageAlt }],
+        isDemo: true
+      }
+    });
+    check(
+      `expansion product ${spec.slug} created as an explicit-currency DEMO draft`,
+      created.status === 201 &&
+        created.body?.status === "DRAFT" &&
+        created.body?.isDemo === true &&
+        created.body?.countryCode === "NG",
+      `status=${created.status} product=${created.body?.status ?? "none"} country=${created.body?.countryCode ?? "none"} code=${created.body?.code ?? "none"}`
+    );
+    if (!created.body?.id) return null;
+    expansionCreatedProducts.push(created.body.id);
+
+    const validation = await api("/api/admin/catalogue/products", {
+      method: "PATCH",
+      data: { id: created.body.id, action: "validate" }
+    });
+    check(
+      `expansion draft ${spec.slug} passes server validation`,
+      validation.status === 200 && validation.body?.valid === true,
+      `valid=${validation.body?.valid} issues=${(validation.body?.issues ?? []).length}`
+    );
+    const published = await api("/api/admin/catalogue/products", {
+      method: "PATCH",
+      data: { id: created.body.id, action: "publish" }
+    });
+    check(
+      `expansion product ${spec.slug} published through the Control Center API`,
+      published.status === 200 && published.body?.status === "ACTIVE",
+      `status=${published.status} product=${published.body?.status ?? "none"} code=${published.body?.code ?? "none"}`
+    );
+    return published.body ?? created.body;
+  }
+
+  async function verifyExpansionVisibility() {
+    const catalogue = await adminCatalogue();
+    const activeSlugs = new Set(
+      catalogue.products.filter((entry) => entry.status === "ACTIVE").map((entry) => entry.slug)
+    );
+    const missing = EXPANSION_PRODUCTS.filter((spec) => !activeSlugs.has(spec.slug)).map((spec) => spec.slug);
+    check("every approved expansion product is ACTIVE", missing.length === 0, missing.join(",") || "8/8 active");
+
+    const departmentSlugs = new Set(EXPANSION_PRODUCTS.map((spec) => spec.departmentSlug));
+    for (const departmentSlug of departmentSlugs) {
+      const expected = EXPANSION_PRODUCTS.filter((spec) => spec.departmentSlug === departmentSlug);
+      const result = await api(`/api/products?category=${departmentSlug}&page=1&pageSize=60`);
+      const items = Array.isArray(result.body?.items) ? result.body.items : [];
+      const found = expected.filter((spec) => items.some((item) => item.slug === spec.slug));
+      check(
+        `Shop department ${departmentSlug} lists the expansion products`,
+        result.status === 200 && found.length === expected.length,
+        `total=${result.body?.total ?? "n/a"} matched=${found.length}/${expected.length}`
+      );
+    }
+
+    for (const spec of EXPANSION_PRODUCTS) {
+      const direct = await context.request.get(`${BASE}/product/${spec.slug}`);
+      const body = await direct.text();
+      check(
+        `published expansion product /product/${spec.slug} returns 200 with its content`,
+        direct.status() === 200 && body.includes(spec.name) && body.includes(spec.imageAlt),
+        `status=${direct.status()} name=${body.includes(spec.name)} alt=${body.includes(spec.imageAlt)}`
+      );
+      const search = await api(`/api/products?q=${encodeURIComponent(spec.name)}&page=1&pageSize=20`);
+      check(
+        `Shop search finds ${spec.slug}`,
+        search.status === 200 && (search.body?.items ?? []).some((item) => item.slug === spec.slug),
+        `total=${search.body?.total ?? "n/a"}`
+      );
+    }
+
+    for (const departmentSlug of departmentSlugs) {
+      await page.goto(`${BASE}/naijashop/c/${departmentSlug}`, { waitUntil: "networkidle" });
+      const expectedNames = EXPANSION_PRODUCTS.filter((spec) => spec.departmentSlug === departmentSlug).map(
+        (spec) => spec.name
+      );
+      let rendered = 0;
+      for (const name of expectedNames) {
+        if ((await page.getByText(name, { exact: false }).count()) > 0) rendered += 1;
+      }
+      check(
+        `Shop department page /naijashop/c/${departmentSlug} renders its expansion products`,
+        rendered === expectedNames.length,
+        `rendered=${rendered}/${expectedNames.length}`
+      );
+      try {
+        fs.mkdirSync(SHOT_DIR, { recursive: true });
+        await page.waitForTimeout(300);
+        await page.screenshot({
+          path: path.join(SHOT_DIR, `expansion-shop-${departmentSlug}-${stamp}.png`),
+          fullPage: true
+        });
+      } catch {
+        /* supplementary evidence */
+      }
+    }
+
+    await page.goto(`${BASE}/naijashop`, { waitUntil: "networkidle" });
+    const shopDepartmentLinks = await Promise.all(
+      ["power-solar", "gaming"].map(async (slug) =>
+        page.locator(`a[href*="/naijashop/c/${slug}"]`).count()
+      )
+    );
+    check(
+      "Shop navigation exposes Power & Solar and Gaming",
+      shopDepartmentLinks.every((count) => count > 0),
+      shopDepartmentLinks.join(",")
+    );
+    const searchSpec = EXPANSION_PRODUCTS[0];
+    await page.goto(`${BASE}/naijashop/search?q=${encodeURIComponent(searchSpec.name)}`, {
+      waitUntil: "networkidle"
+    });
+    const shopSearchRendered = await page.getByText(searchSpec.name, { exact: false }).count();
+    check(
+      "Shop search page renders the approved expansion product",
+      shopSearchRendered > 0,
+      `${searchSpec.name}: ${shopSearchRendered} match(es)`
+    );
+    try {
+      await page.waitForTimeout(300);
+      await page.screenshot({
+        path: path.join(SHOT_DIR, `expansion-shop-search-${stamp}.png`),
+        fullPage: true
+      });
+    } catch {
+      /* supplementary evidence */
+    }
+
+    check(
+      "expansion adds Power & Solar and Gaming departments without disturbing the approved seed",
+      catalogue.departments.filter((entry) => entry.isActive && ["power-solar", "gaming"].includes(entry.slug)).length === 2 &&
+        catalogue.departments.some((entry) => entry.slug === "groceries-household" && entry.isActive),
+      `${catalogue.departments.filter((entry) => entry.isActive).length} active departments`
+    );
+    const counts = activeCounts(catalogue);
+    check(
+      "expansion matches the approved active-catalogue delta",
+      counts.departments === (baselineIsSeed ? 9 : SEED_BASELINE.departments + 2) &&
+        counts.products === SEED_BASELINE.products + EXPANSION_PRODUCTS.length,
+      countsLabel(counts)
+    );
+  }
+
+  async function runAcceptanceLifecycle(departmentId) {
+    const name = `DEMO — Acceptance lifecycle probe ${runId}`;
+    const slug = `demo-acceptance-${runId}`;
+    const created = await api("/api/admin/catalogue/products", {
+      method: "POST",
+      data: {
+        name,
+        slug,
+        description:
+          "Dedicated acceptance probe created through the Control Center. It is published, unpublished and archived in this run, and is not real supply.",
+        priceKobo: 250000,
+        currency: "NGN",
+        countryCode: "NG",
+        categoryId: departmentId,
+        quantity: 3,
+        lowStockLevel: 1,
+        images: [{ url: "/generated/shop/product-diced-onions-500g.webp", alt: "Demonstration product image of diced onions in a bowl" }],
+        isDemo: true
+      }
+    });
+    check("dedicated acceptance product created as DRAFT", created.status === 201 && created.body?.status === "DRAFT", `status=${created.status}`);
+    if (!created.body?.id) return;
+    createdProductIds.push(created.body.id);
+
+    const validation = await api("/api/admin/catalogue/products", {
+      method: "PATCH",
+      data: { id: created.body.id, action: "validate" }
+    });
+    check("dedicated acceptance product passes validation", validation.status === 200 && validation.body?.valid === true, `valid=${validation.body?.valid}`);
+    const published = await api("/api/admin/catalogue/products", {
+      method: "PATCH",
+      data: { id: created.body.id, action: "publish" }
+    });
+    check("dedicated acceptance product publishes", published.status === 200 && published.body?.status === "ACTIVE", `status=${published.status}`);
+    const publicPage = await context.request.get(`${BASE}/product/${slug}`);
+    const publicBody = await publicPage.text();
+    check(
+      "dedicated acceptance product is visible directly and in search before unpublish",
+      publicPage.status() === 200 && publicBody.includes(name),
+      `status=${publicPage.status()} name=${publicBody.includes(name)}`
+    );
+    const searchBefore = await api(`/api/products?q=${encodeURIComponent(name)}&page=1&pageSize=10`);
+    check(
+      "dedicated acceptance product appears in Shop search before unpublish",
+      (searchBefore.body?.items ?? []).some((entry) => entry.slug === slug),
+      `total=${searchBefore.body?.total ?? "n/a"}`
+    );
+
+    const unpublished = await api("/api/admin/catalogue/products", {
+      method: "PATCH",
+      data: { id: created.body.id, action: "unpublish" }
+    });
+    check("dedicated acceptance product unpublishes to DRAFT", unpublished.status === 200 && unpublished.body?.status === "DRAFT", `status=${unpublished.status} product=${unpublished.body?.status ?? "none"}`);
+    const afterPage = await context.request.get(`${BASE}/product/${slug}`);
+    const afterBody = await afterPage.text();
+    const searchAfter = await api(`/api/products?q=${encodeURIComponent(name)}&page=1&pageSize=10`);
+    check(
+      "unpublished acceptance product is excluded from the public page and Shop search",
+      afterPage.status() === 404 &&
+        !afterBody.includes(name) &&
+        !(searchAfter.body?.items ?? []).some((entry) => entry.slug === slug),
+      `page=${afterPage.status()} leaked=${afterBody.includes(name)} searchTotal=${searchAfter.body?.total ?? "n/a"}`
+    );
+
+    const archived = await api("/api/admin/catalogue/products", {
+      method: "PATCH",
+      data: { id: created.body.id, action: "archive" }
+    });
+    check("dedicated acceptance product archives", archived.status === 200 && archived.body?.status === "ARCHIVED", `status=${archived.status} product=${archived.body?.status ?? "none"}`);
+  }
+
 
   function report(harnessError) {
     const failed = checks.filter((entry) => !entry.ok);
@@ -155,6 +873,20 @@ function parse(response, body) {
       baseUrl: BASE,
       runId,
       checkedAt: new Date().toISOString(),
+      baseline: baseline
+        ? {
+            counts: baseline.counts,
+            departments: baseline.departments.length,
+            activeProductSlugs: baseline.activeProductSlugs
+          }
+        : null,
+      finalCounts,
+      expansion: {
+        createdDepartments: expansionCreatedDepartments,
+        createdProducts: expansionCreatedProducts,
+        plannedDepartments: EXPANSION_DEPARTMENTS.map((entry) => entry.slug),
+        plannedProducts: EXPANSION_PRODUCTS.map((entry) => entry.slug)
+      },
       checks,
       skipped: skips,
       observedDefects,
@@ -187,6 +919,39 @@ function parse(response, body) {
       page.url()
     );
 
+    baseline = await snapshotCatalogue();
+    baselineIsSeed =
+      baseline.counts.departments === SEED_BASELINE.departments &&
+      baseline.counts.products === SEED_BASELINE.products;
+    const baselineIsExpanded =
+      baseline.counts.departments === EXPANDED_BASELINE.departments &&
+      baseline.counts.products === EXPANDED_BASELINE.products;
+    check(
+      "catalogue baseline captured before any mutation",
+      Boolean(baseline),
+      `${countsLabel(baseline.counts)} · ${baseline.departments.length} departments / ${baseline.activeProductSlugs.length} active products recorded`
+    );
+    if (baselineIsSeed) {
+      check(
+        "baseline matches the approved REVIEW seed (7 active departments / 23 active products)",
+        true,
+        countsLabel(baseline.counts)
+      );
+    } else if (baselineIsExpanded) {
+      skip(
+        "baseline matches the approved REVIEW seed (7 active departments / 23 active products)",
+        `approved expansion batch already present (${countsLabel(baseline.counts)}); this run verifies it idempotently`
+      );
+    } else {
+      check("baseline matches an approved catalogue state", false, countsLabel(baseline.counts));
+    }
+    const seedPhones = baseline.departments.find((entry) => entry.slug === "phones-tablets");
+    check(
+      "shared Phones & Tablets baseline is captured for restoration",
+      Boolean(seedPhones) && seedPhones.isActive === true,
+      seedPhones ? `active=${seedPhones.isActive} order=${seedPhones.sortOrder}` : "missing"
+    );
+
     // ---------------------------------------------------------------------
     // 1. Department create with slug, ordering and imagery.
     // ---------------------------------------------------------------------
@@ -203,6 +968,11 @@ function parse(response, body) {
       return catalogue.departments.find((entry) => entry.slug === DEPT_SLUG);
     }, "created department");
     createdDepartmentId = createdDept.id;
+    check(
+      "created department is exclusively run-owned",
+      isRunOwned(createdDept),
+      `${createdDept.name} / ${createdDept.slug}`
+    );
     check(
       "department created with explicit slug and ordering",
       createdDept.slug === DEPT_SLUG && createdDept.sortOrder === 0,
@@ -239,8 +1009,8 @@ function parse(response, body) {
     const altProbe = await api("/api/admin/catalogue/departments", {
       method: "POST",
       data: {
-        name: `DEMO Alt probe ${stamp}`,
-        slug: `demo-alt-probe-${stamp}`,
+        name: `DEMO Alt probe ${runId}`,
+        slug: `demo-alt-probe-${runId}`,
         description: "DEMO department alt text probe that must not be silently dropped.",
         imageUrl: IMAGE_ONE,
         imageAlt: "Probe alt text",
@@ -252,8 +1022,9 @@ function parse(response, body) {
       altProbe.status === 201 && altProbe.body?.imageAlt === "Probe alt text",
       `status=${altProbe.status} alt=${altProbe.body?.imageAlt ?? "none"}`
     );
-    const altDept = (await adminCatalogue()).departments.find((entry) => entry.slug === `demo-alt-probe-${stamp}`);
+    const altDept = (await adminCatalogue()).departments.find((entry) => entry.slug === `demo-alt-probe-${runId}`);
     check("alt probe department stored once", Boolean(altDept) && altDept.imageAlt === "Probe alt text", altDept ? String(altDept.imageAlt) : "missing");
+    check("alt probe department is run-owned", isRunOwned(altDept), altDept ? `${altDept.name} / ${altDept.slug}` : "missing");
     if (altDept) {
       await api("/api/admin/catalogue/departments", { method: "PATCH", data: { id: altDept.id, isActive: false } });
     }
@@ -261,7 +1032,7 @@ function parse(response, body) {
     const duplicateDept = await api("/api/admin/catalogue/departments", {
       method: "POST",
       data: {
-        name: `DEMO Duplicate probe ${stamp}`,
+        name: `DEMO Duplicate probe ${runId}`,
         slug: DEPT_SLUG_EDITED,
         description: "DEMO duplicate slug probe that must be refused.",
         imageUrl: IMAGE_ONE,
@@ -276,7 +1047,7 @@ function parse(response, body) {
     );
     check(
       "duplicate department probe created no department",
-      !(await adminCatalogue()).departments.some((entry) => entry.name === `DEMO Duplicate probe ${stamp}`),
+      !(await adminCatalogue()).departments.some((entry) => entry.name === `DEMO Duplicate probe ${runId}`),
       ""
     );
 
@@ -335,7 +1106,7 @@ function parse(response, body) {
 
     // Invalid data must be refused with an actionable error.
     const validProbe = {
-      name: `DEMO invalid probe ${stamp}`,
+      name: `DEMO invalid probe ${runId}`,
       description: "DEMO invalid-data probe that must never be saved.",
       priceKobo: 1000,
       currency: "NGN",
@@ -429,7 +1200,7 @@ function parse(response, body) {
     );
 
     const invalidLeak = (await adminCatalogue()).products.filter((entry) =>
-      entry.name.startsWith(`DEMO invalid probe ${stamp}`)
+      entry.name.startsWith(`DEMO invalid probe ${runId}`)
     );
     check("invalid product probes created no rows", invalidLeak.length === 0, `leaked=${invalidLeak.length}`);
 
@@ -456,7 +1227,7 @@ function parse(response, body) {
       method: "POST",
       data: {
         name: INCOMPLETE_NAME,
-        slug: `demo-incomplete-probe-${stamp}`,
+        slug: `demo-incomplete-probe-${runId}`,
         description: "DEMO incomplete listing that must fail validation before publication.",
         priceKobo: 120000,
         currency: "NGN",
@@ -504,7 +1275,7 @@ function parse(response, body) {
       `status=${incompleteArchive.status} product=${incompleteArchive.body?.status ?? "none"}`
     );
     const incompletePublic = await context.request.get(
-      `${BASE}/product/${incomplete.body?.slug ?? `demo-incomplete-probe-${stamp}`}`
+      `${BASE}/product/${incomplete.body?.slug ?? `demo-incomplete-probe-${runId}`}`
     );
     check("archived incomplete draft is not public", incompletePublic.status() === 404, `status=${incompletePublic.status()}`);
 
@@ -522,6 +1293,115 @@ function parse(response, body) {
       /returns 404 until it is published/.test(previewText) && (await previewPanel.getByText("Open public page").count()) === 0,
       ""
     );
+
+    // ---------------------------------------------------------------------
+    // 3b. Authorized full draft preview via the Control Center.
+    // ---------------------------------------------------------------------
+    const previewPath = `/admin/catalogue/products/${createdProduct.id}/preview`;
+    const adminPreview = await context.request.get(`${BASE}${previewPath}`);
+    const adminPreviewHtml = await adminPreview.text();
+    const previewRoutePresent =
+      adminPreview.status() === 200 || adminPreviewHtml.includes("Preview unavailable");
+    if (previewRoutePresent) {
+      check(
+        "authorized admin can open the complete draft preview",
+        adminPreview.status() === 200 &&
+          adminPreviewHtml.includes(PRODUCT_NAME) &&
+          adminPreviewHtml.includes("DEMO listing created through the Control Center catalogue workflow.") &&
+          adminPreviewHtml.includes(DEPT_NAME) &&
+          adminPreviewHtml.includes("4,500.00") &&
+          adminPreviewHtml.includes(IMAGE_ONE) &&
+          adminPreviewHtml.includes("DRAFT"),
+        `status=${adminPreview.status()} name=${adminPreviewHtml.includes(PRODUCT_NAME)} image=${adminPreviewHtml.includes(IMAGE_ONE)}`
+      );
+      const title = adminPreviewHtml.match(/<title>(.*?)<\/title>/s)?.[1] ?? "";
+      check(
+        "preview metadata does not expose the draft name",
+        Boolean(title) && !title.includes(PRODUCT_NAME) && !title.includes("Review workflow blender"),
+        title.slice(0, 120)
+      );
+      const robotsMeta = adminPreviewHtml.match(/<meta[^>]+name="robots"[^>]*>/i)?.[0] ?? "";
+      check(
+        "preview document is excluded from indexing",
+        /noindex/i.test(robotsMeta) && /nofollow/i.test(robotsMeta),
+        robotsMeta || "robots meta missing"
+      );
+      const previewCache = (adminPreview.headers()["cache-control"] ?? "").toLowerCase();
+      check(
+        "preview response is not publicly cacheable",
+        (previewCache.includes("no-store") || previewCache.includes("private")) && !previewCache.includes("public"),
+        previewCache || "no cache-control header"
+      );
+      check(
+        "inline preview links to the authorized full preview",
+        (await previewPanel.locator(`a[href="${previewPath}"]`).count()) === 1,
+        previewPath
+      );
+
+      const anonymousApi = await request.newContext({ baseURL: BASE });
+      const anonymousPreview = await anonymousApi.get(previewPath, { maxRedirects: 0 });
+      const anonymousPreviewBody = await anonymousPreview.text();
+      check(
+        "anonymous request cannot open the draft preview",
+        [301, 302, 303, 307, 308, 401, 403, 404].includes(anonymousPreview.status()) &&
+          !anonymousPreviewBody.includes(PRODUCT_NAME) &&
+          !anonymousPreviewBody.includes("DEMO listing created through the Control Center catalogue workflow."),
+        `status=${anonymousPreview.status()} location=${anonymousPreview.headers()["location"] ?? "none"} leaked=${anonymousPreviewBody.includes(PRODUCT_NAME)}`
+      );
+      await anonymousApi.dispose();
+
+      if (fs.existsSync(CUSTOMER_FILE)) {
+        const rawCustomer = fs
+          .readFileSync(CUSTOMER_FILE, "utf8")
+          .trim()
+          .split(/\r?\n/)
+          .map((line) => line.trim());
+        const customerApi = await request.newContext({ baseURL: BASE });
+        const customerLogin = await customerApi.post("/api/auth/login", {
+          data: { email: rawCustomer[0], password: rawCustomer[1] },
+          headers: { Origin: BASE }
+        });
+        const customerPreview = await customerApi.get(previewPath, { maxRedirects: 0 });
+        const customerPreviewBody = await customerPreview.text();
+        check(
+          "non-admin customer cannot open the draft preview",
+          customerLogin.status() === 200 &&
+            [301, 302, 303, 307, 308, 401, 403, 404].includes(customerPreview.status()) &&
+            !customerPreviewBody.includes(PRODUCT_NAME) &&
+            !customerPreviewBody.includes("DEMO listing created through the Control Center catalogue workflow."),
+          `login=${customerLogin.status()} preview=${customerPreview.status()} location=${customerPreview.headers()["location"] ?? "none"} leaked=${customerPreviewBody.includes(PRODUCT_NAME)}`
+        );
+        const customerCatalogue = await customerApi.get("/api/admin/catalogue");
+        check(
+          "customer cannot read the draft through the admin catalogue API",
+          customerCatalogue.status() === 401 || customerCatalogue.status() === 403,
+          `status=${customerCatalogue.status()}`
+        );
+        await customerApi.dispose();
+      } else {
+        skip("non-admin customer cannot open the draft preview", `${CUSTOMER_FILE} is missing`);
+      }
+
+      check(
+        "public product JSON still returns 404 for the draft",
+        (await api(`/api/products/${createdProduct.slug}`)).status === 404,
+        ""
+      );
+    } else {
+      skip(
+        "authorized full draft preview",
+        "the served build predates the Control Center preview route; a rebuild is required before this assertion can run"
+      );
+      skip(
+        "preview authorization, metadata and cache headers",
+        "dependent on the Control Center preview route being present in the served build"
+      );
+      skip(
+        "inline preview links to the authorized full preview",
+        "the served build predates the full-preview link"
+      );
+    }
+
     try {
       fs.mkdirSync(SHOT_DIR, { recursive: true });
       await page.waitForTimeout(400);
@@ -712,7 +1592,134 @@ function parse(response, body) {
     );
 
     // ---------------------------------------------------------------------
-    // 6. Authorization and historical-read checks.
+    // 5b. Isolation cleanup, shared-state restoration and baseline assertion.
+    // ---------------------------------------------------------------------
+    await cleanupRunRecords({ assertBaseline: true });
+    await guardSharedDepartments();
+    const afterCleanup = await adminCatalogue();
+    const sharedPhones = afterCleanup.departments.find((entry) => entry.slug === "phones-tablets");
+    check(
+      "shared Phones & Tablets remains active after cleanup",
+      sharedPhones?.isActive === true,
+      sharedPhones ? `active=${sharedPhones.isActive} order=${sharedPhones.sortOrder}` : "missing"
+    );
+    const postCleanupCounts = activeCounts(afterCleanup);
+    if (baselineIsSeed) {
+      check(
+        "post-cleanup catalogue is 7 active departments / 23 active products",
+        postCleanupCounts.departments === SEED_BASELINE.departments &&
+          postCleanupCounts.products === SEED_BASELINE.products,
+        countsLabel(postCleanupCounts)
+      );
+    } else {
+      skip(
+        "post-cleanup catalogue is 7 active departments / 23 active products",
+        `run started from the approved expansion state; recorded baseline ${countsLabel(baseline.counts)} restored`
+      );
+    }
+
+    // ---------------------------------------------------------------------
+    // 6. Control Center expansion: Groceries produce, Power & Solar, Gaming.
+    // ---------------------------------------------------------------------
+    const expansionSlugs = EXPANSION_PRODUCTS.map((spec) => spec.slug);
+    check(
+      "expansion product slugs are unique and do not duplicate the approved catalogue",
+      new Set(expansionSlugs).size === expansionSlugs.length &&
+        !expansionSlugs.includes("demo-fresh-tomatoes") &&
+        !afterCleanup.products.some(
+          (entry) => expansionSlugs.includes(entry.slug) && entry.isDemo !== true
+        ),
+      `${expansionSlugs.length} planned products`
+    );
+
+    for (const spec of EXPANSION_DEPARTMENTS) {
+      const department = await ensureExpansionDepartment(spec);
+      if (!department?.id) {
+        check(`expansion department ${spec.slug} is available`, false, "department create/repair returned no id");
+      }
+    }
+    await ensureGroceriesImageAlt();
+    const expansionCatalogue = await adminCatalogue();
+    const departmentIdBySlug = new Map(
+      expansionCatalogue.departments.filter((entry) => entry.isActive).map((entry) => [entry.slug, entry.id])
+    );
+    check(
+      "Groceries, Power & Solar and Gaming departments are active",
+      ["groceries-household", "power-solar", "gaming"].every((slug) => departmentIdBySlug.has(slug)),
+      ["groceries-household", "power-solar", "gaming"]
+        .map((slug) => `${slug}=${departmentIdBySlug.has(slug) ? "active" : "missing"}`)
+        .join(", ")
+    );
+
+    for (const spec of EXPANSION_PRODUCTS) {
+      const departmentId = departmentIdBySlug.get(spec.departmentSlug);
+      if (!departmentId) {
+        check(`expansion product ${spec.slug} has an active department`, false, spec.departmentSlug);
+        continue;
+      }
+      await ensureExpansionProduct(spec, departmentId);
+    }
+    await verifyExpansionVisibility();
+
+    const afterExpansion = await adminCatalogue();
+    const tomatoes = afterExpansion.products.filter(
+      (entry) => entry.slug === "demo-fresh-tomatoes" && entry.status === "ACTIVE"
+    );
+    check(
+      "the existing tomatoes product is preserved and not duplicated by the expansion",
+      tomatoes.length === 1,
+      `tomatoes=${tomatoes.length}`
+    );
+    check(
+      "expansion product imagery is approved, present and carries alt text",
+      EXPANSION_PRODUCTS.every((spec) => {
+        const entry = afterExpansion.products.find((product) => product.slug === spec.slug);
+        return (
+          entry?.status === "ACTIVE" &&
+          entry.isDemo === true &&
+          entry.isSample === false &&
+          entry.saleMode === "escrow" &&
+          entry.currency === "NGN" &&
+          entry.priceKobo === String(spec.priceKobo) &&
+          entry.stock?.quantity === spec.quantity &&
+          entry.images.length === 1 &&
+          entry.images.every((image) => image.url === spec.imageUrl && image.alt === spec.imageAlt) &&
+          fs.existsSync(path.join(process.cwd(), "public", spec.imageUrl.replace(/^\/+/, "")))
+        );
+      }),
+      `${EXPANSION_PRODUCTS.length} products checked against public/`
+    );
+    check(
+      "expansion product images are unique and not reused",
+      new Set(EXPANSION_PRODUCTS.map((spec) => spec.imageUrl)).size === EXPANSION_PRODUCTS.length,
+      `${EXPANSION_PRODUCTS.length} images`
+    );
+    const powerSolar = afterExpansion.departments.find((entry) => entry.slug === "power-solar");
+    const gaming = afterExpansion.departments.find((entry) => entry.slug === "gaming");
+    check(
+      "new departments match the approved sort order, imagery and alt text",
+      powerSolar?.sortOrder === 30 &&
+        powerSolar?.imageUrl === "/generated/shop/category-power-solar.webp" &&
+        powerSolar?.imageAlt === "Solar panel, portable power station and power bank on a pale blue surface" &&
+        gaming?.sortOrder === 31 &&
+        gaming?.imageUrl === "/generated/shop/category-gaming.webp" &&
+        gaming?.imageAlt === "Game controller, mechanical keyboard and headset on a dark surface",
+      `power-solar=${powerSolar?.sortOrder}/${powerSolar?.imageAlt ?? "no-alt"}; gaming=${gaming?.sortOrder}/${gaming?.imageAlt ?? "no-alt"}`
+    );
+
+    // ---------------------------------------------------------------------
+    // 7. Dedicated acceptance product: publish → unpublish → exclusion.
+    // ---------------------------------------------------------------------
+    const groceries = (await adminCatalogue()).departments.find((entry) => entry.slug === "groceries-household");
+    check(
+      "existing Groceries department is available for the acceptance probe",
+      groceries?.isActive === true,
+      groceries ? `active=${groceries.isActive}` : "missing"
+    );
+    if (groceries) await runAcceptanceLifecycle(groceries.id);
+
+    // ---------------------------------------------------------------------
+    // 8. Authorization and historical-read checks.
     // ---------------------------------------------------------------------
     const anonymous = await fetch(`${BASE}/api/admin/catalogue`);
     check("anonymous catalogue read refused", anonymous.status === 401 || anonymous.status === 403, `status=${anonymous.status}`);
@@ -767,12 +1774,41 @@ function parse(response, body) {
       "regional scope enforcement executed end-to-end",
       "no country-scoped administrator fixture exists; scope helpers are enforced in the service and routes"
     );
+
+    const finalCatalogue = await adminCatalogue();
+    finalCounts = activeCounts(finalCatalogue);
+    const retainedExpansion = EXPANSION_PRODUCTS.filter((spec) =>
+      finalCatalogue.products.some((entry) => entry.slug === spec.slug && entry.status === "ACTIVE")
+    );
+    check(
+      "final catalogue retains the approved 9-department / 31-product expansion batch",
+      finalCounts.departments === EXPANDED_BASELINE.departments &&
+        finalCounts.products === EXPANDED_BASELINE.products &&
+        retainedExpansion.length === EXPANSION_PRODUCTS.length,
+      `${countsLabel(finalCounts)}; retained=${retainedExpansion.length}/${EXPANSION_PRODUCTS.length}`
+    );
+    const activeRunRecords = finalCatalogue.products.filter(
+      (entry) => isRunOwned(entry) && entry.status !== "ARCHIVED"
+    );
+    check(
+      "no run-owned workflow or acceptance product remains published",
+      activeRunRecords.length === 0,
+      activeRunRecords.map((entry) => entry.slug).join(",") || "none"
+    );
+    await guardSharedDepartments();
     check("no browser page errors", pageErrors.length === 0, pageErrors.slice(0, 2).join(" | "));
   } catch (error) {
     harnessError = error;
     check("journey completed without harness error", false, error.message);
   } finally {
-    await cleanup();
+    await cleanupRunRecords();
+    await guardSharedDepartments();
+    try {
+      const finalCatalogue = await adminCatalogue();
+      finalCounts = activeCounts(finalCatalogue);
+    } catch {
+      /* final counts unavailable; the report records the last known state */
+    }
     await browser.close();
     process.exit(report(harnessError));
   }
