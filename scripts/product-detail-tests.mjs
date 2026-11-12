@@ -292,6 +292,16 @@ async function main() {
         await screenshot(page, "mobile-viewport-purchase.png", false);
       }
 
+      // A real click on the purchase control must take an unauthenticated
+      // shopper to sign-in rather than silently doing nothing.
+      await page.evaluate(() => {
+        document.querySelector('[data-testid="add-to-cart"]')?.scrollIntoView({ block: "center" });
+      });
+      await page.waitForTimeout(300);
+      await page.getByTestId("add-to-cart").click();
+      await page.waitForURL(/\/login/, { timeout: 8000 });
+      check(`${viewport.label} purchase: guest add-to-cart routes to sign-in`, page.url().includes("/login"), page.url());
+
       // Entry paths, each followed by browser back to its origin.
       const entryPaths = [
         { label: "home", url: "/", selector: 'a[href^="/product/"]' },
