@@ -561,3 +561,21 @@ and needs supply, onboarding and payout work rather than a rebuild.
 - Runtime country/city activation state in the live database was not read; only code and recorded
   tests were inspected.
 - No test, browser or database verification was performed for this document.
+
+## REVIEW catalogue and Shop acceptance (2026-11-12)
+
+| Requirement | Evidence | Status |
+|---|---|---|
+| Separate REVIEW environment with full migrations | `naijadeals_review`, classification REVIEW, 72 migrations | VERIFIED |
+| Guarded preview startup (identity + classification) | `scripts/review-preview-guard.ts`, `scripts/start-review-preview.cmd` | VERIFIED |
+| Demonstration catalogue, no CRF fixtures | 7 departments, 23 active DEMO products, 0 CRF categories | VERIFIED |
+| Product image/content accuracy | Electronics tile banner-electronics.webp; product images 200 with alt | VERIFIED |
+| Public availability claims | product detail + cards say Demonstration seller; 404 for unpublished | VERIFIED |
+| Shop wording and cart units | Deliveries & Freight label; "N product lines · M units" | VERIFIED |
+| Mobile layout | docSW == viewport at 320/390/768/1440; no clipped wholesale copy | VERIFIED |
+| Basket continuity | `scripts/review-basket-journey.cjs` 10/10; independent UI 18/18 | VERIFIED |
+| Admin suspend/reactivate through to Shop | `scripts/review-catalogue-admin-journey.cjs` 7/7 | VERIFIED |
+| REVIEW financial refusal | ledger + provider choke points; 5/5, zero provider fetches, no ledger writes; TEST allowed | VERIFIED |
+| Catalogue editing (department/product fields) in Control Center | existing UI supports moderation only; no product create/edit form | NOT IMPLEMENTED |
+| Admin-led catalogue slice: publishing controls, edit validation, image remediation queue | moderation exists; editing, demo/test classification fields and remediation queue are absent | PARTIAL |
+| Search index for REVIEW catalogue | engine unavailable; DB substring fallback serves results; reindex script committed | PARTIAL |
