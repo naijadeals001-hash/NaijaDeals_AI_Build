@@ -1,8 +1,15 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
-import { updateOrderStatus } from "./order.service";
+import {
+  assertNoBlockingRefundObligation,
+  loadOrderRefundState,
+  lockOrderRow,
+  updateOrderStatus
+} from "./order.service";
 import { refundPayment } from "@/lib/payments/service";
 import { recordAudit } from "./audit.service";
+import { recordSystemEvent } from "./event.service";
 
 export async function getVendorForUser(userId: string) {
   const vendor = await prisma.vendor.findFirst({ where: { ownerId: userId } });
@@ -240,62 +247,383 @@ export async function advanceSellerOrder(userId: string, orderId: string, status
   );
 }
 
+const RETURN_REFUND_INTENT = "return.refund_intent";
+
+type ReturnRefundIntent = { attempt: number; idempotencyKey: string };
+
+/**
+ * Persisted refund intent for a return receipt.
+ *
+ * A return receipt moves stock and money in two different systems: inventory is
+ * a database transaction, while a wallet/provider refund is not something a
+ * surrounding Prisma transaction can cover. The old code restocked, committed
+ * `RECEIVED`, and only then called `refundPayment`; a provider failure or a
+ * process death left the return permanently un-refundable because a retry was
+ * rejected as an invalid transition.
+ *
+ * The `SystemEvent` row is the durable intent. It is written in the same
+ * transaction as the physical receipt and records the exact idempotency key
+ * used for that attempt. A retry:
+ *   - reuses a PENDING/COMPLETED attempt key (refundPayment resumes or returns
+ *     the settled refund);
+ *   - allocates a new attempt number only after the previous attempt is
+ *     definitively FAILED and its reservation was released.
+ */
+async function loadLatestReturnIntent(db: Prisma.TransactionClient | typeof prisma, returnId: string) {
+  const events = await db.systemEvent.findMany({
+    where: { type: RETURN_REFUND_INTENT, entity: "ReturnRequest", entityId: returnId },
+    select: { payload: true },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+  });
+  let latest: ReturnRefundIntent | null = null;
+  for (const event of events) {
+    const payload = event.payload as Record<string, unknown> | null;
+    const attempt = typeof payload?.attempt === "number" ? payload.attempt : null;
+    const idempotencyKey = typeof payload?.idempotencyKey === "string" ? payload.idempotencyKey : null;
+    if (attempt === null || !idempotencyKey) continue;
+    if (!latest || attempt > latest.attempt) latest = { attempt, idempotencyKey };
+  }
+  return latest;
+}
+
+async function recordReturnIntent(
+  tx: Prisma.TransactionClient,
+  input: { returnId: string; orderId: string; actorId: string; attempt: number; idempotencyKey: string; restocked: boolean }
+) {
+  await recordSystemEvent({
+    tx,
+    type: RETURN_REFUND_INTENT,
+    actorId: input.actorId,
+    entity: "ReturnRequest",
+    entityId: input.returnId,
+    payload: {
+      orderId: input.orderId,
+      attempt: input.attempt,
+      idempotencyKey: input.idempotencyKey,
+      restocked: input.restocked
+    }
+  });
+}
+
+async function restockReturnedItems(tx: Prisma.TransactionClient, orderId: string) {
+  const items = await tx.orderItem.findMany({ where: { orderId } });
+  for (const item of items) {
+    if (item.variantId) {
+      await tx.productVariant.update({ where: { id: item.variantId }, data: { stock: { increment: item.quantity } } });
+    } else {
+      await tx.inventoryStock.update({
+        where: { productId: item.productId },
+        data: { quantity: { increment: item.quantity } }
+      });
+    }
+  }
+}
+
+/**
+ * Finalise a physically received return once its refund has settled.
+ *
+ * Conditional on `status = RECEIVED`, so two concurrent retries cannot both
+ * write a second refund amount. A return whose order was already fully refunded
+ * elsewhere records `REFUNDED` with `refundKobo = 0` and an explicit system
+ * event; no invented money is posted.
+ */
+async function finalizeReceivedReturn(input: {
+  returnId: string;
+  actorId: string;
+  refundedKobo: bigint;
+  refundId?: string;
+  alreadyRefunded: boolean;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const hint = await tx.returnRequest.findUnique({ where: { id: input.returnId }, select: { orderId: true } });
+    if (!hint) throw new ApiError(404, "return_not_found", "Return request not found.");
+    await lockOrderRow(tx, hint.orderId);
+    const current = await tx.returnRequest.findUniqueOrThrow({ where: { id: input.returnId } });
+    if (current.status === "REFUNDED") return current;
+
+    const updated = await tx.returnRequest.updateMany({
+      where: { id: input.returnId, status: "RECEIVED" },
+      data: {
+        status: "REFUNDED",
+        refundKobo: input.refundedKobo,
+        resolvedAt: new Date()
+      }
+    });
+    if (updated.count !== 1) {
+      throw new ApiError(
+        409,
+        "return_conflict",
+        "This return changed while its refund was settling. Reload it before retrying."
+      );
+    }
+    await recordSystemEvent({
+      tx,
+      type: input.alreadyRefunded ? "return.refund_skipped_already_refunded" : "return.refunded",
+      actorId: input.actorId,
+      entity: "ReturnRequest",
+      entityId: input.returnId,
+      payload: {
+        orderId: current.orderId,
+        refundId: input.refundId ?? null,
+        refundedKobo: input.refundedKobo.toString(),
+        alreadyRefunded: input.alreadyRefunded
+      }
+    });
+    await recordAudit({
+      tx,
+      actorId: input.actorId,
+      action: input.alreadyRefunded ? "return.refund_skipped_already_refunded" : "return.refunded",
+      entity: "ReturnRequest",
+      entityId: input.returnId,
+      metadata: {
+        orderId: current.orderId,
+        before: { status: current.status, refundKobo: current.refundKobo.toString() },
+        after: { status: "REFUNDED", refundKobo: input.refundedKobo.toString() },
+        refundId: input.refundId ?? null,
+        alreadyRefunded: input.alreadyRefunded
+      }
+    });
+    return tx.returnRequest.findUniqueOrThrow({ where: { id: input.returnId } });
+  });
+}
+
 export async function resolveReturn(userId: string, returnId: string, action: "approve" | "reject" | "receive") {
   const vendor = await getVendorForUser(userId);
-  const request = await prisma.returnRequest.findUnique({
-    where: { id: returnId },
-    include: { order: { include: { items: true, payments: true } } }
-  });
-  if (!request) throw new ApiError(404, "return_not_found", "Return request not found.");
-  if (request.vendorId !== vendor.id) throw new ApiError(403, "forbidden", "This return belongs to another seller.");
+  const hint = await prisma.returnRequest.findUnique({ where: { id: returnId }, select: { orderId: true } });
+  if (!hint) throw new ApiError(404, "return_not_found", "Return request not found.");
 
-  if (action === "approve") {
-    if (request.status !== "REQUESTED") throw new ApiError(409, "invalid_transition", "Only requested returns can be approved.");
-    return prisma.returnRequest.update({
-      where: { id: request.id },
-      data: { status: "APPROVED", resolvedAt: new Date() }
+  if (action === "approve" || action === "reject") {
+    return prisma.$transaction(async (tx) => {
+      await lockOrderRow(tx, hint.orderId);
+      const request = await tx.returnRequest.findUnique({ where: { id: returnId } });
+      if (!request) throw new ApiError(404, "return_not_found", "Return request not found.");
+      if (request.vendorId !== vendor.id) throw new ApiError(403, "forbidden", "This return belongs to another seller.");
+      if (request.status !== "REQUESTED") {
+        throw new ApiError(
+          409,
+          "invalid_transition",
+          action === "approve" ? "Only requested returns can be approved." : "Only requested returns can be rejected."
+        );
+      }
+      const status = action === "approve" ? "APPROVED" : "REJECTED";
+      const claimed = await tx.returnRequest.updateMany({
+        where: { id: request.id, status: "REQUESTED" },
+        data: { status, resolvedAt: new Date() }
+      });
+      if (claimed.count !== 1) {
+        throw new ApiError(409, "invalid_transition", "This return changed before it could be resolved.");
+      }
+      await recordAudit({
+        tx,
+        actorId: userId,
+        action: action === "approve" ? "return.approved" : "return.rejected",
+        entity: "ReturnRequest",
+        entityId: request.id,
+        metadata: { orderId: request.orderId, before: { status: request.status }, after: { status } }
+      });
+      return tx.returnRequest.findUniqueOrThrow({ where: { id: request.id } });
     });
   }
-  if (action === "reject") {
-    if (request.status !== "REQUESTED") throw new ApiError(409, "invalid_transition", "Only requested returns can be rejected.");
-    return prisma.returnRequest.update({
-      where: { id: request.id },
-      data: { status: "REJECTED", resolvedAt: new Date() }
+
+  // 1. Physical receipt and the durable refund intent commit together.
+  const receipt = await prisma.$transaction(async (tx) => {
+    await lockOrderRow(tx, hint.orderId);
+    const request = await tx.returnRequest.findUnique({
+      where: { id: returnId },
+      include: { order: { include: { items: true, payments: true } } }
     });
-  }
+    if (!request) throw new ApiError(404, "return_not_found", "Return request not found.");
+    if (request.vendorId !== vendor.id) throw new ApiError(403, "forbidden", "This return belongs to another seller.");
+    if (request.status === "REFUNDED") {
+      return { alreadyFinal: true as const, request, idempotencyKey: null, attempt: 0, refundCompleted: true };
+    }
+    if (!["REQUESTED", "APPROVED", "RECEIVED"].includes(request.status)) {
+      throw new ApiError(409, "invalid_transition", "Only approved returns can be received.");
+    }
 
-  if (request.status !== "APPROVED" && request.status !== "REQUESTED") {
-    throw new ApiError(409, "invalid_transition", "Only approved returns can be received.");
-  }
-
-  // Restock returned units, then refund the verified payment.
-  await prisma.$transaction(async (tx) => {
-    for (const item of request.order.items) {
-      if (item.variantId) {
-        await tx.productVariant.update({ where: { id: item.variantId }, data: { stock: { increment: item.quantity } } });
-      } else {
-        await tx.inventoryStock.update({
-          where: { productId: item.productId },
-          data: { quantity: { increment: item.quantity } }
+    let restockedNow = false;
+    if (!request.restocked) {
+      const claimed = await tx.returnRequest.updateMany({
+        // RECEIVED with restocked=false is a legacy/interrupted receipt: the
+        // physical units still need restoring exactly once.
+        where: { id: request.id, status: { in: ["REQUESTED", "APPROVED", "RECEIVED"] }, restocked: false },
+        data: { status: "RECEIVED", restocked: true, resolvedAt: new Date() }
+      });
+      if (claimed.count === 1) {
+        // The physical units are back with the seller: restore them exactly once.
+        await restockReturnedItems(tx, request.orderId);
+        restockedNow = true;
+        await recordAudit({
+          tx,
+          actorId: userId,
+          action: "return.received",
+          entity: "ReturnRequest",
+          entityId: request.id,
+          metadata: { orderId: request.orderId, restocked: true, before: { status: request.status }, after: { status: "RECEIVED" } }
         });
       }
     }
-    await tx.returnRequest.update({
-      where: { id: request.id },
-      data: { status: "RECEIVED", restocked: true, resolvedAt: new Date() }
+
+    // Re-read after the conditional claim so concurrent receivers agree on the
+    // stored status and restock flag.
+    const fresh = await tx.returnRequest.findUniqueOrThrow({ where: { id: request.id } });
+
+    const latest = await loadLatestReturnIntent(tx, request.id);
+    let intent: ReturnRefundIntent;
+    if (!latest) {
+      intent = { attempt: 1, idempotencyKey: `return:${request.id}:1` };
+      await recordReturnIntent(tx, {
+        returnId: request.id,
+        orderId: request.orderId,
+        actorId: userId,
+        attempt: intent.attempt,
+        idempotencyKey: intent.idempotencyKey,
+        restocked: fresh.restocked
+      });
+    } else {
+      const prior = await tx.refund.findUnique({ where: { idempotencyKey: latest.idempotencyKey }, select: { status: true } });
+      if (prior?.status === "FAILED") {
+        intent = { attempt: latest.attempt + 1, idempotencyKey: `return:${request.id}:${latest.attempt + 1}` };
+        await recordReturnIntent(tx, {
+          returnId: request.id,
+          orderId: request.orderId,
+          actorId: userId,
+          attempt: intent.attempt,
+          idempotencyKey: intent.idempotencyKey,
+          restocked: fresh.restocked
+        });
+      } else {
+        intent = latest;
+      }
+    }
+
+    const priorRefund = await tx.refund.findUnique({
+      where: { idempotencyKey: intent.idempotencyKey },
+      select: { id: true, status: true, amountKobo: true }
     });
+    return {
+      alreadyFinal: false as const,
+      request: fresh,
+      idempotencyKey: intent.idempotencyKey,
+      attempt: intent.attempt,
+      refundCompleted: priorRefund?.status === "COMPLETED",
+      priorRefundId: priorRefund?.id ?? null,
+      priorRefundKobo: priorRefund?.amountKobo ?? BigInt(0),
+      restockedNow
+    };
   });
 
-  const refund = await refundPayment({
-    orderId: request.orderId,
+  if (receipt.alreadyFinal) return receipt.request;
+
+  const order = await prisma.order.findUniqueOrThrow({ where: { id: receipt.request.orderId } });
+  const reason = `Return received: ${receipt.request.reason}`;
+
+  // A crash after the provider confirmed but before the local settlement is
+  // recovered by the same key: refundPayment treats a COMPLETED row as
+  // idempotent. No provider call is made in that case.
+  if (!receipt.refundCompleted) {
+    const state = await loadOrderRefundState(prisma, order.id);
+    try {
+      // Reuse the shared fail-closed guard instead of refunding around a
+      // pending/uncertain claim.
+      assertNoBlockingRefundObligation(state);
+    } catch (error) {
+      await prisma.systemEvent
+        .create({
+          data: {
+            type: "return.refund_blocked",
+            actorId: userId,
+            entity: "ReturnRequest",
+            entityId: receipt.request.id,
+            payload: {
+              orderId: order.id,
+              reason: error instanceof ApiError ? error.code : "refund_state_conflict",
+              pendingClaimKobo: state.pendingClaimKobo.toString(),
+              uncertainProviderClaimKobo: state.uncertainProviderClaimKobo.toString()
+            }
+          }
+        })
+        .catch(() => undefined);
+      throw error;
+    }
+
+    const remainingKobo = order.totalKobo - state.claimedKobo;
+    if (remainingKobo <= BigInt(0)) {
+      if (order.paymentStatus === "refunded" || state.settledKobo >= order.totalKobo) {
+        return finalizeReceivedReturn({
+          returnId: receipt.request.id,
+          actorId: userId,
+          refundedKobo: BigInt(0),
+          alreadyRefunded: true
+        });
+      }
+      throw new ApiError(
+        409,
+        "refund_reservation_unreconciled",
+        "The order has no refundable balance but is not fully refunded. Reconcile it before finalising the return."
+      );
+    }
+
+    try {
+      const refund = await refundPayment({
+        orderId: order.id,
+        actorId: userId,
+        reason,
+        amountKobo: remainingKobo,
+        restock: false,
+        idempotencyKey: receipt.idempotencyKey
+      });
+      return finalizeReceivedReturn({
+        returnId: receipt.request.id,
+        actorId: userId,
+        refundedKobo: BigInt(refund.refundedKobo),
+        refundId: refund.refundId,
+        alreadyRefunded: false
+      });
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "already_refunded") {
+        const fresh = await prisma.order.findUnique({
+          where: { id: order.id },
+          select: { paymentStatus: true, status: true }
+        });
+        if (fresh?.paymentStatus === "refunded" || fresh?.status === "refunded") {
+          return finalizeReceivedReturn({
+            returnId: receipt.request.id,
+            actorId: userId,
+            refundedKobo: BigInt(0),
+            alreadyRefunded: true
+          });
+        }
+      }
+      // The intent and the receipt stay committed. A retry of `receive` reuses
+      // the PENDING attempt or allocates the next attempt after a definitive
+      // failure; it never restocks again.
+      await prisma.systemEvent
+        .create({
+          data: {
+            type: "return.refund_attempt_failed",
+            actorId: userId,
+            entity: "ReturnRequest",
+            entityId: receipt.request.id,
+            payload: {
+              orderId: order.id,
+              idempotencyKey: receipt.idempotencyKey,
+              attempt: receipt.attempt,
+              code: error instanceof ApiError ? error.code : "unknown_error"
+            }
+          }
+        })
+        .catch(() => undefined);
+      throw error;
+    }
+  }
+
+  return finalizeReceivedReturn({
+    returnId: receipt.request.id,
     actorId: userId,
-    reason: `Return received: ${request.reason}`,
-    restock: false
-  });
-
-  return prisma.returnRequest.update({
-    where: { id: request.id },
-    data: { status: "REFUNDED", refundKobo: BigInt(refund.refundedKobo) }
+    refundedKobo: receipt.priorRefundKobo,
+    refundId: receipt.priorRefundId ?? undefined,
+    alreadyRefunded: false
   });
 }
 

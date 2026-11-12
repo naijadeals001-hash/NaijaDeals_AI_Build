@@ -3,12 +3,23 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import type { SessionUser } from "@/lib/auth/session";
 import { hasPermission, unheldPermissions } from "@/lib/auth/permissions";
+import { assertRegion } from "@/lib/auth/scope";
 import { recordAudit } from "./audit.service";
 import { isCityActivated } from "./city.service";
 import { notifyUser, notifyVendorOwner } from "./notification.service";
 import { recordSystemEvent } from "./event.service";
 import { updateDeliveryStatus } from "./delivery.service";
-import { updateOrderStatus } from "./order.service";
+import {
+  assertNoBlockingRefundObligation,
+  classifyDeliveryCustody,
+  loadOrderRefundState,
+  lockOrderRow,
+  updateOrderStatus
+} from "./order.service";
+import {
+  cancelUnpaidOrderTx,
+  needsRefundClosure
+} from "./checkout.service";
 import { refundPayment } from "@/lib/payments/service";
 import { ensureWallet, listPaymentMethods } from "@/lib/payments/service";
 import { assertLiveFinancialOperations } from "@/lib/payments/boundary";
@@ -94,67 +105,331 @@ export async function getAdminOrders(scope: { countryCode?: string } = {}) {
   });
 }
 
-export async function adminUpdateOrderStatus(input: { adminId: string; orderId: string; status: OrderStatus; note?: string }) {
-  const order = await prisma.order.findUnique({ where: { id: input.orderId } });
+type AdminClosureResult = {
+  orderId: string;
+  refundedKobo?: string;
+  totalRefundedKobo?: string;
+  refundId?: string;
+  status?: string;
+  restocked?: boolean;
+  deliveryCustody?: string | null;
+  deliveryOutcomes?: unknown[];
+  duplicate?: boolean;
+  alreadyRefunded?: boolean;
+  closure?: {
+    remainingRefundableKobo: string;
+    restockRequested: boolean;
+    restockable: boolean;
+    custody: string;
+    orderStatus: string;
+    paymentStatus: string;
+  };
+};
+
+async function recordAdminClosure(input: {
+  adminId: string;
+  order: { id: string; orderNumber: string; status: string; paymentStatus: string };
+  reason: string;
+  remainingKobo: bigint;
+  custody: { custody: string; restockable: boolean };
+  refundedKobo: string;
+}) {
+  await prisma.$transaction(async (tx) => {
+    const action = await tx.adminAction.create({
+      data: {
+        adminId: input.adminId,
+        action: "admin.order_refunded",
+        entity: "Order",
+        entityId: input.order.id,
+        metadata: {
+          orderNumber: input.order.orderNumber,
+          before: { status: input.order.status, paymentStatus: input.order.paymentStatus },
+          after: { status: "refunded", paymentStatus: "refunded" },
+          remainingRefundableKobo: input.remainingKobo.toString(),
+          refundedKobo: input.refundedKobo,
+          deliveryCustody: input.custody.custody,
+          restockable: input.custody.restockable,
+          reason: input.reason
+        }
+      }
+    });
+    await recordSystemEvent({
+      tx,
+      type: "admin.order_refunded",
+      actorId: input.adminId,
+      entity: "AdminAction",
+      entityId: action.id,
+      payload: {
+        orderId: input.order.id,
+        remainingRefundableKobo: input.remainingKobo.toString(),
+        deliveryCustody: input.custody.custody
+      }
+    });
+    await recordAudit({
+      tx,
+      actorId: input.adminId,
+      action: "admin.order_refunded",
+      entity: "AdminAction",
+      entityId: action.id,
+      metadata: {
+        orderId: input.order.id,
+        before: { status: input.order.status, paymentStatus: input.order.paymentStatus },
+        after: { status: "refunded", paymentStatus: "refunded" },
+        remainingRefundableKobo: input.remainingKobo.toString(),
+        deliveryCustody: input.custody.custody,
+        restockable: input.custody.restockable,
+        note: input.reason
+      }
+    });
+  });
+}
+
+/**
+ * Close a paid or partially-refunded order by refunding the remaining balance.
+ *
+ * The remaining amount is computed server-side from the order's reservation and
+ * settled refunds, never from a client amount. Any pending or contradicted
+ * claim blocks the closure so an administrator cannot silently strand an
+ * external refund. Stock is restored only when the physical custody decision
+ * says the goods are back with (or never left) the seller; the refund
+ * settlement re-checks that under the order lock.
+ */
+async function closeOrderWithRefund(input: {
+  adminId: string;
+  orderId: string;
+  reason: string;
+}): Promise<AdminClosureResult> {
+  const pre = await prisma.order.findUnique({
+    where: { id: input.orderId },
+    include: { payments: true }
+  });
+  if (!pre) throw new ApiError(404, "order_not_found", "Order not found.");
+  if (pre.paymentStatus === "refunded") {
+    return {
+      orderId: pre.id,
+      refundedKobo: "0",
+      totalRefundedKobo: pre.totalKobo.toString(),
+      duplicate: true,
+      alreadyRefunded: true,
+      closure: {
+        remainingRefundableKobo: "0",
+        restockRequested: false,
+        restockable: false,
+        custody: "closed",
+        orderStatus: pre.status,
+        paymentStatus: pre.paymentStatus
+      }
+    };
+  }
+
+  const refundState = await loadOrderRefundState(prisma, pre.id);
+  // Fail closed on a pending provider claim, a lost reservation, an excess
+  // claim or a failed claim whose lifecycle says the provider may have paid.
+  assertNoBlockingRefundObligation(refundState);
+
+  const remainingKobo = pre.totalKobo - refundState.claimedKobo;
+  if (remainingKobo <= BigInt(0)) {
+    throw new ApiError(
+      409,
+      "already_refunded",
+      "This order has no refundable balance left. Reconcile its payment status before closing it."
+    );
+  }
+
+  const deliveries = await prisma.delivery.findMany({
+    where: { orderId: pre.id },
+    select: { status: true }
+  });
+  const custody = classifyDeliveryCustody(deliveries.map((delivery) => delivery.status));
+
+  try {
+    const result = await refundPayment({
+      orderId: pre.id,
+      actorId: input.adminId,
+      reason: input.reason,
+      amountKobo: remainingKobo,
+      restock: custody.restockable
+    });
+    await recordAdminClosure({
+      adminId: input.adminId,
+      order: { id: pre.id, orderNumber: pre.orderNumber, status: pre.status, paymentStatus: pre.paymentStatus },
+      reason: input.reason,
+      remainingKobo,
+      custody,
+      refundedKobo: result.refundedKobo
+    });
+    return {
+      ...result,
+      closure: {
+        remainingRefundableKobo: remainingKobo.toString(),
+        restockRequested: custody.restockable,
+        restockable: custody.restockable,
+        custody: custody.custody,
+        orderStatus: "refunded",
+        paymentStatus: "refunded"
+      }
+    };
+  } catch (error) {
+    // A concurrent closure may have refunded the last balance between the read
+    // and the lock. That is the same operation completing, not a new failure.
+    if (error instanceof ApiError && ["already_refunded", "refund_conflict"].includes(error.code)) {
+      const fresh = await prisma.order.findUnique({ where: { id: pre.id } });
+      if (fresh?.paymentStatus === "refunded" || fresh?.status === "refunded") {
+        return {
+          orderId: pre.id,
+          refundedKobo: "0",
+          totalRefundedKobo: fresh.totalKobo.toString(),
+          duplicate: true,
+          alreadyRefunded: true,
+          closure: {
+            remainingRefundableKobo: "0",
+            restockRequested: false,
+            restockable: false,
+            custody: "closed",
+            orderStatus: fresh.status,
+            paymentStatus: fresh.paymentStatus
+          }
+        };
+      }
+    }
+    throw error;
+  }
+}
+
+export async function adminUpdateOrderStatus(input: {
+  adminId: string;
+  orderId: string;
+  status: OrderStatus;
+  note?: string;
+  /**
+   * Session actor for route callers. When supplied, the service re-checks the
+   * `orders:write` permission and the order's region itself instead of relying
+   * only on the HTTP route. Scripts and internal acceptance fixtures may omit
+   * it because they run without a session.
+   */
+  actor?: SessionUser;
+}) {
+  const order = await prisma.order.findUnique({
+    where: { id: input.orderId },
+    include: { payments: true }
+  });
   if (!order) throw new ApiError(404, "order_not_found", "Order not found.");
 
-  if (input.status === "refunded" && order.paymentStatus === "paid") {
-    return refundPayment({
-      orderId: order.id,
-      actorId: input.adminId,
-      reason: input.note || "Administrator refund.",
-      restock: !["delivered", "completed", "refunded"].includes(order.status)
-    });
-  }
-  if (input.status === "cancelled" && order.paymentStatus === "paid") {
-    return refundPayment({
-      orderId: order.id,
-      actorId: input.adminId,
-      reason: input.note || "Administrator cancelled paid order.",
-      restock: true
-    });
+  if (input.actor) {
+    if (!hasPermission(input.actor, "orders:write")) {
+      throw new ApiError(403, "permission_denied", 'The "orders:write" permission is required for this action.');
+    }
+    if (input.actor.id !== input.adminId) {
+      throw new ApiError(400, "actor_mismatch", "The acting administrator does not match the supplied adminId.");
+    }
+    assertRegion(input.actor, { countryCode: order.countryCode });
   }
 
-  return prisma.$transaction(async (tx) => {
+  const note = input.note?.trim();
+  const reason = note || (input.status === "cancelled" ? "Administrator cancelled the order." : "Administrator refund.");
+
+  // One locked decision, then the refund (if any) in its own transaction.
+  // `refundPayment` cannot be nested in this transaction because it owns the
+  // order lock and provider calls; the decision transaction therefore only
+  // classifies the order and never edits money.
+  const plan = await prisma.$transaction(async (tx) => {
+    await lockOrderRow(tx, input.orderId);
+    const current = await tx.order.findUniqueOrThrow({ where: { id: input.orderId }, include: { payments: true } });
+
+    if ((input.status === "refunded" || input.status === "cancelled") && needsRefundClosure(current)) {
+      return { kind: "refund" as const, status: current.status, paymentStatus: current.paymentStatus };
+    }
+    if (input.status === "refunded" && (current.paymentStatus === "refunded" || current.status === "refunded")) {
+      // A replay of a completed closure reports the existing outcome instead of
+      // pretending there is no payment to refund.
+      return { kind: "refund" as const, status: current.status, paymentStatus: current.paymentStatus };
+    }
+    if (input.status === "refunded") {
+      throw new ApiError(409, "not_paid", "Only a paid order can be refunded. Cancel the unpaid order instead.");
+    }
+    if (input.status === "cancelled") {
+      const cancelled = await cancelUnpaidOrderTx(tx, {
+        orderId: current.id,
+        actorId: input.adminId,
+        reason
+      });
+      await recordAdminStatusAction(tx, {
+        adminId: input.adminId,
+        order: current,
+        target: input.status,
+        note,
+        action: "admin.order_cancelled"
+      });
+      return { kind: "cancelled" as const, order: cancelled };
+    }
+
     const updated = await updateOrderStatus({
       tx,
       actorId: input.adminId,
       orderId: input.orderId,
       status: input.status,
-      note: input.note
+      note
     });
     await syncDeliveryForOrderStatus(tx, input.adminId, input.orderId, input.status);
-    const action = await tx.adminAction.create({
-      data: {
-        adminId: input.adminId,
-        action: "admin.order_status_updated",
-        entity: "Order",
-        entityId: input.orderId,
-        metadata: { before: order.status, after: input.status, note: input.note ?? null }
-      }
+    await recordAdminStatusAction(tx, {
+      adminId: input.adminId,
+      order: current,
+      target: input.status,
+      note,
+      action: "admin.order_status_updated"
     });
-    await recordSystemEvent({
-      tx,
-      type: "admin.action_logged",
-      actorId: input.adminId,
-      entity: "AdminAction",
-      entityId: action.id,
-      payload: { orderId: input.orderId, status: input.status }
+    return { kind: "status" as const, order: updated };
+  });
+
+  if (plan.kind === "refund") {
+    return closeOrderWithRefund({
+      adminId: input.adminId,
+      orderId: input.orderId,
+      reason
     });
-    await recordAudit({
-      tx,
-      actorId: input.adminId,
-      action: "admin.action_logged",
-      entity: "AdminAction",
-      entityId: action.id,
-      metadata: {
-        orderId: input.orderId,
-        before: { status: order.status },
-        after: { status: input.status },
-        note: input.note ?? null
-      }
-    });
-    return updated;
+  }
+  return plan.order;
+}
+
+async function recordAdminStatusAction(
+  tx: Prisma.TransactionClient,
+  input: {
+    adminId: string;
+    order: { id: string; status: string };
+    target: OrderStatus;
+    note?: string;
+    action: string;
+  }
+) {
+  const action = await tx.adminAction.create({
+    data: {
+      adminId: input.adminId,
+      action: input.action,
+      entity: "Order",
+      entityId: input.order.id,
+      metadata: { before: { status: input.order.status }, after: { status: input.target }, note: input.note ?? null }
+    }
+  });
+  await recordSystemEvent({
+    tx,
+    type: "admin.action_logged",
+    actorId: input.adminId,
+    entity: "AdminAction",
+    entityId: action.id,
+    payload: { orderId: input.order.id, status: input.target }
+  });
+  await recordAudit({
+    tx,
+    actorId: input.adminId,
+    action: "admin.action_logged",
+    entity: "AdminAction",
+    entityId: action.id,
+    metadata: {
+      orderId: input.order.id,
+      before: { status: input.order.status },
+      after: { status: input.target },
+      note: input.note ?? null
+    }
   });
 }
 

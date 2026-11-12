@@ -1,4 +1,12 @@
-import type { EscrowHold, EscrowStatus, OrderStatus, Prisma, PrismaClient, RefundStatus } from "@prisma/client";
+import type {
+  DeliveryStatus,
+  EscrowHold,
+  EscrowStatus,
+  OrderStatus,
+  Prisma,
+  PrismaClient,
+  RefundStatus
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { loadRefundLifecycles } from "@/lib/payments/refund-lifecycle";
@@ -10,6 +18,99 @@ import { assertOrderTransition } from "./state-machines";
 import { ensureWallet } from "@/lib/payments/service";
 
 type Db = PrismaClient | Prisma.TransactionClient;
+
+/**
+ * Canonical row-lock order for an order and everything attached to it.
+ *
+ * Every path that can move money, change an order's status or advance a
+ * delivery takes `"Order" ... FOR UPDATE` first:
+ *
+ *   Order -> Payment -> Delivery -> wallet rows
+ *
+ * `confirmPayment`, `markPaymentFailed` and the abandoned-checkout sweep used to
+ * lock the Payment row first while refunds and completion lock the Order row
+ * first; that inversion lets two transactions deadlock. Taking the Order lock
+ * first everywhere makes the order the single serialisation point, so a
+ * concurrent refund, courier update, assignment or cancellation either commits
+ * completely before the other starts or observes its committed state.
+ *
+ * Callers must re-read the rows they validated after acquiring the lock. A
+ * pre-lock read is only a routing hint (for example, which order a delivery
+ * belongs to) and must never authorise a write.
+ */
+export async function lockOrderRow(db: Db, orderId: string): Promise<void> {
+  const locked = await db.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM "Order" WHERE id = ${orderId} FOR UPDATE
+  `;
+  if (locked.length === 0) throw new ApiError(404, "order_not_found", "Order not found.");
+}
+
+/** Delivery states in which the parcel has never left the seller. */
+export const PRE_COLLECTION_DELIVERY_STATUSES: readonly DeliveryStatus[] = [
+  "pending_assignment",
+  "assigned",
+  "pickup_started"
+];
+
+/**
+ * Delivery states in which a courier physically holds the parcel. A refund
+ * must keep these visible instead of cancelling them: cancelling would erase
+ * the courier assignment and the fact that goods are still in the field.
+ */
+export const COLLECTED_DELIVERY_STATUSES: readonly DeliveryStatus[] = [
+  "picked_up",
+  "in_transit",
+  "delivery_attempted",
+  "failed"
+];
+
+export type DeliveryCustodyClass =
+  | "not_collected"
+  | "in_custody"
+  | "delivered"
+  | "returned"
+  | "cancelled"
+  | "mixed";
+
+export type DeliveryCustodyDecision = {
+  custody: DeliveryCustodyClass;
+  /**
+   * True only when every parcel is physically available to the seller again:
+   * it never left (or there is no delivery row), or every delivery returned.
+   * A delivered or in-custody parcel must never be put back on sale by a
+   * refund; its stock is restored by the actual return receipt instead.
+   */
+  restockable: boolean;
+};
+
+/**
+ * Classify the physical custody represented by an order's delivery rows.
+ *
+ * The decision is deliberately conservative: an unknown or mixed state is not
+ * restockable, because double-selling a parcel that is still with a courier is
+ * worse than leaving stock unsold until the return is processed physically.
+ */
+export function classifyDeliveryCustody(statuses: readonly DeliveryStatus[]): DeliveryCustodyDecision {
+  if (statuses.length === 0) return { custody: "not_collected", restockable: true };
+  if (statuses.every((status) => PRE_COLLECTION_DELIVERY_STATUSES.includes(status))) {
+    return { custody: "not_collected", restockable: true };
+  }
+  if (statuses.every((status) => status === "returned")) {
+    return { custody: "returned", restockable: true };
+  }
+  if (statuses.every((status) => status === "cancelled")) {
+    // A cancelled delivery can be a legacy full-refund artefact whose stock was
+    // already restored. Treat it as no proof of custody, never as restockable.
+    return { custody: "cancelled", restockable: false };
+  }
+  if (statuses.some((status) => COLLECTED_DELIVERY_STATUSES.includes(status))) {
+    return { custody: "in_custody", restockable: false };
+  }
+  if (statuses.every((status) => status === "delivered")) {
+    return { custody: "delivered", restockable: false };
+  }
+  return { custody: "mixed", restockable: false };
+}
 
 type RefundClaimRow = { id: string; amountKobo: bigint; status: RefundStatus };
 
@@ -276,12 +377,21 @@ export async function updateOrderStatus(input: {
   const db = input.tx ?? prisma;
   const current = await db.order.findUniqueOrThrow({ where: { id: input.orderId } });
   assertOrderTransition(current.status, input.status);
-  const order = await db.order.update({
+  // Compare-and-set: a caller that did not (or could not) hold the order row
+  // lock still cannot overwrite a status that changed after its read. The
+  // caller re-reads and retries from the new state.
+  const claimed = await db.order.updateMany({
+    where: { id: input.orderId, status: current.status },
+    data: { status: input.status }
+  });
+  if (claimed.count !== 1) {
+    throw new ApiError(409, "order_conflict", "This order changed while its status was being updated. Reload it before retrying.");
+  }
+  await db.orderStatusEvent.create({
+    data: { orderId: input.orderId, from: current.status, to: input.status, note: input.note }
+  });
+  const order = await db.order.findUniqueOrThrow({
     where: { id: input.orderId },
-    data: {
-      status: input.status,
-      statusEvents: { create: { from: current.status, to: input.status, note: input.note } }
-    },
     include: { statusEvents: true }
   });
 
@@ -825,19 +935,25 @@ export async function completeOrder(userId: string, orderId: string) {
 }
 
 export async function requestReturn(input: { userId: string; orderId: string; reason: string; detail?: string }) {
-  const order = await prisma.order.findUnique({ where: { id: input.orderId }, include: { returnRequests: true } });
-  if (!order) throw new ApiError(404, "order_not_found", "Order not found.");
-  if (order.customerId !== input.userId) throw new ApiError(403, "forbidden", "This order belongs to another account.");
-  if (!["delivered", "completed"].includes(order.status)) {
-    throw new ApiError(409, "not_returnable", "Returns open after delivery.");
-  }
-  if (order.returnRequests.some((request) => ["REQUESTED", "APPROVED", "RECEIVED"].includes(request.status))) {
-    throw new ApiError(409, "return_exists", "A return is already open for this order.");
-  }
-  const ageDays = (Date.now() - order.updatedAt.getTime()) / (1000 * 60 * 60 * 24);
-  if (ageDays > 14) throw new ApiError(409, "return_window_closed", "The 14-day return window has closed.");
-
   return prisma.$transaction(async (tx) => {
+    // Serialise with the seller receipt: two concurrent requests must not both
+    // pass an "open return" check and create duplicate restock/refund work.
+    await lockOrderRow(tx, input.orderId);
+    const order = await tx.order.findUnique({
+      where: { id: input.orderId },
+      include: { returnRequests: true }
+    });
+    if (!order) throw new ApiError(404, "order_not_found", "Order not found.");
+    if (order.customerId !== input.userId) throw new ApiError(403, "forbidden", "This order belongs to another account.");
+    if (!["delivered", "completed"].includes(order.status)) {
+      throw new ApiError(409, "not_returnable", "Returns open after delivery.");
+    }
+    if (order.returnRequests.some((request) => ["REQUESTED", "APPROVED", "RECEIVED"].includes(request.status))) {
+      throw new ApiError(409, "return_exists", "A return is already open for this order.");
+    }
+    const ageDays = (Date.now() - order.updatedAt.getTime()) / (1000 * 60 * 60 * 24);
+    if (ageDays > 14) throw new ApiError(409, "return_window_closed", "The 14-day return window has closed.");
+
     const request = await tx.returnRequest.create({
       data: {
         orderId: order.id,

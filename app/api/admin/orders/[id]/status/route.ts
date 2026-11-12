@@ -36,7 +36,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: "Unknown order status.", code: "invalid_status" }, { status: 400 });
     }
     const note = typeof body.note === "string" ? body.note : undefined;
-    const order = await adminUpdateOrderStatus({ adminId: admin.id, orderId: params.id, status, note });
+    const order = await adminUpdateOrderStatus({ adminId: admin.id, orderId: params.id, status, note, actor: admin });
     return NextResponse.json(jsonSafe(order));
   } catch (error) {
     return jsonError(error);

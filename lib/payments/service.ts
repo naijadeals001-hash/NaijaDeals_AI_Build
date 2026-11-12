@@ -9,10 +9,10 @@ import {
   recordRefundLifecycle
 } from "./refund-lifecycle";
 import type { PaymentVerifyResult } from "./types";
-import { updateOrderStatus } from "@/lib/services/core/order.service";
+import { lockOrderRow, updateOrderStatus } from "@/lib/services/core/order.service";
 import { recordAudit } from "@/lib/services/core/audit.service";
 import { recordSystemEvent } from "@/lib/services/core/event.service";
-import { createDelivery, cancelOrderDeliveries } from "@/lib/services/core/delivery.service";
+import { createDelivery, settleRefundDeliveryCustody } from "@/lib/services/core/delivery.service";
 import { notifyOrderPaid } from "@/lib/notifications/domain-events";
 import { recordConversion } from "@/lib/services/affiliate/service";
 import { log } from "@/lib/infra/logger";
@@ -280,6 +280,11 @@ async function markPaymentFailed(input: {
   raw?: unknown;
 }) {
   await prisma.$transaction(async (tx) => {
+    // Order before Payment, the canonical lock order. `confirmPayment` and the
+    // checkout sweep take the same locks in the same order, so a failure
+    // callback and a verification callback cannot deadlock or both act on one
+    // attempt.
+    await lockOrderRow(tx, input.orderId);
     const locked = await tx.$queryRaw<Array<{ status: string }>>`
       SELECT status FROM "Payment" WHERE id = ${input.paymentId} FOR UPDATE
     `;
@@ -495,36 +500,101 @@ export async function confirmPayment(input: { reference: string; provider: Adapt
     throw new ApiError(409, "amount_mismatch", "Verified payment amount does not match the order total.");
   }
 
-  try {
-    await prisma.$transaction(async (tx) => {
-      const locked = await tx.$queryRaw<Array<{ status: string }>>`
-        SELECT status FROM "Payment" WHERE id = ${payment.id} FOR UPDATE
-      `;
-      if (locked[0]?.status === "COMPLETED") return;
-      if (locked[0]?.status === "FAILED") throw new ApiError(409, "payment_failed", "Payment already failed.");
-
-      await tx.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: "COMPLETED",
-          verifiedAt: new Date(),
-          raw: input.rawWebhook
-            ? JSON.parse(JSON.stringify(input.rawWebhook))
-            : verification.raw
-              ? JSON.parse(JSON.stringify(verification.raw))
-              : undefined
+  /**
+   * Whether this call actually moved the payment from PENDING to COMPLETED.
+   *
+   * The pre-transaction read is only a fast path: two concurrent verifications
+   * of the same reference both see PENDING. Exactly one wins the order lock and
+   * commits the escrow; the loser must report `duplicate: true` and must not
+   * re-send the paid notification or the affiliate conversion.
+   */
+  const settlement = await prisma.$transaction(async (tx) => {
+    await lockOrderRow(tx, payment.orderId);
+    const locked = await tx.$queryRaw<Array<{ status: string }>>`
+      SELECT status FROM "Payment" WHERE id = ${payment.id} FOR UPDATE
+    `;
+    if (locked[0]?.status === "COMPLETED") return { settledNow: false };
+    if (locked[0]?.status === "FAILED") {
+      // The provider verification above reported completion, but a concurrent
+      // cancellation/failure callback marked the attempt FAILED while that
+      // request was in flight. The money may have left the customer, so this is
+      // a reconciliation signal, not an ordinary "already failed" response.
+      await recordAudit({
+        tx,
+        actorId: payment.order.customerId,
+        action: "payment.verified_after_failure",
+        entity: "Payment",
+        entityId: payment.id,
+        metadata: {
+          orderId: payment.orderId,
+          provider: payment.provider,
+          providerReference: payment.providerReference,
+          amountKobo: payment.amountKobo.toString(),
+          currency: payment.currency,
+          note: "Provider verification completed after the local attempt was marked failed. No escrow was created; finance must reconcile the charge."
         }
       });
-      await finalizePaidOrder(tx, {
-        order: payment.order,
-        payment,
-        walletDebit: input.provider === "wallet",
-        actorId: payment.order.customerId
+      throw new ApiError(
+        409,
+        "payment_reconciliation_required",
+        "The provider reported this payment as completed after the local attempt was marked failed. No escrow was created; the charge needs reconciliation."
+      );
+    }
+
+    // Re-read the order under the lock. A cancellation, expiry or refund can
+    // commit after the pre-read; finalizing a payment onto a closed order would
+    // create escrow/delivery rows for an order that no longer exists
+    // operationally. The provider result is recorded for reconciliation and the
+    // escrow is deliberately not created.
+    const currentOrder = await tx.order.findUniqueOrThrow({ where: { id: payment.orderId } });
+    if (["cancelled", "refunded"].includes(currentOrder.status)) {
+      await recordAudit({
+        tx,
+        actorId: currentOrder.customerId,
+        action: "payment.verified_order_closed",
+        entity: "Payment",
+        entityId: payment.id,
+        metadata: {
+          orderId: currentOrder.id,
+          provider: payment.provider,
+          providerReference: payment.providerReference,
+          amountKobo: payment.amountKobo.toString(),
+          currency: payment.currency,
+          orderStatus: currentOrder.status,
+          note: "Provider reported completion after the order closed. No escrow was created; reconcile with the provider."
+        }
       });
+      throw new ApiError(
+        409,
+        "order_closed",
+        "This order closed before the payment was confirmed. No escrow was created; the provider result needs reconciliation."
+      );
+    }
+    if (currentOrder.paymentStatus === "paid") return { settledNow: false };
+
+    await tx.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: "COMPLETED",
+        verifiedAt: new Date(),
+        raw: input.rawWebhook
+          ? JSON.parse(JSON.stringify(input.rawWebhook))
+          : verification.raw
+            ? JSON.parse(JSON.stringify(verification.raw))
+            : undefined
+      }
     });
-  } catch (error) {
-    if (error instanceof ApiError) throw error;
-    throw error;
+    await finalizePaidOrder(tx, {
+      order: currentOrder,
+      payment,
+      walletDebit: input.provider === "wallet",
+      actorId: currentOrder.customerId
+    });
+    return { settledNow: true };
+  });
+
+  if (!settlement.settledNow) {
+    return { status: "COMPLETED" as const, orderId: payment.orderId, duplicate: true };
   }
 
   // Post-commit: a notification failure must never undo a verified payment.
@@ -1000,6 +1070,8 @@ async function settleRefund(
     update: {}
   });
 
+  let custody: Awaited<ReturnType<typeof settleRefundDeliveryCustody>> | null = null;
+  let stockRestored = false;
   if (isFullRefund) {
     await tx.payment.update({ where: { id: completedPayment.id }, data: { status: "REFUNDED" } });
     // The order-level payment state must move with the payment record, or a
@@ -1013,17 +1085,23 @@ async function settleRefund(
         data: { status: "refunded", events: { create: { from: escrow.status, to: "refunded", note: input.reason } } }
       });
     }
-    if (input.restock) await restockOrderItems(tx, order.id);
-    // A fully refunded order has no goods to deliver. Cancel any open delivery
-    // in the same transaction, so it leaves the courier queue and tracking
-    // shows the refunded state instead of a stale pending_assignment. A
-    // delivery that already reached delivered/returned keeps its real history.
-    await cancelOrderDeliveries({
+
+    // Custody first, then stock. A refund does not make a collected parcel
+    // disappear: uncollected deliveries are cancelled, collected ones are
+    // retained with a custody event, and the restock decision comes from that
+    // physical state. `input.restock` remains the caller's request, but it is
+    // clamped so stock can never be restored for goods a courier already holds
+    // or the customer already received.
+    custody = await settleRefundDeliveryCustody({
       tx,
       actorId: refund.actorId,
       orderId: order.id,
-      reason: `Order refunded in full: ${input.reason}`
+      reason: `Order refunded in full: ${input.reason}`,
+      refundId: refund.id
     });
+    stockRestored = Boolean(input.restock) && custody.restockable;
+    if (stockRestored) await restockOrderItems(tx, order.id);
+
     await updateOrderStatus({
       tx,
       actorId: refund.actorId,
@@ -1060,7 +1138,11 @@ async function settleRefund(
       platformShareKobo: platformShare.toString(),
       reason: input.reason,
       provider: completedPayment.provider,
-      restocked: Boolean(input.restock) && isFullRefund
+      restocked: stockRestored,
+      restockRequested: Boolean(input.restock) && isFullRefund,
+      restockSuppressed: Boolean(input.restock) && isFullRefund && !stockRestored,
+      deliveryCustody: custody?.custody ?? null,
+      deliveryOutcomes: custody?.outcomes ?? []
     }
   });
 
@@ -1070,7 +1152,10 @@ async function settleRefund(
     totalRefundedKobo: settledAfterKobo.toString(),
     reservedKobo: order.refundedKobo.toString(),
     refundId: refund.id,
-    status: "COMPLETED" as const
+    status: "COMPLETED" as const,
+    restocked: stockRestored,
+    deliveryCustody: custody?.custody ?? null,
+    deliveryOutcomes: custody?.outcomes ?? []
   };
 }
 

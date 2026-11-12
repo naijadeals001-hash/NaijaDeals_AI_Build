@@ -5,7 +5,7 @@ import { ApiError } from "@/lib/auth/guard";
 import { commissionFor, deliveryQuote, escrowFee, getCountry } from "@/lib/config/commerce";
 import { recordAudit } from "./audit.service";
 import { recordSystemEvent } from "./event.service";
-import { updateOrderStatus } from "./order.service";
+import { lockOrderRow, updateOrderStatus } from "./order.service";
 import { cancelOrderDeliveries } from "./delivery.service";
 import { availablePaymentMethods } from "@/lib/payments/service";
 import { activationFor } from "./country.service";
@@ -470,17 +470,10 @@ export async function expireAbandonedCheckouts(
   for (const candidate of candidates) {
     try {
       await prisma.$transaction(async (tx) => {
-        // Lock payments before the order, matching confirmPayment's write order so
-        // the two transactions cannot deadlock and a paid attempt always wins.
-        const lockedPayments = await tx.$queryRaw<Array<{ id: string; status: string }>>`
-          SELECT id, status FROM "Payment" WHERE "orderId" = ${candidate.id} FOR UPDATE
-        `;
-        if (lockedPayments.some((payment) => payment.status === "COMPLETED")) {
-          throw new ExpirySkip("payment_completed");
-        }
-        const completed = await tx.payment.count({ where: { orderId: candidate.id, status: "COMPLETED" } });
-        if (completed > 0) throw new ExpirySkip("payment_completed");
-
+        // Order before Payment, the canonical lock order shared with
+        // confirmPayment, markPaymentFailed and the refund paths. The order lock
+        // is what makes a concurrent verification either commit first (and make
+        // this sweep skip) or wait for the released reservation.
         const lockedOrder = await tx.$queryRaw<Array<{ status: string; paymentStatus: string }>>`
           SELECT status, "paymentStatus" FROM "Order" WHERE id = ${candidate.id} FOR UPDATE
         `;
@@ -492,6 +485,15 @@ export async function expireAbandonedCheckouts(
         if (current.paymentStatus !== "pending") {
           throw new ExpirySkip(`payment_${current.paymentStatus}`);
         }
+
+        const lockedPayments = await tx.$queryRaw<Array<{ id: string; status: string }>>`
+          SELECT id, status FROM "Payment" WHERE "orderId" = ${candidate.id} FOR UPDATE
+        `;
+        if (lockedPayments.some((payment) => payment.status === "COMPLETED")) {
+          throw new ExpirySkip("payment_completed");
+        }
+        const completed = await tx.payment.count({ where: { orderId: candidate.id, status: "COMPLETED" } });
+        if (completed > 0) throw new ExpirySkip("payment_completed");
 
         const [escrowCount, deliveryCount] = await Promise.all([
           tx.escrowHold.count({ where: { orderId: candidate.id } }),
@@ -538,42 +540,150 @@ export async function expireAbandonedCheckouts(
   return sweep;
 }
 
-export async function cancelOrder(input: { orderId: string; userId: string; reason: string }) {
-  const order = await prisma.order.findUnique({ where: { id: input.orderId }, include: { payments: true } });
-  if (!order) throw new ApiError(404, "order_not_found", "Order not found.");
-  if (order.customerId !== input.userId) throw new ApiError(403, "forbidden", "This order belongs to another account.");
-  if (!["created", "payment_pending", "vendor_notified"].includes(order.status)) {
-    throw new ApiError(409, "not_cancellable", "This order can no longer be cancelled by the customer.");
-  }
+const CUSTOMER_CANCELLABLE_STATUSES = ["created", "payment_pending", "vendor_notified"] as const;
+export const REFUNDABLE_PAYMENT_STATUSES = ["paid", "partially_refunded", "refund_pending"] as const;
 
-  if (order.paymentStatus === "paid") {
-    const { refundPayment } = await import("@/lib/payments/service");
-    await refundPayment({ orderId: order.id, actorId: input.userId, reason: input.reason, restock: true });
-    return { orderId: order.id, cancelled: true, refunded: true };
+type OrderWithPayments = Prisma.OrderGetPayload<{ include: { payments: true } }>;
+
+export function hasCompletedPayment(order: OrderWithPayments): boolean {
+  return order.payments.some((payment) => payment.status === "COMPLETED");
+}
+
+/**
+ * True when closing the order must move money through `refundPayment`.
+ *
+ * `refund_pending` is included on purpose: it is a state that must be resolved
+ * by the refund workflow, never by an order-status edit.
+ */
+export function needsRefundClosure(order: OrderWithPayments): boolean {
+  return (
+    hasCompletedPayment(order) ||
+    (REFUNDABLE_PAYMENT_STATUSES as readonly string[]).includes(order.paymentStatus)
+  );
+}
+
+/**
+ * Cancel an account order together with its reservation, pending payment
+ * attempts and uncollected deliveries.
+ *
+ * Caller must hold the order row lock. This function re-reads the order under
+ * that lock and refuses to cancel a paid order: money must go through
+ * `refundPayment`, never through a status edit.
+ */
+export async function cancelUnpaidOrderTx(
+  tx: Prisma.TransactionClient,
+  input: { orderId: string; actorId: string; reason: string; allowedStatuses?: readonly string[] }
+) {
+  await lockOrderRow(tx, input.orderId);
+  const order = await tx.order.findUniqueOrThrow({ where: { id: input.orderId }, include: { payments: true } });
+  if (needsRefundClosure(order)) {
+    throw new ApiError(
+      409,
+      "paid_order",
+      "This order has a completed or refundable payment. Use the refund closure workflow instead of an unpaid cancellation."
+    );
+  }
+  if (input.allowedStatuses && !input.allowedStatuses.includes(order.status)) {
+    throw new ApiError(409, "not_cancellable", "This order can no longer be cancelled.");
   }
 
   const { releaseReservedStock } = await import("@/lib/payments/service");
-  await prisma.$transaction(async (tx) => {
-    await releaseReservedStock(tx, order.id);
-    await cancelOrderDeliveries({
-      tx,
-      actorId: input.userId,
-      orderId: order.id,
-      reason: `Order cancelled: ${input.reason}`
-    });
-    await tx.payment.updateMany({
-      where: { orderId: order.id, status: "PENDING" },
-      data: { status: "FAILED", failureReason: "Order cancelled before payment." }
-    });
-    await updateOrderStatus({ tx, actorId: input.userId, orderId: order.id, status: "cancelled", note: input.reason });
-    await recordAudit({
-      tx,
-      actorId: input.userId,
-      action: "order.cancelled",
-      entity: "Order",
-      entityId: order.id,
-      metadata: { reason: input.reason }
-    });
+  await releaseReservedStock(tx, order.id);
+  await cancelOrderDeliveries({
+    tx,
+    actorId: input.actorId,
+    orderId: order.id,
+    reason: `Order cancelled: ${input.reason}`
   });
-  return { orderId: order.id, cancelled: true, refunded: false };
+  await tx.payment.updateMany({
+    where: { orderId: order.id, status: "PENDING" },
+    data: { status: "FAILED", failureReason: "Order cancelled before payment." }
+  });
+  const updated = await updateOrderStatus({
+    tx,
+    actorId: input.actorId,
+    orderId: order.id,
+    status: "cancelled",
+    note: input.reason
+  });
+  await recordAudit({
+    tx,
+    actorId: input.actorId,
+    action: "order.cancelled",
+    entity: "Order",
+    entityId: order.id,
+    metadata: { reason: input.reason, before: { status: order.status, paymentStatus: order.paymentStatus }, after: { status: "cancelled" } }
+  });
+  return updated;
+}
+
+/**
+ * Administrative unpaid cancellation. Shares the exact reservation release,
+ * payment failure and delivery cancellation used by the customer path so an
+ * administrator cannot strand stock or leave a courier queue entry.
+ */
+export async function cancelUnpaidOrder(input: {
+  orderId: string;
+  actorId: string;
+  reason: string;
+  allowedStatuses?: readonly string[];
+}) {
+  return prisma.$transaction((tx) =>
+    cancelUnpaidOrderTx(tx, {
+      orderId: input.orderId,
+      actorId: input.actorId,
+      reason: input.reason,
+      allowedStatuses: input.allowedStatuses
+    })
+  );
+}
+
+export async function cancelOrder(input: { orderId: string; userId: string; reason: string }) {
+  const ownership = await prisma.order.findUnique({ where: { id: input.orderId }, select: { customerId: true } });
+  if (!ownership) throw new ApiError(404, "order_not_found", "Order not found.");
+  if (ownership.customerId !== input.userId) throw new ApiError(403, "forbidden", "This order belongs to another account.");
+
+  // Decide under the order lock. The old pre-lock read could see `pending`
+  // while a concurrent confirmPayment committed `paid`, then cancel the order
+  // and fail the payment after the escrow had been created.
+  const decision = await prisma.$transaction(async (tx) => {
+    await lockOrderRow(tx, input.orderId);
+    const order = await tx.order.findUniqueOrThrow({ where: { id: input.orderId }, include: { payments: true } });
+    if (order.customerId !== input.userId) throw new ApiError(403, "forbidden", "This order belongs to another account.");
+    if (!(CUSTOMER_CANCELLABLE_STATUSES as readonly string[]).includes(order.status)) {
+      throw new ApiError(409, "not_cancellable", "This order can no longer be cancelled by the customer.");
+    }
+    if (needsRefundClosure(order)) return { refund: true as const };
+    await cancelUnpaidOrderTx(tx, {
+      orderId: order.id,
+      actorId: input.userId,
+      reason: input.reason,
+      allowedStatuses: CUSTOMER_CANCELLABLE_STATUSES
+    });
+    return { refund: false as const };
+  });
+
+  if (!decision.refund) return { orderId: input.orderId, cancelled: true, refunded: false };
+
+  const { refundPayment } = await import("@/lib/payments/service");
+  try {
+    await refundPayment({
+      orderId: input.orderId,
+      actorId: input.userId,
+      reason: input.reason,
+      restock: true
+    });
+  } catch (error) {
+    // The refund path always re-validates under the same order lock. A
+    // concurrent closure that already refunded the order is a coherent
+    // duplicate of this cancellation, not an error.
+    if (error instanceof ApiError && ["already_refunded", "refund_conflict", "refund_pending"].includes(error.code)) {
+      const fresh = await prisma.order.findUnique({ where: { id: input.orderId } });
+      if (fresh?.paymentStatus === "refunded" || fresh?.status === "refunded") {
+        return { orderId: input.orderId, cancelled: true, refunded: true, duplicate: true };
+      }
+    }
+    throw error;
+  }
+  return { orderId: input.orderId, cancelled: true, refunded: true };
 }

@@ -1091,6 +1091,11 @@ async function cleanupRun(prisma: PrismaClient, systemSnapshot: WalletSnapshot) 
     await tx.systemEvent.deleteMany({
       where: { OR: [{ actorId: { in: userIds } }, { entityId: { in: entityIds } }] }
     });
+    // Admin closure now records an AdminAction in addition to the refund audit;
+    // remove the fixture rows before deleting the referenced user.
+    await tx.adminAction.deleteMany({
+      where: { OR: [{ adminId: { in: userIds } }, { entityId: { in: entityIds } }] }
+    });
     await tx.inventoryStock.deleteMany({ where: { productId: { in: productIds } } });
     await tx.productImage.deleteMany({ where: { productId: { in: productIds } } });
     await tx.product.deleteMany({ where: { id: { in: productIds } } });

@@ -2,7 +2,7 @@ import type { DeliveryStatus, OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { updateDeliveryStatus } from "./delivery.service";
-import { updateOrderStatus } from "./order.service";
+import { lockOrderRow, updateOrderStatus } from "./order.service";
 
 const orderStatusForDelivery: Partial<Record<DeliveryStatus, OrderStatus>> = {
   picked_up: "picked_up",
@@ -101,14 +101,27 @@ export async function updateCourierDelivery(input: {
 }) {
   // A suspended courier may finish the delivery already assigned to them.
   const courier = await getCourierForUser(input.userId, false);
-  const delivery = await prisma.delivery.findUnique({ where: { id: input.deliveryId }, include: { order: true } });
-  if (!delivery) throw new ApiError(404, "delivery_not_found", "Delivery not found.");
-  if (delivery.courierId !== courier.id) throw new ApiError(403, "forbidden", "This delivery is assigned to another courier.");
   if (input.status === "delivered" && !input.proofCode) {
     throw new ApiError(400, "proof_required", "A delivery proof code is required to mark an order delivered.");
   }
 
   return prisma.$transaction(async (tx) => {
+    // Ownership is re-read under the order lock, not from the pre-transaction
+    // read. An administrator can reassign the delivery between those points,
+    // and the old courier must not be able to report a status for a parcel that
+    // now belongs to someone else.
+    const hint = await tx.delivery.findUnique({
+      where: { id: input.deliveryId },
+      select: { orderId: true }
+    });
+    if (!hint) throw new ApiError(404, "delivery_not_found", "Delivery not found.");
+    await lockOrderRow(tx, hint.orderId);
+    const delivery = await tx.delivery.findUnique({ where: { id: input.deliveryId } });
+    if (!delivery) throw new ApiError(404, "delivery_not_found", "Delivery not found.");
+    if (delivery.courierId !== courier.id) {
+      throw new ApiError(403, "forbidden", "This delivery is assigned to another courier.");
+    }
+
     const updated = await updateDeliveryStatus({
       tx,
       actorId: input.userId,
