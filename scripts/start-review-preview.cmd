@@ -6,6 +6,10 @@ if "%REVIEW_DATABASE_URL%"=="" (
   echo REFUSED: set REVIEW_DATABASE_URL to the REVIEW-classified database. 1>&2
   exit /b 2
 )
+if "%REVIEW_EXPECTED_DATABASE%"=="" (
+  echo REFUSED: set REVIEW_EXPECTED_DATABASE to the expected database name. 1>&2
+  exit /b 2
+)
 set DATABASE_URL=%REVIEW_DATABASE_URL%
 set NEXT_PUBLIC_REVIEW_CATALOGUE=1
 set NEXT_DIST_DIR=.next-programme

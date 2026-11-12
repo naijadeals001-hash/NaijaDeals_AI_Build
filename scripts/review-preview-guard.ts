@@ -10,6 +10,14 @@ async function main() {
   }
   const rows = await prisma.databaseClassification.findMany({ select: { classification: true } });
   const db = await prisma.$queryRaw<Array<{ current_database: string }>>`select current_database()`;
+  const database = db[0]?.current_database ?? "";
+  const expected = process.env.REVIEW_EXPECTED_DATABASE;
+  if (!expected) {
+    throw new Error("refusing: REVIEW_EXPECTED_DATABASE must name the intended REVIEW database");
+  }
+  if (database !== expected) {
+    throw new Error(`refusing: connected to ${database}, expected ${expected}`);
+  }
   if (!rows.some((row) => row.classification === "REVIEW")) {
     throw new Error("refusing: database is not classified REVIEW");
   }
