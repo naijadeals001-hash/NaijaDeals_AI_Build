@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, Globe2, MapPin } from "lucide-react";
+import { Check, ChevronDown, MapPin } from "lucide-react";
 import { COUNTRIES } from "@/lib/config/commerce";
 import { STORE_CURRENCY } from "@/lib/config/regions";
 import { LANGUAGES } from "@/lib/i18n/dictionary";
@@ -32,25 +32,25 @@ export function LocaleSwitcher() {
   const countryOptions = Object.values(COUNTRIES).filter((item) => item.enabled);
 
   return (
-    <div className="relative" ref={rootRef}>
+    <div ref={rootRef}>
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-label={`${t("common.language")}: ${activeLanguage?.native ?? language}. ${t("common.country")}: ${countryName}.`}
-        className="flex min-h-10 items-center gap-1.5 rounded-full border border-border-soft bg-canvas px-2.5 text-xs font-bold text-muted transition hover:border-primary/40 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        aria-label={`${city}, ${countryName}. ${t("common.language")}: ${activeLanguage?.native ?? language}.`}
+        className="flex min-h-10 max-w-[7.5rem] items-center gap-1 rounded-full px-2.5 text-xs font-bold text-ink/80 transition hover:bg-surface-low hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:max-w-none"
       >
-        <Globe2 className="h-4 w-4" aria-hidden="true" />
-        <span className="uppercase">{language}</span>
-        <ChevronDown className={`h-3.5 w-3.5 transition ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+        <MapPin className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+        <span className="hidden truncate min-[360px]:inline">{city}</span>
+        <ChevronDown className={`hidden h-3.5 w-3.5 shrink-0 transition min-[360px]:block ${open ? "rotate-180" : ""}`} aria-hidden="true" />
       </button>
 
       {open ? (
         <div
           role="dialog"
           aria-label={`${t("common.language")}, ${t("common.country")} and ${t("common.city")}`}
-          className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-border-soft bg-canvas p-4 shadow-soft rtl:left-0 rtl:right-auto"
+          className="absolute left-3 right-3 top-[calc(100%+0.5rem)] z-50 max-h-[calc(100vh-6rem)] w-auto overflow-y-auto rounded-2xl border border-border-soft bg-canvas p-4 shadow-soft sm:left-auto sm:right-6 sm:w-80 sm:rtl:left-6 sm:rtl:right-auto lg:right-8"
         >
           <fieldset>
             <legend className="text-xs font-black uppercase tracking-wide text-muted">{t("common.language")}</legend>
