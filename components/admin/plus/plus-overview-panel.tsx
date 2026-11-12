@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, CircleHelp, RefreshCw } from "lucide-react";
-import type { PlusOverview } from "./plus-api";
+import type { PlusCountLeaf, PlusOverview } from "./plus-api";
 import {
   Button,
   EmptyBlock,
@@ -24,7 +24,7 @@ const FLAG_COPY: Record<
     label: "Membership open",
     trueLabel: "Open",
     falseLabel: "Not open",
-    description: "Whether customers can be offered a Plus+ membership at all."
+    description: "Whether any country currently has an active Plus+ plan available."
   },
   checkoutConfigured: {
     label: "Checkout configured",
@@ -36,27 +36,38 @@ const FLAG_COPY: Record<
     label: "Paid activation approved",
     trueLabel: "Approved",
     falseLabel: "Not approved",
-    description: "Paid activation stays disabled until pricing, billing rules and customer terms are approved."
+    description: "Whether an active priced plan currently has recorded paid-activation approval and effective terms."
   }
 };
 
-const COUNT_LABELS: Record<string, string> = {
+const COUNT_GROUP_LABELS: Record<string, string> = {
+  overview: "Counts",
   content: "Service-awareness cards",
-  contentDraft: "Service cards in draft",
-  contentPublished: "Published service cards",
-  contentArchived: "Archived service cards",
   plans: "Plans",
-  activePlans: "Active plans",
-  draftPlans: "Draft plans",
-  benefits: "Benefits",
-  publishedBenefits: "Published benefits",
-  promotions: "Promotions",
-  pendingPromotions: "Promotions awaiting review",
-  countries: "Countries",
   memberships: "Memberships",
-  entitlements: "Entitlements",
-  members: "Members"
+  benefits: "Benefits",
+  promotions: "Promotions"
 };
+
+const COUNT_LABELS: Record<string, string> = {
+  total: "Total",
+  draft: "Draft",
+  published: "Published",
+  archived: "Archived",
+  active: "Active",
+  retired: "Retired",
+  invited: "Invited",
+  pastDue: "Past due",
+  cancelled: "Cancelled",
+  expired: "Expired",
+  pendingReview: "Submitted for review",
+  approved: "Approved",
+  rejected: "Rejected",
+  house: "House promotions",
+  sponsored: "Sponsored advertisements"
+};
+
+const COUNT_GROUP_ORDER = ["content", "plans", "memberships", "benefits", "promotions", "overview"];
 
 function FlagCard({ flagKey, value }: { flagKey: FlagKey; value: boolean | null }) {
   const copy = FLAG_COPY[flagKey];
@@ -105,16 +116,35 @@ function Stat({ label, value, rawKey }: { label: string; value: number; rawKey: 
   );
 }
 
-function AvailabilityText({ planEnabled }: { planEnabled: boolean | null }) {
-  if (planEnabled === true) {
-    return <span className="font-bold text-[#7EE2A8]">Plan enabled</span>;
+function CountryAvailabilityText({ available }: { available: boolean | null }) {
+  if (available === true) {
+    return <span className="font-bold text-[#7EE2A8]">Available</span>;
   }
   return (
     <span className="font-bold text-[#F2CE72]">
       Not yet available
-      {planEnabled === null ? <span className="block font-normal text-[#8B949E]">No plan flag reported</span> : null}
+      {available === null ? <span className="block font-normal text-[#8B949E]">No availability flag reported</span> : null}
     </span>
   );
+}
+
+function groupCounts(counts: PlusCountLeaf[]): Array<{ group: string; leaves: PlusCountLeaf[] }> {
+  const groups = new Map<string, PlusCountLeaf[]>();
+  for (const leaf of counts) {
+    const leaves = groups.get(leaf.group) ?? [];
+    leaves.push(leaf);
+    groups.set(leaf.group, leaves);
+  }
+  return [...groups.entries()]
+    .sort((left, right) => {
+      const leftIndex = COUNT_GROUP_ORDER.indexOf(left[0]);
+      const rightIndex = COUNT_GROUP_ORDER.indexOf(right[0]);
+      if (leftIndex === -1 && rightIndex === -1) return left[0].localeCompare(right[0]);
+      if (leftIndex === -1) return 1;
+      if (rightIndex === -1) return -1;
+      return leftIndex - rightIndex;
+    })
+    .map(([group, leaves]) => ({ group, leaves }));
 }
 
 export function PlusOverviewPanel({
@@ -163,10 +193,7 @@ export function PlusOverviewPanel({
     }
   ];
 
-  const plansByStatus = overview.plans.reduce<Record<string, number>>((totals, plan) => {
-    totals[plan.status] = (totals[plan.status] ?? 0) + 1;
-    return totals;
-  }, {});
+  const countGroups = groupCounts(overview.counts);
 
   return (
     <div className="space-y-4">
@@ -196,20 +223,32 @@ export function PlusOverviewPanel({
       <Panel>
         <PanelHeader
           title="Reported counts"
-          description="Only the count fields the overview endpoint actually returned are shown."
+          description="Real configuration counts from the nested overview response. No totals are invented."
           headingId="plus-counts-heading"
         />
-        <div aria-labelledby="plus-counts-heading" className="mt-4">
-          {overview.counts.length === 0 ? (
+        <div aria-labelledby="plus-counts-heading" className="mt-4 space-y-4">
+          {countGroups.length === 0 ? (
             <EmptyBlock title="No counts reported">
               The overview endpoint returned no count fields. No totals are invented to fill this space.
             </EmptyBlock>
           ) : (
-            <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {overview.counts.map((count) => (
-                <Stat key={count.key} label={COUNT_LABELS[count.key] ?? humanizeKey(count.key)} value={count.count} rawKey={count.key} />
-              ))}
-            </dl>
+            countGroups.map((group) => (
+              <div key={group.group}>
+                <h3 className="text-sm font-extrabold text-[#F0F6FC]">
+                  {COUNT_GROUP_LABELS[group.group] ?? humanizeKey(group.group)}
+                </h3>
+                <dl className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {group.leaves.map((leaf) => (
+                    <Stat
+                      key={`${leaf.group}.${leaf.key}`}
+                      label={COUNT_LABELS[leaf.key] ?? humanizeKey(leaf.key)}
+                      value={leaf.count}
+                      rawKey={`${leaf.group}.${leaf.key}`}
+                    />
+                  ))}
+                </dl>
+              </div>
+            ))
           )}
         </div>
       </Panel>
@@ -235,7 +274,16 @@ export function PlusOverviewPanel({
                   <div className="min-w-0">
                     <p className="font-bold text-[#F0F6FC]">{plan.name}</p>
                     <p className="text-xs text-[#8B949E]">
-                      {plan.currency ?? "Currency not recorded"} · {plan.billingPeriod ?? "Billing period not recorded"}
+                      {plan.code ?? "Code not reported"} · {plan.currency ?? "Currency not recorded"} ·{" "}
+                      {plan.billingPeriod ?? "Billing period not recorded"}
+                    </p>
+                    <p className="text-xs text-[#8B949E]">
+                      {plan.paidActivationApproved === true
+                        ? "Paid activation approved"
+                        : "Paid activation not approved"}
+                      {plan.approvedTermVersions.length > 0
+                        ? ` · Approved terms: ${plan.approvedTermVersions.map((version) => `v${version}`).join(", ")}`
+                        : " · No approved terms"}
                     </p>
                   </div>
                   <StatusBadge status={plan.status} />
@@ -244,19 +292,12 @@ export function PlusOverviewPanel({
             </ul>
           )}
         </div>
-        {Object.keys(plansByStatus).length > 0 ? (
-          <p className="mt-3 text-xs text-[#8B949E]">
-            {Object.entries(plansByStatus)
-              .map(([status, count]) => `${count} ${status.toLowerCase()}`)
-              .join(" · ")}
-          </p>
-        ) : null}
       </Panel>
 
       <Panel>
         <PanelHeader
           title="Country availability"
-          description="A country is available only when a plan explicitly enables it. Market configuration and currency alone are not Plus+ eligibility."
+          description="A country is available only when the server reports an active plan available there. Market configuration and currency alone are not Plus+ eligibility."
           headingId="plus-countries-heading"
         />
         <div className="mt-4">
@@ -266,15 +307,16 @@ export function PlusOverviewPanel({
             </EmptyBlock>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] border-collapse text-left text-sm" aria-labelledby="plus-countries-heading">
+              <table className="w-full min-w-[640px] border-collapse text-left text-sm" aria-labelledby="plus-countries-heading">
                 <caption className="sr-only">
-                  Countries reported by the Plus+ overview, with the explicit plan availability flag
+                  Countries reported by the Plus+ overview, with server availability and available plans
                 </caption>
                 <thead>
                   <tr className="border-b border-[#21262D] text-[10px] uppercase tracking-[0.1em] text-[#8B949E]">
                     <th scope="col" className="py-2 pr-4 font-extrabold">Country</th>
                     <th scope="col" className="py-2 pr-4 font-extrabold">Code</th>
                     <th scope="col" className="py-2 pr-4 font-extrabold">Currency</th>
+                    <th scope="col" className="py-2 pr-4 font-extrabold">Available plans</th>
                     <th scope="col" className="py-2 font-extrabold">Plus+ availability</th>
                   </tr>
                 </thead>
@@ -284,8 +326,15 @@ export function PlusOverviewPanel({
                       <td className="py-2.5 pr-4 font-semibold text-[#F0F6FC]">{country.name}</td>
                       <td className="py-2.5 pr-4 font-mono text-xs text-[#C9D1D9]">{country.code}</td>
                       <td className="py-2.5 pr-4 text-[#C9D1D9]">{country.currency ?? "Not recorded"}</td>
+                      <td className="py-2.5 pr-4 text-[#C9D1D9]">
+                        {country.plans.length > 0
+                          ? country.plans
+                              .map((plan) => (plan.priceLabel ? `${plan.name} — ${plan.priceLabel}` : plan.name))
+                              .join("; ")
+                          : "None"}
+                      </td>
                       <td className="py-2.5">
-                        <AvailabilityText planEnabled={country.planEnabled} />
+                        <CountryAvailabilityText available={country.available} />
                       </td>
                     </tr>
                   ))}
@@ -295,8 +344,8 @@ export function PlusOverviewPanel({
           )}
         </div>
         <p className="mt-3 text-xs leading-5 text-[#8B949E]">
-          Country configuration is not eligibility. A country remains “Not yet available” until a plan is enabled for it
-          on the server.
+          Country configuration is not eligibility. A country remains “Not yet available” until the server reports an
+          active plan available there.
         </p>
       </Panel>
     </div>

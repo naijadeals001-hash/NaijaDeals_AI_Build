@@ -145,13 +145,18 @@ const STATUS_LABELS: Record<string, string> = {
   ARCHIVED: "Archived",
   SCHEDULED: "Scheduled",
   SUBMITTED: "Submitted for review",
-  PENDING_REVIEW: "Submitted for review",
   APPROVED: "Approved",
   REJECTED: "Rejected",
   ACTIVE: "Active",
   INACTIVE: "Inactive",
+  RETIRED: "Retired",
   PAUSED: "Paused",
   PENDING_APPROVAL: "Pending approval",
+  PENDING_REVIEW: "Submitted for review",
+  INVITED: "Invited",
+  PAST_DUE: "Past due",
+  CANCELLED: "Cancelled",
+  EXPIRED: "Expired",
   UNKNOWN: "Status not reported"
 };
 

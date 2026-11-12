@@ -3,11 +3,13 @@
 import { Fragment, useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import { ArrowDown, ArrowUp, ExternalLink, ImageOff, Pencil, Plus, X } from "lucide-react";
 import { publicServices } from "@/lib/data/public-services";
+import { plusApi, normalizeContent, type PlusContentItem } from "./plus-api";
 import {
-  plusApi,
-  type PlusContentInput,
-  type PlusContentItem
-} from "./plus-api";
+  buildContentPayload,
+  isValidPlusKey,
+  suggestKey,
+  type PlusContentPayload
+} from "./plus-payloads";
 import {
   Button,
   EmptyBlock,
@@ -29,6 +31,7 @@ import {
 const SERVICE_OPTIONS = publicServices.map((service) => ({ key: service.key, label: service.label }));
 
 type ContentFormValues = {
+  key: string;
   title: string;
   description: string;
   imageUrl: string;
@@ -43,6 +46,7 @@ type ContentFormValues = {
 };
 
 const EMPTY_FORM: ContentFormValues = {
+  key: "",
   title: "",
   description: "",
   imageUrl: "",
@@ -58,11 +62,12 @@ const EMPTY_FORM: ContentFormValues = {
 
 function valuesFromItem(item: PlusContentItem): ContentFormValues {
   return {
+    key: item.key,
     title: item.title,
     description: item.description,
     imageUrl: item.imageUrl ?? "",
     imageAlt: item.imageAlt ?? "",
-    destination: item.destination ?? "",
+    destination: item.href ?? "",
     serviceKey: item.serviceKey ?? "",
     language: item.language ?? "en",
     countries: item.countries.join(", "),
@@ -103,9 +108,10 @@ function isSafeDestination(value: string): boolean {
 
 function validateContent(values: ContentFormValues): {
   errors: Record<string, string>;
-  input: PlusContentInput | null;
+  input: PlusContentPayload | null;
 } {
   const errors: Record<string, string> = {};
+  const key = values.key.trim().toLowerCase();
   const title = values.title.trim();
   const description = values.description.trim();
   const imageUrl = values.imageUrl.trim();
@@ -113,6 +119,11 @@ function validateContent(values: ContentFormValues): {
   const destination = values.destination.trim();
   const language = values.language.trim();
   const { codes, invalid } = parseCountries(values.countries);
+
+  if (!key) errors.key = "Enter a stable key for this card.";
+  else if (!isValidPlusKey(key)) {
+    errors.key = "Use 3-80 lowercase letters, digits, hyphens or underscores, starting with a letter or digit.";
+  }
 
   if (!title) errors.title = "Enter a card title.";
   else if (title.length > 120) errors.title = "Keep the title to 120 characters or fewer.";
@@ -164,7 +175,8 @@ function validateContent(values: ContentFormValues): {
 
   return {
     errors,
-    input: {
+    input: buildContentPayload({
+      key,
       title,
       description,
       imageUrl,
@@ -176,7 +188,7 @@ function validateContent(values: ContentFormValues): {
       startsAt,
       endsAt,
       ...(sortOrder ? { sortOrder: Number(sortOrder) } : {})
-    }
+    })
   };
 }
 
@@ -186,26 +198,26 @@ function fromDateTimeLocalValue(value: string): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function countWords(value: number): string {
+function countCharacters(value: number): string {
   return `${value} ${value === 1 ? "character" : "characters"}`;
 }
 
 function ContentForm({
   heading,
   initial,
+  isEdit = false,
   submitLabel,
   pendingLabel,
   onSubmit,
-  onCancel,
-  allowSortOrder = true
+  onCancel
 }: {
   heading: string;
   initial: ContentFormValues;
+  isEdit?: boolean;
   submitLabel: string;
   pendingLabel: string;
-  onSubmit: (input: PlusContentInput) => Promise<void>;
+  onSubmit: (input: PlusContentPayload) => Promise<void>;
   onCancel: () => void;
-  allowSortOrder?: boolean;
 }) {
   const id = useId();
   const [values, setValues] = useState<ContentFormValues>(initial);
@@ -213,6 +225,7 @@ function ContentForm({
   const [serverError, setServerError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
   const [previewFailed, setPreviewFailed] = useState(false);
+  const [keyTouched, setKeyTouched] = useState(isEdit);
 
   useEffect(() => {
     setPreviewFailed(false);
@@ -220,6 +233,15 @@ function ContentForm({
 
   function update<K extends keyof ContentFormValues>(key: K, value: ContentFormValues[K]) {
     setValues((previous) => ({ ...previous, [key]: value }));
+  }
+
+  /** Auto-suggest the key from the title until the operator edits the key. */
+  function updateTitle(title: string) {
+    setValues((previous) => ({
+      ...previous,
+      title,
+      ...(!isEdit && !keyTouched ? { key: suggestKey("card", title) } : {})
+    }));
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -262,12 +284,44 @@ function ContentForm({
       {serverError ? <ErrorBlock title="The server rejected the save" error={serverError} /> : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field id={`${id}-title`} label="Title" required error={errors.title} hint={countWords(values.title.length)}>
+        <Field
+          id={`${id}-key`}
+          label="Key"
+          required
+          error={errors.key}
+          hint={
+            isEdit
+              ? "The key is immutable once the card is created."
+              : "Auto-suggested from the title. Lowercase letters, digits, hyphens or underscores."
+          }
+        >
+          {({ id: fieldId, describedBy, invalid }) => (
+            <input
+              id={fieldId}
+              value={values.key}
+              onChange={(event) => {
+                setKeyTouched(true);
+                update("key", event.target.value);
+              }}
+              aria-describedby={describedBy}
+              aria-invalid={invalid || undefined}
+              aria-required
+              readOnly={isEdit}
+              maxLength={80}
+              placeholder="card-ramadan-deals"
+              className={`${FIELD_CONTROL_CLASS} ${invalid ? FIELD_CONTROL_INVALID_CLASS : ""} ${
+                isEdit ? "opacity-70" : ""
+              }`}
+            />
+          )}
+        </Field>
+
+        <Field id={`${id}-title`} label="Title" required error={errors.title} hint={countCharacters(values.title.length)}>
           {({ id: fieldId, describedBy, invalid }) => (
             <input
               id={fieldId}
               value={values.title}
-              onChange={(event) => update("title", event.target.value)}
+              onChange={(event) => updateTitle(event.target.value)}
               aria-describedby={describedBy}
               aria-invalid={invalid || undefined}
               aria-required
@@ -413,7 +467,7 @@ function ContentForm({
           label="Destination"
           required
           error={errors.destination}
-          hint="Where the card opens, for example /naijashop or a full https:// page."
+          hint="Where the card opens. Sent to the server as `href`: a site path such as /naijashop or a full https:// page."
         >
           {({ id: fieldId, describedBy, invalid }) => (
             <input
@@ -469,27 +523,25 @@ function ContentForm({
           )}
         </Field>
 
-        {allowSortOrder ? (
-          <Field
-            id={`${id}-sort-order`}
-            label="Sort order"
-            error={errors.sortOrder}
-            hint="Optional. Leave blank to let the server append the card."
-          >
-            {({ id: fieldId, describedBy, invalid }) => (
-              <input
-                id={fieldId}
-                value={values.sortOrder}
-                onChange={(event) => update("sortOrder", event.target.value)}
-                aria-describedby={describedBy}
-                aria-invalid={invalid || undefined}
-                inputMode="numeric"
-                placeholder="0"
-                className={`${FIELD_CONTROL_CLASS} ${invalid ? FIELD_CONTROL_INVALID_CLASS : ""}`}
-              />
-            )}
-          </Field>
-        ) : null}
+        <Field
+          id={`${id}-sort-order`}
+          label="Sort order"
+          error={errors.sortOrder}
+          hint="Optional. Leave blank and the server assigns the next position; the returned order is shown in the register."
+        >
+          {({ id: fieldId, describedBy, invalid }) => (
+            <input
+              id={fieldId}
+              value={values.sortOrder}
+              onChange={(event) => update("sortOrder", event.target.value)}
+              aria-describedby={describedBy}
+              aria-invalid={invalid || undefined}
+              inputMode="numeric"
+              placeholder="Next position"
+              className={`${FIELD_CONTROL_CLASS} ${invalid ? FIELD_CONTROL_INVALID_CLASS : ""}`}
+            />
+          )}
+        </Field>
 
         <Field id={`${id}-starts`} label="Starts at" error={errors.startsAt} hint="Optional. Local time.">
           {({ id: fieldId, describedBy, invalid }) => (
@@ -555,7 +607,8 @@ function ContentCard({
   index: number;
   total: number;
 }) {
-  const serviceLabel = SERVICE_OPTIONS.find((service) => service.key === item.serviceKey)?.label ?? item.serviceKey ?? "Service not recorded";
+  const serviceLabel =
+    SERVICE_OPTIONS.find((service) => service.key === item.serviceKey)?.label ?? item.serviceKey ?? "Service not recorded";
   const starts = formatDateTime(item.startsAt);
   const ends = formatDateTime(item.endsAt);
   const schedule =
@@ -563,7 +616,7 @@ function ContentCard({
   const publishBusy = busyKey === `publish:${item.id}`;
   const archiveBusy = busyKey === `archive:${item.id}`;
   const moveBusy = busyKey === `move:${item.id}`;
-  const publishReady = Boolean(item.imageUrl && item.imageAlt && item.destination);
+  const publishReady = Boolean(item.imageUrl && item.imageAlt && item.href);
 
   return (
     <li className="rounded-xl border border-[#21262D] bg-[#0B0E14]/50 p-3 sm:p-4">
@@ -584,27 +637,28 @@ function ContentCard({
             <p className="font-bold text-[#F0F6FC]">{item.title}</p>
             <StatusBadge status={item.status} />
           </div>
+          <p className="font-mono text-[11px] text-[#8B949E]">{item.key || "Key not reported"}</p>
           <p className="text-sm leading-6 text-[#C9D1D9]">{item.description}</p>
           <p className="text-xs text-[#8B949E]">
             {serviceLabel} · {item.language ?? "Language not recorded"} · order {item.sortOrder ?? "not set"}
           </p>
           <p className="text-xs text-[#8B949E]">{countryCodesToText(item.countries)}</p>
           <p className="text-xs text-[#8B949E]">{schedule}</p>
-          {item.destination ? (
+          {item.href ? (
             <p className="break-all font-mono text-[11px] text-[#C9D1D9]">
-              {isSafeDestination(item.destination) ? (
+              {isSafeDestination(item.href) ? (
                 <a
-                  href={item.destination}
-                  target={item.destination.startsWith("https://") ? "_blank" : undefined}
-                  rel={item.destination.startsWith("https://") ? "noreferrer noopener" : undefined}
+                  href={item.href}
+                  target={item.href.startsWith("https://") ? "_blank" : undefined}
+                  rel={item.href.startsWith("https://") ? "noreferrer noopener" : undefined}
                   className="inline-flex items-center gap-1 underline decoration-dotted underline-offset-2 hover:text-[#00E676] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00E676] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0E14]"
                 >
-                  {item.destination}
-                  {item.destination.startsWith("https://") ? <ExternalLink className="h-3 w-3" aria-hidden="true" /> : null}
+                  {item.href}
+                  {item.href.startsWith("https://") ? <ExternalLink className="h-3 w-3" aria-hidden="true" /> : null}
                   <span className="sr-only"> (opens the destination)</span>
                 </a>
               ) : (
-                item.destination
+                item.href
               )}
             </p>
           ) : (
@@ -664,7 +718,7 @@ function ContentCard({
               Publish
             </Button>
           ) : null}
-          {canWrite && item.status !== "ARCHIVED" ? (
+          {canPublish && item.status !== "ARCHIVED" ? (
             <Button variant="secondary" onClick={onArchive} busy={archiveBusy} disabled={busyKey !== null && !archiveBusy}>
               Archive
             </Button>
@@ -673,6 +727,11 @@ function ContentCard({
       ) : null}
     </li>
   );
+}
+
+function createdCard(payload: unknown): PlusContentItem | null {
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) return null;
+  return normalizeContent(payload as Record<string, unknown>);
 }
 
 export function PlusContentPanel({ canWrite, canPublish }: { canWrite: boolean; canPublish: boolean }) {
@@ -686,16 +745,21 @@ export function PlusContentPanel({ canWrite, canPublish }: { canWrite: boolean; 
 
   const items = resource.data ?? [];
 
-  async function create(input: PlusContentInput) {
+  async function create(input: PlusContentPayload) {
     const result = await plusApi.content.create(input);
+    const created = createdCard(result.payload);
     setCreating(false);
     setEditingId(null);
     setActionError(null);
-    setNotice(result.message ?? "The server accepted the new service-awareness card.");
+    const order =
+      created && created.sortOrder !== null
+        ? ` The server returned sort order ${created.sortOrder}.`
+        : " The server did not report a sort order.";
+    setNotice(result.message ?? `The server created “${created?.title ?? input.title}”.${order}`);
     await resource.reload();
   }
 
-  async function update(id: string, input: PlusContentInput) {
+  async function update(id: string, input: PlusContentPayload) {
     const result = await plusApi.content.update(id, input);
     setEditingId(null);
     setActionError(null);
@@ -767,14 +831,16 @@ export function PlusContentPanel({ canWrite, canPublish }: { canWrite: boolean; 
         {!canWrite ? (
           <div className="mt-3">
             <ReadOnlyNote>
-              Creating, editing, reordering and archiving service-awareness cards requires{" "}
-              <code className="font-mono">plus:content:write</code>.
+              Creating, editing and reordering service-awareness cards requires{" "}
+              <code className="font-mono">plus:content:write</code>. Publishing and archiving require{" "}
+              <code className="font-mono">plus:content:publish</code>.
             </ReadOnlyNote>
           </div>
         ) : null}
         {!canPublish ? (
           <p className="mt-2 text-xs leading-5 text-[#8B949E]">
-            Publishing requires <code className="font-mono">plus:content:publish</code>. Drafts remain drafts in this view.
+            Publishing and archiving require <code className="font-mono">plus:content:publish</code>. Drafts remain
+            drafts in this view.
           </p>
         ) : null}
         {notice ? (
@@ -860,6 +926,7 @@ export function PlusContentPanel({ canWrite, canPublish }: { canWrite: boolean; 
                       <ContentForm
                         heading={`Edit “${item.title}”`}
                         initial={valuesFromItem(item)}
+                        isEdit
                         submitLabel="Save changes"
                         pendingLabel="Saving…"
                         onSubmit={(input) => update(item.id, input)}

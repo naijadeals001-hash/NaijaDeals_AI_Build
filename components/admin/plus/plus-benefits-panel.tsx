@@ -2,7 +2,8 @@
 
 import { Fragment, useCallback, useId, useState, type FormEvent } from "react";
 import { Pencil, Plus } from "lucide-react";
-import { plusApi, type PlusBenefit, type PlusBenefitInput, type PlusPlan } from "./plus-api";
+import { plusApi, type PlusBenefit, type PlusPlan } from "./plus-api";
+import { buildBenefitPayload, isValidPlusKey, suggestKey, type PlusBenefitPayload } from "./plus-payloads";
 import {
   Button,
   EmptyBlock,
@@ -21,6 +22,7 @@ import {
 } from "./plus-ui";
 
 type BenefitFormValues = {
+  key: string;
   title: string;
   description: string;
   planId: string;
@@ -28,6 +30,7 @@ type BenefitFormValues = {
 
 function valuesFromBenefit(benefit: PlusBenefit): BenefitFormValues {
   return {
+    key: benefit.key,
     title: benefit.title,
     description: benefit.description,
     planId: benefit.planId ?? ""
@@ -38,6 +41,7 @@ function BenefitForm({
   heading,
   initial,
   plans,
+  isEdit = false,
   submitLabel,
   pendingLabel,
   onSubmit,
@@ -46,9 +50,10 @@ function BenefitForm({
   heading: string;
   initial: BenefitFormValues;
   plans: PlusPlan[];
+  isEdit?: boolean;
   submitLabel: string;
   pendingLabel: string;
-  onSubmit: (input: PlusBenefitInput) => Promise<void>;
+  onSubmit: (input: PlusBenefitPayload) => Promise<void>;
   onCancel: () => void;
 }) {
   const id = useId();
@@ -56,22 +61,36 @@ function BenefitForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
+  const [keyTouched, setKeyTouched] = useState(isEdit);
 
   function update<K extends keyof BenefitFormValues>(key: K, value: BenefitFormValues[K]) {
     setValues((previous) => ({ ...previous, [key]: value }));
   }
 
+  function updateTitle(title: string) {
+    setValues((previous) => ({
+      ...previous,
+      title,
+      ...(!isEdit && !keyTouched ? { key: suggestKey("benefit", title) } : {})
+    }));
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
+    const key = values.key.trim().toLowerCase();
     const title = values.title.trim();
     const description = values.description.trim();
     const planId = values.planId;
 
+    if (!key) nextErrors.key = "Enter a stable key for this benefit.";
+    else if (!isValidPlusKey(key)) {
+      nextErrors.key = "Use 3-80 lowercase letters, digits, hyphens or underscores, starting with a letter or digit.";
+    }
     if (!title) nextErrors.title = "Enter the benefit title.";
     else if (title.length > 120) nextErrors.title = "Keep the title to 120 characters or fewer.";
     if (!description) nextErrors.description = "Describe the benefit that is actually delivered.";
-    else if (description.length > 600) nextErrors.description = "Keep the description to 600 characters or fewer.";
+    else if (description.length > 2000) nextErrors.description = "Keep the description to 2000 characters or fewer.";
     if (!planId) nextErrors.planId = "Choose the plan this benefit belongs to.";
 
     setErrors(nextErrors);
@@ -80,7 +99,7 @@ function BenefitForm({
 
     setPending(true);
     try {
-      await onSubmit({ title, description, planId });
+      await onSubmit(buildBenefitPayload({ key, title, description, planId }));
     } catch (error) {
       setServerError(error);
     } finally {
@@ -93,12 +112,44 @@ function BenefitForm({
       <h3 className="font-display text-base font-extrabold text-[#F0F6FC]">{heading}</h3>
       {serverError ? <ErrorBlock title="The server rejected the benefit" error={serverError} /> : null}
       <div className="grid gap-3 sm:grid-cols-2">
+        <Field
+          id={`${id}-key`}
+          label="Key"
+          required
+          error={errors.key}
+          hint={
+            isEdit
+              ? "The key is immutable once the benefit is created."
+              : "Auto-suggested from the title. Lowercase letters, digits, hyphens or underscores."
+          }
+        >
+          {({ id: fieldId, describedBy, invalid }) => (
+            <input
+              id={fieldId}
+              value={values.key}
+              onChange={(event) => {
+                setKeyTouched(true);
+                update("key", event.target.value);
+              }}
+              aria-describedby={describedBy}
+              aria-invalid={invalid || undefined}
+              aria-required
+              readOnly={isEdit}
+              maxLength={80}
+              placeholder="benefit-free-delivery"
+              className={`${FIELD_CONTROL_CLASS} ${invalid ? FIELD_CONTROL_INVALID_CLASS : ""} ${
+                isEdit ? "opacity-70" : ""
+              }`}
+            />
+          )}
+        </Field>
+
         <Field id={`${id}-title`} label="Benefit title" required error={errors.title}>
           {({ id: fieldId, describedBy, invalid }) => (
             <input
               id={fieldId}
               value={values.title}
-              onChange={(event) => update("title", event.target.value)}
+              onChange={(event) => updateTitle(event.target.value)}
               aria-describedby={describedBy}
               aria-invalid={invalid || undefined}
               aria-required
@@ -155,7 +206,7 @@ function BenefitForm({
                 aria-invalid={invalid || undefined}
                 aria-required
                 rows={3}
-                maxLength={700}
+                maxLength={2000}
                 className={`${FIELD_CONTROL_CLASS} ${invalid ? FIELD_CONTROL_INVALID_CLASS : ""}`}
               />
             )}
@@ -196,7 +247,7 @@ export function PlusBenefitsPanel({
   const benefits = resource.data ?? [];
   const canCreate = canWrite && plans.length > 0;
 
-  async function create(input: PlusBenefitInput) {
+  async function create(input: PlusBenefitPayload) {
     const result = await plusApi.benefits.create(input);
     setCreating(false);
     setEditingId(null);
@@ -205,7 +256,7 @@ export function PlusBenefitsPanel({
     await resource.reload();
   }
 
-  async function update(id: string, input: PlusBenefitInput) {
+  async function update(id: string, input: PlusBenefitPayload) {
     const result = await plusApi.benefits.update(id, input);
     setEditingId(null);
     setActionError(null);
@@ -260,13 +311,14 @@ export function PlusBenefitsPanel({
         {!canWrite ? (
           <div className="mt-3">
             <ReadOnlyNote>
-              Creating, editing and archiving benefits requires <code className="font-mono">plus:content:write</code>.
+              Creating and editing benefits requires <code className="font-mono">plus:content:write</code>. Publishing
+              and archiving require <code className="font-mono">plus:content:publish</code>.
             </ReadOnlyNote>
           </div>
         ) : null}
         {!canPublish ? (
           <p className="mt-2 text-xs leading-5 text-[#8B949E]">
-            Publishing requires <code className="font-mono">plus:content:publish</code>.
+            Publishing and archiving require <code className="font-mono">plus:content:publish</code>.
           </p>
         ) : null}
         {notice ? (
@@ -295,7 +347,7 @@ export function PlusBenefitsPanel({
         <Panel>
           <BenefitForm
             heading="New member benefit"
-            initial={{ title: "", description: "", planId: "" }}
+            initial={{ key: "", title: "", description: "", planId: "" }}
             plans={plans}
             submitLabel="Create draft benefit"
             pendingLabel="Creating…"
@@ -350,6 +402,7 @@ export function PlusBenefitsPanel({
                         <h3 className="font-display text-base font-extrabold text-[#F0F6FC]">{benefit.title}</h3>
                         <StatusBadge status={benefit.status} />
                       </div>
+                      <p className="font-mono text-[11px] text-[#8B949E]">{benefit.key || "Key not reported"}</p>
                       <p className="mt-1 text-sm leading-6 text-[#C9D1D9]">{benefit.description}</p>
                       <p className="mt-1 text-xs leading-5 text-[#8B949E]">
                         Plan: {benefit.planName ?? benefit.planId ?? "Not recorded"}
@@ -386,7 +439,7 @@ export function PlusBenefitsPanel({
                               Publish
                             </Button>
                           ) : null}
-                          {canWrite && benefit.status !== "ARCHIVED" ? (
+                          {canPublish && benefit.status !== "ARCHIVED" ? (
                             <Button
                               variant="secondary"
                               onClick={() => void transition(benefit, "archive")}
@@ -405,6 +458,7 @@ export function PlusBenefitsPanel({
                           heading={`Edit “${benefit.title}”`}
                           initial={valuesFromBenefit(benefit)}
                           plans={plans}
+                          isEdit
                           submitLabel="Save changes"
                           pendingLabel="Saving…"
                           onSubmit={(input) => update(benefit.id, input)}

@@ -8,15 +8,31 @@
  *
  * 1. Nothing is assumed. Field names are read tolerantly because the admin
  *    surface must keep working while the backend adds optional fields, but a
- *    missing value stays missing. In particular, country eligibility is never
- *    inferred from country configuration: only an explicit server flag counts
- *    as "plan enabled".
+ *    missing value stays missing. Country availability comes only from the
+ *    server (`available`, with the older `planEnabled` flag as a fallback);
+ *    marketplace configuration is never treated as eligibility.
  * 2. No mutation is reported as successful before the response arrives. Every
  *    mutation resolves to the server's own payload (and message when it sends
  *    one) or throws a PlusApiError carrying the server's status and error code
  *    verbatim, so panels can surface refusals such as
  *    `paid_activation_not_approved` instead of inventing success.
+ *
+ * Request bodies are built by `plus-payloads.ts`; the server field names there
+ * (`key`, `href`, `code`, `version`, `effectiveFrom`, `kind`, `body`,
+ * `enabled`) are the authoritative contract.
  */
+
+import type {
+  PlusBenefitPayload,
+  PlusContentPayload,
+  PlusCountryPayload,
+  PlusPaidActivationPayload,
+  PlusPlanPayload,
+  PlusPlanPricingPayload,
+  PlusPlanTermPayload,
+  PlusPromotionPayload,
+  PromotionKind
+} from "./plus-payloads";
 
 export type PlusJson = Record<string, unknown>;
 
@@ -188,15 +204,30 @@ export type PlusFlags = {
   paidActivationApproved: boolean | null;
 };
 
+export type PlusCountryPlan = {
+  id: string | null;
+  name: string;
+  priceLabel: string | null;
+};
+
 export type PlusCountryAvailability = {
   code: string;
   name: string;
   currency: string | null;
   /**
-   * True only when the server explicitly reports a plan enabled for the
-   * country. Country configuration alone is never eligibility.
+   * True only when the server reports an ACTIVE plan available in the country.
+   * `planEnabled` is accepted as a fallback for older responses.
    */
-  planEnabled: boolean | null;
+  available: boolean | null;
+  plans: PlusCountryPlan[];
+};
+
+export type PlusCountLeaf = {
+  /** The server's top-level count group, for example `content` or `plans`. */
+  group: string;
+  /** The leaf name inside the group, for example `total` or `pendingReview`. */
+  key: string;
+  count: number;
 };
 
 export type PlusPlanCountry = {
@@ -207,10 +238,14 @@ export type PlusPlanCountry = {
 
 export type PlusPlanTerm = {
   id: string;
-  version: string | null;
+  version: number | null;
   status: string;
-  summary: string | null;
-  effectiveAt: string | null;
+  priceMinor: string | null;
+  currency: string | null;
+  billingPeriod: string | null;
+  cancellationSummary: string | null;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
   approvedAt: string | null;
 };
 
@@ -223,9 +258,10 @@ export type PlusPlan = {
   priceMinor: string | null;
   currency: string | null;
   billingPeriod: string | null;
+  paidActivationApproved: boolean | null;
   countries: PlusPlanCountry[];
   terms: PlusPlanTerm[];
-  activatedAt: string | null;
+  approvedTermVersions: number[];
 };
 
 export type PlusMembershipRow = {
@@ -246,7 +282,7 @@ export type PlusEntitlementRow = {
 };
 
 export type PlusOverview = {
-  counts: Array<{ key: string; count: number }>;
+  counts: PlusCountLeaf[];
   flags: PlusFlags;
   plans: PlusPlan[];
   countries: PlusCountryAvailability[];
@@ -267,24 +303,39 @@ export function normalizePlanCountry(value: unknown): PlusPlanCountry | null {
   return {
     code,
     name: readString(value, ["name", "countryName"]) ?? code,
-    enabled: readBoolean(value, ["planEnabled", "enabled", "active"])
+    enabled: readBoolean(value, ["enabled", "planEnabled", "active"])
+  };
+}
+
+function normalizeTerm(term: PlusJson): PlusPlanTerm {
+  const approvedAt = readString(term, ["approvedAt", "approvedOn"]);
+  return {
+    id: readString(term, ["id"]) ?? "",
+    version: readInteger(term, ["version"]),
+    // Terms have no status column: approval is the `approvedAt` timestamp.
+    status: approvedAt ? "APPROVED" : "PENDING_APPROVAL",
+    priceMinor: readMinorUnits(term, ["priceMinor", "priceKobo"]),
+    currency: readString(term, ["currency", "currencyCode"]),
+    billingPeriod: readString(term, ["billingPeriod", "period"]),
+    cancellationSummary: readString(term, ["cancellationSummary", "summary"]),
+    effectiveFrom: readString(term, ["effectiveFrom", "effectiveAt", "effectiveFromDate"]),
+    effectiveTo: readString(term, ["effectiveTo", "endsAt"]),
+    approvedAt
   };
 }
 
 export function normalizePlan(record: PlusJson): PlusPlan {
   const terms = Array.isArray(record.terms)
-    ? record.terms.filter(isRecord).map((term) => ({
-        id: readString(term, ["id"]) ?? "",
-        version: readString(term, ["version", "label", "name"]),
-        status: (readString(term, ["status"]) ?? "UNKNOWN").toUpperCase(),
-        summary: readString(term, ["summary", "description", "body"]),
-        effectiveAt: readString(term, ["effectiveAt", "effectiveFrom"]),
-        approvedAt: readString(term, ["approvedAt"])
-      }))
+    ? record.terms.filter(isRecord).map(normalizeTerm).filter((term) => term.id.length > 0)
     : [];
   const countries = Array.isArray(record.countries)
     ? record.countries.map(normalizePlanCountry).filter((country): country is PlusPlanCountry => country !== null)
-    : [];
+    : readCountryCodes(record, ["countryCodes"]).map((code) => ({ code, name: code, enabled: true }));
+  const approvedTermVersions = Array.isArray(record.approvedTermVersions)
+    ? record.approvedTermVersions
+        .map((value) => (typeof value === "number" ? value : Number(value)))
+        .filter((value) => Number.isInteger(value))
+    : terms.filter((term) => term.status === "APPROVED" && term.version !== null).map((term) => term.version as number);
 
   return {
     id: readString(record, ["id"]) ?? "",
@@ -295,9 +346,10 @@ export function normalizePlan(record: PlusJson): PlusPlan {
     priceMinor: readMinorUnits(record, ["priceMinor", "priceKobo", "price"]),
     currency: readString(record, ["currency", "currencyCode"]),
     billingPeriod: readString(record, ["billingPeriod", "period", "interval"]),
+    paidActivationApproved: readBoolean(record, ["paidActivationApproved"]),
     countries,
-    terms: terms.filter((term) => term.id.length > 0),
-    activatedAt: readString(record, ["activatedAt", "activeFrom"])
+    terms,
+    approvedTermVersions
   };
 }
 
@@ -340,6 +392,38 @@ function normalizeEntitlements(value: unknown): PlusEntitlementRow[] | null {
   }));
 }
 
+/**
+ * The overview returns nested count groups:
+ * `{ content: { total, draft, published, archived }, plans: {...}, ... }`.
+ * Flat numeric leaves are still accepted.
+ */
+function collectCounts(value: unknown, path: string[], out: PlusCountLeaf[]): void {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    const group = path.length > 1 ? path[0] : "overview";
+    const key = path.length > 1 ? path.slice(1).join(".") : path[0] ?? "count";
+    out.push({ group, key, count: Math.trunc(value) });
+    return;
+  }
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    const group = path.length > 1 ? path[0] : "overview";
+    const key = path.length > 1 ? path.slice(1).join(".") : path[0] ?? "count";
+    out.push({ group, key, count: Number(value.trim()) });
+    return;
+  }
+  if (isRecord(value)) {
+    for (const [key, child] of Object.entries(value)) collectCounts(child, [...path, key], out);
+  }
+}
+
+function normalizeCountryPlans(value: unknown): PlusCountryPlan[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isRecord).map((plan) => ({
+    id: readString(plan, ["id"]),
+    name: readString(plan, ["name", "title"]) ?? "Unnamed plan",
+    priceLabel: readString(plan, ["priceLabel", "price"])
+  }));
+}
+
 export function normalizeOverview(payload: unknown): PlusOverview {
   if (!isRecord(payload)) {
     throw new PlusApiError("The server returned an unexpected overview response.", 0, "invalid_response");
@@ -352,20 +436,8 @@ export function normalizeOverview(payload: unknown): PlusOverview {
     paidActivationApproved: readBoolean(rawFlags, ["paidActivationApproved"])
   };
 
-  const counts: Array<{ key: string; count: number }> = [];
-  if (isRecord(payload.counts)) {
-    for (const [key, value] of Object.entries(payload.counts)) {
-      const numeric =
-        typeof value === "number"
-          ? value
-          : typeof value === "string" && /^\d+$/.test(value.trim())
-            ? Number(value.trim())
-            : Number.NaN;
-      if (Number.isFinite(numeric) && numeric >= 0) {
-        counts.push({ key, count: Math.trunc(numeric) });
-      }
-    }
-  }
+  const counts: PlusCountLeaf[] = [];
+  collectCounts(payload.counts, [], counts);
 
   const plans = Array.isArray(payload.plans)
     ? payload.plans.filter(isRecord).map(normalizePlan).filter((plan) => plan.id.length > 0)
@@ -381,13 +453,15 @@ export function normalizeOverview(payload: unknown): PlusOverview {
             code,
             name: readString(country, ["name", "countryName"]) ?? code,
             currency: readString(country, ["currency", "currencyCode"]),
-            planEnabled: readBoolean(country, [
+            available: readBoolean(country, [
+              "available",
               "planEnabled",
               "plusPlanEnabled",
               "membershipEnabled",
               "planAvailable",
               "eligible"
-            ])
+            ]),
+            plans: normalizeCountryPlans(country.plans)
           } satisfies PlusCountryAvailability;
         })
         .filter((country): country is PlusCountryAvailability => country !== null)
@@ -405,11 +479,12 @@ export function normalizeOverview(payload: unknown): PlusOverview {
 
 export type PlusContentItem = {
   id: string;
+  key: string;
   title: string;
   description: string;
   imageUrl: string | null;
   imageAlt: string | null;
-  destination: string | null;
+  href: string | null;
   serviceKey: string | null;
   sortOrder: number | null;
   language: string | null;
@@ -420,31 +495,19 @@ export type PlusContentItem = {
   publishedAt: string | null;
 };
 
-export type PlusContentInput = {
-  title: string;
-  description: string;
-  imageUrl: string;
-  imageAlt: string;
-  destination: string;
-  serviceKey: string;
-  language: string;
-  countries: string[];
-  startsAt: string | null;
-  endsAt: string | null;
-  sortOrder?: number;
-};
-
 export function normalizeContent(record: PlusJson): PlusContentItem {
   const nestedImage = isRecord(record.image) ? record.image : null;
   return {
     id: readString(record, ["id"]) ?? "",
+    key: readString(record, ["key"]) ?? "",
     title: readString(record, ["title", "name"]) ?? "Untitled card",
     description: readString(record, ["description", "body"]) ?? "",
     imageUrl:
       readString(record, ["imageUrl", "imagePath"]) ?? (nestedImage ? readString(nestedImage, ["url", "src"]) : null),
     imageAlt:
       readString(record, ["imageAlt", "alt"]) ?? (nestedImage ? readString(nestedImage, ["alt", "alternativeText"]) : null),
-    destination: readString(record, ["destination", "href", "linkUrl"]),
+    // The server column is `href`; older payloads used `destination`.
+    href: readString(record, ["href", "destination", "linkUrl"]),
     serviceKey: readString(record, ["serviceKey", "service"]),
     sortOrder: readInteger(record, ["sortOrder", "order", "position"]),
     language: readString(record, ["language", "locale"]),
@@ -462,6 +525,7 @@ export function normalizeContent(record: PlusJson): PlusContentItem {
 
 export type PlusBenefit = {
   id: string;
+  key: string;
   title: string;
   description: string;
   planId: string | null;
@@ -470,16 +534,11 @@ export type PlusBenefit = {
   publishedAt: string | null;
 };
 
-export type PlusBenefitInput = {
-  title: string;
-  description: string;
-  planId: string;
-};
-
 export function normalizeBenefit(record: PlusJson): PlusBenefit {
   const nestedPlan = isRecord(record.plan) ? record.plan : null;
   return {
     id: readString(record, ["id"]) ?? "",
+    key: readString(record, ["key"]) ?? "",
     title: readString(record, ["title", "name"]) ?? "Untitled benefit",
     description: readString(record, ["description", "body"]) ?? "",
     planId: readString(record, ["planId"]) ?? (nestedPlan ? readString(nestedPlan, ["id"]) : null),
@@ -493,14 +552,12 @@ export function normalizeBenefit(record: PlusJson): PlusBenefit {
 /* Promotions                                                          */
 /* ------------------------------------------------------------------ */
 
-export const PROMOTION_TYPES = ["HOUSE_PROMOTION", "MEMBER_BENEFIT", "SPONSORED_ADVERTISEMENT"] as const;
-export type PromotionType = (typeof PROMOTION_TYPES)[number];
-
 export type PlusPromotion = {
   id: string;
+  key: string;
   title: string;
-  description: string;
-  type: PromotionType | "UNKNOWN";
+  body: string;
+  kind: PromotionKind | "UNKNOWN";
   sponsorName: string | null;
   disclosureLabel: string | null;
   status: string;
@@ -509,23 +566,23 @@ export type PlusPromotion = {
   createdAt: string | null;
 };
 
-export type PlusPromotionInput = {
-  title: string;
-  description: string;
-  type: PromotionType;
-  sponsorName: string | null;
-  disclosureLabel: string | null;
-  startsAt: string | null;
-  endsAt: string | null;
-};
+function normalizePromotionKind(record: PlusJson): PromotionKind | "UNKNOWN" {
+  const rawKind = readString(record, ["kind"])?.toUpperCase();
+  if (rawKind === "HOUSE" || rawKind === "SPONSORED") return rawKind;
+  // Defensive fallback for pre-contract rows that stored a descriptive `type`.
+  const legacy = readString(record, ["type"])?.toUpperCase();
+  if (legacy === "SPONSORED" || legacy === "SPONSORED_ADVERTISEMENT") return "SPONSORED";
+  if (legacy === "HOUSE" || legacy === "HOUSE_PROMOTION" || legacy === "MEMBER_BENEFIT") return "HOUSE";
+  return "UNKNOWN";
+}
 
 export function normalizePromotion(record: PlusJson): PlusPromotion {
-  const rawType = (readString(record, ["type", "promotionType"]) ?? "UNKNOWN").toUpperCase();
   return {
     id: readString(record, ["id"]) ?? "",
+    key: readString(record, ["key"]) ?? "",
     title: readString(record, ["title", "name"]) ?? "Untitled promotion",
-    description: readString(record, ["description", "body"]) ?? "",
-    type: (PROMOTION_TYPES as readonly string[]).includes(rawType) ? (rawType as PromotionType) : "UNKNOWN",
+    body: readString(record, ["body", "description"]) ?? "",
+    kind: normalizePromotionKind(record),
     sponsorName: readString(record, ["sponsorName", "sponsor", "advertiserName"]),
     disclosureLabel: readString(record, ["disclosureLabel", "disclosure", "sponsoredLabel"]),
     status: (readString(record, ["status"]) ?? "UNKNOWN").toUpperCase(),
@@ -551,10 +608,10 @@ export const plusApi = {
         .map(normalizeContent)
         .filter((item) => item.id.length > 0);
     },
-    create(input: PlusContentInput) {
+    create(input: PlusContentPayload) {
       return mutate("/api/admin/plus/content", "POST", input);
     },
-    update(id: string, input: PlusContentInput) {
+    update(id: string, input: PlusContentPayload) {
       return mutate(`/api/admin/plus/content/${encodeURIComponent(id)}`, "PATCH", input);
     },
     publish(id: string) {
@@ -575,16 +632,19 @@ export const plusApi = {
         .map(normalizePlan)
         .filter((plan) => plan.id.length > 0);
     },
-    create(input: { name: string; description: string | null; priceMinor: number; currency: string; billingPeriod: string }) {
+    create(input: PlusPlanPayload) {
       return mutate("/api/admin/plus/plans", "POST", input);
     },
-    update(id: string, input: { priceMinor: number; currency: string; billingPeriod: string }) {
+    update(id: string, input: PlusPlanPricingPayload) {
       return mutate(`/api/admin/plus/plans/${encodeURIComponent(id)}`, "PATCH", input);
     },
-    addCountry(id: string, countryCode: string) {
-      return mutate(`/api/admin/plus/plans/${encodeURIComponent(id)}/countries`, "POST", { countryCode });
+    approvePaidActivation(id: string, input: PlusPaidActivationPayload) {
+      return mutate(`/api/admin/plus/plans/${encodeURIComponent(id)}`, "PATCH", input);
     },
-    addTerm(id: string, input: { version: string; summary: string | null; effectiveAt: string | null }) {
+    addCountry(id: string, input: PlusCountryPayload) {
+      return mutate(`/api/admin/plus/plans/${encodeURIComponent(id)}/countries`, "POST", input);
+    },
+    addTerm(id: string, input: PlusPlanTermPayload) {
       return mutate(`/api/admin/plus/plans/${encodeURIComponent(id)}/terms`, "POST", input);
     },
     approveTerm(id: string, termId: string) {
@@ -605,10 +665,10 @@ export const plusApi = {
         .map(normalizeBenefit)
         .filter((benefit) => benefit.id.length > 0);
     },
-    create(input: PlusBenefitInput) {
+    create(input: PlusBenefitPayload) {
       return mutate("/api/admin/plus/benefits", "POST", input);
     },
-    update(id: string, input: PlusBenefitInput) {
+    update(id: string, input: PlusBenefitPayload) {
       return mutate(`/api/admin/plus/benefits/${encodeURIComponent(id)}`, "PATCH", input);
     },
     publish(id: string) {
@@ -626,10 +686,10 @@ export const plusApi = {
         .map(normalizePromotion)
         .filter((promotion) => promotion.id.length > 0);
     },
-    create(input: PlusPromotionInput) {
+    create(input: PlusPromotionPayload) {
       return mutate("/api/admin/plus/promotions", "POST", input);
     },
-    update(id: string, input: PlusPromotionInput) {
+    update(id: string, input: PlusPromotionPayload) {
       return mutate(`/api/admin/plus/promotions/${encodeURIComponent(id)}`, "PATCH", input);
     },
     submit(id: string) {
