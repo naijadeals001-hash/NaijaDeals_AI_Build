@@ -15,7 +15,18 @@ import { NaijaDealsLogo } from "@/components/brand/naijadeals-logo";
 import { PlusCarousel } from "@/components/plus/plus-carousel";
 import { PlusFaq } from "@/components/plus/plus-faq";
 import { PlusServiceCard } from "@/components/plus/plus-service-card";
-import { plusAvailability, plusBenefits, plusFaqs, plusMarketFacts, plusServiceCards } from "@/lib/data/plus";
+import {
+  plusAvailability,
+  plusBenefits,
+  plusFaqs,
+  plusMarketFactsUnavailable,
+  plusMembershipSummary,
+  plusServiceCards,
+  plusStatus,
+  resolvePlusMarketFacts,
+  type PlusMarketFacts
+} from "@/lib/data/plus";
+import { listCountryActivations } from "@/lib/services/core/country.service";
 
 export const metadata: Metadata = {
   title: "NaijaDeals Plus+ — membership status",
@@ -23,14 +34,36 @@ export const metadata: Metadata = {
     "NaijaDeals Plus+ is not open yet. No plan, price or exclusive benefit is configured, and this page cannot take a payment. Explore the real NaijaDeals ecosystem services."
 };
 
+// Marketplace availability is admin-editable at runtime, so this page must be
+// rendered per request instead of freezing one configuration into the build.
+export const dynamic = "force-dynamic";
+
 const EYEBROW = "text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#0b5c33]";
 const SECTION_PAD = "scroll-mt-28 pt-9 sm:pt-12";
 
-export default function PlusPage() {
+/**
+ * Read the same effective country activation list checkout uses (static
+ * configuration overlaid by admin-editable database rows). A failed read must
+ * never take the page down and must never fall back to static values as if they
+ * were the current configuration: it reports that configuration was unreadable.
+ */
+async function readPlusMarketFacts(): Promise<PlusMarketFacts> {
+  try {
+    return resolvePlusMarketFacts(await listCountryActivations());
+  } catch {
+    return plusMarketFactsUnavailable;
+  }
+}
+
+export default async function PlusPage() {
+  const marketFacts = await readPlusMarketFacts();
+  const marketFactsUnavailable = marketFacts.state === "unavailable";
   const benefitCount = plusAvailability.benefitsConfigured;
+  const benefitNoun = benefitCount === 1 ? "benefit" : "benefits";
   const serviceCount = plusServiceCards.length;
-  const deliveryNames = plusMarketFacts.deliveryMarkets.map((country) => country.name).join(", ");
-  const browseNames = plusMarketFacts.browseOnlyMarkets.map((country) => country.name).join(", ");
+  const deliveryNames = marketFacts.deliveryMarkets.map((country) => country.name).join(", ");
+  const browseNames = marketFacts.browseOnlyMarkets.map((country) => country.name).join(", ");
+  const storeCurrency = marketFacts.storeCurrency;
 
   return (
     <div data-plus-page className="bg-[#f4f7f2] pb-4 text-[#14241b]">
@@ -73,14 +106,15 @@ export default function PlusPage() {
                   One membership for the NaijaDeals you already use.
                 </h1>
                 <p className="mt-4 max-w-xl text-[13px] leading-6 text-[#d6e7d7] sm:text-[14px] sm:leading-7">
-                  Plus+ is being prepared as a single membership across the ecosystem. It is not open: no plan, price, exclusive benefit or billing
-                  setup has been approved.
+                  Plus+ is being prepared as a single membership across the ecosystem. {plusMembershipSummary}
                 </p>
 
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <StatusChip tone="gold">Membership not open</StatusChip>
-                  <StatusChip tone="muted">No checkout</StatusChip>
-                  <StatusChip tone="muted">{benefitCount} benefits configured</StatusChip>
+                  <StatusChip tone="gold">{plusStatus.membership}</StatusChip>
+                  <StatusChip tone="muted">{plusStatus.checkout}</StatusChip>
+                  <StatusChip tone="muted">
+                    {benefitCount} {benefitNoun} configured
+                  </StatusChip>
                 </div>
 
                 <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
@@ -119,7 +153,7 @@ export default function PlusPage() {
                   <dl className="mt-3 space-y-2 text-[11.5px] leading-5">
                     <div className="flex items-center justify-between gap-3">
                       <dt className="text-[#b9d5bd]">Plan and price</dt>
-                      <dd className="font-bold text-[#F2D48C]">Not configured</dd>
+                      <dd className="font-bold text-[#F2D48C]">{plusStatus.plan}</dd>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <dt className="text-[#b9d5bd]">Exclusive benefits</dt>
@@ -127,11 +161,11 @@ export default function PlusPage() {
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <dt className="text-[#b9d5bd]">Billing</dt>
-                      <dd className="font-bold text-white">Unavailable</dd>
+                      <dd className="font-bold text-white">{plusStatus.billing}</dd>
                     </div>
                   </dl>
                   <p className="mt-3 border-t border-white/10 pt-2 text-[10.5px] leading-4 text-[#b9d5bd]">
-                    Status reviewed {plusAvailability.reviewedOn}.
+                    Status reflects the configuration in this build.
                   </p>
                 </div>
               </div>
@@ -183,19 +217,28 @@ export default function PlusPage() {
             >
               Your existing NaijaDeals sign-in is the identity a plan would attach to. You can use it today; no membership is attached.
             </Step>
-            <Step number="02" title="A plan is published" status="Not configured" tone="muted">
-              A plan must publish its price, billing period, eligible countries, cancellation terms and approved benefit register before it can be
-              offered. None of that exists yet.
+            <Step number="02" title="A plan is published" status={plusStatus.plan} tone="muted">
+              {plusAvailability.plansConfigured === 0
+                ? "A plan must publish its price, billing period, eligible countries, cancellation terms and approved benefit register before it can be offered. None of that exists yet."
+                : `This build reports ${plusAvailability.plansConfigured} configured ${
+                    plusAvailability.plansConfigured === 1 ? "plan" : "plans"
+                  }; this page does not publish their terms.`}
             </Step>
-            <Step number="03" title="Billing and activation" status="Not available" tone="muted">
-              There is no subscription checkout, payment-method step or activation flow for Plus+. No account is upgraded by this page.
+            <Step number="03" title="Billing and activation" status={plusStatus.checkoutStep} tone="muted">
+              {plusAvailability.checkoutConfigured
+                ? "Subscription checkout is marked configured in this build. This page still has no payment-method step or activation flow, and no account is upgraded here."
+                : "There is no subscription checkout, payment-method step or activation flow for Plus+. No account is upgraded by this page."}
             </Step>
           </ol>
           <div className="mt-4 flex gap-3 rounded-xl border border-[#e5d3a2] bg-[#fffaf0] p-4">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#8a6412]" aria-hidden="true" />
             <p className="text-[12px] leading-6 text-[#5c4a1e]">
-              <strong className="font-extrabold text-[#3f3010]">There is no join button because there is no plan to join.</strong> Until a plan and
-              checkout are approved, a button here could not complete a real subscription.
+              <strong className="font-extrabold text-[#3f3010]">
+                {plusAvailability.membershipOpen ? "No join control is rendered here." : "There is no join button because there is no plan to join."}
+              </strong>{" "}
+              {plusAvailability.checkoutConfigured
+                ? "Checkout is marked configured in this build, but this page still cannot start a subscription."
+                : "Until a plan and checkout are approved, a button here could not complete a real subscription."}
             </p>
           </div>
         </section>
@@ -205,46 +248,65 @@ export default function PlusPage() {
             id="plus-eligibility-heading"
             eyebrow="Eligibility"
             title="Country and plan eligibility"
-            description="No Plus+ plan is configured in any market. The marketplace facts below are read from the current configuration."
+            description={
+              marketFactsUnavailable
+                ? "No Plus+ plan is configured in any market. The marketplace country configuration could not be read for this request, so market facts are shown as unavailable rather than guessed."
+                : "No Plus+ plan is configured in any market. The marketplace facts below are read from the current country configuration."
+            }
           />
           <div className="mt-5 grid gap-3 lg:grid-cols-3">
             <EligibilityCard
-              title={deliveryNames || "No delivery market"}
-              badge="Commerce enabled"
-              tone="live"
-              body={`${plusMarketFacts.storeCurrency} checkout and tracked delivery are enabled for the marketplace. No Plus+ plan, price or entitlement is configured.`}
+              title={marketFactsUnavailable ? "Delivery markets unavailable" : deliveryNames || "No delivery market"}
+              badge={marketFactsUnavailable ? "Configuration unread" : marketFacts.deliveryMarkets.length > 0 ? "Commerce enabled" : "No delivery market"}
+              tone={!marketFactsUnavailable && marketFacts.deliveryMarkets.length > 0 ? "live" : "muted"}
+              body={
+                marketFactsUnavailable
+                  ? "The marketplace country configuration could not be read, so current delivery markets cannot be confirmed. No Plus+ plan, price or entitlement is configured."
+                  : marketFacts.deliveryMarkets.length > 0
+                    ? `${storeCurrency} checkout and tracked delivery are enabled for the marketplace. No Plus+ plan, price or entitlement is configured.`
+                    : "No market currently has marketplace checkout and tracked delivery enabled. No Plus+ plan, price or entitlement is configured."
+              }
               rows={[
-                ["Marketplace currency", plusMarketFacts.storeCurrency],
-                ["Plus+ plan", "Not configured"],
+                ["Marketplace currency", marketFactsUnavailable ? "Unavailable" : storeCurrency ?? "Not configured"],
+                ["Plus+ plan", plusStatus.plan],
                 ["Plus+ price", "Not published"]
               ]}
             />
             <EligibilityCard
               title="Browse-only markets"
-              badge="No delivery"
+              badge={marketFactsUnavailable ? "Configuration unread" : "No delivery"}
               tone="muted"
-              body={`${browseNames || "No additional markets"} can be selected for browsing. Marketplace delivery is not enabled, and no Plus+ plan is configured.`}
+              body={
+                marketFactsUnavailable
+                  ? "The marketplace country configuration could not be read, so browse-only markets cannot be confirmed. No Plus+ plan is configured."
+                  : `${browseNames || "No additional markets"} can be selected for browsing. Marketplace delivery is not enabled, and no Plus+ plan is configured.`
+              }
               rows={[
-                ["Plus+ plan", "Not configured"],
+                ["Plus+ plan", plusStatus.plan],
                 ["Plus+ eligibility", "Not published"],
-                ["Plus+ checkout", "Unavailable"]
+                ["Plus+ checkout", plusStatus.subscriptionCheckout]
               ]}
             />
             <EligibilityCard
               title="Plans and billing"
-              badge="Not configured"
-              tone="muted"
-              body="No monthly or annual plan, trial, amount, currency or cancellation window has been approved. No payment can be taken."
+              badge={plusStatus.checkout}
+              tone={plusAvailability.checkoutConfigured ? "live" : "muted"}
+              body={
+                plusAvailability.checkoutConfigured
+                  ? "Subscription checkout is marked configured in this build. No Plus+ plan price or cancellation window is published on this page."
+                  : "No monthly or annual plan, trial, amount, currency or cancellation window has been approved. No payment can be taken."
+              }
               rows={[
                 ["Plans configured", String(plusAvailability.plansConfigured)],
-                ["Subscription checkout", "None"],
+                ["Subscription checkout", plusStatus.subscriptionCheckout],
                 ["Cancellation terms", "Not published"]
               ]}
             />
           </div>
           <p className="mt-3 text-[11px] leading-5 text-[#4b5b51]">
-            The country list is read from marketplace configuration. Plus+ eligibility is a separate decision and remains unconfigured for every
-            market.
+            {marketFactsUnavailable
+              ? "Marketplace country configuration could not be read. Plus+ eligibility remains unconfigured for every market."
+              : "The country list is read from the current marketplace configuration. Plus+ eligibility is a separate decision and remains unconfigured for every market."}
           </p>
         </section>
 
@@ -253,8 +315,12 @@ export default function PlusPage() {
             id="plus-benefits-heading"
             eyebrow="Benefits"
             title="Discover Plus+-exclusive benefits"
-            description="Only approved entitlements attached to a real plan appear here. That register is empty."
-            aside={<CountChip>{benefitCount} configured</CountChip>}
+            description={
+              benefitCount === 0
+                ? "Only approved entitlements attached to a real plan appear here. That register is empty."
+                : "Only approved entitlements attached to a real plan appear here."
+            }
+            aside={<CountChip>{`${benefitCount} ${benefitNoun}`}</CountChip>}
           />
           <div className="mt-5">
             <PlusCarousel
@@ -303,13 +369,19 @@ export default function PlusPage() {
               ) : (
                 plusBenefits.map((benefit) => (
                   <li key={benefit.id} className="w-[86%] flex-none snap-start sm:w-[48%] lg:w-[32%]">
-                    <article className="flex h-full flex-col rounded-2xl border border-[#dbe6d8] bg-white p-5">
+                    <article data-plus-benefit-card={benefit.id} className="flex h-full flex-col rounded-2xl border border-[#dbe6d8] bg-white p-5">
                       <span className="w-fit rounded-full bg-[#e7f8ed] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#0b5c33]">
                         Configured
                       </span>
                       <h3 className="mt-3 font-display text-[18px] font-extrabold leading-tight">{benefit.title}</h3>
                       <p className="mt-1.5 text-[12.5px] leading-6 text-[#4b5b51]">{benefit.description}</p>
-                      <p className="mt-auto pt-3 text-[11px] font-bold text-[#0b5c33]">Plan: {benefit.planName}</p>
+                      <div className="mt-auto pt-3">
+                        <p className="text-[11px] font-bold text-[#0b5c33]">Plan: {benefit.planName}</p>
+                        <p className="mt-0.5 text-[11px] text-[#4b5b51]">
+                          Eligible countries:{" "}
+                          {benefit.eligibleCountries.length > 0 ? benefit.eligibleCountries.join(", ") : "Not published"}
+                        </p>
+                      </div>
                     </article>
                   </li>
                 ))
@@ -330,7 +402,7 @@ export default function PlusPage() {
                   This is the complete public register. An entitlement can only move into it after approval, and it must name the plan it belongs to.
                 </p>
               </div>
-              <CountChip>Reviewed {plusAvailability.reviewedOn}</CountChip>
+              <CountChip>This build</CountChip>
             </div>
             <dl className="mt-5 grid gap-3 sm:grid-cols-3">
               <RegisterCard
@@ -342,7 +414,7 @@ export default function PlusPage() {
               <RegisterCard
                 icon={<ListChecks className="h-4 w-4" aria-hidden="true" />}
                 label="Plans and prices"
-                value="Not configured"
+                value={plusStatus.plan}
                 body="No monthly or annual plan has been approved."
               />
               <RegisterCard
@@ -402,13 +474,18 @@ export default function PlusPage() {
         <section aria-labelledby="plus-close-heading" className="pt-9 sm:pt-12">
           <div className="overflow-hidden rounded-2xl bg-[#07351f] p-5 text-white sm:p-8 lg:flex lg:items-center lg:justify-between lg:gap-8">
             <div className="max-w-2xl">
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#F2D48C]">No payment. No signup.</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#F2D48C]">
+                {plusAvailability.checkoutConfigured ? "No checkout on this page" : "No payment. No signup."}
+              </p>
               <h2 id="plus-close-heading" className="mt-1 font-display text-[26px] font-extrabold leading-tight tracking-[-0.02em] sm:text-[32px]">
-                Membership is not open yet.
+                {plusAvailability.membershipOpen ? "Membership is marked open." : "Membership is not open yet."}
               </h2>
               <p className="mt-2 text-[12.5px] leading-6 text-[#d6e7d7]">
-                There is nothing to buy and nothing to opt in to. Keep using the marketplace and the other services on their current terms; this page
-                will change only when an approved plan exists.
+                {plusAvailability.membershipOpen
+                  ? plusAvailability.checkoutConfigured
+                    ? "Membership is marked open and subscription checkout is configured in this build. Opening a service still does not create a Plus+ membership."
+                    : "Membership is marked open in this build, but subscription checkout is still not configured. Opening a service does not create a Plus+ membership."
+                  : "There is nothing to buy and nothing to opt in to. Keep using the marketplace and the other services on their current terms; this page will change only when an approved plan exists."}
               </p>
             </div>
             <div className="mt-5 flex flex-col gap-2.5 sm:flex-row lg:mt-0 lg:shrink-0">
@@ -427,7 +504,7 @@ export default function PlusPage() {
               </a>
             </div>
           </div>
-          <p className="mt-3 text-[10.5px] text-[#7d8a81]">Public status reviewed {plusAvailability.reviewedOn}.</p>
+          <p className="mt-3 text-[10.5px] text-[#4b5b51]">Status reflects the configuration in this build.</p>
         </section>
       </div>
     </div>

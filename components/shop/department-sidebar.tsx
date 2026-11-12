@@ -30,37 +30,3 @@ export function DepartmentSidebar({ categories }: { categories: ApiCategory[] })
     </nav>
   );
 }
-
-/** Plus membership panel that sits to the right of the hero on the approved mockup. */
-export function PlusPanel() {
-  return (
-    <aside aria-labelledby="plus-panel" className="hidden shrink-0 flex-col justify-between rounded-lg bg-[#e8f2ff] p-3 lg:flex lg:w-[17%]">
-      <div>
-        <p id="plus-panel" className="font-display text-[15px] font-extrabold leading-tight">
-          NaijaShop <span className="text-[#1a4fb4]">Plus</span>
-        </p>
-        <p className="mt-1 text-[10.5px] leading-4 text-[#414d63]">Fast delivery, exclusive deals and more benefits.</p>
-        <ul className="mt-2 space-y-1 text-[10px] font-semibold text-[#243049]">
-          <li className="flex items-start gap-1">
-            <span aria-hidden>✓</span> Free &amp; faster delivery
-          </li>
-          <li className="flex items-start gap-1">
-            <span aria-hidden>✓</span> Plus-only deals
-          </li>
-          <li className="flex items-start gap-1">
-            <span aria-hidden>✓</span> Early access to sales
-          </li>
-          <li className="flex items-start gap-1">
-            <span aria-hidden>✓</span> Exclusive offers
-          </li>
-        </ul>
-      </div>
-      <div className="mt-2 overflow-hidden rounded">
-        <img src="/generated/shop/category-gaming.webp" alt="" aria-hidden className="h-[58px] w-full object-cover" />
-      </div>
-      <Link href="/naijashop/plus" className="mt-2 rounded-md bg-[#f7a12b] px-2 py-1.5 text-center text-[11.5px] font-bold text-[#12100a] hover:bg-[#e8931c]">
-        Join Plus
-      </Link>
-    </aside>
-  );
-}

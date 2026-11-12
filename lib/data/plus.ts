@@ -1,4 +1,3 @@
-import { COUNTRIES } from "@/lib/config/commerce";
 import { publicServices, type PublicService } from "@/lib/data/public-services";
 
 /**
@@ -24,6 +23,11 @@ export type PlusBenefit = {
   description: string;
   /** The approved plan this entitlement belongs to. */
   planName: string;
+  /**
+   * ISO country codes where the entitlement is approved. Populated only when a
+   * plan and its market scope exist; the card states when it is not published.
+   */
+  eligibleCountries: string[];
 };
 
 export const plusBenefits: PlusBenefit[] = [];
@@ -32,20 +36,90 @@ export const plusAvailability = {
   membershipOpen: false,
   checkoutConfigured: false,
   plansConfigured: 0,
-  benefitsConfigured: plusBenefits.length,
-  /** Date the public availability statement was last checked. */
-  reviewedOn: "5 November 2026"
+  benefitsConfigured: plusBenefits.length
 } as const;
 
-/** Markets whose marketplace delivery/checkout is enabled in this build. */
-const DELIVERY_MARKETS = Object.values(COUNTRIES).filter((country) => country.deliveryEnabled);
-const BROWSE_MARKETS = Object.values(COUNTRIES).filter((country) => !country.deliveryEnabled);
+/**
+ * Short status labels derived from `plusAvailability`. Every membership or
+ * checkout status label on the landing page reads from this object, so the
+ * flags and the copy cannot drift apart.
+ */
+export const plusStatus = {
+  membership: plusAvailability.membershipOpen ? "Membership open" : "Membership not open",
+  checkout: plusAvailability.checkoutConfigured ? "Checkout configured" : "No checkout",
+  billing: plusAvailability.checkoutConfigured ? "Configured" : "Unavailable",
+  subscriptionCheckout: plusAvailability.checkoutConfigured ? "Configured" : "None",
+  checkoutStep: plusAvailability.checkoutConfigured ? "Configured" : "Not available",
+  plan:
+    plusAvailability.plansConfigured === 0
+      ? "Not configured"
+      : `${plusAvailability.plansConfigured} ${plusAvailability.plansConfigured === 1 ? "plan" : "plans"} configured`
+} as const;
 
-export const plusMarketFacts = {
-  deliveryMarkets: DELIVERY_MARKETS,
-  browseOnlyMarkets: BROWSE_MARKETS,
-  storeCurrency: DELIVERY_MARKETS[0]?.currency ?? "NGN"
+/** Sentence form of the membership/checkout flags used in the hero and closing copy. */
+export const plusMembershipSummary = plusAvailability.membershipOpen
+  ? plusAvailability.checkoutConfigured
+    ? "Membership is marked open and subscription checkout is configured in this build."
+    : "Membership is marked open in this build, but subscription checkout is not configured."
+  : plusAvailability.checkoutConfigured
+    ? "Membership is not open in this build. Subscription checkout is marked configured, but no plan is published on this page."
+    : "It is not open: no plan, price, exclusive benefit or billing setup has been approved.";
+
+export type PlusMarketCountry = {
+  code: string;
+  name: string;
+  currency: string;
 };
+
+export type PlusMarketFacts = {
+  /**
+   * `unavailable` means the effective configuration read failed. No market or
+   * currency value may be presented as current in that state.
+   */
+  state: "configured" | "unavailable";
+  deliveryMarkets: PlusMarketCountry[];
+  browseOnlyMarkets: PlusMarketCountry[];
+  /** Currency of the first delivery-enabled market, or null when none is configured. */
+  storeCurrency: string | null;
+};
+
+/** The effective country activation rows the page reads from the server. */
+export type PlusCountryActivation = {
+  code: string;
+  name: string;
+  currency: string;
+  enabled: boolean;
+  deliveryEnabled: boolean;
+};
+
+export const plusMarketFactsUnavailable: PlusMarketFacts = {
+  state: "unavailable",
+  deliveryMarkets: [],
+  browseOnlyMarkets: [],
+  storeCurrency: null
+};
+
+/**
+ * Collapse the effective country activations (static configuration overlaid by
+ * admin-editable database rows) into the marketplace facts Plus+ may state.
+ * Fully disabled markets are omitted: they are neither delivery nor browse-only
+ * markets, so listing them would overstate availability.
+ */
+export function resolvePlusMarketFacts(activations: readonly PlusCountryActivation[]): PlusMarketFacts {
+  const enabled = activations.filter((country) => country.enabled);
+  const deliveryMarkets = enabled
+    .filter((country) => country.deliveryEnabled)
+    .map(({ code, name, currency }) => ({ code, name, currency }));
+  const browseOnlyMarkets = enabled
+    .filter((country) => !country.deliveryEnabled)
+    .map(({ code, name, currency }) => ({ code, name, currency }));
+  return {
+    state: "configured",
+    deliveryMarkets,
+    browseOnlyMarkets,
+    storeCurrency: deliveryMarkets[0]?.currency ?? null
+  };
+}
 
 type AwarenessKey = "drive" | "shop" | "eats" | "send" | "gigs" | "stay" | "fresh" | "stream" | "pay" | "earn";
 
@@ -102,7 +176,8 @@ const AWARENESS_DETAILS: Record<AwarenessKey, AwarenessDetail> = {
   stream: {
     classification: "Music and creators",
     headline: "African music and shows",
-    benefit: "Listen, watch and join creator rooms."
+    // Live rooms are watch-only in this build: no chat or join control exists.
+    benefit: "Listen to African music and watch creator live events."
   },
   pay: {
     classification: "Money",
@@ -144,13 +219,15 @@ export type PlusFaqItem = {
 export const plusFaqs: PlusFaqItem[] = [
   {
     question: "Is Plus+ available now?",
-    answer:
-      "No. There is no open membership, plan or subscription. Nothing on this page can enrol you, and there is no join button because there is no plan to join."
+    answer: plusAvailability.membershipOpen
+      ? "This build reports membership as open. Even so, this page publishes no plan, price or join flow, so nothing here can enrol you."
+      : "No. There is no open membership, plan or subscription. Nothing on this page can enrol you, and there is no join button because there is no plan to join."
   },
   {
     question: "Can I pay, start a trial or pre-register?",
-    answer:
-      "No. No price or billing setup is configured, so this page contains no checkout, trial or payment form. It also does not collect waitlist or email signup details."
+    answer: plusAvailability.checkoutConfigured
+      ? "This build reports subscription checkout as configured, but this page contains no billing form, trial or payment step and collects no waitlist details."
+      : "No. No price or billing setup is configured, so this page contains no checkout, trial or payment form. It also does not collect waitlist or email signup details."
   },
   {
     question: "Which exclusive benefits are included?",
@@ -160,7 +237,7 @@ export const plusFaqs: PlusFaqItem[] = [
   {
     question: "Which countries can join?",
     answer:
-      "No country has a configured Plus+ plan yet. The marketplace currently enables checkout and delivery in Nigeria; the other listed markets are browse-only in this build. That is not Plus+ eligibility."
+      "No country has a configured Plus+ plan yet. The marketplace currently enables checkout and delivery in the markets shown as commerce-enabled; the other listed markets are browse-only in this build. That is not Plus+ eligibility."
   },
   {
     question: "Does Plus+ change my existing orders, wallet or service access?",

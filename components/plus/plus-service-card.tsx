@@ -24,7 +24,10 @@ const STATUS_DOT: Record<PlusServiceCardData["status"], string> = {
  */
 export function PlusServiceCard({ service }: { service: PlusServiceCardData }) {
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-[#dbe6d8] bg-white shadow-[0_2px_10px_rgba(7,53,31,0.04)] transition hover:border-[#b7cdb5] hover:shadow-[0_8px_24px_rgba(7,53,31,0.08)] motion-reduce:transition-none">
+    <article
+      data-plus-service-card={service.key}
+      className="flex h-full flex-col overflow-hidden rounded-2xl border border-[#dbe6d8] bg-white shadow-[0_2px_10px_rgba(7,53,31,0.04)] transition hover:border-[#b7cdb5] hover:shadow-[0_8px_24px_rgba(7,53,31,0.08)] motion-reduce:transition-none"
+    >
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#e7f3e9]">
         <Image
           src={service.image}
@@ -48,6 +51,7 @@ export function PlusServiceCard({ service }: { service: PlusServiceCardData }) {
         <div className="mt-auto pt-4">
           <Link
             href={service.href}
+            data-plus-service-cta={service.key}
             aria-label={`${service.action} with NaijaDeals ${service.label}`}
             className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full text-[12px] font-extrabold text-[#0b5c33] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
           >

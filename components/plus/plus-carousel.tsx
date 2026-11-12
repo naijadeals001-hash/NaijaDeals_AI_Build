@@ -38,7 +38,9 @@ export function PlusCarousel({
     if (!node) return;
     const max = Math.max(0, node.scrollWidth - node.clientWidth);
     const position = Math.abs(node.scrollLeft);
-    setEdges({ start: position <= 2, end: max <= 2 || position >= max - 2 });
+    const next = { start: position <= 2, end: max <= 2 || position >= max - 2 };
+    // Scroll fires every frame; only a real boundary change should re-render.
+    setEdges((previous) => (previous.start === next.start && previous.end === next.end ? previous : next));
   }, []);
 
   useEffect(() => {
@@ -46,11 +48,16 @@ export function PlusCarousel({
     if (!node) return;
     measure();
     node.addEventListener("scroll", measure, { passive: true });
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
+    // The track box keeps its width when cards are added or removed, so watch
+    // the child list as well; otherwise the arrows would keep a stale boundary.
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(node);
+    const contentObserver = new MutationObserver(measure);
+    contentObserver.observe(node, { childList: true });
     return () => {
       node.removeEventListener("scroll", measure);
-      observer.disconnect();
+      resizeObserver.disconnect();
+      contentObserver.disconnect();
     };
   }, [measure]);
 
@@ -99,7 +106,7 @@ export function PlusCarousel({
 
   return (
     <div className="min-w-0 max-w-full">
-      <div role="region" aria-roledescription="carousel" aria-label={`${label} carousel`} className="min-w-0 max-w-full">
+      <div role="region" aria-roledescription="carousel" aria-label={label} className="min-w-0 max-w-full">
         <ul
           id={trackId}
           ref={trackRef}
@@ -119,21 +126,27 @@ export function PlusCarousel({
           <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
             <button
               type="button"
-              onClick={() => page(-1)}
-              disabled={edges.start}
+              onClick={() => {
+                if (!edges.start) page(-1);
+              }}
+              aria-disabled={edges.start}
+              data-plus-carousel-arrow="prev"
               aria-controls={trackId}
               aria-label={`Show previous ${label}`}
-              className="grid h-10 w-10 place-items-center rounded-full border border-[#cbdacb] bg-white text-[#14241b] shadow-sm transition hover:border-[#0b5c33] hover:bg-[#f3f8f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[#cbdacb] disabled:hover:bg-white motion-reduce:transition-none"
+              className="grid h-10 w-10 place-items-center rounded-full border border-[#cbdacb] bg-white text-[#14241b] shadow-sm transition hover:border-[#0b5c33] hover:bg-[#f3f8f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2 aria-disabled:cursor-not-allowed aria-disabled:opacity-40 aria-disabled:hover:border-[#cbdacb] aria-disabled:hover:bg-white motion-reduce:transition-none"
             >
               <ChevronLeft className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
             </button>
             <button
               type="button"
-              onClick={() => page(1)}
-              disabled={edges.end}
+              onClick={() => {
+                if (!edges.end) page(1);
+              }}
+              aria-disabled={edges.end}
+              data-plus-carousel-arrow="next"
               aria-controls={trackId}
               aria-label={`Show next ${label}`}
-              className="grid h-10 w-10 place-items-center rounded-full border border-[#cbdacb] bg-white text-[#14241b] shadow-sm transition hover:border-[#0b5c33] hover:bg-[#f3f8f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[#cbdacb] disabled:hover:bg-white motion-reduce:transition-none"
+              className="grid h-10 w-10 place-items-center rounded-full border border-[#cbdacb] bg-white text-[#14241b] shadow-sm transition hover:border-[#0b5c33] hover:bg-[#f3f8f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2 aria-disabled:cursor-not-allowed aria-disabled:opacity-40 aria-disabled:hover:border-[#cbdacb] aria-disabled:hover:bg-white motion-reduce:transition-none"
             >
               <ChevronRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
             </button>
