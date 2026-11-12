@@ -485,7 +485,8 @@ function ShopHeader() {
               <ChevronDown className="h-3 w-3" aria-hidden />
             </button>
 
-            <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-x-0.5 xl:flex">
+            {/* One scrollable row: the rail must stay a fixed height however many departments exist. */}
+            <div className="hidden min-w-0 flex-1 flex-nowrap items-center gap-x-0.5 overflow-x-auto [scrollbar-width:none] xl:flex">
               {categories.map((category) => (
                 <Link
                   key={category.id}
