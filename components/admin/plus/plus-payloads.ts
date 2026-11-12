@@ -58,6 +58,9 @@ export type PlusPlanPricingPayload = {
 
 export type PlusPaidActivationPayload = { paidActivationApproved: true };
 
+/** Retirement uses the one status change the server accepts on PATCH /plans/[id]. */
+export type PlusPlanRetirementPayload = { status: "RETIRED" };
+
 export type PlusPlanTermPayload = {
   version: number;
   effectiveFrom: string;
@@ -195,6 +198,10 @@ export function buildPlanPricingPayload(input: {
 
 export function buildPaidActivationPayload(): PlusPaidActivationPayload {
   return { paidActivationApproved: true };
+}
+
+export function buildPlanRetirementPayload(): PlusPlanRetirementPayload {
+  return { status: "RETIRED" };
 }
 
 export function buildPlanTermPayload(input: {

@@ -29,6 +29,7 @@ import type {
   PlusPaidActivationPayload,
   PlusPlanPayload,
   PlusPlanPricingPayload,
+  PlusPlanRetirementPayload,
   PlusPlanTermPayload,
   PlusPromotionPayload,
   PromotionKind
@@ -639,6 +640,9 @@ export const plusApi = {
       return mutate(`/api/admin/plus/plans/${encodeURIComponent(id)}`, "PATCH", input);
     },
     approvePaidActivation(id: string, input: PlusPaidActivationPayload) {
+      return mutate(`/api/admin/plus/plans/${encodeURIComponent(id)}`, "PATCH", input);
+    },
+    retire(id: string, input: PlusPlanRetirementPayload) {
       return mutate(`/api/admin/plus/plans/${encodeURIComponent(id)}`, "PATCH", input);
     },
     addCountry(id: string, input: PlusCountryPayload) {

@@ -2,12 +2,13 @@
 
 import { useCallback, useId, useState, type FormEvent } from "react";
 import { Plus } from "lucide-react";
-import { plusApi, type PlusMutationResult, type PlusOverview, type PlusPlan, type PlusPlanTerm } from "./plus-api";
+import { plusApi, normalizePlan, type PlusMutationResult, type PlusOverview, type PlusPlan, type PlusPlanTerm } from "./plus-api";
 import {
   BILLING_PERIODS,
   buildPaidActivationPayload,
   buildPlanPayload,
   buildPlanPricingPayload,
+  buildPlanRetirementPayload,
   buildPlanTermPayload,
   buildCountryPayload,
   isValidPlanCode,
@@ -74,6 +75,12 @@ function hasEffectiveApprovedTerm(plan: PlusPlan): boolean {
 
 function isBillingPeriod(value: string | null): value is BillingPeriod {
   return value !== null && (BILLING_PERIODS as readonly string[]).includes(value);
+}
+
+function planFromPayload(payload: unknown): PlusPlan | null {
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) return null;
+  const plan = normalizePlan(payload as Record<string, unknown>);
+  return plan.id ? plan : null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -387,6 +394,7 @@ function PlanCard({
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [pending, setPending] = useState<PendingKey>(null);
   const [confirmingApproval, setConfirmingApproval] = useState(false);
+  const [confirmingRetirement, setConfirmingRetirement] = useState(false);
   const [countryCode, setCountryCode] = useState("");
   const [countryError, setCountryError] = useState("");
   const [termValues, setTermValues] = useState({
@@ -540,6 +548,28 @@ function PlanCard({
     );
   }
 
+  async function retirePlan() {
+    setPending(`retire:${plan.id}`);
+    setFeedback(null);
+    try {
+      const result = await plusApi.plans.retire(plan.id, buildPlanRetirementPayload());
+      const updated = planFromPayload(result.payload);
+      setFeedback({
+        kind: "success",
+        action: "retire",
+        message: updated
+          ? `The server returned status "${updated.status}" for ${updated.code ?? updated.name}.`
+          : result.message ?? "The server accepted the retirement request."
+      });
+      setConfirmingRetirement(false);
+      await onChanged();
+    } catch (error) {
+      setFeedback({ kind: "error", error, action: "retire" });
+    } finally {
+      setPending(null);
+    }
+  }
+
   return (
     <li className="rounded-xl border border-[#21262D] bg-[#0B0E14]/50 p-3 sm:p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -591,8 +621,51 @@ function PlanCard({
               {pending === `activate:${plan.id}` ? "Requesting activation…" : "Request activation"}
             </Button>
           ) : null}
+          {canConfigure && plan.status === "ACTIVE" ? (
+            <Button
+              variant="danger"
+              onClick={() => setConfirmingRetirement(true)}
+              aria-expanded={confirmingRetirement}
+            >
+              Retire plan
+            </Button>
+          ) : null}
         </div>
       </div>
+
+      {retired ? (
+        <div className="mt-3 rounded-xl border border-[#30363D] bg-[#161B22] p-3">
+          <p className="text-sm font-extrabold text-[#F0F6FC]">Plan retired</p>
+          <p className="mt-1 text-sm leading-6 text-[#C9D1D9]">
+            This plan no longer contributes to public Plus+ availability. It cannot be reactivated. Historical
+            memberships, entitlements and approved terms are retained; retirement is not a deletion.
+          </p>
+        </div>
+      ) : null}
+
+      {confirmingRetirement ? (
+        <div className="mt-3 rounded-xl border border-[#7A2324] bg-[#2B1416] p-3 text-[#FFB3AD]">
+          <p className="text-sm font-extrabold">Retire this plan?</p>
+          <p className="mt-1 text-sm leading-6">
+            Retirement removes the plan from public Plus+ availability immediately. It is not a deletion: historical
+            memberships, entitlements and approved terms are retained, and the plan cannot be reactivated. The server may
+            refuse the request; any refusal is shown verbatim below.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              variant="danger"
+              onClick={() => void retirePlan()}
+              busy={pending === `retire:${plan.id}`}
+              disabled={pending !== null && pending !== `retire:${plan.id}`}
+            >
+              {pending === `retire:${plan.id}` ? "Retiring…" : "Confirm retirement"}
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirmingRetirement(false)} disabled={pending !== null}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {confirmingApproval ? (
         <div className="mt-3 rounded-xl border border-[#7A5B12] bg-[#2F2611] p-3 text-[#F2CE72]">
@@ -638,7 +711,7 @@ function PlanCard({
       ) : null}
       {retired ? (
         <p className="mt-2 text-xs leading-5 text-[#8B949E]">
-          Configuration controls are hidden because a retired plan cannot be reactivated.
+          Activation and configuration controls are unavailable for a retired plan.
         </p>
       ) : null}
 
@@ -683,12 +756,22 @@ function PlanCard({
                       {country.code}
                       {country.name !== country.code ? ` · ${country.name}` : ""}
                     </p>
-                    <p className={country.enabled === true ? "font-bold text-[#7EE2A8]" : "font-bold text-[#F2CE72]"}>
-                      {country.enabled === true
-                        ? "Enabled for this plan"
-                        : country.enabled === false
-                          ? "Disabled — not eligible"
-                          : "Enablement state not reported"}
+                    <p
+                      className={
+                        retired
+                          ? "font-bold text-[#8B949E]"
+                          : country.enabled === true
+                            ? "font-bold text-[#7EE2A8]"
+                            : "font-bold text-[#F2CE72]"
+                      }
+                    >
+                      {retired
+                        ? "Unavailable — plan retired"
+                        : country.enabled === true
+                          ? "Enabled for this plan"
+                          : country.enabled === false
+                            ? "Disabled — not eligible"
+                            : "Enablement state not reported"}
                     </p>
                   </div>
                   {editable && country.enabled !== null ? (
