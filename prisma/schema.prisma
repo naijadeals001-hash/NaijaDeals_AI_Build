@@ -190,6 +190,9 @@ model User {
   returnRequests    ReturnRequest[]
   driverProfile     DriverProfile?
   rides             Ride[]             @relation("RiderRides")
+  rideRatingsGiven  RideRating[]       @relation("RideRatingRater")
+  rideRatingsReceived RideRating[]     @relation("RideRatingSubject")
+  rideSafetyReports RideSafetyReport[] @relation("RideSafetyReporter")
   savedPlaces       SavedPlace[]
   freightRequests  FreightRequest[] @relation("CustomerFreight")
   partnerNotifications PartnerNotification[] @relation("PartnerNotifications")
@@ -844,11 +847,101 @@ model Ride {
   rider              User              @relation("RiderRides", fields: [riderId], references: [id])
   driver             DriverProfile?    @relation(fields: [driverId], references: [id])
   events             RideEvent[]
+  verification       RideVerification?
+  ratings            RideRating[]
+  safetyReports      RideSafetyReport[]
 
   @@index([riderId, status])
   @@index([driverId, status])
   @@index([status, createdAt])
   @@index([status, assignmentExpiresAt])
+}
+
+/// Participant roles for drive ratings and safety reports.
+enum RideParticipantRole {
+  customer
+  driver
+}
+
+/// One protected pickup-verification record per ride.
+///
+/// The raw code is never stored in this table or in an event payload. It is
+/// derived server-side from the random per-ride `salt`, and only the rider's
+/// authenticated endpoint may read it. `codeHash` is a salted scrypt hash used
+/// for constant-time comparison by the authoritative service.
+model RideVerification {
+  id                String    @id @default(cuid())
+  rideId            String    @unique
+  codeHash          String
+  salt              String
+  algorithm         String    @default("scrypt-hmac-sha256-v1")
+  expiresAt         DateTime
+  attemptCount      Int       @default(0)
+  maxAttempts       Int       @default(5)
+  lastAttemptAt     DateTime?
+  verifiedAt        DateTime?
+  verifiedByUserId  String?
+  invalidatedAt     DateTime?
+  invalidatedReason String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  ride              Ride      @relation(fields: [rideId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([verifiedAt])
+}
+
+/// One rating per participant per completed ride.
+///
+/// `raterRole` is derived from the authenticated account's relationship to the
+/// ride, never from client input. There is no public testimonial surface: these
+/// rows are read only by the two participants (their own rating) and by
+/// aggregate calculation over real rows.
+model RideRating {
+  id            String             @id @default(cuid())
+  rideId        String
+  raterUserId   String
+  raterRole     RideParticipantRole
+  subjectUserId String
+  score         Int
+  feedback      String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  ride          Ride               @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  rater         User               @relation("RideRatingRater", fields: [raterUserId], references: [id])
+  subject       User               @relation("RideRatingSubject", fields: [subjectUserId], references: [id])
+
+  @@unique([rideId, raterUserId])
+  @@index([subjectUserId, raterRole])
+  @@index([rideId])
+}
+
+enum RideSafetyReportStatus {
+  submitted
+  under_review
+  closed
+}
+
+/// Safety reports are an operational record, deliberately separate from ratings
+/// and reviews. They are never shown as public testimonials.
+model RideSafetyReport {
+  id              String                @id @default(cuid())
+  rideId          String
+  reporterUserId  String
+  reporterRole    RideParticipantRole
+  category        String
+  details         String
+  status          RideSafetyReportStatus @default(submitted)
+  reviewedAt      DateTime?
+  reviewedByUserId String?
+  resolutionNote  String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  ride            Ride                  @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  reporter        User                  @relation("RideSafetyReporter", fields: [reporterUserId], references: [id])
+
+  @@index([rideId, createdAt])
+  @@index([status, createdAt])
 }
 
 model RideEvent {

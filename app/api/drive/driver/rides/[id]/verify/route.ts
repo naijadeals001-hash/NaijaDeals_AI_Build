@@ -5,7 +5,7 @@ import { jsonSafe } from "@/lib/services/core/serialize";
 
 export const dynamic = "force-dynamic";
 
-/** The assigned driver verifies the passenger's 4-digit code before starting. */
+/** The assigned driver verifies the passenger's 4-digit pickup code before starting. */
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
     assertSameOrigin(request);

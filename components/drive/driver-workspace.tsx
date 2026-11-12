@@ -56,6 +56,7 @@ import {
   verifyPassenger
 } from "./api";
 import { useBrowserLocation } from "./use-browser-location";
+import { RideRatingPanel } from "./ride-rating";
 import type { DriverBoard, DriverBoardRide, DriverNotification, DriveTracking } from "./types";
 
 const focus =
@@ -132,6 +133,7 @@ export function DriverWorkspace({ userName }: { userName: string }) {
   const [tracking, setTracking] = useState<DriveTracking | null>(null);
   const [trackingError, setTrackingError] = useState("");
   const [verifyCode, setVerifyCode] = useState("");
+  const [verificationError, setVerificationError] = useState("");
   const [isOnlineBrowser, setIsOnlineBrowser] = useState(true);
 
   const lastHeartbeatRef = useRef(0);
@@ -368,12 +370,24 @@ export function DriverWorkspace({ userName }: { userName: string }) {
 
   async function submitVerification() {
     if (!activeRide) return;
-    await run(
-      `verify-${activeRide.id}`,
-      () => verifyPassenger(activeRide.id, verifyCode),
-      "Passenger verified. You can start the trip."
-    );
-    setVerifyCode("");
+    setBusy(`verify-${activeRide.id}`);
+    setVerificationError("");
+    setError("");
+    setNotice("");
+    try {
+      await verifyPassenger(activeRide.id, verifyCode);
+      setVerifyCode("");
+      setNotice("Passenger verified. You can start the trip.");
+      await loadBoard();
+    } catch (caught) {
+      // The authoritative service distinguishes a wrong code, an expiry, a
+      // lockout and a rate-limited retry; show that state instead of a generic
+      // failure so the driver never believes the trip can start.
+      setVerificationError(describeError(caught, "That pickup code could not be verified."));
+      await loadBoard();
+    } finally {
+      setBusy("");
+    }
   }
 
   async function recordCash(ride: DriverBoardRide) {
@@ -918,7 +932,11 @@ export function DriverWorkspace({ userName }: { userName: string }) {
                         online={online}
                         busy={busy}
                         verifyCode={verifyCode}
-                        onVerifyCode={setVerifyCode}
+                        verificationError={verificationError}
+                        onVerifyCode={(value) => {
+                          setVerifyCode(value);
+                          setVerificationError("");
+                        }}
                         onSubmitVerification={() => void submitVerification()}
                         onAdvance={(status) => void advance(status)}
                         onRelease={() => void releaseRide()}
@@ -983,7 +1001,11 @@ export function DriverWorkspace({ userName }: { userName: string }) {
                       online={online}
                       busy={busy}
                       verifyCode={verifyCode}
-                      onVerifyCode={setVerifyCode}
+                      verificationError={verificationError}
+                      onVerifyCode={(value) => {
+                        setVerifyCode(value);
+                        setVerificationError("");
+                      }}
                       onSubmitVerification={() => void submitVerification()}
                       onAdvance={(status) => void advance(status)}
                       onRelease={() => void releaseRide()}
@@ -1261,6 +1283,7 @@ function ActiveTripPanel({
   online,
   busy,
   verifyCode,
+  verificationError,
   onVerifyCode,
   onSubmitVerification,
   onAdvance,
@@ -1274,6 +1297,7 @@ function ActiveTripPanel({
   online: boolean;
   busy: string;
   verifyCode: string;
+  verificationError: string;
   onVerifyCode: (value: string) => void;
   onSubmitVerification: () => void;
   onAdvance: (status: "driver_arriving" | "in_progress" | "completed") => void;
@@ -1287,6 +1311,10 @@ function ActiveTripPanel({
   const expired = remaining !== null && remaining <= 0;
   const verificationRequired = Boolean(ride.verification?.required);
   const verified = Boolean(ride.verification?.verified);
+  const verificationExpired = Boolean(ride.verification?.expired);
+  const verificationLocked = Boolean(ride.verification?.locked);
+  const attemptsRemaining = ride.verification?.attemptsRemaining ?? 0;
+  const verificationBlocked = verificationExpired || verificationLocked;
   const target =
     tracking?.target ??
     (ride.status === "in_progress"
@@ -1375,10 +1403,25 @@ function ActiveTripPanel({
 
       {verificationRequired && !verified ? (
         <div className="mt-2 rounded-lg bg-[#fff3e8] p-2.5">
-          <p className="text-[10.5px] font-extrabold text-[#a3480f]">Ask the passenger for their 4-digit ride code</p>
+          <p className="text-[10.5px] font-extrabold text-[#a3480f]">Ask the passenger for their 4-digit pickup code</p>
+          {verificationExpired ? (
+            <p role="status" className="mt-1 rounded-lg bg-[#fee2e2] p-2 text-[10.5px] font-semibold leading-4 text-[#b91c1c]">
+              This pickup code has expired. The ride cannot start until support resets the code.
+            </p>
+          ) : verificationLocked ? (
+            <p role="status" className="mt-1 rounded-lg bg-[#fee2e2] p-2 text-[10.5px] font-semibold leading-4 text-[#b91c1c]">
+              The pickup code is locked after too many incorrect attempts. Support must reset it before this
+              trip can start.
+            </p>
+          ) : (
+            <p className="mt-0.5 text-[10px] leading-4 text-[#7a5a35]">
+              {attemptsRemaining} attempt{attemptsRemaining === 1 ? "" : "s"} left. The server refuses the start
+              until the code is correct.
+            </p>
+          )}
           <div className="mt-1 flex gap-1.5">
             <label htmlFor="passenger-code" className="sr-only">
-              Passenger 4-digit code
+              Passenger 4-digit pickup code
             </label>
             <input
               id="passenger-code"
@@ -1387,23 +1430,31 @@ function ActiveTripPanel({
               inputMode="numeric"
               autoComplete="one-time-code"
               placeholder="1234"
-              className="min-h-9 w-24 rounded-lg border border-[#e2cfae] bg-white px-2 text-center font-display text-[14px] font-extrabold tracking-[0.2em]"
+              disabled={verificationBlocked}
+              aria-invalid={Boolean(verificationError)}
+              aria-describedby={verificationError ? "passenger-code-error" : undefined}
+              className="min-h-9 w-24 rounded-lg border border-[#e2cfae] bg-white px-2 text-center font-display text-[14px] font-extrabold tracking-[0.2em] disabled:opacity-50"
             />
             <button
               type="button"
               onClick={onSubmitVerification}
-              disabled={busy === `verify-${ride.id}` || verifyCode.length !== 4}
+              disabled={verificationBlocked || busy === `verify-${ride.id}` || verifyCode.length !== 4}
               className="inline-flex min-h-9 items-center rounded-lg bg-[#0b5c33] px-3 text-[11px] font-extrabold text-white disabled:opacity-50"
             >
               {busy === `verify-${ride.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : "Verify passenger"}
             </button>
           </div>
+          {verificationError ? (
+            <p id="passenger-code-error" role="alert" className="mt-1 text-[10.5px] font-bold text-[#b91c1c]">
+              {verificationError}
+            </p>
+          ) : null}
         </div>
       ) : ride.status === "driver_arriving" ? (
         <p className="mt-2 rounded-lg bg-[#f2f7f2] p-2 text-[10.5px] leading-4 text-[#5d6d64]">
           {verified
             ? "Passenger verified by the server. Start the trip when they are in the car."
-            : "No verification code was issued for this ride. Confirm the passenger name and plate before starting."}
+            : "No pickup-code record is available for this ride. Refresh; the server will not start the trip without verification."}
         </p>
       ) : null}
 
@@ -1491,6 +1542,9 @@ function RecentTrips({
   busy: string;
   onCash: (ride: DriverBoardRide) => void;
 }) {
+  // Only the most recent completed trip offers the driver rating form; older
+  // trips remain readable without a burst of per-row rating requests.
+  const latestCompletedId = rides.find((ride) => ride.status === "completed")?.id;
   return (
     <section className="rounded-xl bg-white p-4 ring-1 ring-[#e6ece6]">
       <h2 className="text-[13px] font-extrabold">Recent trips</h2>
@@ -1530,6 +1584,7 @@ function RecentTrips({
                   </button>
                 ) : null}
               </div>
+              {ride.id === latestCompletedId ? <RideRatingPanel rideId={ride.id} role="driver" compact /> : null}
             </li>
           ))}
         </ul>

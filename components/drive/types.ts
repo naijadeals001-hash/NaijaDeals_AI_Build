@@ -70,6 +70,11 @@ export type DriveDriverSummary = {
 export type DriverVerification = {
   required: boolean;
   verified: boolean;
+  expired: boolean;
+  locked: boolean;
+  attemptsRemaining: number;
+  expiresAt: string | null;
+  verifiedAt: string | null;
 };
 
 export type DriverBoardRide = ApiRide & {
@@ -96,6 +101,7 @@ export type DriverBoard = {
     foodVehicleType: string;
     insulatedBag: boolean;
     suspendedReason: string | null;
+    rating?: ParticipantRatingSummary;
   };
   presence: DrivePresence;
   summary: DriveDriverSummary;
@@ -132,10 +138,101 @@ export type DriveTracking = {
 
 export type RideVerification = {
   rideId: string;
-  code: string;
+  /** Null after verification, expiry or lockout; only the rider endpoint returns it. */
+  code: string | null;
   issuedAt: string;
+  expiresAt: string | null;
   verified: boolean;
+  expired: boolean;
+  locked: boolean;
+  attemptsRemaining: number;
   required: boolean;
+  verifiedAt?: string | null;
+};
+
+export type ParticipantRatingSummary = {
+  average: number | null;
+  count: number;
+};
+
+export type RideRating = {
+  score: number;
+  feedback: string | null;
+  createdAt: string;
+};
+
+export type RideRatingState = {
+  rideId: string;
+  status: string;
+  own: RideRating | null;
+  canRate: boolean;
+  driverSummary: ParticipantRatingSummary;
+  customerSummary: ParticipantRatingSummary;
+};
+
+export type RideReceipt = {
+  rideId: string;
+  rideNumber: string;
+  status: string;
+  currency: string;
+  route: {
+    pickupLabel: string;
+    pickupAddress: string;
+    dropoffLabel: string;
+    dropoffAddress: string;
+    distanceMeters: number;
+    durationMinutes: number;
+    vehicleClass: string;
+  };
+  fare: {
+    baseKobo: number;
+    distanceKobo: number;
+    timeKobo: number;
+    adjustmentKobo: number;
+    totalKobo: number;
+    currency: string;
+  };
+  payment: {
+    method: string;
+    status: string;
+    reference: string | null;
+    receiptReference: string;
+  };
+  adjustments: {
+    cancellationFeeKobo: number;
+    refundedKobo: number;
+    chargedKobo: number;
+    cancellationReason: string | null;
+  };
+  timestamps: {
+    requestedAt: string;
+    acceptedAt: string | null;
+    startedAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+  };
+  driver: {
+    userId: string;
+    name: string;
+    vehicleMake: string;
+    vehicleModel: string;
+    vehiclePlate: string;
+  } | null;
+  rider: { id: string; name: string };
+  rating: {
+    own: RideRating | null;
+    canRate: boolean;
+    driverSummary: ParticipantRatingSummary;
+    customerSummary: ParticipantRatingSummary;
+  };
+};
+
+export type RideSafetyReport = {
+  id: string;
+  rideId: string;
+  category: string;
+  status: string;
+  createdAt: string;
 };
 
 export type DriverNotification = {

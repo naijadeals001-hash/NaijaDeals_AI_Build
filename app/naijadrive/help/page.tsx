@@ -26,7 +26,7 @@ const topics = [
   },
   {
     title: "Safety and tracking",
-    body: "After assignment, the trip page shows the approved driver, vehicle and plate. When a 4-digit ride code is issued, the driver must verify it before starting. Tracking shows server timestamps and an accuracy radius; a stale position is labelled, never presented as live.",
+    body: "After assignment, the trip page shows the approved driver, vehicle and plate plus a 4-digit pickup code. The server refuses to start the trip until the driver verifies that code. Tracking shows server timestamps and an accuracy radius; a stale position is labelled, never presented as live.",
     href: "/naijadrive#safety",
     label: "Safety information"
   },

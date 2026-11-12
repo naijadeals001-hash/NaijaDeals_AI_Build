@@ -6,12 +6,12 @@ import { jsonSafe } from "@/lib/services/core/serialize";
 export const dynamic = "force-dynamic";
 
 /**
- * The rider's own 4-digit passenger-verification code.
+ * The rider's own protected pickup code.
  *
  * Deliberately separate from the ride payload because the driver also reads that
  * payload; only the rider can retrieve this code. The code is derived from a
- * per-ride random salt held in the server-side event log, so it is not stored in
- * plain text.
+ * random per-ride salt in the dedicated RideVerification record and only its
+ * salted scrypt hash is stored. Drivers and administrators are refused.
  */
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   try {

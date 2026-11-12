@@ -7,6 +7,9 @@ import type {
   DriveTracking,
   DriverBoard,
   DriverNotification,
+  RideRatingState,
+  RideReceipt,
+  RideSafetyReport,
   RideVerification
 } from "./types";
 
@@ -95,6 +98,28 @@ export function verifyPassenger(rideId: string, code: string) {
     `/api/drive/driver/rides/${encodeURIComponent(rideId)}/verify`,
     { method: "POST", body: JSON.stringify({ code }) }
   );
+}
+
+export function getRideReceipt(rideId: string) {
+  return request<RideReceipt>(`/api/drive/rides/${encodeURIComponent(rideId)}/receipt`);
+}
+
+export function getRideRatingState(rideId: string) {
+  return request<RideRatingState>(`/api/drive/ratings/${encodeURIComponent(rideId)}`);
+}
+
+export function submitRideRating(input: { rideId: string; score: number; feedback?: string | null }) {
+  return request<{ idempotent: boolean; rating: { score: number; feedback: string | null; createdAt: string } }>(
+    "/api/drive/ratings",
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
+export function submitSafetyReport(input: { rideId: string; category: string; details: string }) {
+  return request<RideSafetyReport>(`/api/drive/rides/${encodeURIComponent(input.rideId)}/safety-report`, {
+    method: "POST",
+    body: JSON.stringify({ category: input.category, details: input.details })
+  });
 }
 
 export function getPartnerNotifications() {

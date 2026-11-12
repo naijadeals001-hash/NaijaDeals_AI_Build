@@ -369,7 +369,9 @@ async function main() {
       await driverPage.getByRole("button", { name: /I have arrived at pick-up/i }).click();
       await driverPage.getByRole("heading", { name: /At the pick-up/i }).waitFor({ timeout: 30_000 });
       await customerPage.reload({ waitUntil: "domcontentloaded", timeout: 90_000 });
-      await customerPage.getByText(/Give this 4-digit code/i).waitFor({ timeout: 30_000 });
+      await customerPage
+        .getByText(/Share this code only when you have checked your driver and vehicle/i)
+        .waitFor({ timeout: 30_000 });
       const code = await customerPage.evaluate(async (id) => {
         const response = await fetch(`/api/drive/rides/${id}/verification`, { cache: "no-store" });
         const body = await response.json();

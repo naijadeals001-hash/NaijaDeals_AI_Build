@@ -3717,3 +3717,151 @@ refuses automatic correction.
 - This handoff section is a separate local commit on `naijashop-marketplace`. Local only; no push
   or deployment. GitHub preservation remote: not pushed in this increment (no push authorization and
   no deployment review of this branch).
+
+## 2026-11-11 — NaijaDrive protected pickup verification, receipts and participant ratings
+
+Base HEAD `fd0da5d327a19d97ade14fe2520db39736c92a0d` on `naijashop-marketplace`. All execution ran
+against `naijadeals_wallet_acceptance` only. Every entry point derives the URL from `.env` by
+replacing only the database path, guards `select current_database()`, and prints no credentials.
+No production database, shared affiliate database, real charge, payout, provider call, push or
+deployment was touched. The active NaijaPay work in the working tree was left unmodified and
+unstaged.
+
+### 1. Financial defects — read-only verification (NOT fixed, not enabled)
+
+**1a. `completeOrder` after a partial refund — still defective.** `lib/services/core/order.service.ts`
+still releases `escrow.amountKobo` and derives `payable` from the full order amounts; it never reads
+`order.refundedKobo`, and `refundPayment` (`lib/payments/service.ts`) never reduces
+`EscrowHold.amountKobo` on a partial refund. Consequences measured from the code, not simulated:
+a wallet-paid order refuses release with `409 escrow_conflict` because the buyer/seller holds were
+already reduced; an external-paid order reaches the unguarded vendor `wallet.update` and would
+decrement the full escrow amount from the already-reduced hold, driving `heldKobo` negative and
+crediting the full payable. No fixture was created and no affected flow was enabled.
+
+**1b. External escrow 2× projection gap — still defective.** The non-wallet branch of
+`recordEscrow` (`lib/payments/service.ts`) increments SYSTEM `availableKobo` by `amount` while
+posting a SYSTEM **DEBIT** leg. Under the shared convention
+`availableKobo = ledgerNet − open counterparty hold credits`, the stored position is 2× the amount
+away from its journal. The acceptance database currently holds no external `Payment` rows (the
+mocked provider suite cleaned them up), so the read-only database check was:
+SYSTEM `availableKobo = -1,400,000`, `heldKobo = 1,240,000`, ledger net `-160,000`, open counterparty
+holds (8 ride fares) `1,240,000` → expected available `-1,400,000`, difference **0**. The defect is
+in the unexercised branch, not in the current projection. It remains a live-money blocker.
+
+### 2. Protected pickup verification
+
+New models (migration `20261111120000_drive_verification_ratings`):
+
+- `RideVerification` — `rideId @unique`, `codeHash`, `salt`, `algorithm`, `expiresAt`,
+  `attemptCount`, `maxAttempts`, `lastAttemptAt`, `verifiedAt`, `verifiedByUserId`,
+  `invalidatedAt/Reason`, `createdAt/updatedAt`.
+- `RideRating` — one row per `(rideId, raterUserId)`, server-derived `raterRole`, subject, score
+  1–5 with a database `CHECK`, optional feedback, timestamps.
+- `RideSafetyReport` — operational report with reporter role, category, details, status; separate
+  from ratings/reviews and never exposed publicly.
+
+The migration creates only these three tables/enums plus their indexes and foreign keys. It was
+applied to `naijadeals_wallet_acceptance` only (`prisma migrate deploy`); no other database was
+migrated.
+
+Verification lifecycle:
+
+- `acceptRide` issues/rotates the record inside the acceptance transaction; no event-log salt is
+  written.
+- The 4-digit code is random per assignment and derived server-side from a random salt. The raw code
+  is not stored; only a salted scrypt hash is stored and compared with `timingSafeEqual`.
+- `GET /api/drive/rides/[id]/verification` is the only endpoint returning the raw code, and only to
+  the ride's rider. Driver/admin/driver-non-assigned reads are 403.
+- `POST /api/drive/driver/rides/[id]/verify` is the authoritative verification: assignment check,
+  2-hour expiry, 5-attempt cap, 1.5-second per-record cooldown, advisory transaction lock, persisted
+  attempt increments and audit rows. Wrong attempts commit their counter increment; the HTTP error is
+  raised after the transaction so the attempt is never rolled back.
+- `driverUpdateRideStatus(in_progress)` re-checks the protected row inside the same transaction and
+  refuses `verification_not_issued`, `verification_expired`, `verification_locked` or
+  `passenger_verification_required`. A duplicate identical transition is idempotent and creates no
+  second event/payment.
+- Release, assignment expiry and cancellation invalidate the record; re-assignment rotates salt,
+  expiry and attempts.
+- `POST /api/drive/rides/[id]/verification/support` requires `rides:write`, accepts `reset|verify`
+  with a required reason, never returns a code, and writes `ride.verification_support_reset` or
+  `ride.verification_support_verified` with the reason.
+
+### 3. Receipts, ratings and safety
+
+- `GET /api/drive/rides/[id]/receipt` rebuilds fare components (`base + distance + time +
+  rounding = fare`) from the recorded ride, payment method/status/reference, cancellation fee and
+  refund adjustments, total charged and a receipt reference. Rider, assigned driver or admin only.
+- `POST /api/drive/ratings` and `GET /api/drive/ratings/[rideId]`: one rating per participant per
+  completed trip. Role is derived from the authenticated account, never the request. Identical
+  retries are idempotent; a different rating is 409. Aggregates are computed from real rating rows
+  only and never from seed or synthetic data. The caller sees only their own feedback text.
+- `POST/GET /api/drive/rides/[id]/safety-report`: participant-only operational reports; no public
+  testimonial surface.
+- Rider UI shows the code with the exact instruction “Share this code only when you have checked
+  your driver and vehicle.” and explicit expired/locked/verified states. Driver UI shows the 4-digit
+  entry, remaining attempts, expiry/lock state and the server error, and disables start until
+  verified. Completion UI now shows the itemised receipt, payment/reference, adjustments, rating
+  form, safety-report form, “Book another ride”, trip history and support links.
+
+### 4. Acceptance executed
+
+- `npx tsx scripts/drive-verification-rating-acceptance.ts` → **PASS 81/81** on two consecutive
+  runs (final RUN_ID `drive-verify-20261112022322-01bb3e18`), database
+  `naijadeals_wallet_acceptance`. Covered: wrong,
+  expired, locked and repeated codes; concurrent correct+wrong submissions; concurrent starts;
+  unauthorized driver/rider reads and actions; driver payload has no code/hash/salt; atomic start;
+  support reset/verify audits; rating bounds, duplicates and authorization; aggregate from real rows;
+  receipt totals and wallet refund adjustment; safety-report separation; cleanup `leftovers: 0`;
+  SYSTEM restored exactly; in-process reconciliation 0 issues.
+- `DATABASE_URL=<acceptance URL> RECONCILE_DB=naijadeals_wallet_acceptance npx tsx
+  scripts/wallet-reconcile.ts` → `status: CLEAN`, 17 wallets, 8 open rides, 0 open escrows,
+  0 mismatches, 0 duplicate identities.
+- `npx tsc --noEmit` → exit 0.
+- `npm run build` → exit 0, `.next/BUILD_ID` `yKDtS3mf1ovdZ7lMMFw2A`.
+- Playwright production-preview checks at 390/768/1440: rider code instruction plus 4-digit render,
+  driver verification input, receipt/rating render; 9/9 no horizontal overflow and no page errors.
+  Screenshots (ignored by Git): `qa-artifacts/drive-pickup-{390,768,1440}.png`,
+  `qa-artifacts/drive-driver-verify-{390,768,1440}.png`,
+  `qa-artifacts/drive-receipt-{390,768,1440}.png`.
+
+### 5. Security properties proven
+
+- The raw code is returned only to the ride's rider; the assigned driver, a different driver, an
+  unrelated rider and an administrator all receive 403 from the rider endpoint.
+- Driver responses contain verification state only: no raw code, `codeHash` or `salt`.
+- Wrong codes are counted and audited; the max-attempt record and expired record refuse the correct
+  code and refuse start.
+- Concurrent correct/wrong submissions cannot both verify; the record ends verified at most once.
+- Concurrent starts produce exactly one transition and one `in_progress` event.
+- Replaying a code after start is refused. Same-status retries are idempotent and add no event.
+- Support overrides are permission-gated, reason-bound, audited and never reveal a code.
+- Ratings are participant-bound, completed-trip-bound, score-bounded, one per participant, and
+  aggregates contain only real rows.
+
+**Honest limitation:** the raw code is derived from a random salt stored beside its scrypt hash, so
+an attacker with both a full database dump and this source could recompute the 4-digit code. The
+design protects against driver/API exposure and event-log leakage, not against full DB+source
+compromise. A future deploy could add a server-side pepper/secret, but no new credential was invented
+here.
+
+### 6. Remaining gaps (out of this slice)
+
+- Card payments, scheduled rides, off-route/rerouting, ratings-moderation UI, payouts and voice
+  guidance were not built.
+- The 3015 preview was not rebuilt: its configured database is not the acceptance database, and this
+  slice was authorized to migrate only `naijadeals_wallet_acceptance`; serving the new UI against a
+  database without the new tables would be misleading. The temporary acceptance preview on 3021 was
+  stopped after the checks. The pre-existing local preview processes on 3015/3016/3017 were stopped
+  because they held the Prisma engine DLL and blocked client generation; 3015 was not restarted
+  against an unmigrated database.
+- Pre-existing active rides assigned before this change have no protected record; support must reset
+  or the rider must open the trip screen to issue one. This is safe (no bypass) but operationally
+  relevant.
+- The support reset/verify action is exposed as the permission-gated API only; it is not yet wired
+  into a Control Center screen.
+- `scripts/drive-tests.ts` and `scripts/nairadrive-e2e.ts` were updated for the mandatory pickup code
+  but were not executed in this increment (they need a seeded local server and browser). Only the
+  service-level acceptance suite above was executed.
+- The two financial defects in §1 remain unfixed and are not enabled.
+- Nothing was pushed or deployed. The working tree's NaijaPay changes and unrelated modified files
+  were not staged.

@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import type { Prisma, RidePaymentMethod, RideStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
@@ -377,6 +377,7 @@ export async function cancelRide(input: {
     });
     if (updated.count === 0) throw new ApiError(409, "ride_changed", "The ride changed while cancelling. Reload and try again.");
 
+    await invalidateRideVerification(tx, ride.id, "Ride cancelled.");
     const refund = await refundRideHold(tx, ride, input.actorId, feeKobo);
     if (refund) {
       await tx.ride.update({
@@ -493,6 +494,10 @@ export async function acceptRide(input: { userId: string; rideId: string }) {
       throw new ApiError(409, "ride_taken", "Another driver has already accepted this ride, or it is no longer available.");
     }
 
+    // The pickup code belongs to the assignment, not to an event log. Rotating
+    // here means a re-assigned ride never reuses the previous driver's code.
+    await issueRideVerification(tx, ride.id);
+
     await addRideEvent(tx, {
       rideId: ride.id,
       status: "driver_assigned",
@@ -603,7 +608,10 @@ export async function driverUpdateRideStatus(input: {
       }
       throw new ApiError(403, "forbidden", "This ride is assigned to another driver.");
     }
-    if (ride.status === "completed" && input.status === "completed") {
+    // Repeated identical transitions are idempotent. In particular a duplicate
+    // start tap returns the already-started ride without a second event, payment
+    // release or start timestamp; it is not a new transition.
+    if (ride.status === input.status) {
       return { outcome: "ok" as const, ride };
     }
 
@@ -612,15 +620,9 @@ export async function driverUpdateRideStatus(input: {
       if (ride.status !== "in_progress") throw new ApiError(409, "trip_not_started", "Start the trip before completing it.");
     }
     if (input.status === "in_progress") {
-      const required = await isVerificationRequired(tx, ride.id);
-      const verified = isPassengerVerified(ride.events);
-      if (required && !verified) {
-        throw new ApiError(
-          409,
-          "passenger_verification_required",
-          "Ask the passenger for the 4-digit code on their trip screen and verify it before starting."
-        );
-      }
+      // Authoritative gate: the protected record must show a successful code
+      // verification in the same transaction that moves the ride forward.
+      await requireVerifiedRide(tx, ride.id);
     }
 
     const now = new Date();
@@ -742,6 +744,7 @@ export async function releaseRide(input: { userId: string; rideId: string; reaso
     });
     if (updated.count === 0) throw new ApiError(409, "ride_changed", "The ride changed while releasing. Reload and try again.");
 
+    await invalidateRideVerification(tx, ride.id, "Driver released the assignment.");
     await addRideEvent(tx, {
       rideId: ride.id,
       status: "requested",
@@ -826,6 +829,7 @@ async function releaseExpiredRide(
   });
   if (updated.count === 0) return null;
 
+  await invalidateRideVerification(tx, ride.id, "Assignment expired.");
   await addRideEvent(tx, {
     rideId: ride.id,
     status: "requested",
@@ -934,20 +938,28 @@ export async function listDriverRides(userId: string) {
     })
   ]);
 
-  // Attach the verification state the driver UI must enforce before starting.
+  // Attach only the verification state the driver UI needs. The protected record's
+  // hash and salt are never selected here, so no driver response can expose them.
   const activeWithVerification = await Promise.all(
-    active.map(async (ride) => ({
-      ...ride,
-      verification: {
-        required: await isVerificationRequired(prisma, ride.id),
-        verified: isPassengerVerified(ride.events)
-      }
-    }))
+    active.map(async (ride) => {
+      const record = await prisma.rideVerification.findUnique({
+        where: { rideId: ride.id },
+        select: {
+          expiresAt: true,
+          attemptCount: true,
+          maxAttempts: true,
+          verifiedAt: true,
+          invalidatedAt: true
+        }
+      });
+      return { ...ride, verification: safeVerification(record, now) };
+    })
   );
 
-  const [presence, summary] = await Promise.all([
+  const [presence, summary, rating] = await Promise.all([
     presenceForDriver(driver, now),
-    driverSummary(driver, now)
+    driverSummary(driver, now),
+    participantRatingSummary(driver.userId, "customer")
   ]);
   // Time buckets are separate: online time is split into pick-up and on-trip
   // intervals using server timestamps, leaving the remainder as available time.
@@ -971,7 +983,9 @@ export async function listDriverRides(userId: string) {
       foodDeliveryEnabled: driver.foodDeliveryEnabled,
       foodVehicleType: driver.foodVehicleType,
       insulatedBag: driver.insulatedBag,
-      suspendedReason: driver.suspendedReason
+      suspendedReason: driver.suspendedReason,
+      /** Average of real customer ratings only; null until a trip is rated. */
+      rating
     },
     presence,
     summary,
@@ -1011,8 +1025,166 @@ const PRESENCE_STALE_WARNING_SECONDS = 60;
 const DRIVE_SERVICE_RADIUS_METERS = 25_000;
 const MAX_LOCATION_ACCURACY_M = 5_000;
 const ONLINE_EVENT_TYPES = ["driver.online", "driver.offline"];
-const VERIFICATION_EVENT_TYPE = "ride.verification_issued";
 const PASSENGER_VERIFIED_LABEL = "Passenger verified";
+
+/* --------------------------------------------------- pickup verification --- */
+
+/**
+ * The four-digit pickup code is a random per-ride secret, not a value stored in
+ * plain text or in an event payload. A random per-record salt is persisted and
+ * the code is derived server-side from that salt; only its salted scrypt hash is
+ * compared, and only the authenticated rider may read the derived code. Drivers
+ * receive state (required/verified/expired/locked) and never the salt or code.
+ *
+ * A four-digit code has 10,000 possible values. This is only acceptable because
+ * the authoritative service also enforces a short expiry, a five-attempt cap, a
+ * per-record cooldown and a single-use transition, all inside one transaction.
+ */
+export const RIDE_VERIFICATION_CODE_LENGTH = 4;
+export const RIDE_VERIFICATION_MAX_ATTEMPTS = 5;
+export const RIDE_VERIFICATION_TTL_MS = 2 * 60 * 60 * 1000;
+export const RIDE_VERIFICATION_ATTEMPT_COOLDOWN_MS = 1_500;
+const RIDE_VERIFICATION_ALGORITHM = "scrypt-hmac-sha256-v1";
+const RIDE_VERIFICATION_HASH_BYTES = 32;
+
+type VerificationRecord = {
+  expiresAt: Date;
+  attemptCount: number;
+  maxAttempts: number;
+  verifiedAt: Date | null;
+  invalidatedAt: Date | null;
+};
+
+export type SafeRideVerification = {
+  required: boolean;
+  verified: boolean;
+  expired: boolean;
+  locked: boolean;
+  attemptsRemaining: number;
+  expiresAt: string | null;
+  verifiedAt: string | null;
+};
+
+function verificationCodeFor(salt: string, rideId: string) {
+  const digest = createHmac("sha256", salt).update(`${rideId}:naijadrive-pickup-verification`).digest();
+  const space = 10 ** RIDE_VERIFICATION_CODE_LENGTH;
+  return String(digest.readUInt32BE(0) % space).padStart(RIDE_VERIFICATION_CODE_LENGTH, "0");
+}
+
+function hashVerificationCode(code: string, salt: string) {
+  return scryptSync(code, salt, RIDE_VERIFICATION_HASH_BYTES).toString("hex");
+}
+
+function safeVerification(record: VerificationRecord | null, now: Date = new Date()): SafeRideVerification {
+  if (!record) {
+    return {
+      required: false,
+      verified: false,
+      expired: false,
+      locked: false,
+      attemptsRemaining: 0,
+      expiresAt: null,
+      verifiedAt: null
+    };
+  }
+  const active = !record.invalidatedAt;
+  const verified = active && Boolean(record.verifiedAt);
+  const expired = active && !verified && record.expiresAt.getTime() <= now.getTime();
+  const locked = active && !verified && record.attemptCount >= record.maxAttempts;
+  return {
+    required: active,
+    verified,
+    expired,
+    locked,
+    attemptsRemaining: Math.max(0, record.maxAttempts - record.attemptCount),
+    expiresAt: active ? record.expiresAt.toISOString() : null,
+    verifiedAt: verified && record.verifiedAt ? record.verifiedAt.toISOString() : null
+  };
+}
+
+/** Serialise every verification operation for one ride on the same row lock. */
+async function lockRideVerification(tx: Db, rideId: string) {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`ride-verification:${rideId}`}))`;
+}
+
+/**
+ * Issue (or rotate) the protected record. Called inside the driver-acceptance
+ * transaction and by an audited support reset. No caller receives the raw code.
+ */
+async function issueRideVerification(tx: Db, rideId: string) {
+  const salt = randomBytes(16).toString("hex");
+  const code = verificationCodeFor(salt, rideId);
+  const now = new Date();
+  const data = {
+    codeHash: hashVerificationCode(code, salt),
+    salt,
+    algorithm: RIDE_VERIFICATION_ALGORITHM,
+    expiresAt: new Date(now.getTime() + RIDE_VERIFICATION_TTL_MS),
+    attemptCount: 0,
+    maxAttempts: RIDE_VERIFICATION_MAX_ATTEMPTS,
+    lastAttemptAt: null,
+    verifiedAt: null,
+    verifiedByUserId: null,
+    invalidatedAt: null,
+    invalidatedReason: null
+  } satisfies Prisma.RideVerificationUpdateInput;
+  return tx.rideVerification.upsert({
+    where: { rideId },
+    create: { rideId, ...data },
+    update: data
+  });
+}
+
+/** A released, expired or cancelled assignment cannot leave a usable code behind. */
+async function invalidateRideVerification(tx: Db, rideId: string, reason: string) {
+  await tx.rideVerification.updateMany({
+    where: { rideId, invalidatedAt: null },
+    data: {
+      invalidatedAt: new Date(),
+      invalidatedReason: reason.slice(0, 200),
+      verifiedAt: null,
+      verifiedByUserId: null
+    }
+  });
+}
+
+/**
+ * The start transition is gated by the protected row inside the caller's
+ * transaction. A code that is absent, expired, locked or merely verified by a
+ * different ride can never move a trip to `in_progress`.
+ */
+async function requireVerifiedRide(tx: Db, rideId: string) {
+  await lockRideVerification(tx, rideId);
+  const record = await tx.rideVerification.findUnique({ where: { rideId } });
+  const now = new Date();
+  if (!record || record.invalidatedAt) {
+    throw new ApiError(
+      409,
+      "verification_not_issued",
+      "The passenger has to open their trip screen to receive a pickup code before the trip can start."
+    );
+  }
+  if (record.verifiedAt) return record;
+  if (record.expiresAt.getTime() <= now.getTime()) {
+    throw new ApiError(
+      409,
+      "verification_expired",
+      "This pickup code has expired. Ask support to reset the code before starting the trip."
+    );
+  }
+  if (record.attemptCount >= record.maxAttempts) {
+    throw new ApiError(
+      429,
+      "verification_locked",
+      "Too many incorrect pickup codes. Support must reset the code before this trip can start."
+    );
+  }
+  throw new ApiError(
+    409,
+    "passenger_verification_required",
+    "Verify the passenger's pickup code before starting the trip."
+  );
+}
 
 export type DriveRouteStep = {
   instruction: string;
@@ -1709,121 +1881,157 @@ export async function getRideTracking(input: {
 /* --------------------------------------------------- passenger verification --- */
 
 /**
- * SCHEMA GAP (reported, not simulated): `Ride` has no `verificationPinHash` or
- * `verificationRequired` column. The rider receives a server-derived 4-digit code
- * from a random per-ride salt stored only in the server-side SystemEvent log; the
- * code itself is never stored. Verification is required before starting a trip
- * once the rider has opened the code, so existing API clients that never request a
- * code keep their previous state-machine behaviour. A production schema should add
- * `Ride.verificationPinHash` and set it atomically at booking.
+ * The rider's protected pickup code.
+ *
+ * This is the only endpoint allowed to return the raw four-digit code. The
+ * driver, an unrelated account and an administrator are all refused; an
+ * administrator uses the audited support reset instead. After verification the
+ * code is no longer returned at all.
  */
-function verificationCodeFor(salt: string, rideId: string) {
-  const digest = createHmac("sha256", salt).update(rideId).digest();
-  return String(digest.readUInt32BE(0) % 10_000).padStart(4, "0");
-}
-
-async function isVerificationRequired(tx: Db, rideId: string) {
-  const record = await tx.systemEvent.findFirst({
-    where: { type: VERIFICATION_EVENT_TYPE, entity: "Ride", entityId: rideId },
-    select: { id: true }
-  });
-  return Boolean(record);
-}
-
-function isPassengerVerified(events: Array<{ label: string }>) {
-  return events.some((event) => event.label === PASSENGER_VERIFIED_LABEL);
-}
-
 export async function getRideVerificationCode(input: { userId: string; rideId: string }) {
   const ride = await loadRide(prisma, input.rideId);
   if (ride.riderId !== input.userId) {
-    throw new ApiError(403, "forbidden", "Only the rider on this trip can see its verification code.");
+    throw new ApiError(403, "forbidden", "Only the rider on this trip can see its pickup code.");
   }
   if (ride.status === "completed" || ride.status === "cancelled") {
     throw new ApiError(409, "ride_closed", "This ride is no longer active.");
   }
-
-  const existing = await prisma.systemEvent.findFirst({
-    where: { type: VERIFICATION_EVENT_TYPE, entity: "Ride", entityId: ride.id },
-    select: { payload: true, createdAt: true }
-  });
-  const payload = (existing?.payload as { salt?: unknown; issuedAt?: unknown } | null) ?? null;
-  let salt = typeof payload?.salt === "string" ? payload.salt : "";
-  let issuedAt = existing?.createdAt ?? new Date();
-  if (!salt) {
-    salt = randomBytes(16).toString("hex");
-    const created = await prisma.systemEvent.create({
-      data: {
-        type: VERIFICATION_EVENT_TYPE,
-        actorId: input.userId,
-        entity: "Ride",
-        entityId: ride.id,
-        payload: { salt, issuedAt: issuedAt.toISOString() }
-      }
-    });
-    issuedAt = created.createdAt;
+  if (ride.status === "requested") {
+    throw new ApiError(
+      409,
+      "verification_not_available",
+      "A pickup code is issued when a driver accepts the ride."
+    );
+  }
+  if (ride.status === "in_progress") {
+    throw new ApiError(409, "verification_not_available", "This trip has already started.");
   }
 
+  let record = await prisma.rideVerification.findUnique({ where: { rideId: ride.id } });
+  if (!record || record.invalidatedAt) {
+    // A ride assigned before the protected record existed (or one whose previous
+    // assignment was released) gets one record at the moment the rider asks.
+    record = await prisma.$transaction(async (tx) => {
+      await lockRideVerification(tx, ride.id);
+      const fresh = await tx.rideVerification.findUnique({ where: { rideId: ride.id } });
+      if (fresh && !fresh.invalidatedAt) return fresh;
+      return issueRideVerification(tx, ride.id);
+    });
+  }
+
+  const state = safeVerification(record);
   return {
     rideId: ride.id,
-    code: verificationCodeFor(salt, ride.id),
-    issuedAt: issuedAt.toISOString(),
-    verified: isPassengerVerified(ride.events),
+    code: state.verified || state.expired || state.locked ? null : verificationCodeFor(record.salt, ride.id),
+    issuedAt: record.createdAt.toISOString(),
+    expiresAt: state.expiresAt,
+    verified: state.verified,
+    expired: state.expired,
+    locked: state.locked,
+    attemptsRemaining: state.attemptsRemaining,
     required: true
   };
 }
 
+type VerificationOutcome =
+  | { outcome: "verified"; verifiedAt: Date; attemptsRemaining: number; ride: Awaited<ReturnType<typeof loadRide>> }
+  | { outcome: "already"; verifiedAt: Date; attemptsRemaining: number; ride: Awaited<ReturnType<typeof loadRide>> }
+  | { outcome: "invalid"; attemptsRemaining: number }
+  | { outcome: "locked" }
+  | { outcome: "expired" }
+  | { outcome: "not_issued" }
+  | { outcome: "rate_limited" };
+
+/**
+ * Verify a passenger code before the trip starts.
+ *
+ * The row lock serialises concurrent correct/incorrect submissions. A wrong
+ * attempt, its counter increment and its audit row are committed as an outcome
+ * (not thrown inside the transaction, which would roll the attempt back) and the
+ * error is raised afterwards. A correct attempt flips `verifiedAt` exactly once;
+ * replays return the already-verified state and can never restart a closed ride.
+ */
 export async function verifyPassenger(input: { userId: string; rideId: string; code: string }) {
   const driver = await getDriverForUser(input.userId);
   const provided = input.code.trim();
-  if (!/^\d{4}$/.test(provided)) {
-    throw new ApiError(400, "invalid_code", "Enter the 4-digit code shown on the passenger's trip screen.");
+  const pattern = new RegExp(`^\\d{${RIDE_VERIFICATION_CODE_LENGTH}}$`);
+  if (!pattern.test(provided)) {
+    throw new ApiError(
+      400,
+      "invalid_code",
+      `Enter the ${RIDE_VERIFICATION_CODE_LENGTH}-digit code shown on the passenger's trip screen.`
+    );
   }
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx): Promise<VerificationOutcome> => {
+    await lockRideVerification(tx, input.rideId);
     const ride = await loadRide(tx, input.rideId);
-    if (ride.driverId !== driver.id) throw new ApiError(403, "forbidden", "This ride is assigned to another driver.");
+    if (ride.driverId !== driver.id) {
+      throw new ApiError(403, "forbidden", "This ride is assigned to another driver.");
+    }
     if (!["driver_assigned", "driver_arriving"].includes(ride.status)) {
       throw new ApiError(409, "verification_not_available", "Passenger verification is only available before the trip starts.");
     }
-    if (isPassengerVerified(ride.events)) {
-      return { verified: true, alreadyVerified: true, ride };
+
+    const record = await tx.rideVerification.findUnique({ where: { rideId: ride.id } });
+    if (!record || record.invalidatedAt) return { outcome: "not_issued" };
+    const now = new Date();
+    if (record.verifiedAt) {
+      return {
+        outcome: "already",
+        verifiedAt: record.verifiedAt,
+        attemptsRemaining: Math.max(0, record.maxAttempts - record.attemptCount),
+        ride
+      };
+    }
+    if (record.expiresAt.getTime() <= now.getTime()) return { outcome: "expired" };
+    if (record.attemptCount >= record.maxAttempts) return { outcome: "locked" };
+    if (record.lastAttemptAt && now.getTime() - record.lastAttemptAt.getTime() < RIDE_VERIFICATION_ATTEMPT_COOLDOWN_MS) {
+      return { outcome: "rate_limited" };
     }
 
-    const record = await tx.systemEvent.findFirst({
-      where: { type: VERIFICATION_EVENT_TYPE, entity: "Ride", entityId: ride.id },
-      select: { payload: true }
-    });
-    const salt = (record?.payload as { salt?: unknown } | null)?.salt;
-    if (typeof salt !== "string" || !salt) {
-      throw new ApiError(
-        409,
-        "verification_not_issued",
-        "The passenger has not opened their trip code yet. Ask them to refresh their trip screen."
-      );
-    }
+    const derived = hashVerificationCode(provided, record.salt);
+    const expected = Buffer.from(record.codeHash, "hex");
+    const actual = Buffer.from(derived, "hex");
+    const matches = expected.length === actual.length && timingSafeEqual(expected, actual);
 
-    const expected = verificationCodeFor(salt, ride.id);
-    const matches =
-      provided.length === expected.length &&
-      timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
     if (!matches) {
+      const attemptCount = record.attemptCount + 1;
+      await tx.rideVerification.update({
+        where: { id: record.id },
+        data: { attemptCount: { increment: 1 }, lastAttemptAt: now }
+      });
       await recordAudit({
         tx,
         actorId: input.userId,
         action: "ride.passenger_verification_failed",
         entity: "Ride",
         entityId: ride.id,
-        metadata: { driverId: driver.id }
+        metadata: { driverId: driver.id, attemptsRemaining: Math.max(0, record.maxAttempts - attemptCount) }
       });
-      throw new ApiError(400, "invalid_passenger_code", "That code does not match this passenger's trip.");
+      if (attemptCount >= record.maxAttempts) {
+        await recordAudit({
+          tx,
+          actorId: input.userId,
+          action: "ride.passenger_verification_locked",
+          entity: "Ride",
+          entityId: ride.id,
+          metadata: { driverId: driver.id, maxAttempts: record.maxAttempts }
+        });
+        return { outcome: "locked" };
+      }
+      return { outcome: "invalid", attemptsRemaining: record.maxAttempts - attemptCount };
     }
 
-    const event = await addRideEvent(tx, {
+    await tx.rideVerification.update({
+      where: { id: record.id },
+      data: { verifiedAt: now, verifiedByUserId: input.userId, lastAttemptAt: now }
+    });
+    await addRideEvent(tx, {
       rideId: ride.id,
       status: ride.status,
       label: PASSENGER_VERIFIED_LABEL,
-      description: "The driver confirmed the passenger's 4-digit ride code before starting.",
+      description: "The driver confirmed the passenger's pickup code before starting.",
       actorId: input.userId
     });
     await recordAudit({
@@ -1834,8 +2042,457 @@ export async function verifyPassenger(input: { userId: string; rideId: string; c
       entityId: ride.id,
       metadata: { driverId: driver.id }
     });
-    return { verified: true, alreadyVerified: false, verifiedAt: event.createdAt, ride: await loadRide(tx, ride.id) };
+    return {
+      outcome: "verified",
+      verifiedAt: now,
+      attemptsRemaining: Math.max(0, record.maxAttempts - record.attemptCount),
+      ride: await loadRide(tx, ride.id)
+    };
   });
+
+  switch (result.outcome) {
+    case "verified":
+    case "already":
+      return {
+        verified: true,
+        alreadyVerified: result.outcome === "already",
+        verifiedAt: result.verifiedAt.toISOString(),
+        attemptsRemaining: result.attemptsRemaining,
+        ride: result.ride
+      };
+    case "invalid":
+      throw new ApiError(
+        400,
+        "invalid_passenger_code",
+        `That pickup code is not correct. ${result.attemptsRemaining} attempt${result.attemptsRemaining === 1 ? "" : "s"} left.`
+      );
+    case "locked":
+      throw new ApiError(
+        429,
+        "verification_locked",
+        "Too many incorrect pickup codes. Support must reset the code before this trip can start."
+      );
+    case "expired":
+      throw new ApiError(
+        409,
+        "verification_expired",
+        "This pickup code has expired. Ask support to reset the code before starting the trip."
+      );
+    case "not_issued":
+      throw new ApiError(
+        409,
+        "verification_not_issued",
+        "The passenger has not opened their trip screen yet. Ask them to open it to receive their pickup code."
+      );
+    case "rate_limited":
+      throw new ApiError(
+        429,
+        "verification_rate_limited",
+        "Please wait a moment before trying another pickup code."
+      );
+  }
+}
+
+/**
+ * Audited exceptional support handling. An administrator can rotate the code or
+ * mark the passenger verified without ever seeing the raw code. The action is
+ * refused once the trip is moving or closed and always writes an AuditLog row.
+ */
+export async function overrideRideVerification(input: {
+  adminId: string;
+  rideId: string;
+  action: "reset" | "verify";
+  reason: string;
+}) {
+  const reason = input.reason.trim();
+  if (reason.length < 3 || reason.length > 300) {
+    throw new ApiError(400, "invalid_reason", "Give a short reason (3-300 characters) for this support action.");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    await lockRideVerification(tx, input.rideId);
+    const ride = await loadRide(tx, input.rideId);
+    if (!["driver_assigned", "driver_arriving"].includes(ride.status)) {
+      throw new ApiError(
+        409,
+        "verification_not_available",
+        "Pickup-code support actions are only available before the trip starts."
+      );
+    }
+
+    let record = await tx.rideVerification.findUnique({ where: { rideId: ride.id } });
+    if (input.action === "reset") {
+      record = await issueRideVerification(tx, ride.id);
+    } else {
+      if (!record || record.invalidatedAt) record = await issueRideVerification(tx, ride.id);
+      record = await tx.rideVerification.update({
+        where: { id: record.id },
+        data: {
+          verifiedAt: new Date(),
+          verifiedByUserId: input.adminId,
+          attemptCount: 0,
+          lastAttemptAt: null,
+          expiresAt: new Date(Date.now() + RIDE_VERIFICATION_TTL_MS)
+        }
+      });
+    }
+
+    await recordAudit({
+      tx,
+      actorId: input.adminId,
+      action: input.action === "reset" ? "ride.verification_support_reset" : "ride.verification_support_verified",
+      entity: "Ride",
+      entityId: ride.id,
+      metadata: { rideNumber: ride.rideNumber, reason, action: input.action }
+    });
+
+    return {
+      rideId: ride.id,
+      action: input.action,
+      verification: safeVerification(record)
+    };
+  });
+}
+
+/* ------------------------------------------------------- receipts and ratings --- */
+
+export type RideFareComponents = {
+  baseKobo: number;
+  distanceKobo: number;
+  timeKobo: number;
+  adjustmentKobo: number;
+  totalKobo: number;
+  currency: string;
+};
+
+/** The same itemisation the rider was quoted, rebuilt from the recorded ride. */
+export function rideFareComponents(ride: {
+  vehicleClass: string;
+  distanceMeters: number;
+  durationMinutes: number;
+  fareKobo: bigint;
+  currency: string;
+}): RideFareComponents {
+  const vehicle = findVehicleClass(ride.vehicleClass);
+  const totalKobo = Number(ride.fareKobo);
+  const baseKobo = vehicle?.baseKobo ?? 0;
+  const distanceKobo = vehicle ? Math.round(vehicle.perKmKobo * (ride.distanceMeters / 1000)) : 0;
+  const timeKobo = vehicle ? vehicle.perMinuteKobo * ride.durationMinutes : 0;
+  return {
+    baseKobo,
+    distanceKobo,
+    timeKobo,
+    adjustmentKobo: totalKobo - baseKobo - distanceKobo - timeKobo,
+    totalKobo,
+    currency: ride.currency
+  };
+}
+
+export type ParticipantRatingSummary = { average: number | null; count: number };
+
+/** Aggregate over real rating rows only; there is no synthetic seed data path. */
+export async function participantRatingSummary(
+  subjectUserId: string,
+  raterRole: "customer" | "driver"
+): Promise<ParticipantRatingSummary> {
+  const aggregate = await prisma.rideRating.aggregate({
+    where: { subjectUserId, raterRole },
+    _avg: { score: true },
+    _count: { _all: true }
+  });
+  const count = aggregate._count._all;
+  return {
+    average: count > 0 ? Math.round((aggregate._avg.score ?? 0) * 10) / 10 : null,
+    count
+  };
+}
+
+function rideParticipantRole(
+  ride: { riderId: string; driver: { user: { id: string } } | null },
+  userId: string
+): "customer" | "driver" | null {
+  if (ride.riderId === userId) return "customer";
+  if (ride.driver?.user.id === userId) return "driver";
+  return null;
+}
+
+export async function getRideReceipt(input: { userId: string; isAdmin: boolean; rideId: string }) {
+  const ride = await loadRide(prisma, input.rideId);
+  const role = rideParticipantRole(ride, input.userId);
+  if (!input.isAdmin && !role) {
+    throw new ApiError(403, "forbidden", "This trip belongs to another account.");
+  }
+
+  const components = rideFareComponents(ride);
+  const fee = Number(ride.cancellationFeeKobo ?? BigInt(0));
+  const refundedKobo =
+    ride.paymentStatus === "refunded"
+      ? components.totalKobo
+      : ride.paymentStatus === "partially_refunded"
+        ? Math.max(0, components.totalKobo - fee)
+        : 0;
+  const chargedKobo =
+    ride.status === "cancelled"
+      ? ride.paymentStatus === "refunded"
+        ? 0
+        : ride.paymentStatus === "partially_refunded"
+          ? fee
+          : 0
+      : components.totalKobo;
+
+  const [ownRating, driverSummary, customerSummary] = await Promise.all([
+    prisma.rideRating.findUnique({
+      where: { rideId_raterUserId: { rideId: ride.id, raterUserId: input.userId } },
+      select: { score: true, feedback: true, createdAt: true }
+    }),
+    ride.driver
+      ? participantRatingSummary(ride.driver.user.id, "customer")
+      : Promise.resolve({ average: null, count: 0 }),
+    participantRatingSummary(ride.riderId, "driver")
+  ]);
+
+  return {
+    rideId: ride.id,
+    rideNumber: ride.rideNumber,
+    status: ride.status,
+    currency: ride.currency,
+    route: {
+      pickupLabel: ride.pickupLabel,
+      pickupAddress: ride.pickupAddress,
+      dropoffLabel: ride.dropoffLabel,
+      dropoffAddress: ride.dropoffAddress,
+      distanceMeters: ride.distanceMeters,
+      durationMinutes: ride.durationMinutes,
+      vehicleClass: ride.vehicleClass
+    },
+    fare: components,
+    payment: {
+      method: ride.paymentMethod,
+      status: ride.paymentStatus,
+      reference: ride.paymentReference,
+      receiptReference: ride.paymentReference ?? ride.rideNumber
+    },
+    adjustments: {
+      cancellationFeeKobo: fee,
+      refundedKobo,
+      chargedKobo,
+      cancellationReason: ride.cancellationReason ?? null
+    },
+    timestamps: {
+      requestedAt: ride.requestedAt.toISOString(),
+      acceptedAt: ride.acceptedAt?.toISOString() ?? null,
+      startedAt: ride.startedAt?.toISOString() ?? null,
+      completedAt: ride.completedAt?.toISOString() ?? null,
+      cancelledAt: ride.cancelledAt?.toISOString() ?? null
+    },
+    driver: ride.driver
+      ? {
+          userId: ride.driver.user.id,
+          name: ride.driver.user.name,
+          vehicleMake: ride.driver.vehicleMake,
+          vehicleModel: ride.driver.vehicleModel,
+          vehiclePlate: ride.driver.vehiclePlate
+        }
+      : null,
+    rider: { id: ride.rider.id, name: ride.rider.name },
+    rating: {
+      own: ownRating
+        ? { score: ownRating.score, feedback: ownRating.feedback, createdAt: ownRating.createdAt.toISOString() }
+        : null,
+      canRate: ride.status === "completed" && Boolean(role) && !ownRating,
+      driverSummary,
+      customerSummary
+    }
+  };
+}
+
+export async function submitRideRating(input: {
+  userId: string;
+  rideId: string;
+  score: number;
+  feedback?: string | null;
+}) {
+  if (!Number.isInteger(input.score) || input.score < 1 || input.score > 5) {
+    throw new ApiError(400, "invalid_score", "Choose a whole-number rating from 1 to 5.");
+  }
+  const feedback = input.feedback?.trim().replace(/\s+/g, " ") || null;
+  if (feedback && feedback.length > 1000) {
+    throw new ApiError(400, "invalid_feedback", "Feedback must be 1,000 characters or fewer.");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`ride-rating:${input.rideId}:${input.userId}`}))`;
+    const ride = await loadRide(tx, input.rideId);
+    const role = rideParticipantRole(ride, input.userId);
+    if (!role) throw new ApiError(403, "forbidden", "Only the rider or assigned driver can rate this trip.");
+    if (ride.status !== "completed") {
+      throw new ApiError(409, "ride_not_completed", "You can rate this trip after it is completed.");
+    }
+    if (role === "customer" && !ride.driver) {
+      throw new ApiError(409, "no_driver", "This completed trip has no driver to rate.");
+    }
+    const subjectUserId = role === "customer" ? ride.driver!.user.id : ride.riderId;
+
+    const created = await tx.rideRating.createMany({
+      data: [
+        {
+          rideId: ride.id,
+          raterUserId: input.userId,
+          raterRole: role,
+          subjectUserId,
+          score: input.score,
+          feedback
+        }
+      ],
+      skipDuplicates: true
+    });
+    const rating = await tx.rideRating.findUnique({
+      where: { rideId_raterUserId: { rideId: ride.id, raterUserId: input.userId } }
+    });
+    if (!rating) throw new Error("Rating row disappeared after creation.");
+
+    const idempotent = created.count === 0;
+    if (idempotent && (rating.score !== input.score || (rating.feedback ?? null) !== feedback)) {
+      throw new ApiError(
+        409,
+        "rating_already_submitted",
+        "This trip was already rated. A participant can submit exactly one rating per trip."
+      );
+    }
+    if (!idempotent) {
+      await recordAudit({
+        tx,
+        actorId: input.userId,
+        action: "ride.rating_submitted",
+        entity: "Ride",
+        entityId: ride.id,
+        metadata: { raterRole: role, score: input.score, hasFeedback: Boolean(feedback) }
+      });
+    }
+    return {
+      idempotent,
+      rating: {
+        rideId: rating.rideId,
+        score: rating.score,
+        feedback: rating.feedback,
+        createdAt: rating.createdAt.toISOString()
+      }
+    };
+  });
+}
+
+export async function getRideRatingState(input: { userId: string; isAdmin: boolean; rideId: string }) {
+  const ride = await loadRide(prisma, input.rideId);
+  const role = rideParticipantRole(ride, input.userId);
+  if (!input.isAdmin && !role) {
+    throw new ApiError(403, "forbidden", "This trip belongs to another account.");
+  }
+  const [ownRating, driverSummary, customerSummary] = await Promise.all([
+    prisma.rideRating.findUnique({
+      where: { rideId_raterUserId: { rideId: ride.id, raterUserId: input.userId } },
+      select: { score: true, feedback: true, createdAt: true }
+    }),
+    ride.driver
+      ? participantRatingSummary(ride.driver.user.id, "customer")
+      : Promise.resolve({ average: null, count: 0 }),
+    participantRatingSummary(ride.riderId, "driver")
+  ]);
+  return {
+    rideId: ride.id,
+    status: ride.status,
+    own: ownRating
+      ? { score: ownRating.score, feedback: ownRating.feedback, createdAt: ownRating.createdAt.toISOString() }
+      : null,
+    canRate: ride.status === "completed" && Boolean(role) && !ownRating,
+    driverSummary,
+    customerSummary
+  };
+}
+
+const SAFETY_CATEGORIES = [
+  "unsafe_driving",
+  "harassment",
+  "vehicle_condition",
+  "route_deviation",
+  "payment",
+  "other"
+] as const;
+
+export async function submitRideSafetyReport(input: {
+  userId: string;
+  rideId: string;
+  category: string;
+  details: string;
+}) {
+  const category = input.category.trim();
+  if (!(SAFETY_CATEGORIES as readonly string[]).includes(category)) {
+    throw new ApiError(400, "invalid_category", `Choose one of: ${SAFETY_CATEGORIES.join(", ")}.`);
+  }
+  const details = input.details.trim();
+  if (details.length < 5 || details.length > 1500) {
+    throw new ApiError(400, "invalid_details", "Describe the concern in 5-1,500 characters.");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const ride = await loadRide(tx, input.rideId);
+    const role = rideParticipantRole(ride, input.userId);
+    if (!role) throw new ApiError(403, "forbidden", "Only the rider or assigned driver can report on this trip.");
+
+    const report = await tx.rideSafetyReport.create({
+      data: {
+        rideId: ride.id,
+        reporterUserId: input.userId,
+        reporterRole: role,
+        category,
+        details
+      }
+    });
+    // The details are private support data; only category and role go to audit.
+    await recordAudit({
+      tx,
+      actorId: input.userId,
+      action: "ride.safety_report_submitted",
+      entity: "RideSafetyReport",
+      entityId: report.id,
+      metadata: { rideId: ride.id, category, reporterRole: role }
+    });
+    return {
+      id: report.id,
+      rideId: report.rideId,
+      category: report.category,
+      status: report.status,
+      createdAt: report.createdAt.toISOString()
+    };
+  });
+}
+
+export async function listRideSafetyReports(input: { userId: string; isAdmin: boolean; rideId: string }) {
+  const ride = await loadRide(prisma, input.rideId);
+  const role = rideParticipantRole(ride, input.userId);
+  if (!input.isAdmin && !role) {
+    throw new ApiError(403, "forbidden", "This trip belongs to another account.");
+  }
+  const reports = await prisma.rideSafetyReport.findMany({
+    where: {
+      rideId: ride.id,
+      ...(input.isAdmin ? {} : { reporterUserId: input.userId })
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      category: true,
+      status: true,
+      details: true,
+      createdAt: true,
+      reviewedAt: true,
+      resolutionNote: true
+    }
+  });
+  return reports.map((report) => ({
+    ...report,
+    createdAt: report.createdAt.toISOString(),
+    reviewedAt: report.reviewedAt?.toISOString() ?? null
+  }));
 }
 
 /* ------------------------------------------------------------ saved places --- */

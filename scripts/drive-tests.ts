@@ -163,6 +163,19 @@ function walletBalances(wallet: Json) {
   };
 }
 
+/** Every assigned trip now needs the rider's protected pickup code before start. */
+async function verifyPickupCode(rider: Client, driver: Client, rideId: string) {
+  const verification = await rider.get(`/api/drive/rides/${rideId}/verification`);
+  isStatus(verification, 200, `pickup code ${rideId}`);
+  const code = (verification.body as Json).code;
+  assert(
+    typeof code === "string" && /^\d{4}$/.test(code),
+    `pickup code missing from rider response: ${JSON.stringify(verification.body)}`
+  );
+  const verified = await driver.post(`/api/drive/driver/rides/${rideId}/verify`, { code });
+  isStatus(verified, 200, `pickup verification ${rideId}`);
+}
+
 async function main() {
   const guest = new Client();
   const customer = new Client();
@@ -310,6 +323,7 @@ async function main() {
   await step("Driver advances the trip and the wallet fare is released", async () => {
     assert(winningDriver, "no winning driver from the acceptance race");
     const beforeWallet = walletBalances((await winningDriver.get("/api/wallet")).body as Json);
+    await verifyPickupCode(customer, winningDriver, walletRideId);
 
     for (const status of ["driver_arriving", "in_progress", "completed"] as const) {
       const response = await winningDriver.post(`/api/drive/driver/rides/${walletRideId}/status`, { status });
@@ -389,6 +403,7 @@ async function main() {
 
     const accept = await driver2.post(`/api/drive/driver/rides/${ride.id}/accept`);
     isStatus(accept, 200, "cash ride accept");
+    await verifyPickupCode(customer, driver2, ride.id);
     for (const status of ["driver_arriving", "in_progress", "completed"] as const) {
       const response = await driver2.post(`/api/drive/driver/rides/${ride.id}/status`, { status });
       isStatus(response, 200, `cash ride status ${status}`);
@@ -544,6 +559,7 @@ async function main() {
     });
     isStatus(arriving, 200, "deadline ride arriving");
     assert((arriving.body as Json).assignmentExpiresAt, "arrival did not reset the deadline");
+    await verifyPickupCode(customer, driver1, ride.id);
 
     const started = await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, {
       status: "in_progress"
@@ -667,6 +683,7 @@ async function main() {
       200,
       "started expiry arriving"
     );
+    await verifyPickupCode(customer, driver1, ride.id);
     isStatus(
       await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "in_progress" }),
       200,
@@ -706,6 +723,7 @@ async function main() {
         200,
         `race ${index} arriving`
       );
+      await verifyPickupCode(customer, driver1, ride.id);
 
       // Half the iterations race against a deadline that has already passed, so the
       // expiry side wins deterministically and the start must be rejected. The other

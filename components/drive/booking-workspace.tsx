@@ -31,10 +31,19 @@ import { TripMap } from "./trip-map";
 import {
   getAllQuotes,
   getPublicRoute,
+  getRideReceipt,
   getRideVerification,
   getTracking
 } from "./api";
-import type { ApiDriveQuote, ApiRide, DrivePublicRoute, DriveTracking, RideVerification } from "./types";
+import { RideRatingPanel, SafetyReportForm } from "./ride-rating";
+import type {
+  ApiDriveQuote,
+  ApiRide,
+  DrivePublicRoute,
+  DriveTracking,
+  RideReceipt,
+  RideVerification
+} from "./types";
 
 const activeStatuses = ["requested", "driver_assigned", "driver_arriving", "in_progress"];
 const money = (value: ApiMoney, currency = "NGN") => koboToNaira(value, currency);
@@ -192,24 +201,29 @@ export function BookingWorkspace({
     return () => window.clearInterval(timer);
   }, [activeRide, loadRides]);
 
-  // Ask the server for the rider's verification code as soon as a trip is assigned.
-  // Fetching it is what makes the code mandatory on the driver side; a rider who
-  // never opens this screen keeps the legacy flow.
+  // Ask the server for the rider's protected pickup code as soon as a trip is
+  // assigned, and refresh it so a driver verification, expiry or lockout is shown
+  // accurately without a manual reload.
   useEffect(() => {
     if (!activeRide || activeRide.status === "requested" || !viewer) {
       setVerification(null);
       return;
     }
     let cancelled = false;
-    getRideVerification(activeRide.id)
-      .then((result) => {
-        if (!cancelled) setVerification(result);
-      })
-      .catch(() => {
-        if (!cancelled) setVerification(null);
-      });
+    const load = () => {
+      getRideVerification(activeRide.id)
+        .then((result) => {
+          if (!cancelled) setVerification(result);
+        })
+        .catch(() => {
+          if (!cancelled) setVerification(null);
+        });
+    };
+    void load();
+    const timer = window.setInterval(load, 10_000);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
     };
   }, [activeRide?.id, activeRide?.status, viewer]);
 
@@ -821,23 +835,55 @@ function ActiveTripPanel({
             ) : null}
           </div>
           <div className="rounded-xl bg-[#f7f8f6] p-3">
-            <p className="text-[10px] font-black uppercase tracking-wide text-[#5d6d64]">Passenger verification</p>
-            {verification ? (
+            <p className="text-[10px] font-black uppercase tracking-wide text-[#5d6d64]">Pickup verification</p>
+            {verification?.verified ? (
               <>
-                <p className="mt-1 text-[11.5px] leading-5 text-[#5d6d64]">
-                  Give this 4-digit code to your driver before the trip starts.
+                <p className="mt-1 flex items-center gap-1.5 text-[11.5px] font-bold text-[#0b5c33]">
+                  <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                  Your driver verified the pickup code.
                 </p>
-                <p className="mt-1.5 font-display text-[26px] font-extrabold tracking-[0.3em] text-[#0b5c33]">
+                <p className="mt-0.5 text-[10px] text-[#5d6d64]">No code is shown after verification.</p>
+              </>
+            ) : verification?.code ? (
+              <>
+                <p className="mt-1 border-l-2 border-[#0b5c33] pl-2 text-[11.5px] font-bold leading-5 text-[#14241b]">
+                  Share this code only when you have checked your driver and vehicle.
+                </p>
+                <p
+                  className="mt-1.5 font-display text-[30px] font-extrabold tracking-[0.28em] text-[#0b5c33]"
+                  aria-label="Pickup code"
+                >
                   {verification.code}
                 </p>
                 <p className="text-[10px] text-[#5d6d64]">
-                  {verification.verified ? "Verified by the driver." : "Not verified yet."}
+                  {verification.expiresAt
+                    ? `Valid until ${new Date(verification.expiresAt).toLocaleTimeString("en-NG")}.`
+                    : "Not verified yet."}{" "}
+                  {verification.attemptsRemaining > 0
+                    ? `${verification.attemptsRemaining} attempt${verification.attemptsRemaining === 1 ? "" : "s"} left.`
+                    : ""}
                 </p>
               </>
+            ) : verification?.expired ? (
+              <p className="mt-1 text-[11.5px] leading-5 text-[#a3480f]">
+                This pickup code has expired. Contact{" "}
+                <Link href="/naijadrive/help#support" className="font-bold underline">
+                  NaijaDrive support
+                </Link>{" "}
+                to reset it before the trip starts.
+              </p>
+            ) : verification?.locked ? (
+              <p className="mt-1 text-[11.5px] leading-5 text-[#a3480f]">
+                The pickup code is locked after too many attempts. Contact{" "}
+                <Link href="/naijadrive/help#support" className="font-bold underline">
+                  NaijaDrive support
+                </Link>{" "}
+                to reset it.
+              </p>
             ) : (
               <p className="mt-1 text-[11.5px] leading-5 text-[#5d6d64]">
-                A code appears here once your driver is assigned. If the server has not issued one, the
-                driver confirms your name and plate instead.
+                A pickup code appears here when a driver accepts. The server requires the code before
+                the trip can start.
               </p>
             )}
           </div>
@@ -938,6 +984,25 @@ function TripTimeline({ ride }: { ride: ApiRide }) {
 }
 
 export function ReceiptCard({ ride }: { ride: ApiRide }) {
+  const [receipt, setReceipt] = useState<RideReceipt | null>(null);
+  const [receiptError, setReceiptError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setReceipt(null);
+    setReceiptError("");
+    getRideReceipt(ride.id)
+      .then((next) => {
+        if (!cancelled) setReceipt(next);
+      })
+      .catch(() => {
+        if (!cancelled) setReceiptError("The itemised receipt could not be loaded. The trip record below is unchanged.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ride.id]);
+
   const paymentText =
     ride.paymentStatus === "paid"
       ? ride.paymentMethod === "wallet"
@@ -961,7 +1026,7 @@ export function ReceiptCard({ ride }: { ride: ApiRide }) {
         </span>
         <div>
           <h2 id="receipt-heading" className="font-display text-[18px] font-extrabold text-[#14241b]">
-            Ride receipt
+            Trip receipt
           </h2>
           <p className="text-[11px] text-[#5d6d64]">{ride.rideNumber}</p>
         </div>
@@ -977,24 +1042,130 @@ export function ReceiptCard({ ride }: { ride: ApiRide }) {
           <dt className="text-[#5d6d64]">Completed</dt>
           <dd className="text-right font-semibold">{ride.completedAt ? new Date(ride.completedAt).toLocaleString("en-NG") : "—"}</dd>
         </div>
-        <div className="flex justify-between gap-3">
-          <dt className="text-[#5d6d64]">Fare</dt>
-          <dd className="text-right font-extrabold text-[#0b5c33]">{money(ride.fareKobo, ride.currency)}</dd>
+      </dl>
+
+      {receipt ? (
+        <div className="mt-3 rounded-xl bg-[#f7f8f6] p-3">
+          <p className="text-[10px] font-black uppercase tracking-wide text-[#5d6d64]">Fare components</p>
+          <dl className="mt-1.5 space-y-1 text-[11.5px]">
+            <div className="flex justify-between gap-3">
+              <dt className="text-[#5d6d64]">Base fare</dt>
+              <dd className="font-semibold">{money(receipt.fare.baseKobo, receipt.currency)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-[#5d6d64]">Distance · {(receipt.route.distanceMeters / 1000).toFixed(1)} km</dt>
+              <dd className="font-semibold">{money(receipt.fare.distanceKobo, receipt.currency)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-[#5d6d64]">Time · about {receipt.route.durationMinutes} min</dt>
+              <dd className="font-semibold">{money(receipt.fare.timeKobo, receipt.currency)}</dd>
+            </div>
+            {receipt.fare.adjustmentKobo !== 0 ? (
+              <div className="flex justify-between gap-3">
+                <dt className="text-[#5d6d64]">Rounding to ₦50</dt>
+                <dd className="font-semibold">
+                  {receipt.fare.adjustmentKobo < 0 ? "−" : "+"}
+                  {money(Math.abs(receipt.fare.adjustmentKobo), receipt.currency)}
+                </dd>
+              </div>
+            ) : null}
+            <div className="flex justify-between gap-3 border-t border-[#e6ece6] pt-1.5">
+              <dt className="font-extrabold">Fare total</dt>
+              <dd className="font-extrabold text-[#0b5c33]">{money(receipt.fare.totalKobo, receipt.currency)}</dd>
+            </div>
+            {receipt.adjustments.refundedKobo !== 0 ? (
+              <div className="flex justify-between gap-3">
+                <dt className="text-[#5d6d64]">Refund to NaijaPay wallet</dt>
+                <dd className="font-semibold text-[#0b5c33]">
+                  −{money(receipt.adjustments.refundedKobo, receipt.currency)}
+                </dd>
+              </div>
+            ) : null}
+            {receipt.adjustments.cancellationFeeKobo !== 0 ? (
+              <div className="flex justify-between gap-3">
+                <dt className="text-[#5d6d64]">Cancellation fee retained</dt>
+                <dd className="font-semibold">{money(receipt.adjustments.cancellationFeeKobo, receipt.currency)}</dd>
+              </div>
+            ) : null}
+            <div className="flex justify-between gap-3 border-t border-[#e6ece6] pt-1.5">
+              <dt className="font-extrabold">Charged</dt>
+              <dd className="font-extrabold text-[#14241b]">
+                {money(receipt.adjustments.chargedKobo, receipt.currency)}
+              </dd>
+            </div>
+          </dl>
+          <div className="mt-2 space-y-0.5 border-t border-[#e6ece6] pt-2 text-[10.5px] text-[#5d6d64]">
+            <p>
+              Payment: <span className="font-bold text-[#14241b]">{paymentText}</span>
+            </p>
+            <p>
+              Method: <span className="font-bold text-[#14241b]">{receipt.payment.method === "wallet" ? "NaijaPay wallet" : "Cash"}</span>
+              {" · "}Status: <span className="font-bold text-[#14241b]">{receipt.payment.status.replaceAll("_", " ")}</span>
+            </p>
+            <p className="break-all">
+              Reference: <span className="font-mono font-bold text-[#14241b]">{receipt.payment.receiptReference}</span>
+            </p>
+          </div>
         </div>
-        <div className="flex justify-between gap-3">
-          <dt className="text-[#5d6d64]">Payment</dt>
-          <dd className="text-right font-semibold">{paymentText}</dd>
-        </div>
-        {ride.driver ? (
+      ) : (
+        <dl className="mt-3 space-y-1.5 text-[12px]">
+          <div className="flex justify-between gap-3">
+            <dt className="text-[#5d6d64]">Fare</dt>
+            <dd className="text-right font-extrabold text-[#0b5c33]">{money(ride.fareKobo, ride.currency)}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-[#5d6d64]">Payment</dt>
+            <dd className="text-right font-semibold">{paymentText}</dd>
+          </div>
+          {receiptError ? (
+            <p role="status" className="text-[10.5px] leading-4 text-[#a3480f]">
+              {receiptError}
+            </p>
+          ) : null}
+        </dl>
+      )}
+
+      {receipt?.driver ? (
+        <dl className="mt-2 space-y-1 text-[11.5px]">
           <div className="flex justify-between gap-3">
             <dt className="text-[#5d6d64]">Driver</dt>
             <dd className="min-w-0 break-words text-right font-semibold">
-              {ride.driver.user?.name ?? "Verified driver"} · {ride.driver.vehiclePlate}
+              {receipt.driver.name} · {receipt.driver.vehiclePlate}
             </dd>
           </div>
-        ) : null}
-      </dl>
+          <div className="flex justify-between gap-3">
+            <dt className="text-[#5d6d64]">Driver rating</dt>
+            <dd className="text-right font-semibold">
+              {receipt.rating.driverSummary.count > 0
+                ? `${receipt.rating.driverSummary.average?.toFixed(1)} / 5 (${receipt.rating.driverSummary.count})`
+                : "No ratings yet"}
+            </dd>
+          </div>
+        </dl>
+      ) : null}
+
+      <RideRatingPanel rideId={ride.id} role="customer" />
+      <SafetyReportForm rideId={ride.id} />
+
       <div className="mt-3 flex flex-wrap gap-2">
+        <Link
+          href="/naijadrive#ride-options"
+          className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[#0b5c33] px-3 text-[11.5px] font-extrabold text-white"
+        >
+          <Car className="h-3.5 w-3.5" aria-hidden /> Book another ride
+        </Link>
+        <Link
+          href="#ride-history-heading"
+          className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[#f2f7f2] px-3 text-[11.5px] font-bold text-[#14241b]"
+        >
+          Trip history
+        </Link>
+        <Link
+          href="/naijadrive/help#support"
+          className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-[#dfe7df] px-3 text-[11.5px] font-bold text-[#0b5c33]"
+        >
+          Support
+        </Link>
         <button
           type="button"
           onClick={() => window.print()}
@@ -1002,14 +1173,11 @@ export function ReceiptCard({ ride }: { ride: ApiRide }) {
         >
           <ReceiptText className="h-3.5 w-3.5" aria-hidden /> Print receipt
         </button>
-        <Link href="/orders" className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[#f2f7f2] px-3 text-[11.5px] font-bold text-[#14241b]">
-          View all activity
-        </Link>
       </div>
       <p className="mt-2 flex items-start gap-1.5 text-[10px] leading-4 text-[#5d6d64]">
         <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
         Fares are recorded in NGN kobo. A wallet fare is marked paid only after the server releases the
-        held amount to the driver.
+        held amount to the driver. Ratings are shown as an average of real completed-trip ratings only.
       </p>
     </section>
   );
