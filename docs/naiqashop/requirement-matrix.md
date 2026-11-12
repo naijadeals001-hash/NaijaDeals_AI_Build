@@ -27,4 +27,8 @@ Status ladder kept separate: architecture-supported, configured, tested, approve
 | Country | Pan-African expansion | Unverified | Currencies, catalogues, providers, logistics, legal | Readiness checklist per country | Business decisions |
 
 ## Readiness
-- Architecture-supported: countryCode fields, country/city activation, per-country cu
+- Architecture-supported: countryCode fields, country/city activation, per-country currency, provider `supportsCountry`, region-scoped admin.
+- Configured: NG delivery zones, NGN catalogue, six catalogue country entries.
+- Tested: discovery 17/17 and browser 21/21 (this slice); financial suites per handoff.
+- Approved: existing platform decisions only; no expansion or non-NG selling.
+- Live: none — no live provider credentials, no deployment.
