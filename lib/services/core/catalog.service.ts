@@ -1,11 +1,15 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { COUNTRIES } from "@/lib/config/commerce";
+import { listReviews } from "./account.service";
 
 const productInclude = {
   category: true,
   vendor: { select: { id: true, name: true, slug: true, market: true, status: true, trustScore: true, pickupPhone: true } },
-  images: { orderBy: { sortOrder: "asc" as const } },
+  // `sortOrder` alone is not a total order: seeded galleries often share a
+  // sortOrder, and Postgres may return those rows in any order. A stable
+  // secondary key keeps the detail gallery on the same image every request.
+  images: { orderBy: [{ sortOrder: "asc" as const }, { id: "asc" as const }] },
   stock: true,
   variants: { where: { isActive: true }, orderBy: { name: "asc" as const } },
   reviews: { where: { status: "APPROVED" as const }, select: { rating: true } }
@@ -28,10 +32,58 @@ export async function listProducts() {
 }
 
 export async function getProduct(idOrSlug: string) {
+  const key = idOrSlug.trim();
   return prisma.product.findFirstOrThrow({
-    where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+    // Slugs are canonical lowercase, but shared/copied links can arrive
+    // uppercased. Compare the slug case-insensitively while keeping id matches
+    // exact so a cuid can never be confused with another row's slug.
+    where: { OR: [{ id: key }, { slug: { equals: key, mode: "insensitive" } }] },
     include: productInclude
   });
+}
+
+/**
+ * Everything the public product page and its JSON endpoint expose.
+ *
+ * The product row, its reviews, sale mode and calculated availability are
+ * loaded together so both entry points (server render and client retry) show
+ * the same images, description, price and stock. Returns `null` for products
+ * that are not publicly purchasable rather than leaking a draft/suspended row.
+ */
+export async function getPublicProductDetail(idOrSlug: string) {
+  const product = await getProduct(idOrSlug);
+  if (product.status !== "ACTIVE" || product.vendor.status !== "VERIFIED") return null;
+
+  const [reviews, saleMode] = await Promise.all([listReviews(product.id), saleModeFor(product.id)]);
+  return {
+    ...product,
+    isSample: isFixtureListing(product),
+    saleMode,
+    available: availableQuantity(product),
+    rating: ratingSummary(product.reviews),
+    reviews
+  };
+}
+
+/**
+ * Products from the same department for the detail page's "More in …" rail.
+ * Discovery visibility rules and the trust ordering are shared with the
+ * catalogue endpoint; the current product is always excluded.
+ */
+export async function listRelatedProducts(categorySlug: string, excludeId: string, limit = 4) {
+  const page = await queryCatalogProducts({
+    q: null,
+    category: categorySlug,
+    market: null,
+    country: null,
+    vendor: null,
+    price: null,
+    maxPriceKobo: null,
+    sort: "trust",
+    page: 1,
+    pageSize: null
+  });
+  return page.items.filter((product) => product.id !== excludeId).slice(0, limit);
 }
 
 /** Acceptance-suite categories are database rows, never public departments. */
