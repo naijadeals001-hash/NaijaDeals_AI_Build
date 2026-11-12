@@ -1,18 +1,30 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { NaijaShopStorefront } from "@/components/shop/storefront";
-import { ShopFooter } from "@/components/commerce/shop-footer";
+import { NaijaDealsMarketplace } from "@/components/shop/storefront";
+import { ShopSiteFooter } from "@/components/shop/shop-site-footer";
 
 export const metadata: Metadata = {
-  title: "NaijaShop marketplace",
-  description: "Shop verified Nigerian sellers with escrow-protected payment and tracked delivery."
+  title: "NaijaDeals Marketplace — retail and bulk buying",
+  description:
+    "Shop everyday retail listings from verified Nigerian sellers, or start a producer quote for bulk buying and freight through NaijaDeals."
 };
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="rounded-2xl border border-border-soft bg-canvas p-5 font-bold text-muted">Loading marketplace...</div>}>
-      <NaijaShopStorefront />
-      <ShopFooter />
-    </Suspense>
+    <>
+      <Suspense
+        fallback={
+          <div className="grid min-h-[60vh] place-items-center bg-[#f4f7f2] px-4 py-16 text-center">
+            <div>
+              <span className="mx-auto block h-8 w-8 animate-spin rounded-full border-2 border-[#cfe0ca] border-t-[#0b5c33]" aria-hidden />
+              <p className="mt-3 text-[12px] font-bold text-[#4b5b51]">Loading the NaijaDeals marketplace…</p>
+            </div>
+          </div>
+        }
+      >
+        <NaijaDealsMarketplace />
+      </Suspense>
+      <ShopSiteFooter />
+    </>
   );
 }
