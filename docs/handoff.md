@@ -4371,6 +4371,63 @@ with `connection_limit=8` on a fresh database.
   handling.
 - Local commits only; remote preservation/push was not requested and was not performed.
 
+## 2026-11-12 — Returns case journey at `/returns` (d41cbe3)
+
+`/returns` no longer reuses the orders view. It is now a customer return-case journey
+using the existing order and seller return APIs, and `/orders` links to it with
+`/returns?order=<orderId>` instead of opening `window.prompt`.
+
+### Prerequisite outside returns
+
+The journey needs the order read model. At the start of this work, `HEAD afeb8cd`
+returned 500 from `/api/orders` and every seller API because
+`order.service -> payments/service -> delivery.service -> order.service` read
+`PRE_COLLECTION_DELIVERY_STATUSES` during module initialisation (TDZ). The
+logic-preserving fix removes the module-level `cancellableDeliveryStatuses` copy in
+`lib/services/core/delivery.service.ts` and uses
+`[...PRE_COLLECTION_DELIVERY_STATUSES]` directly inside `cancelOneDelivery`.
+
+That prerequisite landed in `315f273` (outside the returns scope) and is present in the
+tree of `d41cbe3`; it did not need a second delta. It must not be reverted: without it
+the returns page cannot load or submit. No financial, refund, order-transition or
+delivery-behaviour rule changed.
+
+### Delivered
+
+- `app/returns/page.tsx` renders `components/shop/returns-case.tsx`.
+- Eligible delivered/completed orders, reason selection, optional notes, real
+  `POST /api/orders/:id/confirm` `action=return` submission, duplicate/busy guards and
+  server-error display.
+- Case reference, status, order/items, seller name, recorded timeline and a separate
+  refund panel derived from `refundSummary`. The panel only says completed when the
+  ledger has settled kobo; no refund is invented.
+- Scoped seller queue for vendor sessions using `GET /api/seller/overview` and
+  `POST /api/seller/returns/:id` (approve/reject/receive). Customers do not call the
+  vendor API.
+- Loading, fetch error/retry, empty, closed-window, signed-out and guest-redirect states;
+  390/1440 layouts; keyboard focus for reason -> notes and the `/orders` deep link.
+
+### Verification executed
+
+| Command | Actual result |
+| --- | --- |
+| `npx tsc --noEmit` | exit 0 |
+| `NEXT_DIST_DIR=.next-returns-full npx next build` | exit 0, `/returns` 10.8 kB, build id `BvLgpykx5cuTag0xXcGhN` |
+| `TEST_BASE_URL=http://localhost:3100 npx tsx scripts/returns-case-tests.ts` | **18/18 PASS** including guest 401/redirect, validation 400, cancelled 409, cross-account 403, real 201 creation, duplicate 409, seller approve 200, duplicate approve 409, seller reject 200 and read-model checks; fixtures/audits removed |
+| `QA_BASE_URL=http://localhost:3100 node scripts/returns-case-visual-qa.mjs` | all checks pass: empty, eligible, deep link/focus, keyboard, 390 overflow 0px, loading, error, seller approve, approved customer state, real closed-window state; screenshots in `qa-artifacts/returns-case/` |
+
+### Honest boundaries
+
+- No admin return queue or admin resolution route exists. The Control Center only
+  counts open returns; nothing admin-side was faked.
+- `ReturnRequest` has no evidence/photo field and stores only `createdAt` plus one
+  `resolvedAt`. The timeline shows only those recorded facts.
+- Receive-and-refund is surfaced with an inline confirmation warning but was not
+  executed in QA because it restocks stock and invokes the refund path. Approve and
+  reject were exercised.
+- Local QA server only: `http://localhost:3100/returns` from the isolated
+  `.next-returns-full` build. No push, deployment or production change.
+
 ## Next executable step
 
 Owner review of the reverse-custody proposal in `docs/decisions.md`, then either (a)
