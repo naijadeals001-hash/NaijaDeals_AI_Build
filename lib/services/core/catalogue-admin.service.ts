@@ -659,8 +659,14 @@ export async function validateProduct(actor: SessionUser, id: string) {
   if (!product.category.isActive) {
     issues.push({ field: "categoryId", message: "Activate the department before publishing its products." });
   }
-  if (product.vendor.status !== "VERIFIED" && product.vendor.status !== "PENDING") {
-    issues.push({ field: "vendorId", message: "The seller cannot publish listings." });
+  if (product.vendor.status !== "VERIFIED") {
+    issues.push({
+      field: "vendorId",
+      message:
+        product.vendor.status === "PENDING"
+          ? "The seller application must be verified before its products can be published."
+          : "The seller cannot publish listings."
+    });
   }
   if (product.vendor.countryCode !== product.countryCode) {
     issues.push({
