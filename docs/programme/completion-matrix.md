@@ -591,3 +591,8 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Inactive department visibility | inactive departments omitted from navigation and from `/api/products` results (category filter) | VERIFIED |
 | Nonexistent product route | genuine HTTP 404 (`P2025` mapped to notFound) | VERIFIED |
 | Escrow release financial boundary | `postEscrowRelease` guarded; harness boundaryComplete true, 46/46 | VERIFIED |
+| Authorized admin draft preview | `/admin/catalogue/products/[id]/preview`; session + products:read/moderate; noindex/no-store; public draft still 404; workflow 141/141 | VERIFIED |
+| DEMO labels on every public card | `isDemo` drives homepage, category/search (`product-card`), related and detail labels; seller chip metadata-derived | VERIFIED |
+| Cleanup isolation | workflow snapshots shared departments, restores exact state, asserts 9/31 baseline and Phones & Tablets active | VERIFIED |
+| Catalogue expansion batch | Groceries +3, Power & Solar 3, Gaming 2 (8 published DEMO products, unique existing assets; no duplicates/spec invention) | VERIFIED |
+| Accepted REVIEW baseline after expansion | 9 active departments / 31 active products / 0 non-DEMO / 0 CRF | VERIFIED |

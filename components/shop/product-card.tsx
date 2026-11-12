@@ -19,6 +19,7 @@ export type ShopProduct = {
   available?: number | null;
   vendor?: { id?: string; name: string; slug?: string; market?: string } | null;
   saleMode?: "escrow" | "contact";
+  isDemo?: boolean;
 };
 
 function naira(value: string | number | bigint) {
@@ -98,6 +99,11 @@ export function ShopProductCard({
         </div>
       </Link>
 
+      {product.isDemo ? (
+        <span className="mt-1 inline-flex w-fit rounded-full bg-[#F2D48C] px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-[#07351f] sm:text-[9px]">
+          DEMO — illustrative
+        </span>
+      ) : null}
       <Link href={href} className="mt-1 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C99520]">
         <h3
           className={`line-clamp-2 break-words font-semibold text-[#0f1111] group-hover:text-[#c45500] ${
@@ -146,7 +152,7 @@ export function ShopProductCard({
         ) : (
           <span className="font-semibold text-[#067d62]">In stock</span>
         )}
-        {vendorName ? <span className="min-w-0 truncate">Sold by {vendorName}</span> : null}
+        {vendorName ? <span className="min-w-0 truncate">Sold by {vendorName}{product.isDemo ? " · demonstration" : ""}</span> : null}
       </p>
 
       {contactOnly ? (

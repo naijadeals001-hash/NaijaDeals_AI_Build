@@ -4527,3 +4527,18 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 - Suites: catalogue workflow 61/61, smoke clean+returning 12/12, basket 10/10, financial
   46/46. Independent reviewer must re-run these on the frozen build.
 - Accepted baseline preserved: 7 active departments, 23 active DEMO products, 0 CRF records.
+
+## Catalogue expansion and authorized preview (2026-11-12, final)
+
+- HEAD `ada798b` + coordinator card changes; served build `A5jxLfWAtiGEWQBIWCEnO`.
+- Authorized draft preview at `/admin/catalogue/products/[id]/preview`, admin-only,
+  noindex/no-store, public drafts still 404.
+- Expansion published through the Control Center: Groceries +3 produce, Power & Solar 3,
+  Gaming 2; eight DEMO products, each with a unique existing approved asset; existing
+  tomatoes preserved.
+- Accepted REVIEW baseline is now 9 active departments / 31 active products, all
+  isDemo=true, 0 non-DEMO active, 0 CRF.
+- DEMO labels now derive from metadata on homepage, category, search, related and detail
+  surfaces; seller chip uses isDemo.
+- Workflow 141/141 (includes preview, cleanup baseline, expansion), smoke 12/12, basket
+  10/10, financial 46/46.

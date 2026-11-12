@@ -319,7 +319,7 @@ export function ProductDetailClient({
                 <span className="rounded-full bg-surface-low px-3 py-1 font-bold text-muted">No reviews yet</span>
               )}
               <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-3 py-1 font-bold text-primary">
-                <Store className="h-4 w-4" aria-hidden /> {product.vendor.name} · {product.vendor.name.toLowerCase().startsWith("demo") ? "Demonstration seller" : "Verified seller"}
+                <Store className="h-4 w-4" aria-hidden /> {product.vendor.name} · {product.isDemo ? "Demonstration seller" : "Verified seller"}
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-surface-low px-3 py-1 font-bold">
                 <MapPin className="h-4 w-4" aria-hidden /> {product.vendor.market}
@@ -545,6 +545,11 @@ function RelatedProductCard({ item }: { item: ApiProduct }) {
           No image supplied
         </span>
       )}
+      {item.isDemo ? (
+        <span className="mt-2 inline-flex w-fit rounded-full bg-[#F2D48C] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#07351f]">
+          DEMO — illustrative
+        </span>
+      ) : null}
       <p className="mt-2 line-clamp-2 text-sm font-bold">{item.name}</p>
       <p className="text-sm font-black text-primary">{koboToNaira(item.priceKobo)}</p>
     </Link>
