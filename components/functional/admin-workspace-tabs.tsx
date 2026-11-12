@@ -7,6 +7,8 @@ import { AdminReconciliationPanel } from "./admin-reconciliation-panel";
 import { AdminNaijaPayPanel } from "./admin-naijapay-panel";
 import { AdminAuraPanel } from "./admin-aura-panel";
 import { AdminDriveVerification } from "./admin-drive-verification";
+import { AdminReviewsPanel } from "./admin-reviews-panel";
+import { AdminDeliveryAssignment } from "./admin-delivery-assignment";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -46,6 +48,8 @@ interface WorkspaceTabProps {
   audit: Row[];
   isSuperAdmin: boolean;
   canModerateRides: boolean;
+  canWriteDeliveries: boolean;
+  canModerateProducts: boolean;
   initialQuery: string;
   onRefresh: () => void;
 }
@@ -842,6 +846,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [roleUser, setRoleUser] = useState<Row | null>(null);
   const [disputeRow, setDisputeRow] = useState<Row | null>(null);
+  const [mobilePage, setMobilePage] = useState(0);
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -850,6 +855,10 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     setError("");
     setSelected(new Set());
   }, [tab, initialQuery]);
+
+  useEffect(() => {
+    setMobilePage(0);
+  }, [tab, initialQuery, query, statusFilter]);
 
   async function bulkModerateProducts(target: "ACTIVE" | "SUSPENDED") {
     const ids = Array.from(selected);
@@ -987,9 +996,48 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
   if (tab === "deliveries") {
     const rows = filterRows(props.deliveries).filter((row) => matches(row, ["orderNumber", "status", "courier.name", "pickupAddress", "dropoffAddress"]));
     const statuses = Array.from(new Set(props.deliveries.map((row) => String(row.status)))).sort();
+    const approvedCouriers = props.couriers.filter(
+      (courier) => courier.active === true && Boolean(courier.user?.verifiedAt)
+    );
+    const pendingCount = props.deliveries.filter((row) => ["pending_assignment", "failed"].includes(String(row.status))).length;
+    const mobilePageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+    const safeMobilePage = Math.min(mobilePage, mobilePageCount - 1);
+    const mobileRows = rows.slice(safeMobilePage * PAGE_SIZE, safeMobilePage * PAGE_SIZE + PAGE_SIZE);
+
+    function deliveryNextStep(row: Row) {
+      if (!props.canWriteDeliveries) return <span className="text-xs text-[#8B949E]">Read only</span>;
+      const status = String(row.status);
+      if (["pending_assignment", "failed"].includes(status) && !row.courierId) {
+        return <span className="text-xs text-[#8B949E]">Assign a courier first</span>;
+      }
+      const current = DELIVERY_SEQUENCE.indexOf(status);
+      const next = current >= 0 ? DELIVERY_SEQUENCE[current + 1] : undefined;
+      if (!next) return <span className="text-xs text-[#8B949E]">No further step</span>;
+      const busy = busyId === String(row.id);
+      return (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() =>
+            void run(
+              String(row.id),
+              () => apiClient.adminDeliveryStatus(String(row.id), next),
+              `Delivery ${text(row.orderNumber)} advanced to ${statusLabel(next)}.`
+            )
+          }
+          className="min-h-9 rounded-lg border border-[#21262D] bg-[#0B0E14] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D] disabled:opacity-50"
+        >
+          {busy ? "Working…" : `Mark ${statusLabel(next)}`}
+        </button>
+      );
+    }
+
     return (
       <>
-      <Panel title="Deliveries" description="Delivery records attached to real orders. Courier names appear only when assigned.">
+      <Panel
+        title="Deliveries"
+        description="Delivery records attached to real orders. Assigning an approved, active courier advances the delivery and order and writes an audit record. The server re-validates eligibility."
+      >
         <Toolbar
           query={query}
           onQuery={setQuery}
@@ -999,49 +1047,152 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
           onFilter={setStatusFilter}
           onRefresh={onRefresh}
         />
+        <p className="border-b border-[#21262D] bg-[#0B0E14] px-4 py-2.5 text-xs text-[#8B949E]">
+          {pendingCount} deliver{pendingCount === 1 ? "y" : "ies"} awaiting assignment · {approvedCouriers.length} active
+          approved courier{approvedCouriers.length === 1 ? "" : "s"} available
+          {props.couriers.length > approvedCouriers.length
+            ? ` · ${props.couriers.length - approvedCouriers.length} inactive or unapproved account${props.couriers.length - approvedCouriers.length === 1 ? "" : "s"} excluded`
+            : ""}
+        </p>
         <ActionFeedback message={message} error={error} />
+        <div className="divide-y divide-[#21262D] md:hidden">
+          {rows.length === 0 ? (
+            <EmptyState label={props.deliveries.length === 0 ? "No delivery records exist yet." : "No deliveries match this filter."} />
+          ) : (
+            mobileRows.map((row) => {
+              const busy = busyId === String(row.id);
+              return (
+                <article key={String(row.id)} className="space-y-3 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-words font-bold text-[#F0F6FC]">{text(row.orderNumber)}</p>
+                      <p className="text-xs text-[#8B949E]">Order: {statusLabel(text(row.orderStatus, "unknown"))}</p>
+                    </div>
+                    <StatusBadge status={text(row.status)} />
+                  </div>
+                  <dl className="grid gap-2 text-xs">
+                    <div>
+                      <dt className="text-[#8B949E]">Courier</dt>
+                      <dd className="font-semibold text-[#F0F6FC]">{text(value(row, "courier.name"), "Unassigned")}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-[#8B949E]">Pickup</dt>
+                      <dd className="break-words text-[#C9D1D9]">{text(row.pickupAddress)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-[#8B949E]">Drop-off</dt>
+                      <dd className="break-words text-[#C9D1D9]">{text(row.dropoffAddress)}</dd>
+                    </div>
+                  </dl>
+                  <AdminDeliveryAssignment
+                    delivery={row}
+                    couriers={props.couriers}
+                    canWrite={props.canWriteDeliveries}
+                    busy={busy}
+                    onAssign={(courierId) =>
+                      void run(
+                        String(row.id),
+                        () => apiClient.adminAssignCourier(String(row.id), courierId),
+                        `Courier assigned to ${text(row.orderNumber)}. The courier now sees this delivery in their queue.`
+                      )
+                    }
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {deliveryNextStep(row)}
+                    <button
+                      type="button"
+                      onClick={() => setDetail(row)}
+                      className="min-h-9 rounded-lg border border-[#21262D] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D]"
+                    >
+                      Details
+                    </button>
+                  </div>
+                </article>
+              );
+            })
+          )}
+        </div>
+        {rows.length > 0 ? (
+          <div className="flex items-center justify-between gap-2 border-t border-[#21262D] px-4 py-3 text-xs text-[#8B949E] md:hidden">
+            <span>
+              Showing {safeMobilePage * PAGE_SIZE + 1}–{Math.min(rows.length, safeMobilePage * PAGE_SIZE + PAGE_SIZE)} of {rows.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMobilePage((current) => Math.max(0, current - 1))}
+                disabled={safeMobilePage === 0}
+                className="min-h-9 rounded-lg border border-[#21262D] px-3 font-bold text-[#F0F6FC] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span aria-live="polite">
+                Page {safeMobilePage + 1} of {mobilePageCount}
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobilePage((current) => Math.min(mobilePageCount - 1, current + 1))}
+                disabled={safeMobilePage >= mobilePageCount - 1}
+                className="min-h-9 rounded-lg border border-[#21262D] px-3 font-bold text-[#F0F6FC] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
+        <div className="hidden md:block">
         <DataTable
           rows={rows}
           emptyLabel={props.deliveries.length === 0 ? "No delivery records exist yet." : "No deliveries match this filter."}
           onDetail={setDetail}
           columns={[
-            { header: "Order", cell: (row) => <span className="font-bold">{text(row.orderNumber)}</span> },
+            {
+              header: "Order",
+              cell: (row) => (
+                <div>
+                  <p className="font-bold">{text(row.orderNumber)}</p>
+                  <p className="text-xs text-[#8B949E]">Order: {statusLabel(text(row.orderStatus, "unknown"))}</p>
+                </div>
+              )
+            },
             { header: "Courier", cell: (row) => <span>{text(value(row, "courier.name"), "Unassigned")}</span> },
             { header: "Status", cell: (row) => <StatusBadge status={text(row.status)} /> },
             { header: "Pickup", cell: (row) => <span className="text-xs text-[#8B949E]">{text(row.pickupAddress)}</span> },
             { header: "Drop-off", cell: (row) => <span className="text-xs text-[#8B949E]">{text(row.dropoffAddress)}</span> },
             {
-              header: "Next step",
+              header: "Assign courier",
               cell: (row) => {
-                const current = DELIVERY_SEQUENCE.indexOf(String(row.status));
-                const next = current >= 0 ? DELIVERY_SEQUENCE[current + 1] : undefined;
-                if (!next) return <span className="text-xs text-[#8B949E]">No further step</span>;
                 const busy = busyId === String(row.id);
                 return (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() =>
+                  <AdminDeliveryAssignment
+                    delivery={row}
+                    couriers={props.couriers}
+                    canWrite={props.canWriteDeliveries}
+                    busy={busy}
+                    onAssign={(courierId) =>
                       void run(
                         String(row.id),
-                        () => apiClient.adminDeliveryStatus(String(row.id), next),
-                        `Delivery ${text(row.orderNumber)} advanced to ${statusLabel(next)}.`
+                        () => apiClient.adminAssignCourier(String(row.id), courierId),
+                        `Courier assigned to ${text(row.orderNumber)}. The courier now sees this delivery in their queue.`
                       )
                     }
-                    className="rounded-lg border border-[#21262D] bg-[#0B0E14] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D] disabled:opacity-50"
-                  >
-                    {busy ? "Working…" : `Mark ${statusLabel(next)}`}
-                  </button>
+                  />
                 );
               }
-            }
+            },
+            { header: "Next step", cell: deliveryNextStep }
           ]}
         />
+        </div>
       </Panel>
       <AdminFoodOrders />
       {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
       </>
     );
+  }
+
+  if (tab === "reviews") {
+    return <AdminReviewsPanel canModerate={props.canModerateProducts} />;
   }
 
   if (tab === "rides") {

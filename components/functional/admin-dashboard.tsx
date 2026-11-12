@@ -73,6 +73,8 @@ interface AdminDashboardProps {
   userActorType: string;
   isSuperAdmin: boolean;
   canModerateRides: boolean;
+  canWriteDeliveries: boolean;
+  canModerateProducts: boolean;
   region: AdminRegion;
   regionRestricted: boolean;
 }
@@ -154,7 +156,8 @@ export function AdminDashboard(props: AdminDashboardProps) {
         (Array.isArray(order.deliveries) ? order.deliveries : []).map((delivery: Row) => ({
           ...delivery,
           orderId: order.id,
-          orderNumber: order.orderNumber
+          orderNumber: order.orderNumber,
+          orderStatus: order.status
         }) as Row)
       ),
     [orders]
@@ -537,6 +540,8 @@ export function AdminDashboard(props: AdminDashboardProps) {
           audit={audit}
           isSuperAdmin={superAdminOnly}
           canModerateRides={props.canModerateRides}
+          canWriteDeliveries={props.canWriteDeliveries}
+          canModerateProducts={props.canModerateProducts}
           initialQuery={searchParams.get("q") ?? ""}
           onRefresh={refresh}
         />

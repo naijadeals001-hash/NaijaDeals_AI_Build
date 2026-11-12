@@ -470,9 +470,15 @@ export async function listAdminPayments() {
 export async function assignCourier(input: { adminId: string; deliveryId: string; courierId: string }) {
   const [delivery, courier] = await Promise.all([
     prisma.delivery.findUnique({ where: { id: input.deliveryId }, include: { order: true } }),
-    prisma.courier.findUnique({ where: { id: input.courierId } })
+    prisma.courier.findUnique({
+      where: { id: input.courierId },
+      include: { user: { select: { verifiedAt: true, actorType: true } } }
+    })
   ]);
   if (!delivery) throw new ApiError(404, "delivery_not_found", "Delivery not found.");
+  if (["delivered", "returned"].includes(delivery.status)) {
+    throw new ApiError(409, "delivery_closed", "This delivery is already closed and cannot be assigned.");
+  }
   if (!courier || !courier.active) {
     throw new ApiError(
       409,
@@ -480,11 +486,22 @@ export async function assignCourier(input: { adminId: string; deliveryId: string
       courier?.suspendedReason ? `Courier suspended: ${courier.suspendedReason}` : "Courier is not active and cannot take new deliveries."
     );
   }
+  // `verifiedAt` is the account approval record. An unverified courier profile
+  // must never receive customer deliveries, even if an administrator sends its
+  // identifier directly to the API.
+  if (!courier.user.verifiedAt) {
+    throw new ApiError(
+      409,
+      "courier_unapproved",
+      "This courier account has not been approved. Verify the account before assigning deliveries."
+    );
+  }
   if (!["ready_for_pickup", "courier_assigned"].includes(delivery.order.status)) {
     throw new ApiError(409, "seller_not_ready", "The seller must mark the order ready for pickup before a courier is assigned.");
   }
 
   return prisma.$transaction(async (tx) => {
+    const previousCourierId = delivery.courierId;
     await tx.delivery.update({ where: { id: delivery.id }, data: { courierId: courier.id } });
     await notifyUser({
       tx,
@@ -500,20 +517,33 @@ export async function assignCourier(input: { adminId: string; deliveryId: string
     if (delivery.order.status === "ready_for_pickup") {
       await updateOrderStatus({ tx, actorId: input.adminId, orderId: delivery.orderId, status: "courier_assigned", note: `Courier ${courier.name} assigned.` });
     }
+    const updated = await tx.delivery.findUniqueOrThrow({ where: { id: delivery.id }, include: { courier: true } });
     await recordAudit({
       tx,
       actorId: input.adminId,
       action: "delivery.courier_assigned",
       entity: "Delivery",
       entityId: delivery.id,
-      metadata: { courierId: courier.id }
+      metadata: {
+        orderNumber: delivery.order.orderNumber,
+        courierId: courier.id,
+        courierName: courier.name,
+        previousCourierId,
+        before: { courierId: previousCourierId, status: delivery.status },
+        after: { courierId: courier.id, status: updated.status }
+      }
     });
-    return tx.delivery.findUniqueOrThrow({ where: { id: delivery.id }, include: { courier: true } });
+    return updated;
   });
 }
 
 export async function listCouriers() {
-  return prisma.courier.findMany({ include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: "desc" } });
+  return prisma.courier.findMany({
+    include: {
+      user: { select: { name: true, email: true, verifiedAt: true, actorType: true } }
+    },
+    orderBy: { createdAt: "desc" }
+  });
 }
 
 export async function createPayout(input: { adminId: string; vendorId: string; periodStart: Date; periodEnd: Date }) {

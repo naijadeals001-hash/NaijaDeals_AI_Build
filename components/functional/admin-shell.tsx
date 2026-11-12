@@ -28,6 +28,7 @@ import {
   Store,
   Megaphone,
   Link2,
+  Star,
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { normalizeTab, TAB_LABELS, type AdminTab } from "@/lib/admin/admin-navigation";
@@ -77,6 +78,7 @@ const adminNavItems: NavItem[] = [
     href: "#",
     children: [
       { id: "products", label: "Products", icon: <Package className="h-4 w-4" />, href: "/admin?tab=products" },
+      { id: "reviews", label: "Reviews", icon: <Star className="h-4 w-4" />, href: "/admin?module=shop&tab=reviews" },
       { id: "applications", label: "Seller applications", icon: <UserCheck className="h-4 w-4" />, href: "/admin?tab=applications" },
     ],
   },
@@ -143,7 +145,7 @@ export function AdminShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>(() => {
-    if (currentTab === "products" || currentTab === "applications") return ["catalog"];
+    if (currentTab === "products" || currentTab === "reviews" || currentTab === "applications") return ["catalog"];
     if (currentTab === "payments" || currentTab === "payouts") return ["finance"];
     if (["users", "vendors", "couriers", "drivers"].includes(currentTab)) return ["people"];
     if (["orders", "deliveries", "rides"].includes(currentTab)) return ["operations"];

@@ -47,6 +47,8 @@ export default async function Page({
         userActorType={publicUser?.actorType ?? "ADMIN"}
         isSuperAdmin={sessionUser ? isSuperAdmin(sessionUser) : false}
         canModerateRides={sessionUser ? hasPermission(sessionUser, "rides:write") : false}
+        canWriteDeliveries={sessionUser ? hasPermission(sessionUser, "deliveries:write") : false}
+        canModerateProducts={sessionUser ? hasPermission(sessionUser, "products:moderate") : false}
         region={resolved.region}
         regionRestricted={resolved.restricted}
       />

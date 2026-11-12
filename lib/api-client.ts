@@ -48,6 +48,29 @@ export type ApiProduct = {
   available?: number;
 };
 
+/** A customer product review as returned by the Control Center moderation API. */
+export type ApiAdminReview = {
+  id: string;
+  rating: number;
+  title: string;
+  body: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  verifiedPurchase: boolean;
+  createdAt: string;
+  product: {
+    id: string;
+    name: string;
+    slug: string;
+    countryCode: string;
+    vendor: { name: string };
+    images: Array<{ url: string; alt: string | null }>;
+  };
+  order: { orderNumber: string } | null;
+  user: { name: string };
+};
+
+export type ApiAdminReviewList = { reviews: ApiAdminReview[] };
+
 /** Envelope returned when the catalogue is requested with `page`/`pageSize`. */
 export type ApiProductPage = {
   items: ApiProduct[];
@@ -498,6 +521,13 @@ export const apiClient = {
   adminVendors: () => requestJson<Array<Record<string, unknown>>>("/api/admin/vendors"),
   adminUsers: () => requestJson<Array<Record<string, unknown>>>("/api/admin/users"),
   adminAuditLogs: () => requestJson<Array<Record<string, unknown>>>("/api/admin/audit-logs"),
+  adminReviews: (status: "PENDING" | "APPROVED" | "REJECTED" | "ALL" = "ALL") =>
+    requestJson<ApiAdminReviewList>(withParams("/api/admin/reviews", { status })),
+  adminModerateReview: (id: string, action: "APPROVE" | "REJECT", reason?: string) =>
+    requestJson<{ id: string; status: string; productId: string; rating: number; unchanged?: boolean }>(
+      `/api/admin/reviews/${id}`,
+      { method: "POST", body: JSON.stringify({ action, reason }) }
+    ),
   adminCouriers: () => requestJson<Array<Record<string, unknown>>>("/api/admin/couriers"),
   adminAssignCourier: (deliveryId: string, courierId: string) =>
     requestJson<Record<string, unknown>>(`/api/admin/deliveries/${deliveryId}/assign`, { method: "POST", body: JSON.stringify({ courierId }) }),
