@@ -99,6 +99,13 @@ export type ReconciliationIssue = {
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
+/**
+ * Diagnostic formatter only. The books are currently Nigeria-only: every open
+ * escrow, ride hold and wallet is NGN with two minor-unit decimals. Do not use
+ * this for a multi-currency report; see
+ * docs/incidents/2026-11-12-escrow-reconstruction.md § "Africa-wide financial
+ * scoping" for the required currency/entity split.
+ */
 const NGN = (kobo: bigint) =>
   "NGN " + (Number(kobo) / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -134,9 +141,28 @@ export type OpenHold = {
 
 export type UnattributedHold = OpenHold & { reason: string };
 
+/**
+ * An open escrow whose recorded buyer of record is not the wallet that funded
+ * its hold journal. This is the legacy shape behind ND-20261109-285D47: the
+ * refund path trusted `EscrowHold.buyerWalletId` and debited a customer pool
+ * that never funded the escrow. Reconciliation attributes the exposure to the
+ * wallet that actually funded it and reports the mismatch; it never silently
+ * moves the difference to a different wallet.
+ */
+export type HoldFundingMismatch = {
+  escrowId: string;
+  orderId: string;
+  orderNumber: string;
+  recordedBuyerWalletId: string;
+  fundingWalletId: string;
+  amountKobo: bigint;
+  detail: string;
+};
+
 export type OpenHoldLedger = {
   holds: OpenHold[];
   unattributed: UnattributedHold[];
+  fundingMismatches: HoldFundingMismatch[];
   buyerHeld: Map<string, bigint>;
   counterpartyHeld: Map<string, bigint>;
 };
@@ -179,25 +205,50 @@ export async function loadOpenHoldLedger(db: Db): Promise<OpenHoldLedger> {
 
   // Only settled refunds have left the escrow. Reserved/submitted/unknown
   // claims are obligations, not movements, and must not shrink the exposure.
-  const settledRefundRows = openEscrows.length
+  // `Order.refundedKobo` is a claim cap, so the detail line separates live
+  // pending claims from a cap whose claim row is missing (a lost reservation).
+  const refundRowsByStatus = openEscrows.length
     ? await db.refund.groupBy({
-        by: ["orderId"],
+        by: ["orderId", "status"],
         where: {
           orderId: { in: openEscrows.map((escrow) => escrow.orderId) },
-          status: "COMPLETED"
+          status: { in: ["PENDING", "COMPLETED"] }
         },
         _sum: { amountKobo: true }
       })
     : [];
-  const settledRefundByOrder = new Map(
-    settledRefundRows.map((row) => [row.orderId, row._sum.amountKobo ?? BigInt(0)])
-  );
+  const settledRefundByOrder = new Map<string, bigint>();
+  const pendingRefundByOrder = new Map<string, bigint>();
+  for (const row of refundRowsByStatus) {
+    const target = row.status === "COMPLETED" ? settledRefundByOrder : pendingRefundByOrder;
+    target.set(row.orderId, row._sum.amountKobo ?? BigInt(0));
+  }
 
   const customerWalletByUser = new Map(customerWallets.map((wallet) => [wallet.userId as string, wallet.id]));
   const systemWallet = await db.wallet.findFirst({ where: { ownerType: "SYSTEM" }, select: { id: true } });
 
+  // The hold journal is the authoritative funding record. Legacy external
+  // escrows recorded the customer in `buyerWalletId` while the hold journal
+  // debited SYSTEM; attributing the exposure to the recorded buyer would hide
+  // the real shortfall inside a much larger false difference.
+  const holdTransactions = openEscrows.length
+    ? await db.walletTransaction.findMany({
+        where: { orderId: { in: openEscrows.map((escrow) => escrow.orderId) }, type: "hold" },
+        select: { orderId: true, walletId: true, amountKobo: true },
+        orderBy: { createdAt: "asc" }
+      })
+    : [];
+  const holdByOrder = new Map<string, Array<{ walletId: string; amountKobo: bigint }>>();
+  for (const transaction of holdTransactions) {
+    if (!transaction.orderId) continue;
+    const list = holdByOrder.get(transaction.orderId) ?? [];
+    list.push({ walletId: transaction.walletId, amountKobo: transaction.amountKobo });
+    holdByOrder.set(transaction.orderId, list);
+  }
+
   const holds: OpenHold[] = [];
   const unattributed: UnattributedHold[] = [];
+  const fundingMismatches: HoldFundingMismatch[] = [];
   const buyerHeld = new Map<string, bigint>();
   const counterpartyHeld = new Map<string, bigint>();
 
@@ -227,27 +278,79 @@ export async function loadOpenHoldLedger(db: Db): Promise<OpenHoldLedger> {
 
   for (const escrow of openEscrows) {
     const settled = settledRefundByOrder.get(escrow.orderId) ?? BigInt(0);
-    const reserved = escrow.order?.refundedKobo ?? BigInt(0);
+    const pending = pendingRefundByOrder.get(escrow.orderId) ?? BigInt(0);
+    const claimed = escrow.order?.refundedKobo ?? BigInt(0);
     const exposure = escrow.amountKobo > settled ? escrow.amountKobo - settled : BigInt(0);
-    const pendingReservation = reserved > settled ? reserved - settled : BigInt(0);
-    const hold: OpenHold = {
+    const unclaimedReservation = claimed > settled + pending ? claimed - settled - pending : BigInt(0);
+    const fundingRows = holdByOrder.get(escrow.orderId) ?? [];
+    const funding = fundingRows.length === 1 ? fundingRows[0] : null;
+    const baseDetail =
+      `${escrow.order?.orderNumber ?? escrow.orderId} escrow ${escrow.status}, ` +
+      `${escrow.amountKobo.toString()} held less ${settled.toString()} settled refund(s)` +
+      (pending > BigInt(0) ? `, ${pending.toString()} reserved by a pending claim` : "") +
+      (unclaimedReservation > BigInt(0)
+        ? `, ${unclaimedReservation.toString()} claimed with no live refund row`
+        : "");
+
+    if (fundingRows.length > 1) {
+      unattributed.push({
+        kind: "escrow",
+        id: escrow.id,
+        reference: `ESCROW-HOLD-${escrow.orderId}`,
+        amountKobo: exposure,
+        buyerWalletId: escrow.buyerWalletId,
+        counterpartyWalletId: escrow.vendorWalletId,
+        detail: baseDetail,
+        reason: "more than one hold journal"
+      });
+      continue;
+    }
+    if (funding && funding.amountKobo !== escrow.amountKobo) {
+      unattributed.push({
+        kind: "escrow",
+        id: escrow.id,
+        reference: `ESCROW-HOLD-${escrow.orderId}`,
+        amountKobo: exposure,
+        buyerWalletId: escrow.buyerWalletId,
+        counterpartyWalletId: escrow.vendorWalletId,
+        detail: baseDetail,
+        reason: "hold journal amount differs from the escrow amount"
+      });
+      continue;
+    }
+
+    const buyerWalletId = funding ? funding.walletId : escrow.buyerWalletId;
+    if (funding && funding.walletId !== escrow.buyerWalletId) {
+      fundingMismatches.push({
+        escrowId: escrow.id,
+        orderId: escrow.orderId,
+        orderNumber: escrow.order?.orderNumber ?? escrow.orderId,
+        recordedBuyerWalletId: escrow.buyerWalletId,
+        fundingWalletId: funding.walletId,
+        amountKobo: exposure,
+        detail:
+          `${baseDetail}; recorded buyer of record ${escrow.buyerWalletId} but the hold journal ` +
+          `debited ${funding.walletId}`
+      });
+    }
+    const detailSuffix =
+      funding && funding.walletId !== escrow.buyerWalletId
+        ? `, exposure attributed to funding wallet ${funding.walletId}`
+        : "";
+    holds.push({
       kind: "escrow",
       id: escrow.id,
       reference: `ESCROW-HOLD-${escrow.orderId}`,
       amountKobo: exposure,
-      buyerWalletId: escrow.buyerWalletId,
+      buyerWalletId,
       counterpartyWalletId: escrow.vendorWalletId,
-      detail:
-        `${escrow.order?.orderNumber ?? escrow.orderId} escrow ${escrow.status}, ` +
-        `${escrow.amountKobo.toString()} held less ${settled.toString()} settled refund(s)` +
-        (pendingReservation > BigInt(0) ? `, ${pendingReservation.toString()} reserved by a pending claim` : "")
-    };
-    holds.push(hold);
-    addTo(buyerHeld, escrow.buyerWalletId, exposure);
+      detail: `${baseDetail}${detailSuffix}`
+    });
+    addTo(buyerHeld, buyerWalletId, exposure);
     addTo(counterpartyHeld, escrow.vendorWalletId, exposure);
   }
 
-  return { holds, unattributed, buyerHeld, counterpartyHeld };
+  return { holds, unattributed, fundingMismatches, buyerHeld, counterpartyHeld };
 }
 
 export function expectedPosition(ledgerNet: bigint, holds: OpenHoldLedger, walletId: string) {
@@ -292,6 +395,13 @@ export function compareWalletProjection(input: {
   };
 }
 
+/**
+ * Whole-book totals. This is valid while every wallet is NGN: a single
+ * currency's debits and credits must balance. It is NOT a multi-currency
+ * check — across currencies a deficit in one would mask a surplus in another.
+ * A multi-currency implementation must group by currency (and legal entity) and
+ * require each group to balance independently.
+ */
 export async function journalTotals() {
   const rows = await prisma.ledgerEntry.groupBy({ by: ["direction"], _sum: { amountKobo: true }, _count: { _all: true } });
   const credit = rows.find((r) => r.direction === "CREDIT")?._sum.amountKobo ?? BigInt(0);
@@ -675,6 +785,24 @@ export async function reconcile(): Promise<{
       fixtureProvenance: false,
       remediation:
         "Restore or identify the owning wallet before release. Never move the held amount to an invented counterparty."
+    });
+  }
+
+  // A legacy escrow whose recorded buyer is not its funding wallet is reported
+  // explicitly. The exposure above is attributed to the wallet that actually
+  // funded the hold, so the report shows the real shortfall instead of a larger
+  // false difference on the recorded buyer.
+  for (const mismatch of holds.fundingMismatches) {
+    issues.push({
+      severity: "unexplained",
+      kind: "hold_attribution",
+      subject: mismatch.escrowId,
+      deltaKobo: mismatch.amountKobo.toString(),
+      detail: `Open escrow ${mismatch.orderNumber} records buyer ${mismatch.recordedBuyerWalletId} but its hold journal funded ${mismatch.fundingWalletId}. Exposure is attributed to the funding wallet.`,
+      evidence: [mismatch.detail],
+      fixtureProvenance: false,
+      remediation:
+        "Correct the escrow buyer of record under operator approval. Until then a refund must be refused when the funding wallet and buyer of record differ; reconciliation attributes the hold to the actual funder."
     });
   }
 

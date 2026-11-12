@@ -1,6 +1,7 @@
-import type { EscrowHold, EscrowStatus, OrderStatus, Prisma, PrismaClient } from "@prisma/client";
+import type { EscrowHold, EscrowStatus, OrderStatus, Prisma, PrismaClient, RefundStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
+import { loadRefundLifecycles } from "@/lib/payments/refund-lifecycle";
 import { recordAudit } from "./audit.service";
 import { enqueueVendorNotification } from "./notification.service";
 import { notifyEscrowReleased, notifyOrderStatus } from "@/lib/notifications/domain-events";
@@ -10,8 +11,219 @@ import { ensureWallet } from "@/lib/payments/service";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
+type RefundClaimRow = { id: string; amountKobo: bigint; status: RefundStatus };
+
+/**
+ * What `Order.refundedKobo` actually means.
+ *
+ * The column is a reservation cap, not a receipt: `claimRefund` increments it
+ * *before* an external provider is called, and it stays incremented while the
+ * claim is `PENDING` (reserved, submitted, acknowledged-pending or unknown).
+ * Only `Refund.status = COMPLETED` proves that money moved back to the buyer.
+ * `Refund.status = FAILED` is a released claim, not a refund.
+ *
+ * Any caller that wants to display or account for refunds must use these
+ * derived amounts, never the raw column:
+ *
+ *  - `claimedKobo`      the reservation cap (`Order.refundedKobo`)
+ *  - `settledKobo`      money that actually moved (`COMPLETED`)
+ *  - `pendingClaimKobo` claims still awaiting a definitive outcome (`PENDING`)
+ *  - `failedClaimKobo`  claims released after a definitive failure
+ *  - `unclaimedReservationKobo` cap with no live refund row (deleted claim)
+ *  - `excessClaimKobo`  settled/pending claims above the recorded cap
+ */
+export type RefundClaimSummary = {
+  claimedKobo: bigint;
+  settledKobo: bigint;
+  pendingClaimKobo: bigint;
+  failedClaimKobo: bigint;
+  unclaimedReservationKobo: bigint;
+  excessClaimKobo: bigint;
+};
+
+export type OrderRefundState = RefundClaimSummary & {
+  pendingClaimCount: number;
+  settledClaimCount: number;
+  failedClaimCount: number;
+  /**
+   * Failed rows whose append-only lifecycle says the provider may nonetheless
+   * have moved the money (`submitted`, `unknown` or `confirmed`). This is a
+   * contradicted state, so nobody may release vendor money until it is
+   * reconciled.
+   */
+  uncertainProviderClaimKobo: bigint;
+  /** Any amount that makes completion or dispute release unsafe. */
+  blockingKobo: bigint;
+  blockingReasons: Array<
+    "pending_claim" | "unclaimed_reservation" | "excess_claim" | "provider_uncertain_failed_claim"
+  >;
+  hasBlockingClaim: boolean;
+};
+
+/** Public, string-safe projection for order receipts and APIs. */
+export type OrderRefundSummary = {
+  /** Order.refundedKobo: claimed and reserved, not confirmed. */
+  claimedKobo: string;
+  /** Refund rows that actually settled. */
+  settledKobo: string;
+  /** Claims still awaiting a definitive provider outcome. */
+  pendingClaimKobo: string;
+  /** Claims released after failure; never a completed refund. */
+  failedClaimKobo: string;
+  /** Claimed amount with no live refund row. Needs reconciliation. */
+  unclaimedReservationKobo: string;
+  hasPendingClaims: boolean;
+};
+
+const zero = BigInt(0);
+const nonNegative = (value: bigint) => (value > zero ? value : zero);
+
+export function summariseRefundClaims(
+  claimedKobo: bigint,
+  refunds: ReadonlyArray<{ amountKobo: bigint; status: RefundStatus }>
+): RefundClaimSummary {
+  let settledKobo = zero;
+  let pendingClaimKobo = zero;
+  let failedClaimKobo = zero;
+  for (const refund of refunds) {
+    if (refund.status === "COMPLETED") settledKobo += refund.amountKobo;
+    else if (refund.status === "PENDING") pendingClaimKobo += refund.amountKobo;
+    else failedClaimKobo += refund.amountKobo;
+  }
+  const claimed = nonNegative(claimedKobo);
+  const liveClaims = settledKobo + pendingClaimKobo;
+  return {
+    claimedKobo: claimed,
+    settledKobo,
+    pendingClaimKobo,
+    failedClaimKobo,
+    unclaimedReservationKobo: nonNegative(claimed - liveClaims),
+    excessClaimKobo: nonNegative(liveClaims - claimed)
+  };
+}
+
+async function buildOrderRefundState(
+  db: Db,
+  claimedKobo: bigint,
+  refunds: RefundClaimRow[]
+): Promise<OrderRefundState> {
+  const summary = summariseRefundClaims(claimedKobo, refunds);
+  const failed = refunds.filter((refund) => refund.status === "FAILED");
+  const lifecycles = await loadRefundLifecycles(
+    db,
+    failed.map((refund) => refund.id)
+  );
+  let uncertainProviderClaimKobo = zero;
+  for (const refund of failed) {
+    const state = lifecycles.get(refund.id)?.state ?? null;
+    if (state === "submitted" || state === "unknown" || state === "confirmed") {
+      uncertainProviderClaimKobo += refund.amountKobo;
+    }
+  }
+  const blockingReasons: OrderRefundState["blockingReasons"] = [];
+  if (summary.pendingClaimKobo > zero) blockingReasons.push("pending_claim");
+  if (summary.unclaimedReservationKobo > zero) blockingReasons.push("unclaimed_reservation");
+  if (summary.excessClaimKobo > zero) blockingReasons.push("excess_claim");
+  if (uncertainProviderClaimKobo > zero) blockingReasons.push("provider_uncertain_failed_claim");
+  return {
+    ...summary,
+    pendingClaimCount: refunds.filter((refund) => refund.status === "PENDING").length,
+    settledClaimCount: refunds.filter((refund) => refund.status === "COMPLETED").length,
+    failedClaimCount: failed.length,
+    uncertainProviderClaimKobo,
+    blockingKobo:
+      summary.pendingClaimKobo +
+      summary.unclaimedReservationKobo +
+      summary.excessClaimKobo +
+      uncertainProviderClaimKobo,
+    blockingReasons,
+    hasBlockingClaim: blockingReasons.length > 0
+  };
+}
+
+/** Load the derived refund state for one order. Read-only. */
+export async function loadOrderRefundState(db: Db, orderId: string): Promise<OrderRefundState> {
+  const order = await db.order.findUniqueOrThrow({
+    where: { id: orderId },
+    select: {
+      refundedKobo: true,
+      refunds: { select: { id: true, amountKobo: true, status: true } }
+    }
+  });
+  return buildOrderRefundState(db, order.refundedKobo, order.refunds);
+}
+
+/**
+ * Fail closed whenever any claim, lost reservation or contradicted lifecycle
+ * could move money that a release would also pay to the vendor.
+ *
+ * Callers must hold the order row lock (`SELECT ... FOR UPDATE`) before this
+ * check and before any wallet update. Completion, dispute release and every
+ * refund settlement take that lock first, then update the buyer wallet, the
+ * vendor wallet and the SYSTEM wallet in that order, so two writers on the same
+ * order cannot interleave and no cross-order wallet cycle exists.
+ */
+export function assertNoBlockingRefundObligation(state: OrderRefundState) {
+  if (state.pendingClaimKobo > zero) {
+    throw new ApiError(
+      409,
+      "refund_pending",
+      "A refund on this order is still awaiting a provider outcome. The amount stays reserved and blocks release until it settles."
+    );
+  }
+  if (state.uncertainProviderClaimKobo > zero) {
+    throw new ApiError(
+      409,
+      "refund_state_conflict",
+      "A failed refund claim is contradicted by its lifecycle record. Reconcile the provider outcome before releasing the escrow."
+    );
+  }
+  if (state.unclaimedReservationKobo > zero || state.excessClaimKobo > zero) {
+    throw new ApiError(
+      409,
+      "refund_reservation_unreconciled",
+      "The order's refundedKobo reservation does not match its refund rows. Reconcile the order before releasing the escrow."
+    );
+  }
+}
+
+export function toOrderRefundSummary(summary: RefundClaimSummary): OrderRefundSummary {
+  return {
+    claimedKobo: summary.claimedKobo.toString(),
+    settledKobo: summary.settledKobo.toString(),
+    pendingClaimKobo: summary.pendingClaimKobo.toString(),
+    failedClaimKobo: summary.failedClaimKobo.toString(),
+    unclaimedReservationKobo: summary.unclaimedReservationKobo.toString(),
+    hasPendingClaims: summary.pendingClaimKobo > zero
+  };
+}
+
+async function loadRefundSummaryMap(
+  db: Db,
+  orders: Array<{ id: string; refundedKobo: bigint }>
+): Promise<Map<string, OrderRefundSummary>> {
+  if (orders.length === 0) return new Map();
+  const rows = await db.refund.groupBy({
+    by: ["orderId", "status"],
+    where: { orderId: { in: orders.map((order) => order.id) } },
+    _sum: { amountKobo: true }
+  });
+  const byOrder = new Map<string, Array<{ amountKobo: bigint; status: RefundStatus }>>();
+  for (const row of rows) {
+    const list = byOrder.get(row.orderId) ?? [];
+    list.push({ amountKobo: row._sum.amountKobo ?? zero, status: row.status });
+    byOrder.set(row.orderId, list);
+  }
+  return new Map(
+    orders.map((order) => [
+      order.id,
+      toOrderRefundSummary(summariseRefundClaims(order.refundedKobo, byOrder.get(order.id) ?? []))
+    ])
+  );
+}
+
 export async function getOrders(userId?: string) {
-  return prisma.order.findMany({
+  const orders = await prisma.order.findMany({
     where: userId ? { customerId: userId } : undefined,
     include: {
       items: true,
@@ -25,10 +237,15 @@ export async function getOrders(userId?: string) {
     },
     orderBy: { createdAt: "desc" }
   });
+  const refundSummaries = await loadRefundSummaryMap(prisma, orders);
+  return orders.map((order) => ({
+    ...order,
+    refundSummary: refundSummaries.get(order.id) ?? toOrderRefundSummary(summariseRefundClaims(order.refundedKobo, []))
+  }));
 }
 
 export async function getOrder(id: string) {
-  return prisma.order.findUniqueOrThrow({
+  const order = await prisma.order.findUniqueOrThrow({
     where: { id },
     include: {
       items: true,
@@ -42,6 +259,11 @@ export async function getOrder(id: string) {
       reviews: true
     }
   });
+  const refundSummaries = await loadRefundSummaryMap(prisma, [order]);
+  return {
+    ...order,
+    refundSummary: refundSummaries.get(order.id) ?? toOrderRefundSummary(summariseRefundClaims(order.refundedKobo, []))
+  };
 }
 
 export async function updateOrderStatus(input: {
@@ -215,11 +437,14 @@ export function releaseObligation(input: {
 
 export type OrderReleaseState = {
   order: Prisma.OrderGetPayload<{
-    include: { escrowHolds: true; refunds: { select: { id: true } } };
+    include: { escrowHolds: true; refunds: { select: { id: true; amountKobo: true; status: true } } };
   }>;
   escrow: EscrowHold | null;
+  /** Kept for callers that only need the count; the amount is authoritative. */
   pendingRefundCount: number;
+  pendingRefundKobo: bigint;
   completedRefundKobo: bigint;
+  refundState: OrderRefundState;
   previouslyReleasedKobo: bigint;
   previouslyReleasedPayableKobo: bigint;
   frozenPayableKobo: bigint;
@@ -231,7 +456,9 @@ export type OrderReleaseState = {
  *
  * Completed refunds, not `Order.refundedKobo`, determine what is still owed.
  * Pending claims are returned separately because they must block a release
- * without changing its arithmetic.
+ * without changing its arithmetic. The complete refund state is also returned
+ * so a lost reservation (a claimed amount with no refund row) and a
+ * failed-but-provider-confirmed claim cannot be released by accident.
  */
 export async function loadOrderReleaseState(
   tx: Prisma.TransactionClient,
@@ -241,13 +468,10 @@ export async function loadOrderReleaseState(
     where: { id: orderId },
     include: {
       escrowHolds: { orderBy: { createdAt: "asc" } },
-      refunds: { where: { status: "PENDING" }, select: { id: true } }
+      refunds: { select: { id: true, amountKobo: true, status: true } }
     }
   });
-  const completed = await tx.refund.aggregate({
-    where: { orderId, status: "COMPLETED" },
-    _sum: { amountKobo: true }
-  });
+  const refundState = await buildOrderRefundState(tx, order.refundedKobo, order.refunds);
   const priorReleases = await tx.walletTransaction.findMany({
     where: { orderId, type: "release" },
     select: {
@@ -266,7 +490,7 @@ export async function loadOrderReleaseState(
 
   const escrow = order.escrowHolds[0] ?? null;
   const frozenPayableKobo = order.subtotalKobo - order.commissionKobo + order.deliveryFeeKobo;
-  const completedRefundKobo = completed._sum.amountKobo ?? BigInt(0);
+  const completedRefundKobo = refundState.settledKobo;
   const obligation = escrow
     ? releaseObligation({
         escrowAmountKobo: escrow.amountKobo,
@@ -281,8 +505,10 @@ export async function loadOrderReleaseState(
   return {
     order,
     escrow,
-    pendingRefundCount: order.refunds.length,
+    pendingRefundCount: refundState.pendingClaimCount,
+    pendingRefundKobo: refundState.pendingClaimKobo,
     completedRefundKobo,
+    refundState,
     previouslyReleasedKobo,
     previouslyReleasedPayableKobo,
     frozenPayableKobo,
@@ -520,10 +746,10 @@ export async function completeOrder(userId: string, orderId: string) {
     if (order.status !== "delivered") throw new ApiError(409, "not_delivered", "Only delivered orders can be completed.");
     // An external refund reserves `refundedKobo` before its provider call. Until
     // that call settles, the held amount has no settled record to attribute it
-    // to, so completion must wait rather than release or strand it.
-    if (releaseState.pendingRefundCount > 0) {
-      throw new ApiError(409, "refund_pending", "A refund is still awaiting provider confirmation. Retry completion after it settles.");
-    }
+    // to, so completion must wait rather than release or strand it. The same
+    // guard also refuses a lost reservation and a failed claim whose lifecycle
+    // says the provider may have paid it.
+    assertNoBlockingRefundObligation(releaseState.refundState);
 
     let breakdown: ReleasePostingResult | null = null;
     if (escrow) {
@@ -557,7 +783,11 @@ export async function completeOrder(userId: string, orderId: string) {
         platformShareKobo: (breakdown?.platformShareKobo ?? BigInt(0)).toString(),
         otherAllocatedKobo: "0",
         completedRefundKobo: releaseState.completedRefundKobo.toString(),
-        reservedRefundKobo: (order.refundedKobo - releaseState.completedRefundKobo).toString(),
+        claimedRefundKobo: releaseState.refundState.claimedKobo.toString(),
+        pendingClaimKobo: releaseState.refundState.pendingClaimKobo.toString(),
+        unclaimedReservationKobo: releaseState.refundState.unclaimedReservationKobo.toString(),
+        // Retained for readers that predate the explicit claim/settlement split.
+        reservedRefundKobo: (releaseState.refundState.claimedKobo - releaseState.refundState.settledKobo).toString(),
         previouslyReleasedKobo: releaseState.previouslyReleasedKobo.toString()
       }
     });

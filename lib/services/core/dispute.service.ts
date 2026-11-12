@@ -5,6 +5,7 @@ import { refundPayment } from "@/lib/payments/service";
 import { recordAudit } from "./audit.service";
 import { recordSystemEvent } from "./event.service";
 import {
+  assertNoBlockingRefundObligation,
   loadOrderReleaseState,
   postEscrowRelease,
   readRecordedRelease,
@@ -197,10 +198,10 @@ export async function resolveDispute(input: {
     const releaseState = await loadOrderReleaseState(tx, current.orderId);
     // An unconfirmed external refund has moved no money but its reservation
     // already caps the order. Releasing during that window would strand the
-    // reservation, so the release waits for the refund to settle.
-    if (releaseState.pendingRefundCount > 0) {
-      throw new ApiError(409, "refund_pending", "A refund on this order is still awaiting provider confirmation. Retry after it settles.");
-    }
+    // reservation, so the release waits for the refund to settle. The shared
+    // guard also refuses lost reservations and contradicted failed claims; both
+    // entry points take the order row lock first, so they cannot interleave.
+    assertNoBlockingRefundObligation(releaseState.refundState);
     const escrow = releaseState.escrow ?? current.escrow;
     if (!escrow) throw new ApiError(409, "no_escrow", "This order has no escrow hold to release.");
     if (escrow.status !== "disputed") {
@@ -250,6 +251,9 @@ export async function resolveDispute(input: {
         },
         after: { disputeStatus: updated.status, orderStatus: "completed", escrowStatus: "released" },
         completedRefundKobo: releaseState.completedRefundKobo.toString(),
+        claimedRefundKobo: releaseState.refundState.claimedKobo.toString(),
+        pendingClaimKobo: releaseState.refundState.pendingClaimKobo.toString(),
+        unclaimedReservationKobo: releaseState.refundState.unclaimedReservationKobo.toString(),
         totalReleasedKobo: breakdown.totalReleasedKobo.toString(),
         remainingEscrowObligationKobo: breakdown.remainingEscrowObligationKobo.toString(),
         vendorProceedsKobo: breakdown.vendorProceedsKobo.toString(),

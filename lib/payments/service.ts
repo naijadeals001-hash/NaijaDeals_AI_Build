@@ -620,6 +620,58 @@ async function lockAndReadRefundOrder(tx: Prisma.TransactionClient, orderId: str
   return { order, completedPayment, escrow: order.escrowHolds[0] ?? null };
 }
 
+/**
+ * Refuse a refund whose buyer-of-record is not the wallet that funded the hold.
+ *
+ * `EscrowHold.buyerWalletId` is the wallet a refund debits/credits. Legacy
+ * external escrows were created with the customer as the buyer of record even
+ * though `recordEscrow` had debited the SYSTEM wallet (incident
+ * ND-20261109-285D47). Trusting the escrow row then refunds out of the
+ * customer's held pool, which may be backing unrelated orders.
+ *
+ * The hold transaction is the authoritative funding record: `recordEscrow`
+ * always writes exactly one `type = "hold"` transaction whose `walletId` is the
+ * wallet it debited. When it exists, the escrow buyer of record must match it.
+ * Rows that predate the hold journal (manual fixtures, very old imports) have
+ * no proof either way and keep the historical behaviour; they are reported in
+ * reconciliation instead of being silently treated as consistent.
+ */
+async function assertRefundFundingSource(
+  db: Db,
+  orderId: string,
+  escrow: { buyerWalletId: string; amountKobo: bigint } | null
+) {
+  if (!escrow) return;
+  const holds = await db.walletTransaction.findMany({
+    where: { orderId, type: "hold" },
+    select: { reference: true, walletId: true, amountKobo: true },
+    orderBy: { createdAt: "asc" }
+  });
+  if (holds.length === 0) return;
+  if (holds.length > 1) {
+    throw new ApiError(
+      409,
+      "refund_funding_source_unknown",
+      "This order has more than one escrow funding journal. Reconcile it before any refund."
+    );
+  }
+  const hold = holds[0];
+  if (hold.amountKobo !== escrow.amountKobo) {
+    throw new ApiError(
+      409,
+      "refund_funding_source_mismatch",
+      "The escrow amount does not match the journal that funded it. Reconcile the order before any refund."
+    );
+  }
+  if (hold.walletId !== escrow.buyerWalletId) {
+    throw new ApiError(
+      409,
+      "refund_funding_source_mismatch",
+      "The escrow buyer of record is not the wallet that funded the hold. The refund is refused so unrelated held funds cannot be debited. Correct the legacy escrow record under operator approval first."
+    );
+  }
+}
+
 function computeRefundBasis(
   order: { paymentStatus: string; refundedKobo: bigint; totalKobo: bigint },
   requestedKobo: bigint | undefined,
@@ -737,6 +789,11 @@ async function settleRefund(
   if (refund.status !== "PENDING") {
     throw new ApiError(409, "refund_failed", "This refund attempt is no longer pending and cannot be settled.");
   }
+
+  // The buyer of record must be the wallet that actually funded the hold. A
+  // legacy external escrow that points at the customer while SYSTEM funded it
+  // would otherwise refund from another order's held pool.
+  await assertRefundFundingSource(tx, order.id, escrow);
 
   const requested = refund.amountKobo;
   const completed = await tx.refund.aggregate({
@@ -1044,6 +1101,9 @@ export async function reserveExternalRefundClaim(input: {
 
   const claimed = await prisma.$transaction(async (tx) => {
     const locked = await lockAndReadRefundOrder(tx, order.id);
+    // Validate before reserving anything: a refused recovery must not strand a
+    // claim against the order.
+    await assertRefundFundingSource(tx, order.id, locked.escrow);
     const basis = computeRefundBasis(locked.order, input.amountKobo, "locked");
     if (input.restock && !basis.isFullRefund) {
       throw new ApiError(400, "invalid_restock", "Stock can only be restocked on a full refund.");
@@ -1346,6 +1406,16 @@ async function submitExternalRefundClaim(input: {
     });
     throw new ApiError(503, "refund_unsupported", `${provider} refunds are not configured on this server.`);
   }
+
+  // Check the funding record before the provider is contacted. The settlement
+  // path repeats this under the order lock; a legacy mismatch must never send a
+  // refund request that the local books cannot post to the correct wallet.
+  const escrow = await prisma.escrowHold.findFirst({
+    where: { orderId: refund.orderId },
+    orderBy: { createdAt: "asc" },
+    select: { buyerWalletId: true, amountKobo: true }
+  });
+  await assertRefundFundingSource(prisma, refund.orderId, escrow);
 
   const begin = await beginExternalRefundSubmission({
     refundId: refund.id,
@@ -1666,6 +1736,7 @@ export async function refundPayment(input: {
     // reports money returned that never moved.
     return await prisma.$transaction(async (tx) => {
       const locked = await lockAndReadRefundOrder(tx, order.id);
+      await assertRefundFundingSource(tx, order.id, locked.escrow);
       const basis = computeRefundBasis(locked.order, input.amountKobo, "locked");
       if (input.restock && !basis.isFullRefund) {
         throw new ApiError(400, "invalid_restock", "Stock can only be restocked on a full refund.");
