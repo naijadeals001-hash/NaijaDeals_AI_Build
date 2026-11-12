@@ -1,11 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 import { refundPayment } from "../lib/payments/service";
+import { requireTestDatabase } from "./lib/test-db-guard";
 
 const prisma = new PrismaClient();
 const results: Array<{ name: string; status: "PASS" | "FAIL"; detail: string }> = [];
 const check = (name: string, ok: boolean, detail: string) => results.push({ name, status: ok ? "PASS" : "FAIL", detail });
 
 async function main() {
+  // Fail closed before the first query: the target must be named by
+  // TEST_DATABASE_URL and carry a TEST marker. Never fall back to .env DATABASE_URL.
+  await requireTestDatabase();
   const admin = await prisma.user.findFirstOrThrow({ where: { email: "superadmin@naijadeals.local" } });
   const order = await prisma.order.findFirst({
     where: { paymentStatus: "paid", refundedKobo: 0n, payments: { some: { provider: "wallet", status: "COMPLETED" } } },

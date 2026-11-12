@@ -20,6 +20,7 @@ import "dotenv/config";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { PrismaClient } from "@prisma/client";
+import { requireTestDatabase } from "./lib/test-db-guard";
 
 const DB = "naijadeals_wallet_acceptance";
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -38,11 +39,9 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 function acceptanceUrl() {
-  const raw = process.env.DATABASE_URL;
-  if (!raw) throw new Error("DATABASE_URL is not set in .env.");
-  const url = new URL(raw);
-  url.pathname = `/${DB}`;
-  return url.toString();
+  const raw = process.env.TEST_DATABASE_URL;
+  if (!raw) throw new Error("TEST_DATABASE_URL is not set by the test database guard.");
+  return raw;
 }
 
 async function statusOf(promise: Promise<unknown>) {
@@ -239,8 +238,7 @@ async function main(prisma: PrismaClient) {
 
 async function run() {
   process.env.VALKEY_URL = "";
-  const url = acceptanceUrl();
-  process.env.DATABASE_URL = url;
+  await requireTestDatabase();
   const { prisma } = await import("../lib/prisma");
   try {
     await main(prisma);

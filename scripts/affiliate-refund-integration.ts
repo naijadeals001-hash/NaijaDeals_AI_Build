@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma";
 import { refundPayment } from "../lib/payments/service";
 import { processReversalIntents } from "../lib/services/affiliate/reversal-processor";
 import { createLink, resolveTouch, recordConversion } from "../lib/services/affiliate/service";
+import { requireTestDatabase } from "./lib/test-db-guard";
 
 /**
  * The real refund workflow: refundPayment → persisted intent → processor →
@@ -57,6 +58,9 @@ let mixedConversionId = "";
 const made = { users: [] as string[], conversions: [] as string[], intents: [] as string[], campaign: "", profile: "", order: "", vendor: "", product: "" };
 
 async function main() {
+  // Fail closed before the first query: the target must be named by
+  // TEST_DATABASE_URL and carry a TEST marker. Never fall back to .env DATABASE_URL.
+  await requireTestDatabase();
   const db = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
   console.log("database:", db[0].db);
   // Preflight: a pending migration on the target surfaces later as an opaque Prisma

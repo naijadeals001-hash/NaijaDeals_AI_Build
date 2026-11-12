@@ -6,6 +6,7 @@ import { refundPayment } from "../lib/payments/service";
 import { processReversalIntents, reversalReferenceFor } from "../lib/services/affiliate/reversal-processor";
 import { settleConversion } from "../lib/services/affiliate/settlement";
 import { createLink, recordConversion, resolveTouch, updateConversionState } from "../lib/services/affiliate/service";
+import { requireTestDatabase } from "./lib/test-db-guard";
 
 /**
  * Settlement versus refund-driven reversal, through the real refund workflow.
@@ -319,6 +320,9 @@ async function buildFixture(label: string, refundKobo: bigint): Promise<Fixture>
 }
 
 async function main() {
+  // Fail closed before the first query: the target must be named by
+  // TEST_DATABASE_URL and carry a TEST marker. Never fall back to .env DATABASE_URL.
+  await requireTestDatabase();
   const database = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
   const actual = database[0]?.db ?? "";
   console.log("database:", actual);

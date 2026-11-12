@@ -47,6 +47,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { PrismaClient } from "@prisma/client";
+import { requireTestDatabase, testDatabaseChildEnv } from "./lib/test-db-guard";
 
 const DB = "naijadeals_wallet_acceptance";
 const RUN_ID = `${new Date().toISOString().replace(/\D/g, "").slice(0, 14)}-${randomBytes(4).toString("hex")}`;
@@ -99,10 +100,9 @@ function requiredEnv(name: string) {
 }
 
 function acceptanceUrl(connectionLimit?: number) {
-  const raw = process.env.DATABASE_URL;
-  if (!raw) throw new Error("DATABASE_URL is not set in .env.");
+  const raw = process.env.TEST_DATABASE_URL;
+  if (!raw) throw new Error("TEST_DATABASE_URL is not set by the test database guard.");
   const url = new URL(raw);
-  url.pathname = `/${DB}`;
   if (connectionLimit) url.searchParams.set("connection_limit", String(connectionLimit));
   return url.toString();
 }
@@ -264,8 +264,7 @@ function spawnWorker(spec: WorkerSpec, barrierDir: string, url: string): WorkerH
   const child = spawn(process.execPath, [TSX_CLI, SELF], {
     cwd: REPO_ROOT,
     env: {
-      ...process.env,
-      DATABASE_URL: url,
+      ...testDatabaseChildEnv(url),
       WC_WORKER: "1",
       WC_KIND: spec.kind,
       WC_ROLE: spec.role,
@@ -676,7 +675,7 @@ async function runReconcile(url: string): Promise<ReconcileReport> {
   return new Promise<ReconcileReport>((resolve, reject) => {
     const child = spawn(process.execPath, [TSX_CLI, path.join(REPO_ROOT, "scripts", "wallet-reconcile.ts")], {
       cwd: REPO_ROOT,
-      env: { ...process.env, DATABASE_URL: url, RECONCILE_DB: DB, NODE_ENV: "test" },
+      env: { ...testDatabaseChildEnv(url), RECONCILE_DB: DB, NODE_ENV: "test" },
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true
     });
@@ -2265,8 +2264,8 @@ async function runCleanupOnly() {
   const runId = process.env.WC_CLEANUP_RUN_ID;
   if (!runId) throw new Error("WC_CLEANUP_RUN_ID is required when WC_CLEANUP_ONLY=1.");
   process.env.VALKEY_URL = "";
+  await requireTestDatabase();
   const url = acceptanceUrl();
-  process.env.DATABASE_URL = url;
   const { prisma } = await import("../lib/prisma");
   try {
     const db = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
@@ -2283,8 +2282,8 @@ async function runAcceptance() {
   // Post-commit notifications must not wait on an absent Valkey in this isolated
   // run; the financial services under test are unchanged.
   process.env.VALKEY_URL = "";
+  await requireTestDatabase();
   const url = acceptanceUrl();
-  process.env.DATABASE_URL = url;
   const { prisma } = await import("../lib/prisma");
   try {
     await main(prisma, url);

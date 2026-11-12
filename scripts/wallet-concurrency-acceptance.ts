@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/prisma";
 import { hashPassword } from "../lib/auth/password";
 import { ensureWallet } from "../lib/payments/service";
+import { requireTestDatabase } from "./lib/test-db-guard";
 
 const DB = "naijadeals_wallet_acceptance";
 const rows: { name: string; status: "PASS" | "FAIL"; detail: string }[] = [];
@@ -15,6 +16,9 @@ async function check(name: string, fn: () => Promise<string>) {
 async function user() { return prisma.user.create({ data: { email: `wc-${randomUUID()}@example.test`, name: "WC", actorType: "CUSTOMER", passwordHash: await hashPassword(`WC-${randomUUID()}`) } }); }
 
 async function main() {
+  // Fail closed before the first query: the target must be named by
+  // TEST_DATABASE_URL and carry a TEST marker. Never fall back to .env DATABASE_URL.
+  await requireTestDatabase();
   const db = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
   assert(db[0]?.db === DB, `wrong database ${db[0]?.db}`);
   await check("1. Concurrent CUSTOMER creation yields one wallet", async () => {

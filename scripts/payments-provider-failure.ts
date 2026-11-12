@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma";
 import { hashPassword } from "../lib/auth/password";
 import { adapters } from "../lib/payments/adapters";
 import { confirmPayment, initializePayment } from "../lib/payments/service";
+import { requireTestDatabase } from "./lib/test-db-guard";
 
 /**
  * Configured-provider failure, timeout and safe retry.
@@ -32,6 +33,9 @@ async function check(name: string, run: () => Promise<string>) {
 }
 
 async function main() {
+  // Fail closed before the first query: the target must be named by
+  // TEST_DATABASE_URL and carry a TEST marker. Never fall back to .env DATABASE_URL.
+  await requireTestDatabase();
   const database = await prisma.$queryRawUnsafe<Array<{ db: string }>>("select current_database() as db");
   const actual = database[0]?.db ?? "";
   if (actual !== REQUIRED_DB) throw new Error(`Refusing to run: connected to "${actual}", expected "${REQUIRED_DB}".`);

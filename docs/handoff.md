@@ -4011,3 +4011,32 @@ acceptance evidence here, and future runs must set `DATABASE_URL` to an isolated
 - This handoff section is a separate documentation-only local commit on `naijashop-marketplace`.
   Nothing was pushed and no deployment was triggered; unrelated working-tree changes (drive files,
   admin UI, AGENTS.md and other pre-existing edits) were left unstaged.
+
+### 7. Incident follow-up — fail-closed test database guard (2026-11-12)
+
+Read-only investigation is recorded in `docs/incidents/2026-11-11-dev-refund.md`. Correcting the
+previous note: future financial acceptance runs must set an explicit `TEST_DATABASE_URL` (or
+`NAIJADEALS_TEST_DATABASE_URL`); `DATABASE_URL` is no longer an acceptable isolation mechanism.
+
+- Seven completed refund rows totalling 5,601,000 kobo were created on `ND-20261109-285D47`,
+  `ND-20261109-619DAC` and `ND-20261109-373876`. `ND-20261109-726639` has no residual refund,
+  journal, audit or affiliate row; only `Order.updatedAt` records the reverted claim.
+- `ND-20261109-285D47` was externally funded (original hold debited SYSTEM) but its refund consumed
+  the customer `heldKobo` pool. Customer-funded open escrow coverage is short by exactly 1,968,000
+  kobo. `619DAC` and `373876` were buyer-funded and remain internally consistent.
+- A compensating reclassification (customer `availableKobo` -1,968,000; `heldKobo` +1,968,000,
+  total unchanged) is proposed in the incident document. It has **not** been executed and requires
+  operator approval. No refund was reversed and no journal was deleted.
+- Current snapshot: `backups/incident-2026-11-12T03-38-59-450Z.dump`, SHA-256
+  `83ffc59dc06c079f5e96137e30d957a13ba8de70f1a84fc2697cdff55d937ae2` (gitignored).
+- Guard: `scripts/lib/test-db-guard.ts` plus `scripts/assert-test-db.ts`; applied to the phase07
+  refund suites, escrow/payment integration suites and wallet acceptance suites. Guard tests
+  (`scripts/test-db-guard-tests.ts`) pass 12/12 checks; `phase07-partial-refund-tests.ts` now exits
+  before its first query when `TEST_DATABASE_URL` is absent and shared counts stayed
+  `Refund 8 / Wallet 204 / Order 61`.
+- `npx tsc --noEmit` was run repeatedly. It passed while the guard work was verified, then a
+  concurrent uncommitted change to `lib/services/core/dispute.service.ts` introduced one unrelated
+  error at that file's line 58. Concurrent uncommitted changes in `lib/payments/service.ts`,
+  `lib/services/core/order.service.ts` and the escrow `releaseObligation` call sites were also
+  present; none are part of this slice's commit and all were left unstaged. The guard, CLI, tests
+  and guard-entrypoint edits add no type errors of their own.

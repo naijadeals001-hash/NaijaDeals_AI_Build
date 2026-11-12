@@ -27,6 +27,7 @@ import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import type { PrismaClient } from "@prisma/client";
+import { requireTestDatabase, testDatabaseChildEnv } from "./lib/test-db-guard";
 
 const DB = "naijadeals_wallet_acceptance";
 const RUN_ID = `${new Date().toISOString().replace(/\D/g, "").slice(0, 14)}-${randomBytes(4).toString("hex")}`;
@@ -48,10 +49,9 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 function acceptanceUrl(connectionLimit?: number) {
-  const raw = process.env.DATABASE_URL;
-  if (!raw) throw new Error("DATABASE_URL is not set in .env.");
+  const raw = process.env.TEST_DATABASE_URL;
+  if (!raw) throw new Error("TEST_DATABASE_URL is not set by the test database guard.");
   const url = new URL(raw);
-  url.pathname = `/${DB}`;
   if (connectionLimit) url.searchParams.set("connection_limit", String(connectionLimit));
   return url.toString();
 }
@@ -522,7 +522,7 @@ async function main(prisma: PrismaClient, url: string) {
     [TSX_CLI, path.join(REPO_ROOT, "scripts", "wallet-reconcile.ts")],
     {
       cwd: REPO_ROOT,
-      env: { ...process.env, DATABASE_URL: url, RECONCILE_DB: DB, VALKEY_URL: "" },
+      env: { ...testDatabaseChildEnv(url), RECONCILE_DB: DB, VALKEY_URL: "" },
       encoding: "utf8",
       timeout: 120_000
     }
@@ -561,8 +561,8 @@ async function main(prisma: PrismaClient, url: string) {
 
 async function run() {
   process.env.VALKEY_URL = "";
+  await requireTestDatabase();
   const url = acceptanceUrl(1);
-  process.env.DATABASE_URL = url;
   const { prisma } = await import("../lib/prisma");
   try {
     await main(prisma, url);
