@@ -8,6 +8,15 @@
 import { prisma } from "../lib/prisma";
 import { adapters } from "../lib/payments/adapters";
 import { postBalancedTransaction } from "../lib/services/core/wallet.service";
+import {
+  initializePayment,
+  confirmPayment,
+  refundPayment,
+  processWebhook,
+  reserveExternalRefundClaim,
+  settleConfirmedExternalRefund,
+  reconcileExternalRefundOutcome
+} from "../lib/payments/service";
 
 type Check = { name: string; ok: boolean; detail: string };
 
@@ -63,6 +72,37 @@ async function main() {
   const after = await prisma.walletTransaction.count();
   record("ledger posting refused", ledgerError === "review_financial_operations_disabled", ledgerError);
   record("no financial writes", before === after, `before=${before} after=${after}`);
+
+  const entryPoints: Array<[string, () => Promise<unknown>]> = [
+    ["initializePayment", () => initializePayment({} as never)],
+    ["confirmPayment", () => confirmPayment({} as never)],
+    ["refundPayment", () => refundPayment({} as never)],
+    ["reserveExternalRefundClaim", () => reserveExternalRefundClaim({} as never)],
+    ["settleConfirmedExternalRefund", () => settleConfirmedExternalRefund({} as never)],
+    ["reconcileExternalRefundOutcome", () => reconcileExternalRefundOutcome({} as never)],
+    ["processWebhook", () => processWebhook("paystack", "", new Headers())]
+  ];
+  const writesBefore = {
+    payments: await prisma.payment.count(),
+    refunds: await prisma.refund.count(),
+    walletTransactions: await prisma.walletTransaction.count()
+  };
+  for (const [name, call] of entryPoints) {
+    let code = "no_error";
+    try {
+      await call();
+    } catch (error) {
+      code = (error as { code?: string }).code ?? (error as Error).message;
+    }
+    record(`${name} refused before writes`, code === "review_financial_operations_disabled", code);
+  }
+  const writesAfter = {
+    payments: await prisma.payment.count(),
+    refunds: await prisma.refund.count(),
+    walletTransactions: await prisma.walletTransaction.count()
+  };
+  record("no financial state written", JSON.stringify(writesBefore) === JSON.stringify(writesAfter), JSON.stringify(writesAfter));
+  record("still zero outbound provider calls", fetchCalls === 0, `fetchCalls=${fetchCalls}`);
 
   global.fetch = originalFetch;
   const failed = checks.filter((check) => !check.ok);

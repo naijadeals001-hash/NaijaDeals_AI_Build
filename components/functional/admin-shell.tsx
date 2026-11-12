@@ -81,6 +81,7 @@ const adminNavItems: NavItem[] = [
       { id: "products", label: "Products", icon: <Package className="h-4 w-4" />, href: "/admin?tab=products" },
       { id: "reviews", label: "Reviews", icon: <Star className="h-4 w-4" />, href: "/admin?module=shop&tab=reviews" },
       { id: "applications", label: "Seller applications", icon: <UserCheck className="h-4 w-4" />, href: "/admin?tab=applications" },
+      { id: "catalogue", label: "Catalogue workflow", icon: <Package className="h-4 w-4" />, href: "/admin/catalogue" },
     ],
   },
   {
@@ -149,6 +150,7 @@ export function AdminShell({
   const searchParams = useSearchParams();
   const isSuperAdminPath = pathname?.startsWith("/super-admin") ?? false;
   const isPlusPath = pathname?.startsWith("/admin/plus") ?? false;
+  const isCataloguePath = pathname?.startsWith("/admin/catalogue") ?? false;
   const currentTab = normalizeTab(searchParams.get("tab"));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -196,7 +198,8 @@ export function AdminShell({
     if (href === "/super-admin") return isSuperAdminPath;
     if (isSuperAdminPath) return false;
     if (href === "/admin/plus") return isPlusPath;
-    if (isPlusPath) return false;
+    if (href === "/admin/catalogue") return isCataloguePath;
+    if (isPlusPath || isCataloguePath) return false;
     const tab: AdminTab = normalizeTab(href.includes("tab=") ? href.split("tab=")[1] : "overview");
     return currentTab === tab;
   };

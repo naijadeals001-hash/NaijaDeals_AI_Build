@@ -3,6 +3,7 @@ import type { Order, Payment, Prisma, PrismaClient, Refund } from "@prisma/clien
 import { prisma } from "@/lib/prisma";
 import { getCountry, commissionFor } from "@/lib/config/commerce";
 import { ApiError } from "@/lib/auth/guard";
+import { assertFinancialOperationsAllowed } from "./review-financial-guard";
 import { adapters, isDefinitiveProviderRejection, type AdapterId, isTestPaymentsEnabled } from "./adapters";
 import {
   loadRefundLifecycle,
@@ -101,7 +102,8 @@ export async function initializePayment(input: {
   provider: AdapterId;
   callbackUrl: string;
 }) {
-  const adapter = adapters[input.provider];
+
+  await assertFinancialOperationsAllowed("Payment initialization");  const adapter = adapters[input.provider];
   if (!adapter) throw new ApiError(400, "unknown_provider", "Unknown payment provider.");
 
   const order = await prisma.order.findUnique({
@@ -443,7 +445,8 @@ async function finalizePaidOrder(tx: Db, input: { order: Order; payment: Payment
 }
 
 export async function confirmPayment(input: { reference: string; provider: AdapterId; rawWebhook?: unknown }) {
-  const payment = await getPaymentByReference(input.reference);
+
+  await assertFinancialOperationsAllowed("Payment confirmation");  const payment = await getPaymentByReference(input.reference);
   if (payment.provider !== input.provider) {
     throw new ApiError(400, "provider_mismatch", "Payment reference does not belong to this provider.");
   }
@@ -1179,7 +1182,8 @@ export async function reserveExternalRefundClaim(input: {
   amountKobo?: bigint;
   restock?: boolean;
 }) {
-  const order = await prisma.order.findUnique({
+
+  await assertFinancialOperationsAllowed("External refund reservation");  const order = await prisma.order.findUnique({
     where: { id: input.orderId },
     include: { payments: true }
   });
@@ -1423,7 +1427,8 @@ export async function settleConfirmedExternalRefund(input: {
   reason?: string;
   restock?: boolean;
 }) {
-  return prisma.$transaction(async (tx) => {
+
+  await assertFinancialOperationsAllowed("External refund settlement");  return prisma.$transaction(async (tx) => {
     const refund = await tx.refund.findUniqueOrThrow({ where: { id: input.refundId } });
     const locked = await lockAndReadRefundOrder(tx, refund.orderId);
     const fresh = await tx.refund.findUniqueOrThrow({ where: { id: input.refundId } });
@@ -1687,7 +1692,8 @@ export async function reconcileExternalRefundOutcome(input: {
   providerReference?: string;
   note?: string;
 }) {
-  const refund = await prisma.refund.findUnique({
+
+  await assertFinancialOperationsAllowed("External refund reconciliation");  const refund = await prisma.refund.findUnique({
     where: { id: input.refundId },
     include: { payment: true }
   });
@@ -1783,7 +1789,8 @@ export async function refundPayment(input: {
   /** Caller-supplied retry key; the same key never calls the provider twice. */
   idempotencyKey?: string;
 }) {
-  const idempotencyKey = input.idempotencyKey ?? `refund:${input.orderId}:${randomBytes(10).toString("hex")}`;
+
+  await assertFinancialOperationsAllowed("Refund");  const idempotencyKey = input.idempotencyKey ?? `refund:${input.orderId}:${randomBytes(10).toString("hex")}`;
   const prior = await prisma.refund.findUnique({
     where: { idempotencyKey },
     include: { payment: true }
@@ -1864,7 +1871,8 @@ export async function refundPayment(input: {
 }
 
 export async function processWebhook(provider: "paystack" | "flutterwave", rawBody: string, headers: Headers) {
-  const adapter = adapters[provider];
+
+  await assertFinancialOperationsAllowed("Payment callback");  const adapter = adapters[provider];
   if (!adapter.verifyWebhook) throw new ApiError(400, "webhook_unsupported", "This provider does not accept webhooks.");
   const verified = await adapter.verifyWebhook(rawBody, headers);
   if (!verified) throw new ApiError(401, "invalid_signature", "Webhook signature verification failed.");

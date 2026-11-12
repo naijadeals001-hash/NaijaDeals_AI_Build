@@ -579,3 +579,10 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Catalogue editing (department/product fields) in Control Center | existing UI supports moderation only; no product create/edit form | NOT IMPLEMENTED |
 | Admin-led catalogue slice: publishing controls, edit validation, image remediation queue | moderation exists; editing, demo/test classification fields and remediation queue are absent | PARTIAL |
 | Search index for REVIEW catalogue | engine unavailable; DB substring fallback serves results; reindex script committed | PARTIAL |
+| Route-level REVIEW financial refusal at every entry point | `scripts/review-financial-refusal.ts` 14/14: funding, confirmation, refund, reservation, settlement, reconciliation, webhook, ledger; zero fetches/writes; payouts use existing LIVE boundary | VERIFIED |
+| Admin catalogue create/edit department | `/admin/catalogue` + `/api/admin/catalogue/departments`; audited; `scripts/review-catalogue-workflow.cjs` 14/14 | VERIFIED |
+| Admin product draft → preview → publish → Shop → edit → unpublish | same workflow; server reports ACTIVE, product 200/404, Shop search reflects state | VERIFIED |
+| DEMO classification field | `Category.isDemo` / `Product.isDemo` migration applied to REVIEW and TEST; existing demo rows classified | VERIFIED |
+| Image validation before publish | existing project asset or https required; alt required; publish blocked otherwise | VERIFIED |
+| Catalogue image remediation queue | no queue surface; publish blocks missing imagery instead | NOT IMPLEMENTED |
+| Admin department/product delete or archive | no delete; unpublish and inactive only | NOT IMPLEMENTED |

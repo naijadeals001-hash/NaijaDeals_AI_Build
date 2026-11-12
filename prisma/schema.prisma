@@ -272,6 +272,8 @@ model Category {
   imageUrl    String?
   sortOrder   Int       @default(0)
   isActive    Boolean   @default(true)
+  /// Explicit demonstration classification; never shown as real supply.
+  isDemo      Boolean   @default(false)
   createdAt   DateTime  @default(now())
   products    Product[]
 }
@@ -297,6 +299,8 @@ model Product {
   /// escrow = paid through checkout; contact = seller-handled enquiry only.
   saleMode       SaleMode         @default(escrow)
   status         ProductStatus    @default(ACTIVE)
+  /// Explicit demonstration classification; never shown as real supply.
+  isDemo         Boolean          @default(false)
   moderationNote String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
