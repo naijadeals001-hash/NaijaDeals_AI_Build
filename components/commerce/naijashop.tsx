@@ -1207,6 +1207,7 @@ export function ShopCartPage() {
   if (status === "error" || !cart) return <ErrorBox message={error || "Cart unavailable."} />;
 
   const active = cart.items.filter((item) => !item.savedForLater);
+  const units = active.reduce((sum, item) => sum + item.quantity, 0);
   const saved = cart.items.filter((item) => item.savedForLater);
 
   return (
@@ -1214,7 +1215,7 @@ export function ShopCartPage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-extrabold">Shopping Cart</h1>
-          <p className="text-sm text-muted">{active.length === 0 ? "Your cart is empty" : `${active.length} ${active.length === 1 ? "item" : "items"}`}</p>
+          <p className="text-sm text-muted">{active.length === 0 ? "Your cart is empty" : `${active.length} ${active.length === 1 ? "product line" : "product lines"} · ${units} ${units === 1 ? "unit" : "units"}`}</p>
         </div>
         <Link href="/naijashop" className="text-sm font-bold text-primary underline">
           Continue shopping

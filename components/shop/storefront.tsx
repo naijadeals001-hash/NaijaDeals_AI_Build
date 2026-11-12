@@ -362,7 +362,7 @@ export function NaijaDealsMarketplace() {
               </h2>
               <p className="mt-2 text-[11.5px] leading-5 text-[#4b5b51]">
                 A combined wholesale checkout is not live yet. Bulk quantities are quoted directly by producers, and larger loads move through
-                independent NaijaSend transporters.
+                independent Deliveries & Freight transporters.
               </p>
               <ul className="mt-3 space-y-1.5 text-[11px] font-semibold text-[#3d4f43]">
                 <li className="flex items-center gap-2">
@@ -377,7 +377,7 @@ export function NaijaDealsMarketplace() {
               <div className="mt-4 rounded-xl border border-[#e3d6bb] bg-white/60 p-3">
                 <p className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#0b5c33]">How a bulk order moves</p>
                 <p className="mt-1 text-[10.5px] leading-4 text-[#4b5b51]">
-                  Producer quote, then a NaijaSend freight quote, then delivery. Quotes are requests; nothing is charged until you book.
+                  Producer quote, then a Deliveries & Freight quote, then delivery. Quotes are requests; nothing is charged until you book.
                 </p>
               </div>
               <div className="mt-auto flex flex-col gap-2 pt-5">
@@ -422,7 +422,7 @@ export function NaijaDealsMarketplace() {
           {[
             { icon: BadgeCheck, title: "Verified sellers", body: "Seller accounts are reviewed before listings go live." },
             { icon: ShieldCheck, title: "Escrow checkout", body: "Paid orders are held until delivery is confirmed." },
-            { icon: Truck, title: "Tracked delivery", body: "Delivery events are recorded by NaijaSend." },
+            { icon: Truck, title: "Tracked delivery", body: "Delivery events are recorded by Deliveries & Freight." },
             { icon: Wallet, title: "One account", body: "Cart, orders and addresses across NaijaDeals." }
           ].map((item) => (
             <div key={item.title} className="flex items-start gap-2">
@@ -620,7 +620,7 @@ export function NaijaDealsMarketplace() {
               <div className="min-w-0">
                 <p className="break-words text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-[#f5b52e]">Producer and wholesale connections</p>
                 <h2 id="bulk-heading" className="mt-2 break-words font-display text-[25px] font-extrabold leading-tight tracking-tight sm:text-[30px]">
-                  Source in bulk. Move it with NaijaSend.
+                  Source in bulk. Move it with Deliveries & Freight.
                 </h2>
                 <p className="mt-2 max-w-xl text-[11.5px] leading-6 text-[#c3d9c7] sm:text-[12.5px]">
                   NaijaDeals does not run a combined wholesale checkout with tiered pricing yet. Today, bulk buying starts with a producer
@@ -629,7 +629,7 @@ export function NaijaDealsMarketplace() {
                 <ol className="mt-5 grid gap-2 sm:grid-cols-3">
                   {[
                     { icon: Leaf, title: "Ask a producer", body: "Request the quantity from a NaijaFresh farm; the farm sets its own quote.", href: "/naijafresh/business", cta: "Bulk produce" },
-                    { icon: Truck, title: "Book freight", body: "Independent NaijaSend transporters quote larger loads.", href: "/naijasend/quote", cta: "Freight quote" },
+                    { icon: Truck, title: "Book freight", body: "Independent Deliveries & Freight transporters quote larger loads.", href: "/naijasend/quote", cta: "Freight quote" },
                     { icon: Store, title: "Sell onward", body: "Apply for a seller account if you are buying to resell.", href: "/sell", cta: "Start selling" }
                   ].map((step, index) => (
                     <li key={step.title} className="rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">

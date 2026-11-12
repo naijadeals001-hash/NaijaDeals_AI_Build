@@ -30,7 +30,7 @@ const ECOSYSTEM: Array<[string, string]> = [
   ["NaijaEats", "/naijaeats"],
   ["NaijaFresh", "/naijafresh"],
   ["NaijaDrive", "/naijadrive"],
-  ["NaijaSend", "/naijasend"],
+  ["Deliveries & Freight", "/naijasend"],
   ["NaijaGigs", "/naijagigs"],
   ["NaijaStay", "/naijastay"],
   ["NaijaStream", "/naijastream"],

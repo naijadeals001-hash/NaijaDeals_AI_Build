@@ -222,7 +222,7 @@ const WHOLESALE_LINKS = [
   {
     href: "/naijasend/quote",
     label: "Get a freight quote",
-    description: "Independent NaijaSend transporters quote larger loads.",
+    description: "Independent Deliveries & Freight transporters quote larger loads.",
     icon: Truck
   },
   {

@@ -101,7 +101,8 @@ export function MarketplaceProductCard({
             <Store className="h-3 w-3 shrink-0 text-[#0f7a4a]" aria-hidden />
             <span className="truncate">
               Sold by {vendorName}
-              {soldByVerified ? <span className="sr-only"> (verified seller)</span> : null}
+              {soldByVerified && !vendorName.toLowerCase().startsWith("demo") ? <span className="sr-only"> (verified seller)</span> : null}
+              {vendorName.toLowerCase().startsWith("demo") ? <span className="sr-only"> (demonstration seller)</span> : null}
             </span>
           </p>
         ) : null}
