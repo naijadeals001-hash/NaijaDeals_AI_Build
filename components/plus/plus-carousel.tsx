@@ -10,8 +10,12 @@ type EdgeState = { start: boolean; end: boolean };
  *
  * - Native horizontal scrolling gives touch swipe and momentum without a
  *   custom drag implementation.
- * - Arrows page by the number of cards actually visible and disable at each
- *   boundary.
+ * - Arrows are rendered only when the track genuinely overflows. A rail whose
+ *   cards all fit shows no arrows at all, rather than two permanently disabled
+ *   controls.
+ * - When arrows exist they page by the number of cards actually visible and
+ *   expose `aria-disabled` at each boundary while remaining focusable, so focus
+ *   is never dropped when the boundary changes.
  * - The track itself is focusable so ArrowLeft/ArrowRight/Home/End work from
  *   the keyboard without hijacking keys while a card link has focus.
  * - Scrolling honours `prefers-reduced-motion`; nothing auto-advances.
@@ -29,9 +33,11 @@ export function PlusCarousel({
   const trackId = useId();
   const instructionsId = useId();
   const trackRef = useRef<HTMLUListElement | null>(null);
-  // Start fully disabled so SSR and hydration agree, then measure the real
-  // track. An enabled arrow before measurement would be a false affordance.
+  // Start with no overflow and no arrows so SSR and hydration agree, then
+  // measure the real track. An arrow before measurement would be a false
+  // affordance.
   const [edges, setEdges] = useState<EdgeState>({ start: true, end: true });
+  const [overflowing, setOverflowing] = useState(false);
 
   const measure = useCallback(() => {
     const node = trackRef.current;
@@ -41,6 +47,8 @@ export function PlusCarousel({
     const next = { start: position <= 2, end: max <= 2 || position >= max - 2 };
     // Scroll fires every frame; only a real boundary change should re-render.
     setEdges((previous) => (previous.start === next.start && previous.end === next.end ? previous : next));
+    const nextOverflowing = max > 2;
+    setOverflowing((previous) => (previous === nextOverflowing ? previous : nextOverflowing));
   }, []);
 
   useEffect(() => {
@@ -106,7 +114,7 @@ export function PlusCarousel({
 
   return (
     <div className="min-w-0 max-w-full">
-      <div role="region" aria-roledescription="carousel" aria-label={label} className="min-w-0 max-w-full">
+      <div role="region" aria-roledescription="carousel" aria-label={label} data-plus-carousel className="min-w-0 max-w-full">
         <ul
           id={trackId}
           ref={trackRef}
@@ -114,16 +122,19 @@ export function PlusCarousel({
           aria-label={label}
           aria-describedby={instructionsId}
           onKeyDown={onKeyDown}
+          data-plus-carousel-track
           className="flex w-full min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2 [&::-webkit-scrollbar]:hidden"
         >
           {children}
         </ul>
         <p id={instructionsId} className="sr-only">
-          Use the left and right arrow keys, Home or End to move through this carousel. Each card can be reached with Tab.
+          Use the left and right arrow keys, Home or End to move through this carousel when it has more cards than fit. Each card
+          can be reached with Tab.
         </p>
         <div className="mt-2.5 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
           <p className="min-w-0 text-[11px] leading-5 text-[#4b5b51]">{hint}</p>
-          <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+          {overflowing ? (
+          <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto" data-plus-carousel-controls>
             <button
               type="button"
               onClick={() => {
@@ -151,6 +162,7 @@ export function PlusCarousel({
               <ChevronRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
             </button>
           </div>
+          ) : null}
         </div>
       </div>
     </div>

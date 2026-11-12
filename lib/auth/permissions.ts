@@ -36,10 +36,36 @@ export const PERMISSIONS = [
   "stream:read",
   "stream:write",
   "affiliates:read",
-  "affiliates:manage"
+  "affiliates:manage",
+  /// NaijaDeals Plus+ configuration. Read covers viewing cards, plans,
+  /// benefits, promotions and the overview; write covers draft editing.
+  "plus:content:read",
+  "plus:content:write",
+  /// Publication and archival are separate from drafting so a prepared card
+  /// cannot be made public by the same role that wrote it.
+  "plus:content:publish",
+  /// Plan, country, term and staff membership administration. There is no
+  /// customer purchase path behind this permission.
+  "plus:membership:configure",
+  /// Reviewing sponsored promotions. House promotions use content publish.
+  "plus:advertiser:approve"
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
+
+/**
+ * Plus+ capabilities that ordinary administrators deliberately do not hold.
+ *
+ * Publication, membership/price administration and advertiser approval each
+ * carry named accountability, so they belong to the dedicated Plus+ roles or
+ * `super_admin` only. An ordinary `admin` may draft and edit Plus+ content but
+ * cannot publish it, configure plan terms or approve a sponsor.
+ */
+const PLUS_WITHHELD_FROM_ADMIN: readonly Permission[] = [
+  "plus:content:publish",
+  "plus:membership:configure",
+  "plus:advertiser:approve"
+] as const;
 
 /**
  * Role to permission mapping.
@@ -47,15 +73,27 @@ export type Permission = (typeof PERMISSIONS)[number];
  * - `super_admin` holds every permission, including role administration.
  * - `admin` keeps the pre-existing operational surface (orders, deliveries,
  *   rides, catalogue, vendors, finance, audit) but deliberately cannot grant
- *   roles, so an administrator cannot promote themselves or anyone else.
+ *   roles or exercise Plus+'s publication/membership/advertiser powers.
  * - `ops`, `finance`, `support` and `moderator` are narrow staff roles.
+ * - The `plus_*` roles are single-capability editorial and commercial roles.
  */
 const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
   super_admin: PERMISSIONS,
   // Read-only affiliate review. Deliberately narrow: inspection without any
   // authority to resolve, approve or move money.
   affiliate_reviewer: ["affiliates:read"],
-  admin: PERMISSIONS.filter((permission) => permission !== "roles:write"),
+  // Plus+ draft editing. Cannot publish, configure commercial terms or approve
+  // an advertiser.
+  plus_editor: ["plus:content:read", "plus:content:write"],
+  // Plus+ publication and archival. Cannot draft or edit new content.
+  plus_publisher: ["plus:content:read", "plus:content:publish"],
+  // Plan, country, term and staff membership administration.
+  plus_membership_admin: ["plus:content:read", "plus:membership:configure"],
+  // Sponsored-promotion review only.
+  plus_advertiser_reviewer: ["plus:content:read", "plus:advertiser:approve"],
+  admin: PERMISSIONS.filter(
+    (permission) => permission !== "roles:write" && !PLUS_WITHHELD_FROM_ADMIN.includes(permission)
+  ),
   ops: [
     "dashboard:read",
     "disputes:read",
@@ -108,7 +146,19 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
 };
 
 /** Roles that grant Control Center access at all. */
-export const STAFF_ROLES = ["super_admin", "admin", "ops", "finance", "support", "moderator", "affiliate_reviewer"] as const;
+export const STAFF_ROLES = [
+  "super_admin",
+  "admin",
+  "ops",
+  "finance",
+  "support",
+  "moderator",
+  "affiliate_reviewer",
+  "plus_editor",
+  "plus_publisher",
+  "plus_membership_admin",
+  "plus_advertiser_reviewer"
+] as const;
 
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
