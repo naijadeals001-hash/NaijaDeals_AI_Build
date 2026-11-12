@@ -10,8 +10,8 @@ Canonical preview: http://localhost:3047/naijashop, database `naijadeals_review`
   0 orders, 0 CRF categories.
 - Department imagery: Electronics & Appliances uses
   `/generated/shop/banner-electronics.webp` (1024×576, served 200, rendered).
-- Demonstration seller is announced as "demonstration seller"; the verified-seller
-  claim is reserved for non-DEMO vendors.
+- Demonstration seller is announced as "Demonstration seller" on both cards and the
+  product detail; the verified-seller claim is reserved for non-DEMO vendors.
 - Public copy uses the approved label "Deliveries & Freight"; no "NaijaSend" remains in
   Shop components.
 

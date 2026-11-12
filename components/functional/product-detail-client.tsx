@@ -314,7 +314,7 @@ export function ProductDetailClient({
                 <span className="rounded-full bg-surface-low px-3 py-1 font-bold text-muted">No reviews yet</span>
               )}
               <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-3 py-1 font-bold text-primary">
-                <Store className="h-4 w-4" aria-hidden /> {product.vendor.name} · Verified seller
+                <Store className="h-4 w-4" aria-hidden /> {product.vendor.name} · {product.vendor.name.toLowerCase().startsWith("demo") ? "Demonstration seller" : "Verified seller"}
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-surface-low px-3 py-1 font-bold">
                 <MapPin className="h-4 w-4" aria-hidden /> {product.vendor.market}
