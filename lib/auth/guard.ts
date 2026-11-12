@@ -135,11 +135,16 @@ export function assertSameOrigin(request: Request) {
 }
 
 export async function readJson<T = Record<string, unknown>>(request: Request): Promise<T> {
+  let parsed: unknown;
   try {
-    return (await request.json()) as T;
+    parsed = await request.json();
   } catch {
     throw new ApiError(400, "invalid_json", "Request body must be valid JSON.");
   }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new ApiError(400, "invalid_body", "Request body must be a JSON object.");
+  }
+  return parsed as T;
 }
 
 export function requireString(value: unknown, field: string, max = 500): string {

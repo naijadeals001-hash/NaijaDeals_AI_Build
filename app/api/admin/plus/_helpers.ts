@@ -11,6 +11,16 @@ import { getPromotion } from "@/lib/services/plus/promotion.service";
  * is reviewed by the advertiser reviewer. The route resolves the row first so
  * the caller cannot choose which rule applies by supplying a kind.
  */
+/** Route gate when the service will choose between two capabilities from the
+ * stored row state (for example writer for DRAFT, publisher for PUBLISHED). */
+export async function requireAnyAdminPermission(permissions: readonly Permission[]): Promise<SessionUser> {
+  const actor = await requireAdmin();
+  if (!permissions.some((permission) => hasPermission(actor, permission))) {
+    throw new ApiError(403, "permission_denied", `One of these permissions is required: ${permissions.join(", ")}.`);
+  }
+  return actor;
+}
+
 export async function requirePromotionPermission(
   id: string,
   required: { house: Permission; sponsored: Permission }

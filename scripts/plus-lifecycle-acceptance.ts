@@ -247,6 +247,51 @@ async function main() {
       return "javascript: href and image rejected";
     });
 
+    await check("http images and ambiguous project paths are rejected", async () => {
+      for (const imageUrl of ["http://example.com/image.png", "//cdn.example.com/image.png"]) {
+        await expectCode("invalid_url", () =>
+          contentService.createContent(actor, {
+            key: `${prefix}-bad-http-image-${imageUrl.includes("//") ? "protocol" : "http"}`,
+            title: "Bad http image",
+            description: "Must be rejected.",
+            imageUrl,
+            imageAlt: "Bad",
+            href: "/naijashop"
+          })
+        );
+      }
+      for (const href of ["/\\evil", "//evil.example"]) {
+        await expectCode("invalid_url", () =>
+          contentService.createContent(actor, {
+            key: `${prefix}-bad-path-${href.startsWith("//") ? "protocol" : "backslash"}`,
+            title: "Bad path",
+            description: "Must be rejected.",
+            imageUrl: "/generated/shop/hero-desktop.webp",
+            imageAlt: "Shopper carrying paper bags at an outdoor market",
+            href
+          })
+        );
+      }
+      return "http image, protocol-relative image/href and /\\ href rejected";
+    });
+
+    await check("content create appends sort order when omitted", async () => {
+      const max = await prisma.plusContentCard.aggregate({ _max: { sortOrder: true } });
+      const key = `${prefix}-append-sort`;
+      created.contentKeys.push(key);
+      const card = await contentService.createContent(actor, {
+        key,
+        title: "Appended sort order",
+        description: "This card must append to the current content order.",
+        imageUrl: "/generated/shop/hero-desktop.webp",
+        imageAlt: "Shopper carrying paper bags at an outdoor market",
+        href: "/naijashop"
+      });
+      const expected = (max._max.sortOrder ?? -10) + 10;
+      assert(card.sortOrder === expected, `expected sortOrder ${expected}, received ${card.sortOrder}`);
+      return `sortOrder ${card.sortOrder} appended after max ${max._max.sortOrder ?? "none"}`;
+    });
+
     /* ---------------------------------------------------------------------
      * Priced plan activation.
      * ------------------------------------------------------------------- */
@@ -307,6 +352,76 @@ async function main() {
       assert(availability.membershipOpen, "membershipOpen is false after activation");
       assert(availability.paidActivationApproved, "paidActivationApproved flag is false");
       return `NG available, price=${ng.plans[0]?.priceLabel ?? "?"}`;
+    });
+
+    await check("active plan commercial fields are frozen", async () => {
+      await expectCode("terms_frozen", () => planService.updatePlan(actor, plan.id, { priceMinor: "600000" }));
+      await expectCode("terms_frozen", () => planService.updatePlan(actor, plan.id, { currency: "GHS" }));
+      await expectCode("terms_frozen", () => planService.updatePlan(actor, plan.id, { paidActivationApproved: false }));
+      await expectCode("terms_frozen", () => planService.updatePlan(actor, plan.id, { billingPeriod: "ANNUAL" }));
+      return "price/currency/paid flag/billing period changes -> terms_frozen";
+    });
+
+    await check("public price follows the approved term, not a mutable plan row", async () => {
+      await prisma.plusPlan.update({ where: { id: plan.id }, data: { priceMinor: BigInt(999999) } });
+      try {
+        const availability = await availabilityService.getPlusAvailability(now);
+        const entry = availability.plans.find((candidate) => candidate.id === plan.id);
+        assert(!entry || entry.priceMinor === "500000", `public price exposed mutable plan value: ${entry?.priceMinor ?? "missing"}`);
+        return entry ? "term price 500000 retained" : "mismatched plan row excluded from public availability";
+      } finally {
+        await prisma.plusPlan.update({ where: { id: plan.id }, data: { priceMinor: BigInt(500000) } });
+      }
+    });
+
+    await check("priced activation refuses a null-price term", async () => {
+      const code = `${prefix}-null-term-plan`;
+      created.planCodes.push(code);
+      const candidate = await planService.createPlan(actor, {
+        code,
+        name: "Null term plan",
+        description: "Used to prove a priced plan needs a frozen price.",
+        currency: "NGN",
+        priceMinor: "100000",
+        billingPeriod: "MONTHLY",
+        paidActivationApproved: true
+      });
+      await planService.setPlanCountry(actor, candidate.id, { countryCode: "NG", enabled: true });
+      const nullTerm = await planService.createPlanTerm(actor, candidate.id, {
+        version: 1,
+        priceMinor: null,
+        currency: "NGN",
+        billingPeriod: "MONTHLY",
+        effectiveFrom: new Date(now.getTime() - day).toISOString()
+      });
+      await planService.approvePlanTerm(actor, candidate.id, nullTerm.id);
+      await expectCode("paid_activation_not_approved", () => planService.activatePlan(actor, candidate.id));
+      return "null-price approved term -> paid_activation_not_approved";
+    });
+
+    await check("priced activation refuses a mismatched term price", async () => {
+      const code = `${prefix}-mismatch-plan`;
+      created.planCodes.push(code);
+      const candidate = await planService.createPlan(actor, {
+        code,
+        name: "Mismatched term plan",
+        description: "Used to prove the approved term must freeze the plan price.",
+        currency: "NGN",
+        priceMinor: "100000",
+        billingPeriod: "MONTHLY",
+        paidActivationApproved: true
+      });
+      await planService.setPlanCountry(actor, candidate.id, { countryCode: "NG", enabled: true });
+      const mismatched = await planService.createPlanTerm(actor, candidate.id, {
+        version: 1,
+        priceMinor: "90000",
+        currency: "NGN",
+        billingPeriod: "MONTHLY",
+        effectiveFrom: new Date(now.getTime() - day).toISOString()
+      });
+      await planService.approvePlanTerm(actor, candidate.id, mismatched.id);
+      await expectCode("paid_activation_not_approved", () => planService.activatePlan(actor, candidate.id));
+      return "term price 90000 vs plan 100000 -> paid_activation_not_approved";
     });
 
     /* ---------------------------------------------------------------------
@@ -487,6 +602,17 @@ async function main() {
       return "INVITED refused, ACTIVE granted";
     });
 
+    await check("a second ACTIVE membership for the same account and plan is refused", async () => {
+      await expectCode("membership_exists", () =>
+        membershipService.createMembership(actor, {
+          userId: customer.id,
+          planId: plan.id,
+          status: "ACTIVE"
+        })
+      );
+      return "membership_exists";
+    });
+
     await check("redemption verifies ownership", async () => {
       const entitlementId = created.entitlementIds[0]!;
       await expectCode("entitlement_not_found", () =>
@@ -519,6 +645,27 @@ async function main() {
       const count = await prisma.plusRedemption.count({ where: { idempotencyKey: key } });
       assert(count === 1, `expected one redemption row, found ${count}`);
       return `rows=${count}`;
+    });
+
+    await check("a different idempotency key cannot redeem the same entitlement twice", async () => {
+      const entitlementId = created.entitlementIds[0]!;
+      await expectCode("already_redeemed", () =>
+        membershipService.redeemEntitlement(customer.id, {
+          entitlementId,
+          idempotencyKey: `${prefix}-redeem-second-key`,
+          reference: "second redemption"
+        })
+      );
+      const count = await prisma.plusRedemption.count({ where: { entitlementId } });
+      assert(count === 1, `expected one redemption for the entitlement, found ${count}`);
+      return `entitlement redemption rows=${count}`;
+    });
+
+    await check("duplicate entitlement code is rejected", async () => {
+      await expectCode("entitlement_exists", () =>
+        membershipService.grantEntitlement(actor, membership.id, { code: "free-delivery" })
+      );
+      return "entitlement_exists";
     });
 
     await check("idempotency key cannot be reused for another entitlement", async () => {
@@ -568,13 +715,77 @@ async function main() {
       return "entitlement_not_active";
     });
 
+    await check("redemption refuses a cancelled membership", async () => {
+      const entitlement = await membershipService.grantEntitlement(actor, membership.id, { code: "cancelled-membership-benefit" });
+      created.entitlementIds.push(entitlement.id);
+      await prisma.plusMembership.update({ where: { id: membership.id }, data: { status: "CANCELLED", cancelledAt: new Date() } });
+      try {
+        await expectCode("membership_not_active", () =>
+          membershipService.redeemEntitlement(customer.id, {
+            entitlementId: entitlement.id,
+            idempotencyKey: `${prefix}-cancelled-membership`,
+            reference: "cancelled-membership"
+          })
+        );
+      } finally {
+        await prisma.plusMembership.update({ where: { id: membership.id }, data: { status: "ACTIVE", cancelledAt: null } });
+      }
+      return "membership_not_active";
+    });
+
+    await check("redemption refuses a membership whose period has ended", async () => {
+      const entitlement = await membershipService.grantEntitlement(actor, membership.id, { code: "ended-period-benefit" });
+      created.entitlementIds.push(entitlement.id);
+      await prisma.plusMembership.update({
+        where: { id: membership.id },
+        data: { currentPeriodEnd: new Date(now.getTime() - 60_000) }
+      });
+      try {
+        await expectCode("membership_expired", () =>
+          membershipService.redeemEntitlement(customer.id, {
+            entitlementId: entitlement.id,
+            idempotencyKey: `${prefix}-ended-period`,
+            reference: "ended-period"
+          })
+        );
+      } finally {
+        await prisma.plusMembership.update({ where: { id: membership.id }, data: { currentPeriodEnd: null } });
+      }
+      return "membership_expired";
+    });
+
+    await check("concurrent promotion approve and reject cannot both succeed", async () => {
+      const key = `${prefix}-concurrent-promotion`;
+      created.promotionKeys.push(key);
+      const promotion = await promotionService.createPromotion(actor, {
+        key,
+        kind: "SPONSORED",
+        title: "Concurrent review",
+        body: "Exactly one reviewer decision must win.",
+        sponsorName: "Concurrency Sponsor",
+        disclosureLabel: "Sponsored"
+      });
+      await promotionService.submitPromotion(actor, promotion.id);
+      const outcomes = await Promise.allSettled([
+        promotionService.approvePromotion(actor, promotion.id),
+        promotionService.rejectPromotion(actor, promotion.id, { reason: "Concurrent rejection." })
+      ]);
+      const fulfilled = outcomes.filter((outcome) => outcome.status === "fulfilled");
+      const rejected = outcomes.filter((outcome) => outcome.status === "rejected");
+      assert(fulfilled.length === 1, `expected exactly one winning transition, got ${fulfilled.length}`);
+      assert(rejected.length === 1, `expected exactly one losing transition, got ${rejected.length}`);
+      const stored = await prisma.plusPromotion.findUniqueOrThrow({ where: { id: promotion.id }, select: { status: true } });
+      assert(stored.status === "APPROVED" || stored.status === "REJECTED", `unexpected final status ${stored.status}`);
+      return `one winner, final status=${stored.status}`;
+    });
+
     await check("audited Plus+ actions create AuditLog rows", async () => {
       const actions = await prisma.auditLog.findMany({
         where: {
           actorId: { in: created.userIds },
           entity: { in: ["PlusContentCard", "PlusPlan", "PlusBenefit", "PlusPromotion", "PlusMembership", "PlusRedemption"] }
         },
-        select: { action: true, entity: true }
+        select: { action: true, entity: true, metadata: true }
       });
       const has = (action: string, entity: string) => actions.some((row) => row.action === action && row.entity === entity);
       assert(has("plus.content.published", "PlusContentCard"), "missing content publish audit");
@@ -583,7 +794,32 @@ async function main() {
       assert(has("plus.promotion.published", "PlusPromotion"), "missing promotion publish audit");
       assert(has("plus.membership.created", "PlusMembership"), "missing membership creation audit");
       assert(has("plus.redemption.redeemed", "PlusRedemption"), "missing redemption audit");
-      return `${actions.length} audit row(s) across six entities`;
+
+      const createdPlanAudit = actions.find(
+        (row) =>
+          row.action === "plus.plan.created" &&
+          row.entity === "PlusPlan" &&
+          (row.metadata as Record<string, any> | null)?.code === planCode
+      );
+      const createdMeta = createdPlanAudit?.metadata as Record<string, any> | null | undefined;
+      assert(createdMeta?.priceMinor?.from === null, "plan create audit missing old price null");
+      assert(createdMeta?.priceMinor?.to === "500000", "plan create audit missing new price");
+      assert(createdMeta?.paidActivationApproved?.from === false, "plan create audit missing old paid flag");
+      assert(createdMeta?.paidActivationApproved?.to === false, "plan create audit missing new paid flag");
+
+      const updatedPlanAudit = actions.find(
+        (row) =>
+          row.action === "plus.plan.updated" &&
+          row.entity === "PlusPlan" &&
+          (row.metadata as Record<string, any> | null)?.code === planCode &&
+          (row.metadata as Record<string, any> | null)?.paidActivationApproved?.to === true
+      );
+      const updatedMeta = updatedPlanAudit?.metadata as Record<string, any> | null | undefined;
+      assert(updatedMeta?.paidActivationApproved?.from === false, "plan update audit missing old paid flag");
+      assert(updatedMeta?.paidActivationApproved?.to === true, "plan update audit missing new paid flag");
+      assert(updatedMeta?.priceMinor?.from === "500000", "plan update audit missing old price");
+      assert(updatedMeta?.priceMinor?.to === "500000", "plan update audit missing new price");
+      return `${actions.length} audit row(s) across six entities with plan old/new values`;
     });
 
     return { target, prefix };

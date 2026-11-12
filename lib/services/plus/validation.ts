@@ -151,12 +151,16 @@ export function marketplaceCountryCodes(): string[] {
 }
 
 
+function isProjectPath(value: string): boolean {
+  return value.startsWith("/") && !value.startsWith("//") && !value.startsWith("/\\");
+}
+
 export function isSafeImageUrl(value: string): boolean {
-  if (value.startsWith("/") && !value.startsWith("//")) return true;
-  if (!/^https?:\/\//i.test(value)) return false;
+  if (isProjectPath(value)) return true;
+  if (!/^https:\/\//i.test(value)) return false;
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    return url.protocol === "https:";
   } catch {
     return false;
   }
@@ -169,7 +173,7 @@ export function isSafeHref(value: string): boolean {
   if (!trimmed) return false;
   const lower = trimmed.toLowerCase();
   if (lower.startsWith("javascript:") || lower.startsWith("vbscript:") || lower.startsWith("data:")) return false;
-  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return true;
+  if (isProjectPath(trimmed)) return true;
   if (!/^https:\/\//i.test(trimmed)) return false;
   try {
     const url = new URL(trimmed);
@@ -184,7 +188,7 @@ export function isSafeHref(value: string): boolean {
 export function assertImageUrl(value: unknown, field = "imageUrl"): string {
   const text = requiredText(value, field, 2000);
   if (!isSafeImageUrl(text)) {
-    throw new ApiError(400, "invalid_url", `${field} must be a project path starting with / or an http(s) URL.`);
+    throw new ApiError(400, "invalid_url", `${field} must be a project path starting with / or an https URL.`);
   }
   return text;
 }

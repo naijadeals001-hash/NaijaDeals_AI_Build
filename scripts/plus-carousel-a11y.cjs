@@ -132,18 +132,34 @@ async function main() {
     browser = await chromium.launch(launchOptions);
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
     await page.goto(`${BASE}/naijashop/plus`, { waitUntil: "networkidle", timeout: 30_000 });
+    await page.waitForTimeout(400);
+    // Seed data is configuration, not a fixture. Count whatever is published
+    // before adding this run's own cards so the assertions stay independent of
+    // a 0, 1 or 10-card configured rail.
+    const baselineCards = await page.locator("[data-plus-awareness-card]").count();
 
     await insertCards(client, 1);
     await page.reload({ waitUntil: "networkidle" });
     await page.waitForTimeout(800);
 
-    await check("non-overflowing rail renders zero arrows", async () => {
-      const cards = await page.locator("[data-plus-awareness-card]").count();
-      const arrows = await page.locator("[data-plus-carousel-arrow]").count();
-      assert(cards === 1, `expected one awareness card, found ${cards}`);
-      assert(arrows === 0, `expected zero arrows, found ${arrows}`);
-      return `cards=1 arrows=0`;
+    const firstOverflow = await page.evaluate(() => {
+      const track = document.querySelector("[data-plus-carousel-track]");
+      return track instanceof HTMLElement ? Math.max(0, track.scrollWidth - track.clientWidth) : 0;
     });
+    if (firstOverflow <= 2) {
+      await check("non-overflowing rail renders zero arrows", async () => {
+        const cards = await page.locator("[data-plus-awareness-card]").count();
+        const arrows = await page.locator("[data-plus-carousel-arrow]").count();
+        assert(cards === baselineCards + 1, `expected ${baselineCards + 1} awareness cards, found ${cards}`);
+        assert(arrows === 0, `expected zero arrows, found ${arrows}`);
+        return `cards=${cards} arrows=0`;
+      });
+    } else {
+      skip(
+        "non-overflowing rail renders zero arrows",
+        `configured baseline already has ${baselineCards} card(s) and overflows; the rule is checked by plus-honesty-tests`
+      );
+    }
 
     await insertCards(client, 5, 1);
     await page.reload({ waitUntil: "networkidle" });
@@ -155,11 +171,11 @@ async function main() {
       const arrows = await page.locator("[data-plus-carousel-arrow]").count();
       const prev = await page.locator('[data-plus-carousel-arrow="prev"]').getAttribute("aria-disabled");
       const next = await page.locator('[data-plus-carousel-arrow="next"]').getAttribute("aria-disabled");
-      assert(cards === 6, `expected six awareness cards, found ${cards}`);
+      assert(cards === baselineCards + 6, `expected ${baselineCards + 6} awareness cards, found ${cards}`);
       assert(arrows === 2, `expected two arrows, found ${arrows}`);
       assert(prev === "true", `previous arrow aria-disabled=${prev}`);
       assert(next === "false", `next arrow aria-disabled=${next}`);
-      return `cards=6 arrows=2 prev=${prev} next=${next}`;
+      return `cards=${cards} (baseline ${baselineCards} + 6 fixture) arrows=2 prev=${prev} next=${next}`;
     });
 
     await check("keyboard Home/End/Arrow move the focused track", async () => {

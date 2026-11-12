@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/api-error";
 import type { SessionUser } from "@/lib/auth/session";
 import { recordAudit } from "@/lib/services/core/audit.service";
+import { hasPermission } from "@/lib/auth/permissions";
 import { requirePlusPermission } from "./access";
 import {
   assertImageUrl,
@@ -20,9 +21,9 @@ import {
 /**
  * Plus+ awareness-card configuration.
  *
- * Create/update only reach DRAFT. Publication and archival are separate
- * operations guarded by `plus:content:publish`, so a content editor cannot make
- * their own copy public.
+ * Creation starts as DRAFT and draft editing needs `plus:content:write`.
+ * Editing a PUBLISHED card needs `plus:content:publish`, and publication,
+ * archival and reordering of published rows are separate publisher actions.
  */
 
 const CONTENT_STATUSES: readonly PlusPublishStatus[] = ["DRAFT", "PUBLISHED", "ARCHIVED"];
@@ -40,6 +41,21 @@ function duplicateKey(error: unknown, entity: string): never {
     throw new ApiError(409, "duplicate_key", `A ${entity} with that key already exists.`);
   }
   throw error;
+}
+
+/**
+ * Editing a PUBLISHED row is a publication action. A writer may prepare drafts,
+ * but only a publisher may alter live copy; otherwise an editor could replace a
+ * reviewed card without any second approval.
+ */
+function requirePublishedEditPermission(actor: SessionUser): void {
+  if (!hasPermission(actor, "plus:content:publish")) {
+    throw new ApiError(403, "published_requires_publisher", "Editing published content requires the plus:content:publish permission.");
+  }
+}
+
+function stateChanged(): never {
+  throw new ApiError(409, "state_changed", "This record changed while the action was being applied. Reload and try again.");
 }
 
 async function findCard(id: string): Promise<PlusContentCard> {
@@ -80,6 +96,11 @@ export async function createContent(actor: SessionUser, input: Record<string, un
   const endsAt = parseOptionalDate(input.endsAt, "endsAt");
   assertWindow(startsAt, endsAt);
 
+  const sortOrder =
+    input.sortOrder === undefined || input.sortOrder === null || input.sortOrder === ""
+      ? ((await prisma.plusContentCard.aggregate({ _max: { sortOrder: true } }))._max.sortOrder ?? -10) + 10
+      : parseSortOrder(input.sortOrder);
+
   try {
     const card = await prisma.plusContentCard.create({
       data: {
@@ -90,7 +111,7 @@ export async function createContent(actor: SessionUser, input: Record<string, un
         imageAlt: requiredText(input.imageAlt, "imageAlt", 400),
         href: assertLinkUrl(input.href),
         serviceKey: assertServiceKey(input.serviceKey),
-        sortOrder: parseSortOrder(input.sortOrder),
+        sortOrder,
         status: "DRAFT",
         language: parseLanguage(input.language),
         countries: normaliseCountries(input.countries),
@@ -114,8 +135,9 @@ export async function createContent(actor: SessionUser, input: Record<string, un
 }
 
 export async function updateContent(actor: SessionUser, id: string, input: Record<string, unknown>): Promise<PlusContentCard> {
-  requirePlusPermission(actor, "plus:content:write");
   const existing = await findCard(id);
+  if (existing.status === "PUBLISHED") requirePublishedEditPermission(actor);
+  else requirePlusPermission(actor, "plus:content:write");
   if (input.status !== undefined) {
     throw new ApiError(400, "status_via_publish", "Status changes use the publish or archive route.");
   }
@@ -172,7 +194,13 @@ export async function updateContent(actor: SessionUser, id: string, input: Recor
   const endsAt = data.endsAt !== undefined ? (data.endsAt as Date | null) : existing.endsAt;
   assertWindow(startsAt, endsAt);
 
-  const card = await prisma.plusContentCard.update({ where: { id }, data });
+  let card: PlusContentCard;
+  try {
+    card = await prisma.plusContentCard.update({ where: { id, status: existing.status }, data });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") stateChanged();
+    throw error;
+  }
   await recordAudit({
     actorId: actor.id,
     action: "plus.content.updated",
@@ -189,10 +217,12 @@ export async function publishContent(actor: SessionUser, id: string): Promise<Pl
   assertPublishable(existing);
   if (existing.status === "PUBLISHED") return existing;
 
-  const card = await prisma.plusContentCard.update({
-    where: { id },
-    data: { status: "PUBLISHED", updatedById: actor.id }
+  const updated = await prisma.plusContentCard.updateMany({
+    where: { id, status: existing.status },
+    data: { status: "PUBLISHED", updatedById: actor.id, updatedAt: new Date() }
   });
+  if (updated.count === 0) stateChanged();
+  const card = await prisma.plusContentCard.findUniqueOrThrow({ where: { id } });
   await recordAudit({
     actorId: actor.id,
     action: "plus.content.published",
@@ -208,10 +238,12 @@ export async function archiveContent(actor: SessionUser, id: string): Promise<Pl
   const existing = await findCard(id);
   if (existing.status === "ARCHIVED") return existing;
 
-  const card = await prisma.plusContentCard.update({
-    where: { id },
-    data: { status: "ARCHIVED", updatedById: actor.id }
+  const result = await prisma.plusContentCard.updateMany({
+    where: { id, status: existing.status },
+    data: { status: "ARCHIVED", updatedById: actor.id, updatedAt: new Date() }
   });
+  if (result.count === 0) stateChanged();
+  const card = await prisma.plusContentCard.findUniqueOrThrow({ where: { id } });
   await recordAudit({
     actorId: actor.id,
     action: "plus.content.archived",
@@ -223,7 +255,6 @@ export async function archiveContent(actor: SessionUser, id: string): Promise<Pl
 }
 
 export async function reorderContent(actor: SessionUser, rawIds: unknown): Promise<PlusContentCard[]> {
-  requirePlusPermission(actor, "plus:content:write");
   if (!Array.isArray(rawIds) || rawIds.length === 0) {
     throw new ApiError(400, "validation_error", "ids must be a non-empty array of content card ids.");
   }
@@ -235,11 +266,14 @@ export async function reorderContent(actor: SessionUser, rawIds: unknown): Promi
   });
   if (new Set(ids).size !== ids.length) throw new ApiError(400, "duplicate_id", "ids must not contain duplicates.");
 
-  const found = await prisma.plusContentCard.findMany({ where: { id: { in: ids } }, select: { id: true } });
+  const found = await prisma.plusContentCard.findMany({ where: { id: { in: ids } }, select: { id: true, status: true } });
   if (found.length !== ids.length) {
     const missing = ids.filter((id) => !found.some((row) => row.id === id));
     throw new ApiError(404, "content_not_found", `Unknown content card id(s): ${missing.join(", ")}.`);
   }
+
+  if (found.some((row) => row.status === "PUBLISHED")) requirePublishedEditPermission(actor);
+  else requirePlusPermission(actor, "plus:content:write");
 
   const updated = await prisma.$transaction(
     ids.map((id, index) =>

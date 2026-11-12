@@ -86,11 +86,16 @@ export async function getPlusAvailability(now: Date = new Date()): Promise<PlusA
     const priced = plan.priceMinor !== null && plan.priceMinor > BigInt(0);
     const term = effectiveTerm(plan.terms, now);
     if (priced && (!plan.paidActivationApproved || !term)) continue;
+    // Public prices come only from the approved term. A mutable plan row cannot
+    // change what customers see after activation.
+    if (priced) {
+      if (!term || term.priceMinor === null || term.priceMinor !== plan.priceMinor || term.currency !== plan.currency) continue;
+    }
     if (priced && plan.paidActivationApproved && term) anyPaidActivationApproved = true;
 
-    const displayMinor = priced ? term?.priceMinor ?? plan.priceMinor : plan.priceMinor;
-    const currency = priced && term ? term.currency : plan.currency;
-    const billingPeriod = term?.billingPeriod ?? plan.billingPeriod;
+    const displayMinor = priced ? (term?.priceMinor ?? null) : plan.priceMinor;
+    const currency = priced ? (term?.currency ?? plan.currency) : plan.currency;
+    const billingPeriod = priced ? (term?.billingPeriod ?? null) : plan.billingPeriod;
     const entry: PlusAvailablePlan = {
       id: plan.id,
       code: plan.code,

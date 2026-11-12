@@ -42,6 +42,21 @@ function parseKind(value: unknown): PlusPromotionKind {
   return value as PlusPromotionKind;
 }
 
+function assertSponsoredDisclosure(label: string): string {
+  const trimmed = label.trim();
+  if (/^naijadeals$/i.test(trimmed)) {
+    throw new ApiError(400, "invalid_disclosure", "A sponsored disclosure cannot be labelled NaijaDeals.");
+  }
+  if (!/sponsored|advertisement/i.test(trimmed)) {
+    throw new ApiError(400, "invalid_disclosure", 'A sponsored disclosure must contain "Sponsored" or "Advertisement".');
+  }
+  return trimmed;
+}
+
+function stateChanged(): never {
+  throw new ApiError(409, "state_changed", "This promotion changed while the action was being applied. Reload and try again.");
+}
+
 export async function getPromotion(id: string): Promise<PlusPromotion> {
   const promotion = await prisma.plusPromotion.findUnique({ where: { id } });
   if (!promotion) throw new ApiError(404, "not_found", "Plus+ promotion not found.");
@@ -87,6 +102,8 @@ export async function createPromotion(actor: SessionUser, input: Record<string, 
   const endsAt = parseOptionalDate(input.endsAt, "endsAt");
   assertWindow(startsAt, endsAt);
   const media = imagePair(input.imageUrl, input.imageAlt);
+  const requestedDisclosure = optionalText(input.disclosureLabel, "disclosureLabel", 60) ?? "Sponsored";
+  const disclosureLabel = kind === "SPONSORED" ? assertSponsoredDisclosure(requestedDisclosure) : requestedDisclosure;
 
   try {
     const promotion = await prisma.plusPromotion.create({
@@ -103,7 +120,7 @@ export async function createPromotion(actor: SessionUser, input: Record<string, 
         startsAt,
         endsAt,
         sponsorName,
-        disclosureLabel: optionalText(input.disclosureLabel, "disclosureLabel", 60) ?? "Sponsored",
+        disclosureLabel,
         campaignRef: optionalText(input.campaignRef, "campaignRef", 200),
         sortOrder: parseSortOrder(input.sortOrder)
       }
@@ -171,7 +188,8 @@ export async function updatePromotion(actor: SessionUser, id: string, input: Rec
     changed.push("sponsorName");
   }
   if ("disclosureLabel" in input) {
-    data.disclosureLabel = optionalText(input.disclosureLabel, "disclosureLabel", 60) ?? "Sponsored";
+    const label = optionalText(input.disclosureLabel, "disclosureLabel", 60) ?? "Sponsored";
+    data.disclosureLabel = existing.kind === "SPONSORED" ? assertSponsoredDisclosure(label) : label;
     changed.push("disclosureLabel");
   }
   if ("campaignRef" in input) {
@@ -196,7 +214,12 @@ export async function updatePromotion(actor: SessionUser, id: string, input: Rec
   const endsAt = data.endsAt !== undefined ? (data.endsAt as Date | null) : existing.endsAt;
   assertWindow(startsAt, endsAt);
 
-  const promotion = await prisma.plusPromotion.update({ where: { id }, data });
+  const updated = await prisma.plusPromotion.updateMany({
+    where: { id, status: existing.status },
+    data: { ...data, updatedAt: new Date() }
+  });
+  if (updated.count === 0) stateChanged();
+  const promotion = await prisma.plusPromotion.findUniqueOrThrow({ where: { id } });
   await recordAudit({
     actorId: actor.id,
     action: "plus.promotion.updated",
@@ -215,10 +238,12 @@ export async function submitPromotion(actor: SessionUser, id: string): Promise<P
     if (existing.status !== "DRAFT" && existing.status !== "REJECTED") {
       throw new ApiError(409, "invalid_transition", "Only a DRAFT or REJECTED sponsored promotion can be submitted for review.");
     }
-    const promotion = await prisma.plusPromotion.update({
-      where: { id },
-      data: { status: "PENDING_REVIEW", approvedAt: null, approvedById: null }
+    const updated = await prisma.plusPromotion.updateMany({
+      where: { id, status: existing.status },
+      data: { status: "PENDING_REVIEW", approvedAt: null, approvedById: null, updatedAt: new Date() }
     });
+    if (updated.count === 0) stateChanged();
+    const promotion = await prisma.plusPromotion.findUniqueOrThrow({ where: { id } });
     await recordAudit({
       actorId: actor.id,
       action: "plus.promotion.submitted",
@@ -238,10 +263,12 @@ export async function submitPromotion(actor: SessionUser, id: string): Promise<P
 }
 
 async function approveHousePromotion(actor: SessionUser, promotion: PlusPromotion, action: string): Promise<PlusPromotion> {
-  const approved = await prisma.plusPromotion.update({
-    where: { id: promotion.id },
-    data: { status: "APPROVED", approvedAt: new Date(), approvedById: actor.id }
+  const updated = await prisma.plusPromotion.updateMany({
+    where: { id: promotion.id, status: promotion.status },
+    data: { status: "APPROVED", approvedAt: new Date(), approvedById: actor.id, updatedAt: new Date() }
   });
+  if (updated.count === 0) stateChanged();
+  const approved = await prisma.plusPromotion.findUniqueOrThrow({ where: { id: promotion.id } });
   await recordAudit({
     actorId: actor.id,
     action,
@@ -276,11 +303,19 @@ export async function approvePromotion(actor: SessionUser, id: string): Promise<
   if (!disclosureLabel) {
     throw new ApiError(409, "disclosure_required", "A sponsored promotion needs a disclosure label before approval.");
   }
+  try {
+    assertSponsoredDisclosure(disclosureLabel);
+  } catch (error) {
+    if (error instanceof ApiError) throw new ApiError(409, error.code, error.message);
+    throw error;
+  }
 
-  const approved = await prisma.plusPromotion.update({
-    where: { id },
-    data: { status: "APPROVED", approvedAt: new Date(), approvedById: actor.id }
+  const updated = await prisma.plusPromotion.updateMany({
+    where: { id, status: "PENDING_REVIEW" },
+    data: { status: "APPROVED", approvedAt: new Date(), approvedById: actor.id, updatedAt: new Date() }
   });
+  if (updated.count === 0) stateChanged();
+  const approved = await prisma.plusPromotion.findUniqueOrThrow({ where: { id } });
   await recordAudit({
     actorId: actor.id,
     action: "plus.promotion.approved",
@@ -303,10 +338,12 @@ export async function rejectPromotion(actor: SessionUser, id: string, input: Rec
   }
   const reason = optionalText(input.reason, "reason", 500);
 
-  const rejected = await prisma.plusPromotion.update({
-    where: { id },
-    data: { status: "REJECTED", approvedAt: null, approvedById: null }
+  const updated = await prisma.plusPromotion.updateMany({
+    where: { id, status: "PENDING_REVIEW" },
+    data: { status: "REJECTED", approvedAt: null, approvedById: null, updatedAt: new Date() }
   });
+  if (updated.count === 0) stateChanged();
+  const rejected = await prisma.plusPromotion.findUniqueOrThrow({ where: { id } });
   await recordAudit({
     actorId: actor.id,
     action: "plus.promotion.rejected",
@@ -331,16 +368,24 @@ export async function publishPromotion(actor: SessionUser, id: string): Promise<
     if (!existing.disclosureLabel?.trim()) {
       throw new ApiError(409, "disclosure_required", "A sponsored promotion needs a disclosure label before publication.");
     }
+    try {
+      assertSponsoredDisclosure(existing.disclosureLabel);
+    } catch (error) {
+      if (error instanceof ApiError) throw new ApiError(409, error.code, error.message);
+      throw error;
+    }
   }
   if (existing.imageUrl && !existing.imageAlt?.trim()) {
     throw new ApiError(400, "promotion_incomplete", "A promotion image needs alternative text before publication.");
   }
   assertWindow(existing.startsAt, existing.endsAt);
 
-  const promotion = await prisma.plusPromotion.update({
-    where: { id },
-    data: { status: "PUBLISHED" }
+  const updated = await prisma.plusPromotion.updateMany({
+    where: { id, status: "APPROVED" },
+    data: { status: "PUBLISHED", updatedAt: new Date() }
   });
+  if (updated.count === 0) stateChanged();
+  const promotion = await prisma.plusPromotion.findUniqueOrThrow({ where: { id } });
   await recordAudit({
     actorId: actor.id,
     action: "plus.promotion.published",
@@ -356,10 +401,12 @@ export async function archivePromotion(actor: SessionUser, id: string): Promise<
   const existing = await findPromotion(id);
   if (existing.status === "ARCHIVED") return existing;
 
-  const promotion = await prisma.plusPromotion.update({
-    where: { id },
-    data: { status: "ARCHIVED" }
+  const updated = await prisma.plusPromotion.updateMany({
+    where: { id, status: existing.status },
+    data: { status: "ARCHIVED", updatedAt: new Date() }
   });
+  if (updated.count === 0) stateChanged();
+  const promotion = await prisma.plusPromotion.findUniqueOrThrow({ where: { id } });
   await recordAudit({
     actorId: actor.id,
     action: "plus.promotion.archived",

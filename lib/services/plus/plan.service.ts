@@ -102,7 +102,12 @@ export async function createPlan(actor: SessionUser, input: Record<string, unkno
       action: "plus.plan.created",
       entity: "PlusPlan",
       entityId: plan.id,
-      metadata: { code: plan.code, currency: plan.currency, priceMinor: plan.priceMinor?.toString() ?? null }
+      metadata: {
+        code: plan.code,
+        currency: plan.currency,
+        priceMinor: { from: null, to: plan.priceMinor?.toString() ?? null },
+        paidActivationApproved: { from: false, to: plan.paidActivationApproved }
+      }
     });
     return plan;
   } catch (error) {
@@ -127,20 +132,44 @@ export async function updatePlan(actor: SessionUser, id: string, input: Record<s
     data.description = requiredText(input.description, "description", 2000);
     changed.push("description");
   }
+
+  const nextCurrency = "currency" in input ? normaliseCurrency(input.currency) : existing.currency;
+  const nextPriceMinor = "priceMinor" in input ? parsePriceMinor(input.priceMinor) : existing.priceMinor;
+  const nextBillingPeriod = "billingPeriod" in input ? parseBillingPeriod(input.billingPeriod, null) : existing.billingPeriod;
+  const nextPaidActivationApproved =
+    "paidActivationApproved" in input
+      ? parseBoolean(input.paidActivationApproved, "paidActivationApproved")
+      : existing.paidActivationApproved;
+
+  if (existing.status === "ACTIVE") {
+    const frozen: string[] = [];
+    if (nextCurrency !== existing.currency) frozen.push("currency");
+    if (nextPriceMinor !== existing.priceMinor) frozen.push("priceMinor");
+    if (nextBillingPeriod !== existing.billingPeriod) frozen.push("billingPeriod");
+    if (nextPaidActivationApproved !== existing.paidActivationApproved) frozen.push("paidActivationApproved");
+    if (frozen.length > 0) {
+      throw new ApiError(
+        409,
+        "terms_frozen",
+        `Active plan terms are frozen; create a new approved plan or term instead of changing ${frozen.join(", ")}.`
+      );
+    }
+  }
+
   if ("currency" in input) {
-    data.currency = normaliseCurrency(input.currency);
+    data.currency = nextCurrency;
     changed.push("currency");
   }
   if ("priceMinor" in input) {
-    data.priceMinor = parsePriceMinor(input.priceMinor);
+    data.priceMinor = nextPriceMinor;
     changed.push("priceMinor");
   }
   if ("billingPeriod" in input) {
-    data.billingPeriod = parseBillingPeriod(input.billingPeriod, null);
+    data.billingPeriod = nextBillingPeriod;
     changed.push("billingPeriod");
   }
   if ("paidActivationApproved" in input) {
-    data.paidActivationApproved = parseBoolean(input.paidActivationApproved, "paidActivationApproved");
+    data.paidActivationApproved = nextPaidActivationApproved;
     changed.push("paidActivationApproved");
   }
   if ("sortOrder" in input) {
@@ -157,17 +186,30 @@ export async function updatePlan(actor: SessionUser, id: string, input: Record<s
     }
   }
 
-  const plan = await prisma.plusPlan.update({
-    where: { id },
-    data,
-    include: { countries: { orderBy: { countryCode: "asc" } }, terms: { orderBy: { version: "desc" } } }
-  });
+  let plan: PlanWithConfiguration;
+  try {
+    plan = await prisma.plusPlan.update({
+      where: { id, status: existing.status },
+      data,
+      include: { countries: { orderBy: { countryCode: "asc" } }, terms: { orderBy: { version: "desc" } } }
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      throw new ApiError(409, "state_changed", "This plan changed while the action was being applied. Reload and try again.");
+    }
+    throw error;
+  }
   await recordAudit({
     actorId: actor.id,
     action: "plus.plan.updated",
     entity: "PlusPlan",
     entityId: plan.id,
-    metadata: { code: plan.code, fields: changed }
+    metadata: {
+      code: plan.code,
+      fields: changed,
+      priceMinor: { from: existing.priceMinor?.toString() ?? null, to: plan.priceMinor?.toString() ?? null },
+      paidActivationApproved: { from: existing.paidActivationApproved, to: plan.paidActivationApproved }
+    }
   });
   return plan;
 }
@@ -307,6 +349,20 @@ export async function activatePlan(actor: SessionUser, planId: string): Promise<
         409,
         "paid_activation_not_approved",
         "This plan has a price but no approved, currently effective term. Approve the commercial terms before activation."
+      );
+    }
+    if (term.priceMinor === null || term.priceMinor !== plan.priceMinor) {
+      throw new ApiError(
+        409,
+        "paid_activation_not_approved",
+        "The approved term must freeze the same price as the plan before a priced plan can activate."
+      );
+    }
+    if (term.currency !== plan.currency) {
+      throw new ApiError(
+        409,
+        "paid_activation_not_approved",
+        "The approved term currency must match the plan currency before a priced plan can activate."
       );
     }
     effectiveTermId = term.id;

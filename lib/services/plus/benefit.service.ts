@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/api-error";
 import type { SessionUser } from "@/lib/auth/session";
 import { recordAudit } from "@/lib/services/core/audit.service";
+import { hasPermission } from "@/lib/auth/permissions";
 import { requirePlusPermission } from "./access";
 import {
   assertWindow,
@@ -46,6 +47,16 @@ async function findBenefit(id: string): Promise<BenefitWithPlan> {
   const benefit = await prisma.plusBenefit.findUnique({ where: { id }, include: { plan: true } });
   if (!benefit) throw new ApiError(404, "not_found", "Plus+ benefit not found.");
   return benefit;
+}
+
+function requirePublishedEditPermission(actor: SessionUser): void {
+  if (!hasPermission(actor, "plus:content:publish")) {
+    throw new ApiError(403, "published_requires_publisher", "Editing published benefits requires the plus:content:publish permission.");
+  }
+}
+
+function stateChanged(): never {
+  throw new ApiError(409, "state_changed", "This benefit changed while the action was being applied. Reload and try again.");
 }
 
 export async function listBenefits(options: { status?: unknown } = {}): Promise<BenefitWithPlan[]> {
@@ -102,8 +113,9 @@ export async function createBenefit(actor: SessionUser, input: Record<string, un
 }
 
 export async function updateBenefit(actor: SessionUser, id: string, input: Record<string, unknown>): Promise<BenefitWithPlan> {
-  requirePlusPermission(actor, "plus:content:write");
   const existing = await findBenefit(id);
+  if (existing.status === "PUBLISHED") requirePublishedEditPermission(actor);
+  else requirePlusPermission(actor, "plus:content:write");
   if (input.status !== undefined) {
     throw new ApiError(400, "status_via_publish", "Status changes use the publish or archive route.");
   }
@@ -153,7 +165,17 @@ export async function updateBenefit(actor: SessionUser, id: string, input: Recor
   const endsAt = data.endsAt !== undefined ? (data.endsAt as Date | null) : existing.endsAt;
   assertWindow(startsAt, endsAt);
 
-  const benefit = await prisma.plusBenefit.update({ where: { id }, data, include: { plan: true } });
+  let benefit: BenefitWithPlan;
+  try {
+    benefit = await prisma.plusBenefit.update({
+      where: { id, status: existing.status },
+      data,
+      include: { plan: true }
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") stateChanged();
+    throw error;
+  }
   await recordAudit({
     actorId: actor.id,
     action: "plus.benefit.updated",
@@ -179,11 +201,12 @@ export async function publishBenefit(actor: SessionUser, id: string): Promise<Be
   }
   assertWindow(existing.startsAt, existing.endsAt);
 
-  const benefit = await prisma.plusBenefit.update({
-    where: { id },
-    data: { status: "PUBLISHED" },
-    include: { plan: true }
+  const updated = await prisma.plusBenefit.updateMany({
+    where: { id, status: existing.status },
+    data: { status: "PUBLISHED", updatedAt: new Date() }
   });
+  if (updated.count === 0) stateChanged();
+  const benefit = await prisma.plusBenefit.findUniqueOrThrow({ where: { id }, include: { plan: true } });
   await recordAudit({
     actorId: actor.id,
     action: "plus.benefit.published",
@@ -199,11 +222,12 @@ export async function archiveBenefit(actor: SessionUser, id: string): Promise<Be
   const existing = await findBenefit(id);
   if (existing.status === "ARCHIVED") return existing;
 
-  const benefit = await prisma.plusBenefit.update({
-    where: { id },
-    data: { status: "ARCHIVED" },
-    include: { plan: true }
+  const updated = await prisma.plusBenefit.updateMany({
+    where: { id, status: existing.status },
+    data: { status: "ARCHIVED", updatedAt: new Date() }
   });
+  if (updated.count === 0) stateChanged();
+  const benefit = await prisma.plusBenefit.findUniqueOrThrow({ where: { id }, include: { plan: true } });
   await recordAudit({
     actorId: actor.id,
     action: "plus.benefit.archived",

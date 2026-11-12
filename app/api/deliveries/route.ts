@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createDeliveryRequest } from "@/lib/services/core/delivery.service";
-import { assertSameOrigin, jsonError, readJson, requireAdmin, requireString } from "@/lib/auth/guard";
+import { assertSameOrigin, jsonError, readJson, requireAdminPermission, requireString } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    const admin = await requireAdmin();
+    const admin = await requireAdminPermission("deliveries:write");
     const body = await readJson<Record<string, unknown>>(request);
     const fee = body.feeKobo === undefined ? undefined : BigInt(String(body.feeKobo));
     const delivery = await createDeliveryRequest({

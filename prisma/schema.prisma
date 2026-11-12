@@ -4034,14 +4034,14 @@ model PlusEntitlement {
   membership  PlusMembership   @relation(fields: [membershipId], references: [id], onDelete: Cascade)
   redemptions PlusRedemption[]
 
-  @@index([membershipId, code])
+  @@unique([membershipId, code])
 }
 
 /// One entitlement redemption. `idempotencyKey` is unique so an interrupted or
 /// retried request cannot redeem twice.
 model PlusRedemption {
   id             String   @id @default(cuid())
-  entitlementId  String
+  entitlementId  String   @unique
   userId         String
   idempotencyKey String   @unique
   reference      String
@@ -4051,7 +4051,6 @@ model PlusRedemption {
   entitlement PlusEntitlement @relation(fields: [entitlementId], references: [id], onDelete: Cascade)
 
   @@index([userId, redeemedAt])
-  @@index([entitlementId])
 }
 
 /// A genuine member benefit. Standard ecosystem services must not be recorded

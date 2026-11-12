@@ -56,9 +56,17 @@ export async function createMembership(
     throw new ApiError(400, "invalid_window", "currentPeriodEnd must be later than startedAt.");
   }
 
-  const membership = await prisma.plusMembership.create({
-    data: { userId, planId, status, startedAt, currentPeriodEnd }
-  });
+  let membership: PlusMembership;
+  try {
+    membership = await prisma.plusMembership.create({
+      data: { userId, planId, status, startedAt, currentPeriodEnd }
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new ApiError(409, "membership_exists", "This account already has an active membership on that plan.");
+    }
+    throw error;
+  }
   await recordAudit({
     actorId: actor.id,
     action: "plus.membership.created",
@@ -88,15 +96,31 @@ export async function grantEntitlement(
   }
   const metadata = parseMetadata(input.metadata);
 
-  const entitlement = await prisma.plusEntitlement.create({
-    data: {
-      membershipId,
-      code,
-      status: "ACTIVE",
-      ...(expiresAt ? { expiresAt } : {}),
-      ...(metadata ? { metadata: metadata as Prisma.InputJsonValue } : {})
-    }
+  const existingEntitlement = await prisma.plusEntitlement.findUnique({
+    where: { membershipId_code: { membershipId, code } },
+    select: { id: true }
   });
+  if (existingEntitlement) {
+    throw new ApiError(409, "entitlement_exists", "That entitlement code has already been granted to this membership.");
+  }
+
+  let entitlement: PlusEntitlement;
+  try {
+    entitlement = await prisma.plusEntitlement.create({
+      data: {
+        membershipId,
+        code,
+        status: "ACTIVE",
+        ...(expiresAt ? { expiresAt } : {}),
+        ...(metadata ? { metadata: metadata as Prisma.InputJsonValue } : {})
+      }
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new ApiError(409, "entitlement_exists", "That entitlement code has already been granted to this membership.");
+    }
+    throw error;
+  }
   await recordAudit({
     actorId: actor.id,
     action: "plus.entitlement.granted",
@@ -160,17 +184,27 @@ export async function redeemEntitlement(
 
   const entitlement = await prisma.plusEntitlement.findUnique({
     where: { id: entitlementId },
-    include: { membership: { select: { userId: true } } }
+    include: { membership: { select: { userId: true, status: true, currentPeriodEnd: true } } }
   });
   // Do not reveal another account's entitlement.
   if (!entitlement || entitlement.membership.userId !== ownerId) {
     throw new ApiError(404, "entitlement_not_found", "Plus+ entitlement not found.");
+  }
+  if (entitlement.membership.status !== "ACTIVE") {
+    throw new ApiError(409, "membership_not_active", "The membership backing this entitlement is not active.");
+  }
+  if (entitlement.membership.currentPeriodEnd && entitlement.membership.currentPeriodEnd.getTime() <= Date.now()) {
+    throw new ApiError(409, "membership_expired", "The membership period for this entitlement has ended.");
   }
   if (entitlement.status !== "ACTIVE") {
     throw new ApiError(409, "entitlement_not_active", "This entitlement is not active.");
   }
   if (entitlement.expiresAt && entitlement.expiresAt.getTime() <= Date.now()) {
     throw new ApiError(409, "entitlement_expired", "This entitlement has expired.");
+  }
+  const existingRedemption = await prisma.plusRedemption.findUnique({ where: { entitlementId } });
+  if (existingRedemption) {
+    throw new ApiError(409, "already_redeemed", "This entitlement has already been redeemed.");
   }
 
   try {
@@ -202,6 +236,10 @@ export async function redeemEntitlement(
       const existing = await prisma.plusRedemption.findUnique({ where: { idempotencyKey } });
       if (existing && existing.userId === ownerId && existing.entitlementId === entitlementId) {
         return { redemption: existing, replayed: true };
+      }
+      const byEntitlement = await prisma.plusRedemption.findUnique({ where: { entitlementId } });
+      if (byEntitlement) {
+        throw new ApiError(409, "already_redeemed", "This entitlement has already been redeemed.");
       }
       throw new ApiError(409, "idempotency_conflict", "That idempotency key was already used for a different redemption.");
     }

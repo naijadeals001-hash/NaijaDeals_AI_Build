@@ -539,6 +539,126 @@ async function main() {
       return "read 200, write 201, publish 403";
     });
 
+    const h1Content = await api(superToken, "POST", "/api/admin/plus/content", {
+      key: `${prefix}-h1-content`,
+      title: "Published content for permission test",
+      description: "This card is published before the editor/publisher boundary tests.",
+      imageUrl: "/generated/shop/hero-desktop.webp",
+      imageAlt: "Shopper carrying paper bags at an outdoor market",
+      href: "/naijashop"
+    });
+    assert(h1Content.status === 201, `H1 content fixture failed: ${h1Content.text}`);
+    const h1ContentId = String(h1Content.json?.id ?? "");
+    const h1Published = await api(superToken, "POST", `/api/admin/plus/content/${h1ContentId}/publish`);
+    assert(h1Published.status === 200, `H1 content publish failed: ${h1Published.text}`);
+
+    const h1Benefit = await api(superToken, "POST", "/api/admin/plus/benefits", {
+      key: `${prefix}-h1-benefit`,
+      title: "Published benefit for permission test",
+      description: "This benefit is published before the editor/publisher boundary tests.",
+      planId
+    });
+    assert(h1Benefit.status === 201, `H1 benefit fixture failed: ${h1Benefit.text}`);
+    const h1BenefitId = String(h1Benefit.json?.id ?? "");
+    const h1BenefitPublished = await api(superToken, "POST", `/api/admin/plus/benefits/${h1BenefitId}/publish`);
+    assert(h1BenefitPublished.status === 200, `H1 benefit publish failed: ${h1BenefitPublished.text}`);
+
+    await check("plus_editor cannot edit or reorder PUBLISHED content or benefits", async () => {
+      const editor = tokens.get("plus_editor")!;
+      const contentEdit = await api(editor, "PATCH", `/api/admin/plus/content/${h1ContentId}`, {
+        title: "Editor overwrite must be refused"
+      });
+      const benefitEdit = await api(editor, "PATCH", `/api/admin/plus/benefits/${h1BenefitId}`, {
+        title: "Editor benefit overwrite must be refused"
+      });
+      const reorder = await api(editor, "POST", "/api/admin/plus/content/reorder", {
+        ids: [h1ContentId, contentId]
+      });
+      const stored = await prisma.plusContentCard.findUnique({ where: { id: h1ContentId }, select: { title: true } });
+      assert(contentEdit.status === 403 && contentEdit.json?.code === "published_requires_publisher", `editor content edit returned ${contentEdit.status}/${contentEdit.json?.code}`);
+      assert(benefitEdit.status === 403 && benefitEdit.json?.code === "published_requires_publisher", `editor benefit edit returned ${benefitEdit.status}/${benefitEdit.json?.code}`);
+      assert(reorder.status === 403 && reorder.json?.code === "published_requires_publisher", `editor published reorder returned ${reorder.status}/${reorder.json?.code}`);
+      assert(stored?.title === "Published content for permission test", "editor changed the published title despite the refusal");
+      return "content, benefit and published reorder all 403; published title unchanged";
+    });
+
+    await check("plus_publisher can edit PUBLISHED content and benefits", async () => {
+      const publisher = tokens.get("plus_publisher")!;
+      const contentEdit = await api(publisher, "PATCH", `/api/admin/plus/content/${h1ContentId}`, {
+        description: "Publisher-approved edit."
+      });
+      const benefitEdit = await api(publisher, "PATCH", `/api/admin/plus/benefits/${h1BenefitId}`, {
+        title: "Publisher-approved benefit title"
+      });
+      const reorder = await api(publisher, "POST", "/api/admin/plus/content/reorder", {
+        ids: [h1ContentId, contentId]
+      });
+      assert(contentEdit.status === 200, `publisher content edit returned ${contentEdit.status}: ${contentEdit.text}`);
+      assert(benefitEdit.status === 200, `publisher benefit edit returned ${benefitEdit.status}: ${benefitEdit.text}`);
+      assert(reorder.status === 200, `publisher published reorder returned ${reorder.status}: ${reorder.text}`);
+      return "content, benefit and published reorder all 200";
+    });
+
+    await check("Plus+ staff roles cannot reach deliveries mutations", async () => {
+      const editor = tokens.get("plus_editor")!;
+      const admin = tokens.get("admin")!;
+      const editorCreate = await api(editor, "POST", "/api/deliveries", {
+        orderId: "permission-probe",
+        pickupAddress: "Pickup",
+        dropoffAddress: "Dropoff"
+      });
+      const editorStatus = await api(editor, "PATCH", "/api/deliveries/permission-probe/status", {
+        status: "delivered"
+      });
+      const adminCreate = await api(admin, "POST", "/api/deliveries", {});
+      const adminStatus = await api(admin, "PATCH", "/api/deliveries/permission-probe/status", {
+        status: "delivered"
+      });
+      assert(editorCreate.status === 403, `plus_editor create delivery returned ${editorCreate.status}`);
+      assert(editorStatus.status === 403, `plus_editor delivery status returned ${editorStatus.status}`);
+      assert(adminCreate.status === 400, `permitted admin did not reach validation: ${adminCreate.status} ${adminCreate.text}`);
+      assert(adminStatus.status === 404, `permitted admin did not reach the delivery handler: ${adminStatus.status} ${adminStatus.text}`);
+      return "plus_editor 403/403; permitted admin reaches validation 400 and handler 404";
+    });
+
+    await check("null and array JSON bodies return 400", async () => {
+      const nullBody = await api(superToken, "POST", "/api/admin/plus/content", null);
+      const arrayBody = await api(superToken, "POST", "/api/admin/plus/content", []);
+      assert(nullBody.status === 400 && nullBody.json?.code === "invalid_body", `null body returned ${nullBody.status}/${nullBody.json?.code}`);
+      assert(arrayBody.status === 400 && arrayBody.json?.code === "invalid_body", `array body returned ${arrayBody.status}/${arrayBody.json?.code}`);
+      return "null and array bodies -> 400 invalid_body";
+    });
+
+    await check("sponsored disclosures must be recognisable and not NaijaDeals", async () => {
+      const naijaLabel = await api(superToken, "POST", "/api/admin/plus/promotions", {
+        key: `${prefix}-bad-disclosure-naija`,
+        kind: "SPONSORED",
+        title: "Bad disclosure",
+        body: "This sponsored promotion must be refused.",
+        sponsorName: "Sponsor",
+        disclosureLabel: "NaijaDeals"
+      });
+      const genericLabel = await api(superToken, "POST", "/api/admin/plus/promotions", {
+        key: `${prefix}-bad-disclosure-generic`,
+        kind: "SPONSORED",
+        title: "Bad disclosure",
+        body: "This sponsored promotion must be refused.",
+        sponsorName: "Sponsor",
+        disclosureLabel: "Promotion"
+      });
+      const houseLabel = await api(superToken, "POST", "/api/admin/plus/promotions", {
+        key: `${prefix}-house-disclosure`,
+        kind: "HOUSE",
+        title: "House disclosure",
+        body: "House rows keep their own label.",
+        disclosureLabel: "House update"
+      });
+      assert(naijaLabel.status === 400 && naijaLabel.json?.code === "invalid_disclosure", `NaijaDeals label returned ${naijaLabel.status}/${naijaLabel.json?.code}`);
+      assert(genericLabel.status === 400 && genericLabel.json?.code === "invalid_disclosure", `generic label returned ${genericLabel.status}/${genericLabel.json?.code}`);
+      assert(houseLabel.status === 201, `house label returned ${houseLabel.status}: ${houseLabel.text}`);
+      return "NaijaDeals and generic sponsored labels refused; house label accepted";
+    });
+
     await check("audit rows record allowed actions and omit denied ones", async () => {
       // Approve a fresh sponsored promotion as the reviewer so the audit row is
       // produced by this actor, not reused from the super-admin matrix probe.

@@ -322,8 +322,8 @@ export default async function PlusPage() {
               unavailable
                 ? "Benefit availability could not be read for this request."
                 : benefitCount === 0
-                  ? "Only approved entitlements attached to an available plan appear here. That register is empty."
-                  : "Only approved entitlements attached to an available plan appear here."
+                  ? "Only benefits published for an available plan appear here. This section is empty."
+                  : "Only benefits published for an available plan appear here."
             }
             aside={<CountChip>{unavailable ? "Unavailable" : `${benefitCount} ${benefitNoun}`}</CountChip>}
           />
@@ -344,7 +344,7 @@ export default async function PlusPage() {
                 eyebrow="Benefits register · empty"
                 title="No Plus+-exclusive benefits are configured yet."
               >
-                Standard NaijaDeals services are not Plus+ benefits. When an entitlement is approved and attached to an available plan, it will appear
+                Standard NaijaDeals services are not Plus+ benefits. When a benefit is published for an available plan, it will appear
                 here with its plan and eligible countries.
               </PlusEmptyState>
             ) : (
@@ -413,7 +413,7 @@ export default async function PlusPage() {
                   All benefits, including none.
                 </h2>
                 <p className="mt-2 text-[12.5px] leading-6 text-[#4b5b51]">
-                  This is the complete public register. An entitlement can only move into it after approval, and it must name the plan it belongs to.
+                  This is the complete public register. A benefit can only move into it after publication for an available plan, and it must name the plan it belongs to.
                 </p>
               </div>
               <CountChip>Current server state</CountChip>
@@ -423,7 +423,7 @@ export default async function PlusPage() {
                 icon={<Sparkles className="h-4 w-4" aria-hidden="true" />}
                 label="Exclusive benefits"
                 value={unavailable ? "Unavailable" : `${benefitCount} published`}
-                body="No entitlement is created by visiting this page."
+                body="No benefit is created by visiting this page."
               />
               <RegisterCard
                 icon={<ListChecks className="h-4 w-4" aria-hidden="true" />}
