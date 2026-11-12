@@ -4467,6 +4467,38 @@ Honest boundaries: no membership model, plan, price, entitlement enforcement,
 redemption, Control Center Plus+ administration or advertiser/sponsorship surface
 exists. Nothing is gated by Plus+ and no payment can be taken. The page says so.
 
+## NaijaDeals Plus+ — membership foundation acceptance (2026-11-12, evening)
+
+Built and independently accepted after remediation. Landing page preserved; merchandising is
+now persistent configuration, not code.
+
+- Commits: `8986772` schema/services/admin API, `0235fb7` Control Center, `7372bfc` sidebar,
+  `7b8c835` honesty test + awareness seed, `fd9a9bf` UI contract fixes, `619d264` authz and
+  integrity fixes, `1990cbc` plan retirement.
+- Migration `20261112150000_plus_membership_foundation` + `20261112180000_plus_integrity_constraints`
+  applied to isolated `naijadeals_plus_test` and canonical `naijadeals_checkout_refund_test`
+  (both TEST-classified). `naijadeals_core` untouched.
+- Control Center `/admin/plus`: awareness CRUD with draft/publish/archive/reorder, schedule,
+  country scope; plans with frozen active terms and a paid-activation approval gate; plan
+  retirement; benefits; house/sponsored promotions with advertiser approval and mandatory
+  sponsored disclosure. Permissions are separate per function; ordinary `admin` has read/write
+  only. Editing published content requires publish permission.
+- Public `/naijashop/plus`: 10 awareness cards seeded from the canonical registry via
+  `scripts/plus-awareness-seed.ts` (idempotent, TEST-guarded); zero benefits/promotions; every
+  country "Not yet available"; no price, join or billing control.
+- Verified: `tsc` exit 0; production build in `.next-programme` exit 0 (`nIAovE072RfRQdTCOZLu9`);
+  honesty 20/20, lifecycle 37/37, admin 19/19 on the canonical DB; independent browser reviewer
+  executed every Control Center workflow through the UI (including activation → retirement) and
+  inspected 390/1440 renders; independent security reviewer closed H1/H2/M1–M3/M5/M8.
+- Canonical preview: `http://localhost:3047/naijashop/plus` and `/admin/plus` (admin redirects
+  to login when signed out), served from `.next-programme` on the TEST DB.
+- Owner decisions still required are listed in `docs/plus/commercial-decisions.md`. No price,
+  benefit, country rollout or advertiser terms are approved; checkout remains unconfigured.
+
+Security note: a read-only reviewer's redaction pattern missed a credential in `.env.txt`
+(colon-separated entry). The file is git-ignored and never tracked. The value was not repeated;
+rotate that key and remove/secure the file.
+
 ## Next executable step
 
 Owner decision required before Plus+ can progress: approve plan/price terms, eligible
