@@ -510,7 +510,7 @@ function parse(response, body) {
     check(
       "Groceries department image alt backfilled through the Control Center API",
       updated.status === 200 && updated.body?.imageAlt === GROCERIES_IMAGE_ALT,
-      `status=${updated.status} alt=${updated.body?.imageAlt ?? "none"}`
+      `status=${updated.status} previous=${department.imageAlt ?? "none"} alt=${updated.body?.imageAlt ?? "none"}`
     );
     if (updated.status === 200 && updated.body?.imageAlt === GROCERIES_IMAGE_ALT && baseline) {
       const baselineEntry = baseline.departments.find((entry) => entry.id === department.id);
