@@ -641,13 +641,13 @@ function MarketplaceBar({ categories, session }: { categories: ApiCategory[]; se
             ))}
           </select>
           <label htmlFor="shop-search" className="sr-only">
-            Search NaijaShop
+            Search Shop
           </label>
           <input
             id="shop-search"
             name="q"
             type="search"
-            placeholder="Search NaijaShop products, brands and sellers"
+            placeholder="Search products, brands and sellers"
             className="min-h-10 min-w-0 flex-1 bg-white px-3 text-sm text-ink outline-none placeholder:text-muted/70"
           />
           <button type="submit" className="grid w-11 place-items-center bg-[#f3b33d] text-[#0b1a13] transition hover:bg-[#e5a52f]" aria-label="Search">
@@ -1056,7 +1056,7 @@ export function SearchPage() {
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="font-display text-3xl font-extrabold">Search NaijaShop</h1>
+        <h1 className="font-display text-3xl font-extrabold">Search Shop</h1>
         <p className="text-sm text-muted">Results are filtered from live product inventory.</p>
       </header>
       <form
@@ -1226,7 +1226,7 @@ export function ShopCartPage() {
           <ShoppingCart className="mx-auto mb-3 h-8 w-8 text-primary" aria-hidden />
           <p className="font-display text-xl font-extrabold">Your cart is empty</p>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            Add a listing from NaijaShop to start a checkout. Your saved items and browsing history stay unchanged.
+            Add a listing from Shop to start a checkout. Your saved items and browsing history stay unchanged.
           </p>
           <Link
             href="/naijashop"
