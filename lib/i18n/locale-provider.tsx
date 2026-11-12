@@ -34,6 +34,12 @@ const ONE_YEAR = 60 * 60 * 24 * 365;
 
 function writeCookie(name: string, value: string) {
   if (typeof document === "undefined") return;
+  if (!value) {
+    // Clearing a city must remove the cookie, not store an empty selection:
+    // the homepage uses cookie presence to decide whether to ask for a city.
+    document.cookie = `${name}=; path=/; max-age=0; samesite=lax`;
+    return;
+  }
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${ONE_YEAR}; samesite=lax`;
 }
 

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ShopFooter } from "@/components/commerce/shop-footer";
 
 export const metadata: Metadata = {
   title: "NaijaShop Plus — NaijaShop",
@@ -16,7 +15,7 @@ export const metadata: Metadata = {
 export default function PlusPage() {
   return (
     <>
-      <main className="bg-white px-5 py-8 text-[#0f1111]">
+      <div className="bg-white px-5 py-8 text-[#0f1111]">
         <div className="mx-auto max-w-3xl">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#0b5c3b]">NaijaShop</p>
           <h1 className="mt-1 font-display text-[30px] font-extrabold">Plus</h1>
@@ -49,8 +48,7 @@ export default function PlusPage() {
             and we will show the announcement here and on your account page.
           </p>
         </div>
-      </main>
-      <ShopFooter />
+      </div>
     </>
   );
 }

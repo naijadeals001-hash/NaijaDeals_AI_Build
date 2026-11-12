@@ -209,7 +209,7 @@ const DISCOVER_LINKS = [
   { href: "/naijashop/deals", label: "Price drops", description: "Seller-recorded reductions only", icon: Tag },
   { href: "/naijashop/bestsellers", label: "Bestsellers", description: "Popular listings, ordered by price", icon: TrendingUp },
   { href: "/naijashop/categories", label: "All departments", description: "Browse the full directory", icon: Grid2x2 },
-  { href: "/naijashop/sellers", label: "Verified sellers", description: "Review sellers by market", icon: BadgeCheck }
+  { href: "/naijashop/sellers", label: "Sell on NaijaDeals", description: "Open a verified seller account", icon: BadgeCheck }
 ] as const;
 
 const WHOLESALE_LINKS = [
@@ -233,8 +233,8 @@ const WHOLESALE_LINKS = [
   },
   {
     href: "/naijashop/sellers",
-    label: "Browse the seller directory",
-    description: "Check markets and seller status before ordering.",
+    label: "Seller account support",
+    description: "How a verified seller account is opened and run.",
     icon: Store
   },
   {

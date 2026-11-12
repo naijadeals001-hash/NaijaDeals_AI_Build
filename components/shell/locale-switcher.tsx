@@ -30,6 +30,9 @@ export function LocaleSwitcher() {
 
   const activeLanguage = LANGUAGES.find((item) => item.code === language);
   const countryOptions = Object.values(COUNTRIES).filter((item) => item.enabled);
+  // An unset city is not Lagos. Until the visitor selects one, the control asks
+  // for a location and the selector shows an explicit placeholder.
+  const locationLabel = city.trim() || "Choose location";
 
   return (
     <div ref={rootRef}>
@@ -38,11 +41,11 @@ export function LocaleSwitcher() {
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-label={`${city}, ${countryName}. ${t("common.language")}: ${activeLanguage?.native ?? language}.`}
+        aria-label={`${locationLabel}, ${countryName}. ${t("common.language")}: ${activeLanguage?.native ?? language}.`}
         className="flex min-h-10 max-w-[7.5rem] items-center gap-1 rounded-full px-2.5 text-xs font-bold text-ink/80 transition hover:bg-surface-low hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:max-w-none"
       >
         <MapPin className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-        <span className="hidden truncate min-[360px]:inline">{city}</span>
+        <span className="hidden truncate min-[360px]:inline">{locationLabel}</span>
         <ChevronDown className={`hidden h-3.5 w-3.5 shrink-0 transition min-[360px]:block ${open ? "rotate-180" : ""}`} aria-hidden="true" />
       </button>
 
@@ -99,8 +102,12 @@ export function LocaleSwitcher() {
               <select
                 value={city}
                 onChange={(event) => setCity(event.target.value)}
+                aria-label={`${t("common.city")}: ${locationLabel}`}
                 className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-surface-low px-2 text-sm font-semibold outline-none focus:border-primary"
               >
+                <option value="" disabled>
+                  Choose location
+                </option>
                 {cities.map((item) => (
                   <option key={item} value={item}>
                     {item}

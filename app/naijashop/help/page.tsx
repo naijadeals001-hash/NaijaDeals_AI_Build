@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ShopFooter } from "@/components/commerce/shop-footer";
 
 export const metadata: Metadata = { title: "Help & customer service — NaijaShop", description: "Delivery, payments, returns and account help." };
 
@@ -39,7 +38,7 @@ const TOPICS = [
 export default function ShopHelpPage() {
   return (
     <>
-      <main className="bg-white px-5 py-8 text-[#0f1111]">
+      <div className="bg-white px-5 py-8 text-[#0f1111]">
         <div className="mx-auto max-w-4xl">
           <h1 className="font-display text-[30px] font-extrabold">Help &amp; customer service</h1>
           <p className="mt-1 text-[13px] text-[#565959]">Answers for delivery, payments, returns and your account.</p>
@@ -62,8 +61,7 @@ export default function ShopHelpPage() {
             This page lists only the support channels the platform operates today; no phone numbers or response-time promises are published until they are approved.
           </p>
         </div>
-      </main>
-      <ShopFooter />
+      </div>
     </>
   );
 }

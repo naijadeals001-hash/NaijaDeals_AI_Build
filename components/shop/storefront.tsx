@@ -1,34 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ArrowRight,
   ArrowUpRight,
   BadgeCheck,
   Boxes,
-  ChevronDown,
-  Grid2x2,
-  Home as HomeIcon,
-  LayoutGrid,
   Leaf,
-  MapPin,
-  Menu,
-  Package,
-  Search,
   ShieldCheck,
-  ShoppingCart,
   Store,
   Truck,
-  User,
   Wallet
 } from "lucide-react";
-import { apiClient, type ApiCategory, type ApiProduct, type SessionUser } from "@/lib/api-client";
-import { NaijaDealsLogo } from "@/components/brand/naijadeals-logo";
-import { AllDrawer, type ShopDepartment } from "./all-drawer";
-import { AccountMenu, rememberRecentlyViewed } from "./account-menu";
+import { apiClient, type ApiCategory, type ApiProduct } from "@/lib/api-client";
 import { MarketplaceProductCard } from "./marketplace-card";
+import { announceShopCartCount } from "./shop-header";
 
 /**
  * Acceptance suites create throwaway listings named "Variant Fixture …",
@@ -43,7 +31,12 @@ type StorefrontConfig = {
   shelfLimit?: number;
 };
 
-type Department = ShopDepartment;
+type Department = {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl?: string | null;
+};
 
 type Notice = { text: string; tone: "success" | "error" } | null;
 
@@ -80,18 +73,11 @@ export function NaijaDealsMarketplace() {
   const [categoriesStatus, setCategoriesStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
-  const [cartCount, setCartCount] = useState(0);
-  const [sessionUser, setSessionUser] = useState<SessionUser | null | undefined>(undefined);
   const [addingId, setAddingId] = useState("");
   const [addedId, setAddedId] = useState("");
-  const [destination, setDestination] = useState("Lagos, Nigeria");
-  const [openPanel, setOpenPanel] = useState<"all" | "account" | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [config, setConfig] = useState<StorefrontConfig>({});
-  const [scope, setScope] = useState("");
   const [missingArt, setMissingArt] = useState<Record<string, boolean>>({});
-  const allReturnFocusRef = useRef<HTMLElement | null>(null);
-  const accountReturnFocusRef = useRef<HTMLElement | null>(null);
 
   const markMissing = (key: string) => setMissingArt((current) => (current[key] ? current : { ...current, [key]: true }));
 
@@ -142,41 +128,6 @@ export function NaijaDealsMarketplace() {
       active = false;
     };
   }, [reloadKey]);
-
-  useEffect(() => {
-    let active = true;
-    // Establish the session first so guests never trigger protected cart and
-    // address requests. Their storefront still defaults to an empty cart and
-    // the saved delivery context appears as soon as a signed-in user loads.
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((value: { user?: SessionUser | null } | null) => {
-        if (!active) return;
-        const user = value?.user ?? null;
-        setSessionUser(user);
-        if (!user) return;
-        return Promise.allSettled([apiClient.getCart(), apiClient.getAddresses()]).then(([cart, addresses]) => {
-          if (!active) return;
-          if (cart.status === "fulfilled") {
-            const cartValue = cart.value as { items?: Array<{ quantity: number; savedForLater?: boolean }> };
-            setCartCount(
-              cartValue?.items?.filter((item) => !item.savedForLater).reduce((sum, item) => sum + item.quantity, 0) ?? 0
-            );
-          }
-          if (addresses.status === "fulfilled") {
-            const list = addresses.value as Array<{ city?: string; state?: string; isDefault?: boolean }>;
-            const chosen = list.find((address) => address.isDefault) ?? list[0];
-            if (chosen) setDestination([chosen.city, chosen.state].filter(Boolean).join(", "));
-          }
-        });
-      })
-      .catch(() => {
-        if (active) setSessionUser(null);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const showHero = config.showHero !== false;
   const showShelves = config.showShelves !== false;
@@ -276,7 +227,8 @@ export function NaijaDealsMarketplace() {
     setNotice(null);
     try {
       const cart = await apiClient.addCartItem(product.id, 1);
-      setCartCount(cart.items.filter((item) => !item.savedForLater).reduce((sum, item) => sum + item.quantity, 0));
+      // Publish the server's cart total to the shared header badge.
+      announceShopCartCount(cart.items.filter((item) => !item.savedForLater).reduce((sum, item) => sum + item.quantity, 0));
       setNotice({ text: `${product.name} added to your cart.`, tone: "success" });
       setAddedId(product.id);
       window.setTimeout(() => setAddedId(""), 2000);
@@ -291,273 +243,9 @@ export function NaijaDealsMarketplace() {
     }
   }
 
-  function openAll(trigger: HTMLElement) {
-    allReturnFocusRef.current = trigger;
-    setOpenPanel("all");
-  }
-
-  function openAccount(trigger: HTMLElement) {
-    accountReturnFocusRef.current = trigger;
-    setOpenPanel("account");
-  }
-
-  const firstName = sessionUser?.name?.split(" ")[0] ?? null;
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const [slug, items] of byCategory) counts[slug] = items.length;
-    return counts;
-  }, [byCategory]);
-
   return (
-    <div
-      className="w-full max-w-full bg-[#f4f7f2] text-[#14241b]"
-      onClickCapture={(event) => rememberRecentlyViewed(event.target)}
-    >
-      <a
-        href="#shop-main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[100] focus:rounded-full focus:bg-[#07351f] focus:px-4 focus:py-2 focus:text-[12px] focus:font-bold focus:text-white"
-      >
-        Skip to marketplace content
-      </a>
-
-      {/* Utility bar — ecosystem context only; the marketplace header below is sticky. */}
-      <div className="bg-[#062b19] text-white">
-        <div className="mx-auto flex h-9 max-w-[1440px] items-center gap-2 px-3 text-[10.5px] sm:px-6 lg:px-8">
-          <Link href="/" className="flex shrink-0 items-center gap-1.5 font-semibold text-white/85 hover:text-white">
-            <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
-            NaijaDeals
-          </Link>
-          <span className="text-white/30" aria-hidden>
-            /
-          </span>
-          <span className="truncate text-white/70">Marketplace</span>
-          <nav aria-label="Marketplace services" className="ml-auto flex shrink-0 items-center gap-3">
-            <Link href="/naijafresh/business" className="hidden hover:text-[#f5b52e] sm:inline">
-              Bulk buying
-            </Link>
-            <Link href="/naijasend" className="hidden hover:text-[#f5b52e] md:inline">
-              Freight
-            </Link>
-            <Link href="/sell" className="font-semibold hover:text-[#f5b52e]">
-              Sell
-            </Link>
-            <Link href="/naijashop/help" className="font-semibold hover:text-[#f5b52e]">
-              Help
-            </Link>
-          </nav>
-        </div>
-      </div>
-
-      <header className="border-b border-[#e1e8de] bg-white lg:sticky lg:top-0 lg:z-40 lg:shadow-[0_10px_28px_rgba(7,53,31,0.06)]">
-        <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 py-3 sm:gap-3 lg:gap-5">
-            <button
-              type="button"
-              onClick={(event) => openAll(event.currentTarget)}
-              aria-label="Open All departments menu"
-              aria-haspopup="dialog"
-              aria-expanded={openPanel === "all"}
-              aria-controls="shop-all-panel"
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[#07351f] transition hover:bg-[#eef4ea] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] lg:hidden"
-            >
-              <Menu className="h-5 w-5" aria-hidden />
-            </button>
-
-            <Link href="/naijashop" aria-label="NaijaDeals Marketplace home" className="flex min-w-0 shrink-0 flex-col">
-              <NaijaDealsLogo tone="onLight" size="md" />
-              <span className="mt-0.5 text-[8.5px] font-bold uppercase tracking-[0.2em] text-[#0f7a4a]">Marketplace</span>
-            </Link>
-
-            <div className="hidden min-w-0 flex-1 lg:block">
-              <MarketplaceSearch
-                categories={categories}
-                scope={scope}
-                onScopeChange={setScope}
-                idPrefix="shop-search-desktop"
-                variant="desktop"
-              />
-            </div>
-
-            <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
-              <Link
-                href="/account#addresses"
-                aria-label={`Deliver to ${destination}. Change delivery address`}
-                className="hidden items-start gap-1.5 rounded-lg px-2 py-1 text-left transition hover:bg-[#eef4ea] xl:flex"
-              >
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#0f7a4a]" aria-hidden />
-                <span className="leading-tight">
-                  <span className="block text-[9.5px] font-semibold text-[#566359]">Deliver to</span>
-                  <span className="flex max-w-[11rem] items-center gap-0.5 text-[11.5px] font-extrabold text-[#14241b]">
-                    <span className="truncate">{destination}</span>
-                    <ChevronDown className="h-3 w-3 shrink-0" aria-hidden />
-                  </span>
-                </span>
-              </Link>
-              <span className="mx-1 hidden h-8 w-px bg-[#e1e8de] xl:block" aria-hidden />
-
-              <button
-                type="button"
-                onClick={(event) => openAccount(event.currentTarget)}
-                aria-label={
-                  sessionUser
-                    ? `Account and lists for ${sessionUser.name}`
-                    : sessionUser === null
-                      ? "Account and lists. Sign in"
-                      : "Account and lists"
-                }
-                aria-haspopup="dialog"
-                aria-expanded={openPanel === "account"}
-                aria-controls="shop-account-panel"
-                className="flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 transition hover:bg-[#eef4ea] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
-              >
-                <User className="h-5 w-5 shrink-0 text-[#0b5c33]" aria-hidden />
-                <span className="hidden flex-col text-left leading-tight lg:flex">
-                  <span className="max-w-[9rem] truncate text-[9.5px] font-semibold text-[#566359]">
-                    {sessionUser ? `Hello, ${firstName}` : sessionUser === null ? "Hello, sign in" : "Hello"}
-                  </span>
-                  <span className="text-[11.5px] font-extrabold text-[#14241b]">Account &amp; Lists</span>
-                </span>
-              </button>
-
-              <Link
-                href="/orders"
-                aria-label="Returns and orders"
-                className="hidden items-center gap-1.5 rounded-full px-2 py-1.5 transition hover:bg-[#eef4ea] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] md:flex"
-              >
-                <Package className="h-5 w-5 text-[#0b5c33]" aria-hidden />
-                <span className="hidden flex-col leading-tight lg:flex">
-                  <span className="text-[9.5px] font-semibold text-[#566359]">Returns</span>
-                  <span className="text-[11.5px] font-extrabold text-[#14241b]">&amp; Orders</span>
-                </span>
-              </Link>
-
-              <Link
-                href="/cart"
-                aria-label={`Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}`}
-                className="relative flex items-center gap-1.5 rounded-full px-2 py-1.5 transition hover:bg-[#eef4ea] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
-              >
-                <span className="relative">
-                  <ShoppingCart className="h-5 w-5 text-[#0b5c33]" aria-hidden />
-                  <span
-                    className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[#f26b21] px-1 text-[9px] font-black leading-none text-white"
-                    aria-hidden
-                  >
-                    {cartCount}
-                  </span>
-                </span>
-                <span className="hidden text-[11.5px] font-extrabold text-[#14241b] sm:inline">Cart</span>
-              </Link>
-            </div>
-          </div>
-
-          <div className="pb-2.5 lg:hidden">
-            <MarketplaceSearch
-              categories={categories}
-              scope={scope}
-              onScopeChange={setScope}
-              idPrefix="shop-search-mobile"
-              variant="mobile"
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-2 pb-2.5 lg:hidden">
-            <Link
-              href="/account#addresses"
-              aria-label={`Deliver to ${destination}. Change delivery address`}
-              className="flex min-w-0 items-center gap-1 text-[10.5px] font-semibold text-[#4b5b51]"
-            >
-              <MapPin className="h-3.5 w-3.5 shrink-0 text-[#0f7a4a]" aria-hidden />
-              <span className="truncate">
-                Deliver to <span className="font-extrabold text-[#14241b]">{destination}</span>
-              </span>
-              <ChevronDown className="h-3 w-3 shrink-0" aria-hidden />
-            </Link>
-            <Link href="/naijafresh/business" className="shrink-0 text-[10.5px] font-extrabold text-[#0b5c33] hover:underline">
-              Buying in bulk?
-            </Link>
-          </div>
-        </div>
-
-        <nav aria-label="Marketplace departments" className="border-t border-[#eef3ec] bg-[#f7faf4]">
-          {/*
-            Deliberate small-screen pattern: the three core actions wrap instead
-            of scrolling sideways, so nothing is clipped at 320px. Departments
-            are always one tap away in the ALL drawer, and appear inline from
-            768px where there is room for a wrapped two/three-row list.
-          */}
-          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-0.5 px-2 sm:px-5 lg:px-8">
-            <button
-              type="button"
-              onClick={(event) => openAll(event.currentTarget)}
-              aria-label="Open all departments"
-              aria-haspopup="dialog"
-              aria-expanded={openPanel === "all"}
-              aria-controls="shop-all-panel"
-              className="flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2 py-2.5 text-[11.5px] font-extrabold text-[#07351f] hover:text-[#0b5c33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
-            >
-              <Grid2x2 className="h-3.5 w-3.5" aria-hidden />
-              All departments
-            </button>
-            <span className="h-4 w-px shrink-0 bg-[#dbe5d7]" aria-hidden />
-            <Link
-              href="/naijashop/deals"
-              className="shrink-0 whitespace-nowrap px-2 py-2.5 text-[11.5px] font-extrabold text-[#b8440a] hover:text-[#8f3508]"
-            >
-              Price drops
-            </Link>
-            <Link
-              href="/naijashop/bestsellers"
-              className="shrink-0 whitespace-nowrap px-2 py-2.5 text-[11.5px] font-semibold text-[#3d4f43] hover:text-[#0b5c33]"
-            >
-              Bestsellers
-            </Link>
-            <Link
-              href="/sell"
-              className="ml-auto hidden shrink-0 items-center gap-1 whitespace-nowrap px-2 py-2.5 text-[11.5px] font-extrabold text-[#0b5c33] hover:text-[#07351f] sm:flex xl:order-4"
-            >
-              Sell on NaijaDeals
-              <ArrowRight className="h-3 w-3" aria-hidden />
-            </Link>
-            <div className="hidden min-w-0 basis-full flex-wrap items-center gap-x-0.5 md:flex md:border-t md:border-[#eef3ec] md:pt-0.5 xl:order-3 xl:basis-auto xl:flex-1 xl:border-t-0 xl:pt-0">
-              {categories.map((category) => (
-                <Link
-                  key={category.id}
-                  href={`/naijashop/c/${category.slug}`}
-                  className="shrink-0 whitespace-nowrap px-2 py-2.5 text-[11.5px] font-semibold text-[#3d4f43] hover:text-[#0b5c33]"
-                >
-                  {category.name}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </nav>
-      </header>
-
-      <AllDrawer
-        open={openPanel === "all"}
-        onClose={() => setOpenPanel(null)}
-        returnFocusRef={allReturnFocusRef}
-        departments={departments}
-        categoryCounts={categoryCounts}
-        departmentsStatus={categoriesStatus}
-        countsAvailable={status === "ready"}
-        signedIn={sessionUser === undefined ? null : sessionUser !== null}
-      />
-
-      <AccountMenu
-        open={openPanel === "account"}
-        onClose={() => setOpenPanel(null)}
-        returnFocusRef={accountReturnFocusRef}
-        user={sessionUser}
-        onSignedOut={() => {
-          setSessionUser(null);
-          setCartCount(0);
-          setDestination("Lagos, Nigeria");
-          setNotice(null);
-        }}
-      />
-
-      <main id="shop-main" className="mx-auto w-full max-w-[1440px] px-3 pb-10 sm:px-6 lg:px-8">
+    <div className="w-full max-w-full bg-[#f4f7f2] text-[#14241b]">
+      <div className="mx-auto w-full max-w-[1440px] px-3 pb-10 pt-1 sm:px-6 lg:px-8">
         {notice ? (
           <div
             role={notice.tone === "error" ? "alert" : "status"}
@@ -1029,147 +717,8 @@ export function NaijaDealsMarketplace() {
             </div>
           </section>
         ) : null}
-      </main>
-
-      <nav
-        aria-label="Marketplace mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dce6d8] bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
-      >
-        <ul className="grid grid-cols-4">
-          <li>
-            <Link
-              href="/naijashop"
-              aria-current="page"
-              className="flex min-h-12 flex-col items-center justify-center gap-0.5 py-2 text-[9.5px] font-bold text-[#0b5c33]"
-            >
-              <HomeIcon className="h-5 w-5" aria-hidden />
-              Home
-            </Link>
-          </li>
-          <li>
-            <button
-              type="button"
-              onClick={(event) => openAll(event.currentTarget)}
-              aria-label="Open all departments"
-              aria-haspopup="dialog"
-              aria-expanded={openPanel === "all"}
-              aria-controls="shop-all-panel"
-              className="flex min-h-12 w-full flex-col items-center justify-center gap-0.5 py-2 text-[9.5px] font-bold text-[#5d6d64] transition hover:text-[#0b5c33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0b5c33]"
-            >
-              <Grid2x2 className="h-5 w-5" aria-hidden />
-              Departments
-            </button>
-          </li>
-          <li>
-            <Link
-              href="/cart"
-              aria-label={`Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}`}
-              className="flex min-h-12 flex-col items-center justify-center gap-0.5 py-2 text-[9.5px] font-bold text-[#5d6d64] transition hover:text-[#0b5c33]"
-            >
-              <span className="relative">
-                <ShoppingCart className="h-5 w-5" aria-hidden />
-                <span
-                  className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[#f26b21] px-1 text-[9px] font-black leading-none text-white"
-                  aria-hidden
-                >
-                  {cartCount}
-                </span>
-              </span>
-              Cart
-            </Link>
-          </li>
-          <li>
-            <button
-              type="button"
-              onClick={(event) => openAccount(event.currentTarget)}
-              aria-label={
-                sessionUser
-                  ? `Open account and lists for ${sessionUser.name}`
-                  : sessionUser === null
-                    ? "Open account and lists to sign in"
-                    : "Open account and lists"
-              }
-              aria-haspopup="dialog"
-              aria-expanded={openPanel === "account"}
-              aria-controls="shop-account-panel"
-              className="flex min-h-12 w-full flex-col items-center justify-center gap-0.5 py-2 text-[9.5px] font-bold text-[#5d6d64] transition hover:text-[#0b5c33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0b5c33]"
-            >
-              <User className="h-5 w-5" aria-hidden />
-              Account
-            </button>
-          </li>
-        </ul>
-      </nav>
-    </div>
-  );
-}
-
-function MarketplaceSearch({
-  categories,
-  scope,
-  onScopeChange,
-  idPrefix,
-  variant
-}: {
-  categories: ApiCategory[];
-  scope: string;
-  onScopeChange: (value: string) => void;
-  idPrefix: string;
-  variant: "desktop" | "mobile";
-}) {
-  const selected = categories.find((category) => category.slug === scope);
-  const action = scope ? `/naijashop/c/${scope}` : "/naijashop/search";
-  const placeholder = selected
-    ? `Search in ${selected.name}`
-    : variant === "desktop"
-      ? "Search products, brands and categories…"
-      : "Search products…";
-
-  return (
-    <form action={action} method="get" role="search" aria-label="Search the NaijaDeals marketplace" className="w-full">
-      <label htmlFor={`${idPrefix}-input`} className="sr-only">
-        {selected ? `Search within ${selected.name}` : "Search all departments"}
-      </label>
-      <div className="flex h-11 min-w-0 items-stretch overflow-hidden rounded-full border border-[#cfdccb] bg-[#f6f8f4] transition focus-within:border-[#0b5c33] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0b5c33]/15">
-        {categories.length > 0 ? (
-          <>
-            <label htmlFor={`${idPrefix}-scope`} className="sr-only">
-              Limit search to a department
-            </label>
-            <select
-              id={`${idPrefix}-scope`}
-              value={scope}
-              onChange={(event) => onScopeChange(event.target.value)}
-              className="h-11 max-w-[9.5rem] shrink-0 cursor-pointer rounded-l-full border-r border-[#dce6d8] bg-transparent py-0 pl-3 pr-1 text-[11px] font-bold text-[#0b4d2e] outline-none sm:max-w-none sm:pl-4 sm:pr-2 sm:text-[11.5px]"
-            >
-              <option value="">All departments</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.slug}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </>
-        ) : null}
-        <Search className="ml-2 hidden h-4 w-4 shrink-0 self-center text-[#566359] sm:block" aria-hidden />
-        <input
-          id={`${idPrefix}-input`}
-          name="q"
-          type="search"
-          maxLength={120}
-          enterKeyHint="search"
-          placeholder={placeholder}
-          className="min-w-0 flex-1 bg-transparent px-3 text-[12px] text-[#14241b] outline-none placeholder:text-[#566359] sm:text-[13px]"
-        />
-        <button
-          type="submit"
-          aria-label={selected ? `Search in ${selected.name}` : "Search all departments"}
-          className="grid w-11 shrink-0 place-items-center bg-[#f26b21] text-white transition hover:bg-[#d95a12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#07351f]"
-        >
-          <Search className="h-4 w-4" aria-hidden />
-        </button>
       </div>
-    </form>
+    </div>
   );
 }
 

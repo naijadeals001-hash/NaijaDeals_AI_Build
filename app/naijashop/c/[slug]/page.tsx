@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { CategoryBrowse } from "@/components/shop/category-browse";
-import { ShopFooter } from "@/components/commerce/shop-footer";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +9,6 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
   return (
     <>
       <CategoryBrowse categorySlug={params.slug} />
-      <ShopFooter />
     </>
   );
 }

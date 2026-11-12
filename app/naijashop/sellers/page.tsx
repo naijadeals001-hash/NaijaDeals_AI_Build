@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ShopFooter } from "@/components/commerce/shop-footer";
 
 export const metadata: Metadata = { title: "Sell on NaijaShop — NaijaShop", description: "Open a verified seller account on NaijaShop." };
 
 export default function SellersPage() {
   return (
     <>
-      <main className="bg-white px-5 py-8 text-[#0f1111]">
+      <div className="bg-white px-5 py-8 text-[#0f1111]">
         <div className="mx-auto max-w-3xl">
           <h1 className="font-display text-[30px] font-extrabold">Sell on NaijaShop</h1>
           <p className="mt-2 text-[13.5px] leading-7 text-[#565959]">
@@ -39,8 +38,7 @@ export default function SellersPage() {
             </Link>
           </div>
         </div>
-      </main>
-      <ShopFooter />
+      </div>
     </>
   );
 }

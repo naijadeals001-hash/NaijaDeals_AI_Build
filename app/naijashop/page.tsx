@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { NaijaDealsMarketplace } from "@/components/shop/storefront";
-import { ShopSiteFooter } from "@/components/shop/shop-site-footer";
 
 export const metadata: Metadata = {
   title: "NaijaDeals Marketplace — retail and bulk buying",
@@ -24,7 +23,6 @@ export default function Page() {
       >
         <NaijaDealsMarketplace />
       </Suspense>
-      <ShopSiteFooter />
     </>
   );
 }

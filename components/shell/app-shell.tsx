@@ -518,7 +518,7 @@ function SiteFooter({ offsetForSidebar }: { offsetForSidebar: boolean }) {
             <p className="mt-4 text-[11px] font-semibold text-white/50">Abuja, FCT · EziAlayi, Abia State, Nigeria</p>
             <p className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-white/50">
               <span className="h-1.5 w-1.5 rounded-full bg-primary-live" aria-hidden="true" />
-              {city}, {countryName}
+              {city ? `${city}, ${countryName}` : `Choose location · ${countryName}`}
             </p>
           </div>
 

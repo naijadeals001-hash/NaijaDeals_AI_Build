@@ -30,12 +30,22 @@ export function citiesFor(countryCode: string) {
   return CITIES[countryCode] ?? [];
 }
 
+/**
+ * The first city in a market is an editorial starting point, not the visitor's
+ * location. Callers must not use it as a silent default address.
+ */
 export function defaultCity(countryCode: string) {
   return CITIES[countryCode]?.[0] ?? "";
 }
 
+/**
+ * Resolve only a city the visitor actually selected. A missing or foreign city
+ * returns an empty string so the interface can ask for a location instead of
+ * assigning one. Do not reintroduce a fallback here: every header, delivery
+ * estimate and footer reads this value as the visitor's choice.
+ */
 export function resolveCity(countryCode: string, city: string | null | undefined) {
   const list = citiesFor(countryCode);
   if (city && list.includes(city)) return city;
-  return defaultCity(countryCode);
+  return "";
 }

@@ -14,6 +14,7 @@ import {
   type BrowseSort
 } from "./browse-query";
 import { ShopProductCard, type ShopProduct } from "./product-card";
+import { announceShopCartCount } from "./shop-header";
 
 const SORT_LABELS: Record<BrowseSort, string> = {
   featured: "Featured",
@@ -181,7 +182,9 @@ export function CategoryBrowse({
     setAddingId(product.id);
     setNotice("");
     try {
-      await apiClient.addCartItem(product.id, 1);
+      const cart = await apiClient.addCartItem(product.id, 1);
+      // Keep the shared header badge at the server's authoritative total.
+      announceShopCartCount(cart.items.filter((item) => !item.savedForLater).reduce((sum, item) => sum + item.quantity, 0));
       setNotice(`${product.name} added to cart.`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not add to cart.";
