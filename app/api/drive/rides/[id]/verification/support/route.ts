@@ -36,7 +36,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
       action,
       reason: requireString(body.reason, "Reason", 300)
     });
-    return NextResponse.json(jsonSafe(result));
+    return NextResponse.json(jsonSafe(result), {
+      headers: { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie" }
+    });
   } catch (error) {
     return jsonError(error);
   }

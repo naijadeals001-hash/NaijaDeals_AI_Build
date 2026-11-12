@@ -45,6 +45,7 @@ export default async function Page({
         userRoles={publicUser?.roles ?? ["super_admin"]}
         userActorType={publicUser?.actorType ?? "ADMIN"}
         isSuperAdmin
+        canModerateRides
         region={resolved.region}
         regionRestricted={resolved.restricted}
       />

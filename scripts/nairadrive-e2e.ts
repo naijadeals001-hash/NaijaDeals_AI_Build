@@ -464,7 +464,7 @@ async function main() {
       onlineSecondsBeforeReload = board.presence.todayOnlineSeconds;
 
       await customerPage.reload({ waitUntil: "domcontentloaded", timeout: 90_000 });
-      await customerPage.getByRole("heading", { name: "Ride receipt" }).waitFor({ timeout: 30_000 });
+      await customerPage.getByRole("heading", { name: "Trip receipt" }).waitFor({ timeout: 30_000 });
       const body = await customerPage.locator("body").innerText();
       assert(/Paid from NaijaPay wallet/i.test(body), "receipt does not show wallet payment");
       const closed = await customerPage.evaluate(async (id) => {

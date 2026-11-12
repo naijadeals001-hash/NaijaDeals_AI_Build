@@ -1305,6 +1305,7 @@ function ActiveTripPanel({
   const verified = Boolean(ride.verification?.verified);
   const verificationExpired = Boolean(ride.verification?.expired);
   const verificationLocked = Boolean(ride.verification?.locked);
+  const legacyVerification = Boolean(ride.verification?.legacy);
   const attemptsRemaining = ride.verification?.attemptsRemaining ?? 0;
   const verificationBlocked = verificationExpired || verificationLocked;
   const target =
@@ -1398,12 +1399,13 @@ function ActiveTripPanel({
           <p className="text-[10.5px] font-extrabold text-[#a3480f]">Ask the passenger for their 4-digit pickup code</p>
           {verificationExpired ? (
             <p role="status" className="mt-1 rounded-lg bg-[#fee2e2] p-2 text-[10.5px] font-semibold leading-4 text-[#b91c1c]">
-              This pickup code has expired. The ride cannot start until support resets the code.
+              This pickup code has expired. The rider can reset it from their trip screen, or support can
+              reset it.
             </p>
           ) : verificationLocked ? (
             <p role="status" className="mt-1 rounded-lg bg-[#fee2e2] p-2 text-[10.5px] font-semibold leading-4 text-[#b91c1c]">
-              The pickup code is locked after too many incorrect attempts. Support must reset it before this
-              trip can start.
+              The pickup code is locked after too many incorrect attempts. The rider or support must reset
+              it before this trip can start.
             </p>
           ) : (
             <p className="mt-0.5 text-[10px] leading-4 text-[#7a5a35]">
@@ -1442,11 +1444,16 @@ function ActiveTripPanel({
             </p>
           ) : null}
         </div>
+      ) : legacyVerification ? (
+        <p className="mt-2 rounded-lg bg-[#f2f7f2] p-2 text-[10.5px] leading-4 text-[#5d6d64]">
+          This trip was matched before protected pickup verification was introduced, so there is no code
+          to enter. Starting it is allowed and the legacy exception is written to the trip audit trail.
+        </p>
       ) : ride.status === "driver_arriving" ? (
         <p className="mt-2 rounded-lg bg-[#f2f7f2] p-2 text-[10.5px] leading-4 text-[#5d6d64]">
           {verified
             ? "Passenger verified by the server. Start the trip when they are in the car."
-            : "No pickup-code record is available for this ride. Refresh; the server will not start the trip without verification."}
+            : "No active pickup-code record is available for this ride. Refresh; the server will not start the trip without verification."}
         </p>
       ) : null}
 

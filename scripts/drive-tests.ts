@@ -469,6 +469,205 @@ async function main() {
     assert((cancel.body as Json).paymentStatus === "refunded", "admin cancel did not refund the hold");
   });
 
+  await step("Rider can reset a locked pickup code; driver and other accounts cannot", async () => {
+    const request = await customer.post("/api/drive/rides", {
+      pickupId: "maryland",
+      dropoffId: "apapa",
+      vehicleClass: "economy",
+      paymentMethod: "cash"
+    });
+    isStatus(request, 201, "pickup reset ride request");
+    const ride = request.body as Json;
+    isStatus(await driver1.post(`/api/drive/driver/rides/${ride.id}/accept`), 200, "pickup reset accept");
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "driver_arriving" }),
+      200,
+      "pickup reset arriving"
+    );
+
+    const issued = await customer.get(`/api/drive/rides/${ride.id}/verification`);
+    isStatus(issued, 200, "pickup reset code");
+    const code = (issued.body as Json).code as string;
+    assert(typeof code === "string" && /^\d{4}$/.test(code), `missing pickup code: ${JSON.stringify(issued.body)}`);
+    const wrong = String((Number(code) + 1) % 10_000).padStart(4, "0");
+
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      const response = await driver1.post(`/api/drive/driver/rides/${ride.id}/verify`, { code: wrong });
+      assert(
+        response.status === (attempt < 5 ? 400 : 429),
+        `wrong pickup attempt ${attempt} returned ${response.status} ${JSON.stringify(response.body)}`
+      );
+      if (attempt < 5) await new Promise((resolve) => setTimeout(resolve, 1_700));
+    }
+
+    const locked = await customer.get(`/api/drive/rides/${ride.id}/verification`);
+    isStatus(locked, 200, "locked pickup code state");
+    assert((locked.body as Json).locked === true, "pickup code did not report a lockout");
+
+    const otherReset = await other.post(`/api/drive/rides/${ride.id}/verification/reset`);
+    isStatus(otherReset, 403, "cross-account pickup reset");
+    const driverReset = await driver1.post(`/api/drive/rides/${ride.id}/verification/reset`);
+    isStatus(driverReset, 403, "driver pickup reset");
+    const reset = await customer.post(`/api/drive/rides/${ride.id}/verification/reset`);
+    isStatus(reset, 200, "rider pickup reset");
+    assert(
+      !JSON.stringify(reset.body).includes("\"code\""),
+      `reset response carried a raw code: ${JSON.stringify(reset.body)}`
+    );
+
+    const reissued = await customer.get(`/api/drive/rides/${ride.id}/verification`);
+    isStatus(reissued, 200, "reissued pickup code");
+    const nextCode = (reissued.body as Json).code as string;
+    assert(typeof nextCode === "string" && /^\d{4}$/.test(nextCode), "rider did not receive a new code");
+    assert((reissued.body as Json).locked === false, "reissued pickup code is still locked");
+
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/verify`, { code: nextCode }),
+      200,
+      "driver verifies reissued code"
+    );
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "in_progress" }),
+      200,
+      "trip starts after rider reset"
+    );
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "completed" }),
+      200,
+      "trip completes after rider reset"
+    );
+
+    const audits = await db.auditLog.count({
+      where: { action: "ride.verification_rider_reset", entityId: ride.id }
+    });
+    assert(audits === 1, `expected one rider reset audit row, got ${audits}`);
+  });
+
+  await step("A legacy assignment starts without retroactive verification and is audited", async () => {
+    const request = await customer.post("/api/drive/rides", {
+      pickupId: "yaba-tejuosho",
+      dropoffId: "lekki-phase-1",
+      vehicleClass: "economy",
+      paymentMethod: "cash"
+    });
+    isStatus(request, 201, "legacy ride request");
+    const ride = request.body as Json;
+    isStatus(await driver1.post(`/api/drive/driver/rides/${ride.id}/accept`), 200, "legacy ride accept");
+
+    // Simulate an assignment created before the protected-record feature existed.
+    await db.rideVerification.deleteMany({ where: { rideId: ride.id } });
+    const legacy = await customer.get(`/api/drive/rides/${ride.id}/verification`);
+    isStatus(legacy, 200, "legacy verification state");
+    const legacyBody = legacy.body as Json;
+    assert(legacyBody.legacy === true, `legacy state not reported: ${JSON.stringify(legacyBody)}`);
+    assert(legacyBody.code === null && legacyBody.required === false, "legacy ride exposed a code");
+    assert(
+      (await db.rideVerification.count({ where: { rideId: ride.id } })) === 0,
+      "opening the legacy trip screen created a retroactive record"
+    );
+
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "driver_arriving" }),
+      200,
+      "legacy arriving"
+    );
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "in_progress" }),
+      200,
+      "legacy trip starts"
+    );
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "completed" }),
+      200,
+      "legacy trip completes"
+    );
+
+    const events = await db.rideEvent.count({ where: { rideId: ride.id, label: "Legacy pickup start" } });
+    const audits = await db.auditLog.count({
+      where: { action: "ride.legacy_pickup_start_without_verification", entityId: ride.id }
+    });
+    assert(events === 1 && audits === 1, `legacy exception was not audited (events ${events}, audits ${audits})`);
+  });
+
+  await step("Control Center pickup-code support is permission-gated and never returns a code", async () => {
+    const request = await customer.post("/api/drive/rides", {
+      pickupId: "ikeja-city-mall",
+      dropoffId: "maryland",
+      vehicleClass: "economy",
+      paymentMethod: "cash"
+    });
+    isStatus(request, 201, "support ride request");
+    const ride = request.body as Json;
+    isStatus(await driver1.post(`/api/drive/driver/rides/${ride.id}/accept`), 200, "support ride accept");
+
+    isStatus(await customer.get("/api/admin/rides/verification"), 403, "customer support queue");
+    const queue = await admin.get("/api/admin/rides/verification");
+    isStatus(queue, 200, "admin support queue");
+    const queueRows = (queue.body as Json).rides as Json[];
+    const row = queueRows.find((item) => item.rideId === ride.id);
+    assert(row, "assigned ride missing from the support queue");
+    assert(
+      row.verification.required === true && row.verification.legacy === false,
+      `support queue state is wrong: ${JSON.stringify(row.verification)}`
+    );
+    const serialized = JSON.stringify(queue.body);
+    assert(
+      !serialized.includes("codeHash") && !serialized.includes("\"salt\"") && !serialized.includes("\"code\""),
+      "support queue exposed verification secrets"
+    );
+
+    isStatus(
+      await customer.post(`/api/drive/rides/${ride.id}/verification/support`, {
+        action: "reset",
+        reason: "Not staff"
+      }),
+      403,
+      "customer support action"
+    );
+    const reset = await admin.post(`/api/drive/rides/${ride.id}/verification/support`, {
+      action: "reset",
+      reason: "HTTP support regression"
+    });
+    isStatus(reset, 200, "admin support reset");
+    assert(
+      !JSON.stringify(reset.body).includes("\"code\""),
+      `support reset returned a code: ${JSON.stringify(reset.body)}`
+    );
+
+    const reissued = await customer.get(`/api/drive/rides/${ride.id}/verification`);
+    isStatus(reissued, 200, "support reset rider code");
+    const code = (reissued.body as Json).code as string;
+    assert(typeof code === "string" && /^\d{4}$/.test(code), "support reset did not issue a rider code");
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/verify`, { code }),
+      200,
+      "driver verifies support reset code"
+    );
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "driver_arriving" }),
+      200,
+      "support reset arriving"
+    );
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "in_progress" }),
+      200,
+      "support reset start"
+    );
+    isStatus(
+      await driver1.post(`/api/drive/driver/rides/${ride.id}/status`, { status: "completed" }),
+      200,
+      "support reset complete"
+    );
+    const audits = await db.auditLog.count({
+      where: {
+        action: "ride.verification_support_reset",
+        entityId: ride.id,
+        metadata: { path: ["reason"], equals: "HTTP support regression" }
+      }
+    });
+    assert(audits === 1, `support reset audit missing or duplicated (${audits})`);
+  });
+
   await step("Rider fare cannot be quoted across an invalid route", async () => {
     const response = await guest.get("/api/drive/quote?pickup=unknown-place&dropoff=ajah&vehicleClass=economy");
     isStatus(response, 400, "unknown place quote");

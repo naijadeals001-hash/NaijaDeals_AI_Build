@@ -6,6 +6,7 @@ import { AdminStorefrontPanel } from "./admin-storefront-panel";
 import { AdminReconciliationPanel } from "./admin-reconciliation-panel";
 import { AdminNaijaPayPanel } from "./admin-naijapay-panel";
 import { AdminAuraPanel } from "./admin-aura-panel";
+import { AdminDriveVerification } from "./admin-drive-verification";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -44,6 +45,7 @@ interface WorkspaceTabProps {
   escrow: Row[];
   audit: Row[];
   isSuperAdmin: boolean;
+  canModerateRides: boolean;
   initialQuery: string;
   onRefresh: () => void;
 }
@@ -1049,6 +1051,7 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     const statuses = Array.from(new Set(props.rides.map((row) => String(row.status)))).sort();
     return (
       <>
+      {props.canModerateRides ? <AdminDriveVerification canModerate /> : null}
       <Panel title="Trips" description="NaijaDrive ride records from the drive service.">
         <Toolbar
           query={query}

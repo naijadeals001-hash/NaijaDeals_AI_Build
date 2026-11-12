@@ -18,7 +18,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     const user = await requireUser();
     const result = await getRideVerificationCode({ userId: user.id, rideId: params.id });
     return NextResponse.json(jsonSafe(result), {
-      headers: { "Cache-Control": "no-store" }
+      headers: { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie" }
     });
   } catch (error) {
     return jsonError(error);

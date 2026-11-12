@@ -21,7 +21,7 @@
  *   npx tsx scripts/drive-verification-rating-acceptance.ts
  */
 import "dotenv/config";
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes, scryptSync } from "node:crypto";
 import path from "node:path";
 import type { PrismaClient } from "@prisma/client";
 
@@ -45,6 +45,30 @@ function assert(condition: unknown, message: string): asserts condition {
 
 const safeJson = (value: unknown) =>
   JSON.stringify(value, (_key, inner) => (typeof inner === "bigint" ? inner.toString() : inner));
+
+/**
+ * Test-side derivation used only to construct known fixtures. It intentionally
+ * mirrors the service so the suite can prove that a leading-zero code and a
+ * pre-v2 (v1) record still verify. It is not used to implement production
+ * behaviour.
+ */
+const CODE_SPACE = 10_000;
+function derivedCode(salt: string, rideId: string, algorithm: "v1" | "v2") {
+  if (algorithm === "v1") {
+    const digest = createHmac("sha256", salt).update(`${rideId}:naijadrive-pickup-verification`).digest();
+    return String(digest.readUInt32BE(0) % CODE_SPACE).padStart(4, "0");
+  }
+  const limit = Math.floor(0x1_0000_0000 / CODE_SPACE) * CODE_SPACE;
+  for (let counter = 0; counter < 32; counter += 1) {
+    const digest = createHmac("sha256", salt).update(`${rideId}:naijadrive-pickup-verification:${counter}`).digest();
+    const value = digest.readUInt32BE(0);
+    if (value < limit) return String(value % CODE_SPACE).padStart(4, "0");
+  }
+  throw new Error("fixture derivation exhausted its rejection loop");
+}
+function hashFor(code: string, salt: string) {
+  return scryptSync(code, salt, 32).toString("hex");
+}
 
 function acceptanceUrl() {
   const raw = process.env.DATABASE_URL;
@@ -285,7 +309,7 @@ async function main() {
   const recordA = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideA.id } });
   check(
     "assignment creates one protected record with hash/salt/expiry/limits",
-    recordA.algorithm === "scrypt-hmac-sha256-v1" &&
+    recordA.algorithm === "scrypt-hmac-sha256-v2" &&
       recordA.codeHash.length === 64 &&
       recordA.salt.length === 32 &&
       recordA.expiresAt.getTime() > Date.now() &&
@@ -868,6 +892,388 @@ async function main() {
     409,
     "ride_not_completed"
   );
+
+  /* ------------------------------- K. raw-code compatibility and budget --- */
+  const riderG = await createUser("CUSTOMER", "rider-g");
+  const riderH = await createUser("CUSTOMER", "rider-h");
+
+  // A record issued by the previous algorithm version must keep working after
+  // deployment. The test constructs the v1 record the old service would have made.
+  const rideV1 = await newRide(riderG.id, "cash");
+  await assign(driverA.user.id, rideV1.id);
+  const v1Salt = randomBytes(16).toString("hex");
+  const v1Code = derivedCode(v1Salt, rideV1.id, "v1");
+  await prisma.rideVerification.update({
+    where: { rideId: rideV1.id },
+    data: {
+      algorithm: "scrypt-hmac-sha256-v1",
+      salt: v1Salt,
+      codeHash: hashFor(v1Code, v1Salt)
+    }
+  });
+  const codeV1 = await drive.getRideVerificationCode({ userId: riderG.id, rideId: rideV1.id });
+  check(
+    "a pre-v2 record still derives the code the old algorithm stored",
+    codeV1.code === v1Code && codeV1.required && !codeV1.legacy,
+    JSON.stringify({ returned: codeV1.code, expected: v1Code })
+  );
+  const verifiedV1 = await drive.verifyPassenger({ userId: driverA.user.id, rideId: rideV1.id, code: v1Code });
+  check("a pre-v2 record still verifies", verifiedV1.verified === true);
+  await arrive(driverA.user.id, rideV1.id);
+  await start(driverA.user.id, rideV1.id);
+  await complete(driverA.user.id, rideV1.id);
+
+  // Leading zeros are valid digits, not a numeric value. Construct a v2 record
+  // whose real code starts with zero and prove both the endpoint and the driver
+  // submission preserve it.
+  const rideZero = await newRide(riderG.id, "cash");
+  await assign(driverA.user.id, rideZero.id);
+  let zeroSalt = "";
+  let zeroCode = "";
+  for (let attempt = 0; attempt < 500; attempt += 1) {
+    const candidate = randomBytes(16).toString("hex");
+    const candidateCode = derivedCode(candidate, rideZero.id, "v2");
+    if (candidateCode.startsWith("0")) {
+      zeroSalt = candidate;
+      zeroCode = candidateCode;
+      break;
+    }
+  }
+  check("fixture search found a leading-zero code", zeroSalt !== "" && zeroCode.startsWith("0"), zeroCode);
+  await prisma.rideVerification.update({
+    where: { rideId: rideZero.id },
+    data: { algorithm: "scrypt-hmac-sha256-v2", salt: zeroSalt, codeHash: hashFor(zeroCode, zeroSalt) }
+  });
+  const codeZero = await drive.getRideVerificationCode({ userId: riderG.id, rideId: rideZero.id });
+  check(
+    "the rider endpoint returns a four-character leading-zero code",
+    codeZero.code === zeroCode && /^0\d{3}$/.test(codeZero.code ?? ""),
+    JSON.stringify({ returned: codeZero.code, expected: zeroCode })
+  );
+  const verifiedZero = await drive.verifyPassenger({ userId: driverA.user.id, rideId: rideZero.id, code: zeroCode });
+  check("the driver submission accepts a leading-zero code", verifiedZero.verified === true);
+  await drive.cancelRide({
+    actorId: riderG.id,
+    isAdmin: false,
+    rideId: rideZero.id,
+    reason: "Leading-zero acceptance cleanup"
+  });
+
+  // Attempts belong to the ride. A refresh must not clear them, and neither may a
+  // release followed by re-acceptance.
+  const rideBudget = await newRide(riderG.id, "cash");
+  await assign(driverA.user.id, rideBudget.id);
+  const codeBudget = await drive.getRideVerificationCode({ userId: riderG.id, rideId: rideBudget.id });
+  const wrongBudget = String((Number(codeBudget.code) + 1) % 10_000).padStart(4, "0");
+  await expectError(
+    "first wrong code increments the attempt counter",
+    () => drive.verifyPassenger({ userId: driverA.user.id, rideId: rideBudget.id, code: wrongBudget }),
+    400,
+    "invalid_passenger_code"
+  );
+  const beforeRefresh = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideBudget.id } });
+  await drive.getRideVerificationCode({ userId: riderG.id, rideId: rideBudget.id });
+  await drive.getRideVerificationCode({ userId: riderG.id, rideId: rideBudget.id });
+  const afterRefresh = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideBudget.id } });
+  check(
+    "refreshing the rider screen neither resets nor increments attempts",
+    afterRefresh.attemptCount === beforeRefresh.attemptCount && afterRefresh.attemptCount === 1,
+    JSON.stringify({ before: beforeRefresh.attemptCount, after: afterRefresh.attemptCount })
+  );
+
+  await drive.releaseRide({ userId: driverA.user.id, rideId: rideBudget.id, reason: "Budget test release" });
+  const releasedRecord = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideBudget.id } });
+  check("release invalidates the current code", Boolean(releasedRecord.invalidatedAt));
+  await assign(driverA.user.id, rideBudget.id);
+  const reassignedRecord = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideBudget.id } });
+  const codeBudget2 = await drive.getRideVerificationCode({ userId: riderG.id, rideId: rideBudget.id });
+  check(
+    "reassignment rotates the code but carries the spent attempt budget",
+    reassignedRecord.salt !== releasedRecord.salt &&
+      reassignedRecord.attemptCount === 1 &&
+      reassignedRecord.verifiedAt === null &&
+      codeBudget2.code === derivedCode(reassignedRecord.salt, rideBudget.id, "v2"),
+    JSON.stringify({ attempts: reassignedRecord.attemptCount, code: codeBudget2.code })
+  );
+  const verifiedBudget = await drive.verifyPassenger({
+    userId: driverA.user.id,
+    rideId: rideBudget.id,
+    code: codeBudget2.code!
+  });
+  check(
+    "the reassigned code verifies with the remaining budget, not a fresh five",
+    verifiedBudget.verified === true && verifiedBudget.attemptsRemaining === drive.RIDE_VERIFICATION_MAX_ATTEMPTS - 1,
+    JSON.stringify({ attemptsRemaining: verifiedBudget.attemptsRemaining })
+  );
+  await arrive(driverA.user.id, rideBudget.id);
+  await start(driverA.user.id, rideBudget.id);
+  await complete(driverA.user.id, rideBudget.id);
+
+  /* ------------------------------- L. rider reset and suspended driver --- */
+  const rideReset = await newRide(riderH.id, "cash");
+  await assign(driverB.user.id, rideReset.id);
+  await expectError(
+    "an unrelated rider cannot reset another ride's code",
+    () => drive.resetRideVerificationByRider({ userId: riderG.id, rideId: rideReset.id }),
+    403,
+    "forbidden"
+  );
+  await expectError(
+    "the driver cannot reset the rider's code",
+    () => drive.resetRideVerificationByRider({ userId: driverB.user.id, rideId: rideReset.id }),
+    403,
+    "forbidden"
+  );
+  await expectError(
+    "an active code is not reset just because someone asks",
+    () => drive.resetRideVerificationByRider({ userId: riderH.id, rideId: rideReset.id }),
+    409,
+    "verification_active"
+  );
+  await prisma.rideVerification.update({
+    where: { rideId: rideReset.id },
+    data: { attemptCount: drive.RIDE_VERIFICATION_MAX_ATTEMPTS }
+  });
+  const beforeRiderReset = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideReset.id } });
+  const riderReset = await drive.resetRideVerificationByRider({ userId: riderH.id, rideId: rideReset.id });
+  const afterRiderReset = await prisma.rideVerification.findUniqueOrThrow({ where: { rideId: rideReset.id } });
+  check(
+    "rider reset rotates a locked code and clears attempts without returning a code",
+    afterRiderReset.salt !== beforeRiderReset.salt &&
+      afterRiderReset.attemptCount === 0 &&
+      afterRiderReset.verifiedAt === null &&
+      riderReset.verification.locked === false &&
+      !safeJson(riderReset).includes("\"code\"")
+  );
+  check(
+    "rider reset wrote its audit row",
+    (await prisma.auditLog.count({
+      where: { action: "ride.verification_rider_reset", entityId: rideReset.id }
+    })) === 1
+  );
+  const resetCode = await drive.getRideVerificationCode({ userId: riderH.id, rideId: rideReset.id });
+  check("the rider receives a working code after reset", typeof resetCode.code === "string");
+  const verifiedReset = await drive.verifyPassenger({
+    userId: driverB.user.id,
+    rideId: rideReset.id,
+    code: resetCode.code!
+  });
+  check("the reset code verifies", verifiedReset.verified === true);
+  await expectError(
+    "a verified ride cannot be reset again",
+    () => drive.resetRideVerificationByRider({ userId: riderH.id, rideId: rideReset.id }),
+    409,
+    "already_verified"
+  );
+  await arrive(driverB.user.id, rideReset.id);
+  await start(driverB.user.id, rideReset.id);
+  await complete(driverB.user.id, rideReset.id);
+
+  // Reset abuse limit: three reissues per window, then a clear 429. The record is
+  // forced expired between resets because a reset leaves an active code.
+  const rideResetLimit = await newRide(riderH.id, "cash");
+  await assign(driverB.user.id, rideResetLimit.id);
+  await prisma.rideVerification.update({
+    where: { rideId: rideResetLimit.id },
+    data: { attemptCount: drive.RIDE_VERIFICATION_MAX_ATTEMPTS }
+  });
+  for (let reset = 1; reset <= drive.RIDE_VERIFICATION_MAX_RIDER_RESETS_PER_WINDOW; reset += 1) {
+    const result = await drive.resetRideVerificationByRider({ userId: riderH.id, rideId: rideResetLimit.id });
+    check(`rider reset ${reset} within the window succeeds`, result.reissued === true);
+    await prisma.rideVerification.update({
+      where: { rideId: rideResetLimit.id },
+      data: { expiresAt: new Date(Date.now() - 1_000) }
+    });
+  }
+  await expectError(
+    "a fourth rider reset inside the window is rate limited",
+    () => drive.resetRideVerificationByRider({ userId: riderH.id, rideId: rideResetLimit.id }),
+    429,
+    "verification_reset_rate_limited"
+  );
+  check(
+    "the reset limit left exactly the allowed audit rows",
+    (await prisma.auditLog.count({
+      where: { action: "ride.verification_rider_reset", entityId: rideResetLimit.id }
+    })) === drive.RIDE_VERIFICATION_MAX_RIDER_RESETS_PER_WINDOW
+  );
+  await drive.cancelRide({
+    actorId: riderH.id,
+    isAdmin: false,
+    rideId: rideResetLimit.id,
+    reason: "Reset-limit cleanup"
+  });
+
+  // A driver suspended after accepting can still verify and finish the trip they
+  // hold; suspension blocks new work, not the assigned trip.
+  const rideSuspended = await newRide(riderH.id, "cash");
+  await assign(driverB.user.id, rideSuspended.id);
+  const codeSuspended = await drive.getRideVerificationCode({ userId: riderH.id, rideId: rideSuspended.id });
+  await prisma.driverProfile.update({
+    where: { id: driverB.profile.id },
+    data: { status: "suspended", suspendedReason: "Acceptance-suite suspension check" }
+  });
+  const suspendedVerify = await drive.verifyPassenger({
+    userId: driverB.user.id,
+    rideId: rideSuspended.id,
+    code: codeSuspended.code!
+  });
+  check("a suspended driver can still verify the ride they already hold", suspendedVerify.verified === true);
+  await prisma.driverProfile.update({
+    where: { id: driverB.profile.id },
+    data: { status: "approved", suspendedReason: null }
+  });
+  await arrive(driverB.user.id, rideSuspended.id);
+  await start(driverB.user.id, rideSuspended.id);
+  await complete(driverB.user.id, rideSuspended.id);
+
+  /* ----------------------------------- M. legacy active-ride transition --- */
+  const legacyRide = await newRide(riderG.id, "cash");
+  await assign(driverA.user.id, legacyRide.id);
+  await prisma.rideVerification.delete({ where: { rideId: legacyRide.id } });
+  const legacyCode = await drive.getRideVerificationCode({ userId: riderG.id, rideId: legacyRide.id });
+  check(
+    "a legacy assignment reports no code and does not create a record retroactively",
+    legacyCode.legacy === true &&
+      legacyCode.code === null &&
+      legacyCode.required === false &&
+      (await prisma.rideVerification.count({ where: { rideId: legacyRide.id } })) === 0,
+    JSON.stringify(legacyCode)
+  );
+  await drive.getRideVerificationCode({ userId: riderG.id, rideId: legacyRide.id });
+  check(
+    "opening the trip screen again still does not create a retroactive record",
+    (await prisma.rideVerification.count({ where: { rideId: legacyRide.id } })) === 0
+  );
+  const legacyBoard = await drive.listDriverRides(driverA.user.id);
+  const legacyRow = legacyBoard.active.find((ride) => ride.id === legacyRide.id);
+  check(
+    "the driver board marks a missing record as legacy, not as verified",
+    legacyRow?.verification?.legacy === true &&
+      legacyRow?.verification?.required === false &&
+      legacyRow?.verification?.verified === false,
+    safeJson(legacyRow?.verification)
+  );
+  await expectError(
+    "a legacy ride has no code for the driver to submit",
+    () => drive.verifyPassenger({ userId: driverA.user.id, rideId: legacyRide.id, code: "1234" }),
+    409,
+    "verification_not_required"
+  );
+  await arrive(driverA.user.id, legacyRide.id);
+  const legacyStarted = await start(driverA.user.id, legacyRide.id);
+  check("a legacy trip reaches the pick-up and starts without retroactive verification", legacyStarted.status === "in_progress");
+  check(
+    "the legacy start wrote an explicit event and audit row",
+    (await prisma.rideEvent.count({ where: { rideId: legacyRide.id, label: "Legacy pickup start" } })) === 1 &&
+      (await prisma.auditLog.count({
+        where: { action: "ride.legacy_pickup_start_without_verification", entityId: legacyRide.id }
+      })) === 1
+  );
+  check(
+    "a ride already in progress is not requeued or blocked by verification",
+    (await drive.driverUpdateRideStatus({
+      userId: driverA.user.id,
+      rideId: legacyRide.id,
+      status: "completed"
+    })).status === "completed"
+  );
+
+  // Support may explicitly opt a legacy ride into verification. That is a
+  // deliberate support action, not a retroactive requirement.
+  const legacySupport = await newRide(riderH.id, "cash");
+  await assign(driverB.user.id, legacySupport.id);
+  await prisma.rideVerification.delete({ where: { rideId: legacySupport.id } });
+  await expectError(
+    "a legacy rider cannot reset a code that never existed",
+    () => drive.resetRideVerificationByRider({ userId: riderH.id, rideId: legacySupport.id }),
+    409,
+    "verification_not_required"
+  );
+  const supportIssue = await drive.overrideRideVerification({
+    adminId: admin.id,
+    rideId: legacySupport.id,
+    action: "reset",
+    reason: "Legacy ride opt-in to pickup verification"
+  });
+  check(
+    "support can explicitly issue a code for a legacy ride",
+    supportIssue.verification.required === true &&
+      (await prisma.rideVerification.count({ where: { rideId: legacySupport.id } })) === 1
+  );
+  await arrive(driverB.user.id, legacySupport.id);
+  await expectError(
+    "after the support opt-in the start is gated by the issued code",
+    () => start(driverB.user.id, legacySupport.id),
+    409,
+    "passenger_verification_required"
+  );
+  const legacySupportCode = await drive.getRideVerificationCode({ userId: riderH.id, rideId: legacySupport.id });
+  const legacySupportVerify = await drive.verifyPassenger({
+    userId: driverB.user.id,
+    rideId: legacySupport.id,
+    code: legacySupportCode.code!
+  });
+  check("the support-issued code verifies normally", legacySupportVerify.verified === true);
+  await start(driverB.user.id, legacySupport.id);
+  await complete(driverB.user.id, legacySupport.id);
+
+  // Awaiting assignment is unchanged: no record exists, and the rider is told why.
+  const awaitingRide = await newRide(riderG.id, "cash");
+  await expectError(
+    "an unassigned ride has no pickup code yet",
+    () => drive.getRideVerificationCode({ userId: riderG.id, rideId: awaitingRide.id }),
+    409,
+    "verification_not_available"
+  );
+  check(
+    "requesting a ride never creates a verification record",
+    (await prisma.rideVerification.count({ where: { rideId: awaitingRide.id } })) === 0
+  );
+  await drive.cancelRide({
+    actorId: riderG.id,
+    isAdmin: false,
+    rideId: awaitingRide.id,
+    reason: "Awaiting-assignment cleanup"
+  });
+
+  /* ------------------------------- N. Control Center support queue shape --- */
+  const queueNormal = await newRide(riderG.id, "cash");
+  await assign(driverA.user.id, queueNormal.id);
+  const queueLegacy = await newRide(riderH.id, "cash");
+  await assign(driverB.user.id, queueLegacy.id);
+  await prisma.rideVerification.delete({ where: { rideId: queueLegacy.id } });
+  const queue = await drive.listRideVerificationSupport();
+  const normalRow = queue.find((row) => row.rideId === queueNormal.id);
+  const legacyQueueRow = queue.find((row) => row.rideId === queueLegacy.id);
+  const queueSerialized = safeJson(queue);
+  check(
+    "the Control Center queue lists active assigned trips with legacy state",
+    Boolean(normalRow) &&
+      normalRow?.verification.required === true &&
+      normalRow?.verification.legacy === false &&
+      legacyQueueRow?.verification.legacy === true &&
+      legacyQueueRow?.verification.required === false
+  );
+  check(
+    "the Control Center queue never contains a raw code, salt or hash",
+    !queueSerialized.includes("codeHash") &&
+      !queueSerialized.includes("\"salt\"") &&
+      !queueSerialized.includes("\"code\"") &&
+      queue.every((row) => ["driver_assigned", "driver_arriving"].includes(row.status))
+  );
+  await drive.cancelRide({
+    actorId: riderG.id,
+    isAdmin: false,
+    rideId: queueNormal.id,
+    reason: "Support-queue cleanup"
+  });
+  await drive.cancelRide({
+    actorId: riderH.id,
+    isAdmin: false,
+    rideId: queueLegacy.id,
+    reason: "Support-queue cleanup"
+  });
 
   } finally {
     await cleanupFixtures();

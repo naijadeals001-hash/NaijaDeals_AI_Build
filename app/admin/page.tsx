@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { AdminDashboard } from "@/components/functional/admin-dashboard";
 import { getSessionUser, isSuperAdmin, toPublicSessionUser } from "@/lib/auth/session";
+import { hasPermission } from "@/lib/auth/permissions";
 import { loadAdminPageData } from "@/lib/admin/load-page-data";
 import { normalizeModule, normalizeTab } from "@/lib/admin/admin-navigation";
 import { resolveAdminRegion } from "@/lib/admin/region";
@@ -45,6 +46,7 @@ export default async function Page({
         userRoles={publicUser?.roles ?? ["admin"]}
         userActorType={publicUser?.actorType ?? "ADMIN"}
         isSuperAdmin={sessionUser ? isSuperAdmin(sessionUser) : false}
+        canModerateRides={sessionUser ? hasPermission(sessionUser, "rides:write") : false}
         region={resolved.region}
         regionRestricted={resolved.restricted}
       />

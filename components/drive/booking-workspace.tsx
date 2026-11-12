@@ -33,7 +33,8 @@ import {
   getPublicRoute,
   getRideReceipt,
   getRideVerification,
-  getTracking
+  getTracking,
+  resetRideVerification
 } from "./api";
 import { RideRatingPanel, SafetyReportForm } from "./ride-rating";
 import type {
@@ -117,6 +118,7 @@ export function BookingWorkspace({
   const [error, setError] = useState("");
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [verification, setVerification] = useState<RideVerification | null>(null);
+  const [verificationTouched, setVerificationTouched] = useState(0);
 
   const pickupPlace = useMemo(() => findPlace(pickup), [pickup]);
   const dropoffPlace = useMemo(() => findPlace(dropoff), [dropoff]);
@@ -225,7 +227,7 @@ export function BookingWorkspace({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [activeRide?.id, activeRide?.status, viewer]);
+  }, [activeRide?.id, activeRide?.status, viewer, verificationTouched]);
 
   async function requestRide() {
     setBusy("request");
@@ -647,6 +649,7 @@ export function BookingWorkspace({
           onCancel={() => void cancelRide(activeRide)}
           onRefresh={() => void loadRides()}
           verification={verification}
+          onVerificationChanged={() => setVerificationTouched((current) => current + 1)}
         />
       ) : (
         <section id="active-trip" className="scroll-mt-24 rounded-2xl border border-dashed border-[#cfdccf] bg-[#f7fbf7] p-4 text-[12.5px] text-[#5d6d64]">
@@ -714,7 +717,8 @@ function ActiveTripPanel({
   busy,
   onCancel,
   onRefresh,
-  verification
+  verification,
+  onVerificationChanged
 }: {
   ride: ApiRide;
   viewer: { name: string; isDriver: boolean } | null;
@@ -723,11 +727,14 @@ function ActiveTripPanel({
   onCancel: () => void;
   onRefresh: () => void;
   verification: RideVerification | null;
+  onVerificationChanged: () => void;
 }) {
   const [tracking, setTracking] = useState<DriveTracking | null>(null);
   const [trackingState, setTrackingState] = useState<"idle" | "ready" | "error">("idle");
   const [trackingError, setTrackingError] = useState("");
   const [failures, setFailures] = useState(0);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState("");
   const lastCapturedRef = useRef<string | null>(null);
 
   const shouldTrack = ["driver_assigned", "driver_arriving", "in_progress"].includes(ride.status);
@@ -785,6 +792,19 @@ function ActiveTripPanel({
     `Status: ${statusText(ride.status)}`,
     `Fare: ${money(ride.fareKobo, ride.currency)} (${ride.paymentMethod === "wallet" ? "NaijaPay" : "cash"})`
   ].join("\n");
+
+  async function resetCode() {
+    setResetBusy(true);
+    setResetError("");
+    try {
+      await resetRideVerification(ride.id);
+      onVerificationChanged();
+    } catch (caught) {
+      setResetError(caught instanceof Error ? caught.message : "Unable to reset the pickup code.");
+    } finally {
+      setResetBusy(false);
+    }
+  }
 
   return (
     <section id="active-trip" aria-labelledby="active-trip-heading" className="scroll-mt-24 rounded-2xl border border-[#0b5c33]/25 bg-white p-4 sm:p-5">
@@ -864,22 +884,40 @@ function ActiveTripPanel({
                     : ""}
                 </p>
               </>
-            ) : verification?.expired ? (
-              <p className="mt-1 text-[11.5px] leading-5 text-[#a3480f]">
-                This pickup code has expired. Contact{" "}
-                <Link href="/naijadrive/help#support" className="font-bold underline">
-                  NaijaDrive support
-                </Link>{" "}
-                to reset it before the trip starts.
+            ) : verification?.legacy ? (
+              <p className="mt-1 text-[11.5px] leading-5 text-[#5d6d64]">
+                This trip was matched before protected pickup verification was introduced, so no pickup
+                code is required. NaijaDrive support can still issue one if needed.
               </p>
-            ) : verification?.locked ? (
-              <p className="mt-1 text-[11.5px] leading-5 text-[#a3480f]">
-                The pickup code is locked after too many attempts. Contact{" "}
-                <Link href="/naijadrive/help#support" className="font-bold underline">
-                  NaijaDrive support
-                </Link>{" "}
-                to reset it.
-              </p>
+            ) : verification?.expired || verification?.locked ? (
+              <>
+                <p className="mt-1 text-[11.5px] leading-5 text-[#a3480f]">
+                  {verification?.expired
+                    ? "This pickup code has expired. Reset it to continue your trip."
+                    : "The pickup code is locked after too many attempts. Reset it to continue your trip."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void resetCode()}
+                  disabled={resetBusy}
+                  className="mt-1.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#0b5c33] px-3 text-[10.5px] font-extrabold text-white disabled:opacity-50"
+                >
+                  {resetBusy ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : <RefreshCw className="h-3 w-3" aria-hidden />}
+                  {resetBusy ? "Resetting…" : "Reset pickup code"}
+                </button>
+                {resetError ? (
+                  <p role="alert" className="mt-1 text-[10.5px] font-bold text-[#b91c1c]">
+                    {resetError}
+                  </p>
+                ) : null}
+                <p className="mt-1 text-[10px] leading-4 text-[#5d6d64]">
+                  If resetting does not work, contact{" "}
+                  <Link href="/naijadrive/help#support" className="font-bold underline">
+                    NaijaDrive support
+                  </Link>
+                  .
+                </p>
+              </>
             ) : (
               <p className="mt-1 text-[11.5px] leading-5 text-[#5d6d64]">
                 A pickup code appears here when a driver accepts. The server requires the code before

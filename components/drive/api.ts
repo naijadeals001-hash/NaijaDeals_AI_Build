@@ -93,6 +93,13 @@ export function getRideVerification(rideId: string) {
   return request<RideVerification>(`/api/drive/rides/${encodeURIComponent(rideId)}/verification`);
 }
 
+export function resetRideVerification(rideId: string) {
+  return request<{ rideId: string; reissued: boolean; verification: RideVerification }>(
+    `/api/drive/rides/${encodeURIComponent(rideId)}/verification/reset`,
+    { method: "POST" }
+  );
+}
+
 export function verifyPassenger(rideId: string, code: string) {
   return request<{ verified: boolean; alreadyVerified: boolean }>(
     `/api/drive/driver/rides/${encodeURIComponent(rideId)}/verify`,

@@ -72,6 +72,7 @@ interface AdminDashboardProps {
   userRoles: string[];
   userActorType: string;
   isSuperAdmin: boolean;
+  canModerateRides: boolean;
   region: AdminRegion;
   regionRestricted: boolean;
 }
@@ -535,6 +536,7 @@ export function AdminDashboard(props: AdminDashboardProps) {
           escrow={props.escrow}
           audit={audit}
           isSuperAdmin={superAdminOnly}
+          canModerateRides={props.canModerateRides}
           initialQuery={searchParams.get("q") ?? ""}
           onRefresh={refresh}
         />

@@ -340,6 +340,7 @@ export async function cancelRide(input: {
   reason?: string | null;
 }) {
   return prisma.$transaction(async (tx) => {
+    await lockRideVerification(tx, input.rideId);
     const ride = await loadRide(tx, input.rideId);
     if (!input.isAdmin && ride.riderId !== input.actorId) {
       throw new ApiError(403, "forbidden", "This ride belongs to another account.");
@@ -447,6 +448,11 @@ export async function acceptRide(input: { userId: string; rideId: string }) {
     );
   }
   const loaded = await prisma.$transaction(async (tx) => {
+    // Lock order for every transaction that mutates a ride's verification state:
+    // ride-verification advisory lock -> Ride row -> RideVerification row. Taking
+    // the same lock here means a release, expiry, cancellation, support reset and
+    // this acceptance cannot interleave their ride/verification writes.
+    await lockRideVerification(tx, input.rideId);
     const ride = await tx.ride.findUnique({ where: { id: input.rideId } });
     if (!ride) throw new ApiError(404, "ride_not_found", "Ride not found.");
     if (ride.status === "cancelled") throw new ApiError(409, "ride_cancelled", "This ride was cancelled by the rider.");
@@ -495,8 +501,10 @@ export async function acceptRide(input: { userId: string; rideId: string }) {
     }
 
     // The pickup code belongs to the assignment, not to an event log. Rotating
-    // here means a re-assigned ride never reuses the previous driver's code.
-    await issueRideVerification(tx, ride.id);
+    // here means a re-assigned ride never reuses the previous driver's code. The
+    // attempt budget is carried across reassignment: otherwise a driver could
+    // release and re-accept the same ride to reset the five-attempt cap.
+    await issueRideVerification(tx, ride.id, { carryAttempts: true });
 
     await addRideEvent(tx, {
       rideId: ride.id,
@@ -619,10 +627,14 @@ export async function driverUpdateRideStatus(input: {
     if (input.status === "completed") {
       if (ride.status !== "in_progress") throw new ApiError(409, "trip_not_started", "Start the trip before completing it.");
     }
+    let legacyVerificationStart = false;
     if (input.status === "in_progress") {
       // Authoritative gate: the protected record must show a successful code
-      // verification in the same transaction that moves the ride forward.
-      await requireVerifiedRide(tx, ride.id);
+      // verification in the same transaction that moves the ride forward. A ride
+      // with no record at all predates this feature and is allowed to start with
+      // an audit record instead of a retroactive block.
+      const check = await requireVerifiedRide(tx, ride.id);
+      legacyVerificationStart = check.legacy;
     }
 
     const now = new Date();
@@ -690,6 +702,27 @@ export async function driverUpdateRideStatus(input: {
       description,
       actorId: input.userId
     });
+    if (legacyVerificationStart) {
+      // Backward-compatible transition: the ride was accepted before protected
+      // pickup verification existed, so there is nothing to verify. Record the
+      // exception explicitly instead of pretending a code was checked.
+      await addRideEvent(tx, {
+        rideId: ride.id,
+        status: "in_progress",
+        label: "Legacy pickup start",
+        description:
+          "This trip was matched before protected pickup verification was introduced. No pickup code existed, and the start was recorded as a legacy exception.",
+        actorId: input.userId
+      });
+      await recordAudit({
+        tx,
+        actorId: input.userId,
+        action: "ride.legacy_pickup_start_without_verification",
+        entity: "Ride",
+        entityId: ride.id,
+        metadata: { rideNumber: ride.rideNumber, reason: "no_verification_record_for_pre_feature_assignment" }
+      });
+    }
     await recordSystemEvent({
       tx,
       type: `ride.${input.status}`,
@@ -726,6 +759,7 @@ export async function driverUpdateRideStatus(input: {
 export async function releaseRide(input: { userId: string; rideId: string; reason?: string | null }) {
   const driver = await getDriverForUser(input.userId);
   return prisma.$transaction(async (tx) => {
+    await lockRideVerification(tx, input.rideId);
     const ride = await loadRide(tx, input.rideId);
     if (ride.driverId !== driver.id) throw new ApiError(403, "forbidden", "This ride is assigned to another driver.");
     if (!["driver_assigned", "driver_arriving"].includes(ride.status)) {
@@ -812,6 +846,7 @@ async function releaseExpiredRide(
   ride: { id: string; rideNumber: string; status: RideStatus; driverId: string | null },
   now: Date
 ) {
+  await lockRideVerification(tx, ride.id);
   const updated = await tx.ride.updateMany({
     where: {
       id: ride.id,
@@ -952,7 +987,7 @@ export async function listDriverRides(userId: string) {
           invalidatedAt: true
         }
       });
-      return { ...ride, verification: safeVerification(record, now) };
+      return { ...ride, verification: safeVerification(record, now, { legacy: !record }) };
     })
   );
 
@@ -1004,6 +1039,64 @@ export async function listAllRides() {
   });
 }
 
+/**
+ * Control Center queue for pickup-code support.
+ *
+ * Returns active assigned trips only, with verification state and a legacy flag
+ * but never the salt, hash or raw code. The route requires `rides:write`, the same
+ * permission the reset/verify action requires.
+ */
+export async function listRideVerificationSupport() {
+  await releaseExpiredAssignments();
+  const rides = await prisma.ride.findMany({
+    where: { status: { in: ["driver_assigned", "driver_arriving"] } },
+    select: {
+      id: true,
+      rideNumber: true,
+      status: true,
+      acceptedAt: true,
+      assignmentExpiresAt: true,
+      rider: { select: { id: true, name: true } },
+      driver: { select: { id: true, vehiclePlate: true, user: { select: { id: true, name: true } } } }
+    },
+    orderBy: { acceptedAt: "asc" },
+    take: 100
+  });
+  if (rides.length === 0) return [];
+  const records = await prisma.rideVerification.findMany({
+    where: { rideId: { in: rides.map((ride) => ride.id) } },
+    select: {
+      rideId: true,
+      expiresAt: true,
+      attemptCount: true,
+      maxAttempts: true,
+      verifiedAt: true,
+      invalidatedAt: true,
+      lastAttemptAt: true
+    }
+  });
+  const byRide = new Map(records.map((record) => [record.rideId, record]));
+  const now = new Date();
+  return rides.map((ride) => {
+    const record = byRide.get(ride.id) ?? null;
+    return {
+      rideId: ride.id,
+      rideNumber: ride.rideNumber,
+      status: ride.status,
+      acceptedAt: ride.acceptedAt?.toISOString() ?? null,
+      assignmentExpiresAt: ride.assignmentExpiresAt?.toISOString() ?? null,
+      rider: { name: ride.rider.name },
+      driver: ride.driver
+        ? {
+            name: ride.driver.user.name,
+            vehiclePlate: ride.driver.vehiclePlate
+          }
+        : null,
+      verification: safeVerification(record, now, { legacy: !record })
+    };
+  });
+}
+
 /* ------------------------------------------- presence, tracking and routing --- */
 
 /**
@@ -1044,8 +1137,25 @@ export const RIDE_VERIFICATION_CODE_LENGTH = 4;
 export const RIDE_VERIFICATION_MAX_ATTEMPTS = 5;
 export const RIDE_VERIFICATION_TTL_MS = 2 * 60 * 60 * 1000;
 export const RIDE_VERIFICATION_ATTEMPT_COOLDOWN_MS = 1_500;
-const RIDE_VERIFICATION_ALGORITHM = "scrypt-hmac-sha256-v1";
+/**
+ * A rider may re-issue an expired or locked code without support. The limit keeps
+ * a rider (or someone holding their session) from repeatedly invalidating the code
+ * the driver is about to use. Support resets are separately privileged and audited.
+ */
+export const RIDE_VERIFICATION_MAX_RIDER_RESETS_PER_WINDOW = 3;
+export const RIDE_VERIFICATION_RIDER_RESET_WINDOW_MS = 10 * 60 * 1000;
+/**
+ * Algorithm versioning is deliberate. `v1` derived the code from a single HMAC
+ * block with a modulo reduction; `v2` keeps the same construction but uses
+ * rejection sampling so every one of the 10,000 codes is equally likely. Existing
+ * records stay on their recorded version, so deploying v2 does not invalidate a
+ * code already shown to a rider.
+ */
+const RIDE_VERIFICATION_ALGORITHM = "scrypt-hmac-sha256-v2";
+const RIDE_VERIFICATION_ALGORITHM_V1 = "scrypt-hmac-sha256-v1";
+const RIDE_VERIFICATION_ALGORITHM_V2 = RIDE_VERIFICATION_ALGORITHM;
 const RIDE_VERIFICATION_HASH_BYTES = 32;
+const RIDE_VERIFICATION_MESSAGE_SUFFIX = "naijadrive-pickup-verification";
 
 type VerificationRecord = {
   expiresAt: Date;
@@ -1053,6 +1163,7 @@ type VerificationRecord = {
   maxAttempts: number;
   verifiedAt: Date | null;
   invalidatedAt: Date | null;
+  algorithm?: string;
 };
 
 export type SafeRideVerification = {
@@ -1063,19 +1174,66 @@ export type SafeRideVerification = {
   attemptsRemaining: number;
   expiresAt: string | null;
   verifiedAt: string | null;
+  /**
+   * True when the ride was assigned before protected pickup verification existed
+   * and therefore has no RideVerification record. Such a trip is not forced to
+   * verify retroactively; starting it is audited as a legacy exception.
+   */
+  legacy: boolean;
 };
 
-function verificationCodeFor(salt: string, rideId: string) {
-  const digest = createHmac("sha256", salt).update(`${rideId}:naijadrive-pickup-verification`).digest();
-  const space = 10 ** RIDE_VERIFICATION_CODE_LENGTH;
-  return String(digest.readUInt32BE(0) % space).padStart(RIDE_VERIFICATION_CODE_LENGTH, "0");
+const RIDE_VERIFICATION_CODE_SPACE = 10 ** RIDE_VERIFICATION_CODE_LENGTH;
+
+/**
+ * Derive the 4-digit pickup code from the per-ride salt and algorithm version.
+ *
+ * The salt is CSPRNG output (16 random bytes). `v2` rejection-samples a 32-bit
+ * HMAC block so the modulo reduction cannot bias any digit combination; `v1` is
+ * retained only to read records issued before v2 was deployed.
+ */
+function verificationCodeFor(salt: string, rideId: string, algorithm: string = RIDE_VERIFICATION_ALGORITHM) {
+  if (algorithm === RIDE_VERIFICATION_ALGORITHM_V1) {
+    const digest = createHmac("sha256", salt)
+      .update(`${rideId}:${RIDE_VERIFICATION_MESSAGE_SUFFIX}`)
+      .digest();
+    return String(digest.readUInt32BE(0) % RIDE_VERIFICATION_CODE_SPACE).padStart(
+      RIDE_VERIFICATION_CODE_LENGTH,
+      "0"
+    );
+  }
+  if (algorithm !== RIDE_VERIFICATION_ALGORITHM_V2) {
+    throw new ApiError(500, "verification_algorithm_unsupported", "This pickup code uses an unknown algorithm version.");
+  }
+  // Reject the top 7,296 of the 2^32 values so the remaining range is an exact
+  // multiple of 10,000. The rejection probability is 0.00017%.
+  const limit = Math.floor(0x1_0000_0000 / RIDE_VERIFICATION_CODE_SPACE) * RIDE_VERIFICATION_CODE_SPACE;
+  for (let counter = 0; counter < 32; counter += 1) {
+    const digest = createHmac("sha256", salt)
+      .update(`${rideId}:${RIDE_VERIFICATION_MESSAGE_SUFFIX}:${counter}`)
+      .digest();
+    const value = digest.readUInt32BE(0);
+    if (value < limit) {
+      return String(value % RIDE_VERIFICATION_CODE_SPACE).padStart(RIDE_VERIFICATION_CODE_LENGTH, "0");
+    }
+  }
+  // Unreachable in practice (the chance of 32 consecutive rejections is ~1e-116).
+  // Hashing another block keeps the function total without weakening the space.
+  const fallback = createHmac("sha256", salt)
+    .update(`${rideId}:${RIDE_VERIFICATION_MESSAGE_SUFFIX}:fallback`)
+    .digest()
+    .readUInt32BE(0);
+  return String(fallback % RIDE_VERIFICATION_CODE_SPACE).padStart(RIDE_VERIFICATION_CODE_LENGTH, "0");
 }
 
 function hashVerificationCode(code: string, salt: string) {
   return scryptSync(code, salt, RIDE_VERIFICATION_HASH_BYTES).toString("hex");
 }
 
-function safeVerification(record: VerificationRecord | null, now: Date = new Date()): SafeRideVerification {
+function safeVerification(
+  record: VerificationRecord | null,
+  now: Date = new Date(),
+  options: { legacy?: boolean } = {}
+): SafeRideVerification {
   if (!record) {
     return {
       required: false,
@@ -1084,7 +1242,8 @@ function safeVerification(record: VerificationRecord | null, now: Date = new Dat
       locked: false,
       attemptsRemaining: 0,
       expiresAt: null,
-      verifiedAt: null
+      verifiedAt: null,
+      legacy: Boolean(options.legacy)
     };
   }
   const active = !record.invalidatedAt;
@@ -1098,7 +1257,8 @@ function safeVerification(record: VerificationRecord | null, now: Date = new Dat
     locked,
     attemptsRemaining: Math.max(0, record.maxAttempts - record.attemptCount),
     expiresAt: active ? record.expiresAt.toISOString() : null,
-    verifiedAt: verified && record.verifiedAt ? record.verifiedAt.toISOString() : null
+    verifiedAt: verified && record.verifiedAt ? record.verifiedAt.toISOString() : null,
+    legacy: false
   };
 }
 
@@ -1109,18 +1269,37 @@ async function lockRideVerification(tx: Db, rideId: string) {
 
 /**
  * Issue (or rotate) the protected record. Called inside the driver-acceptance
- * transaction and by an audited support reset. No caller receives the raw code.
+ * transaction and by an audited support/rider reset. No caller receives the raw
+ * code.
+ *
+ * `carryAttempts` is used by reassignment: the five-attempt budget belongs to the
+ * ride, so releasing and accepting the same ride again must not restore a fresh
+ * budget to a driver who already spent it. Only an explicit rider/support reset
+ * clears attempts.
  */
-async function issueRideVerification(tx: Db, rideId: string) {
+async function issueRideVerification(
+  tx: Db,
+  rideId: string,
+  options: { carryAttempts?: boolean } = {}
+) {
+  const existing = options.carryAttempts
+    ? await tx.rideVerification.findUnique({
+        where: { rideId },
+        select: { attemptCount: true, maxAttempts: true }
+      })
+    : null;
+  const attemptCount = existing
+    ? Math.min(existing.attemptCount, Math.max(existing.maxAttempts, RIDE_VERIFICATION_MAX_ATTEMPTS))
+    : 0;
   const salt = randomBytes(16).toString("hex");
-  const code = verificationCodeFor(salt, rideId);
+  const code = verificationCodeFor(salt, rideId, RIDE_VERIFICATION_ALGORITHM);
   const now = new Date();
   const data = {
     codeHash: hashVerificationCode(code, salt),
     salt,
     algorithm: RIDE_VERIFICATION_ALGORITHM,
     expiresAt: new Date(now.getTime() + RIDE_VERIFICATION_TTL_MS),
-    attemptCount: 0,
+    attemptCount,
     maxAttempts: RIDE_VERIFICATION_MAX_ATTEMPTS,
     lastAttemptAt: null,
     verifiedAt: null,
@@ -1150,33 +1329,42 @@ async function invalidateRideVerification(tx: Db, rideId: string, reason: string
 
 /**
  * The start transition is gated by the protected row inside the caller's
- * transaction. A code that is absent, expired, locked or merely verified by a
- * different ride can never move a trip to `in_progress`.
+ * transaction. A code that is expired, locked or merely missing is refused.
+ *
+ * The one deliberate exception is a ride assigned before this feature existed: it
+ * has no RideVerification row at all. Absence is the legacy discriminator because
+ * every current acceptance creates the row in the same transaction. Such a trip
+ * is allowed to start and the caller records an explicit audit event; it is never
+ * silently treated as verified. An invalidated row is not legacy and remains a
+ * refusal.
  */
-async function requireVerifiedRide(tx: Db, rideId: string) {
+async function requireVerifiedRide(tx: Db, rideId: string): Promise<{ legacy: boolean }> {
   await lockRideVerification(tx, rideId);
   const record = await tx.rideVerification.findUnique({ where: { rideId } });
   const now = new Date();
-  if (!record || record.invalidatedAt) {
+  if (!record) {
+    return { legacy: true };
+  }
+  if (record.invalidatedAt) {
     throw new ApiError(
       409,
       "verification_not_issued",
       "The passenger has to open their trip screen to receive a pickup code before the trip can start."
     );
   }
-  if (record.verifiedAt) return record;
+  if (record.verifiedAt) return { legacy: false };
   if (record.expiresAt.getTime() <= now.getTime()) {
     throw new ApiError(
       409,
       "verification_expired",
-      "This pickup code has expired. Ask support to reset the code before starting the trip."
+      "This pickup code has expired. The rider can reset it from their trip screen, or support can reset it."
     );
   }
   if (record.attemptCount >= record.maxAttempts) {
     throw new ApiError(
       429,
       "verification_locked",
-      "Too many incorrect pickup codes. Support must reset the code before this trip can start."
+      "Too many incorrect pickup codes. The rider or support must reset the code before this trip can start."
     );
   }
   throw new ApiError(
@@ -1908,28 +2096,52 @@ export async function getRideVerificationCode(input: { userId: string; rideId: s
   }
 
   let record = await prisma.rideVerification.findUnique({ where: { rideId: ride.id } });
-  if (!record || record.invalidatedAt) {
-    // A ride assigned before the protected record existed (or one whose previous
-    // assignment was released) gets one record at the moment the rider asks.
+  if (!record) {
+    // Deliberate legacy transition: a ride assigned before protected pickup
+    // verification existed has no record. Opening the trip screen must not create
+    // one and retroactively force verification on a trip already in motion or
+    // waiting with the passenger. Support can still issue a code explicitly.
+    return {
+      rideId: ride.id,
+      code: null,
+      issuedAt: null,
+      expiresAt: null,
+      verified: false,
+      expired: false,
+      locked: false,
+      attemptsRemaining: 0,
+      required: false,
+      legacy: true,
+      verifiedAt: null
+    };
+  }
+  if (record.invalidatedAt) {
+    // An invalidated record means the previous assignment ended. If the ride is
+    // assigned again, a fresh code is required; the attempt budget is carried.
     record = await prisma.$transaction(async (tx) => {
       await lockRideVerification(tx, ride.id);
       const fresh = await tx.rideVerification.findUnique({ where: { rideId: ride.id } });
       if (fresh && !fresh.invalidatedAt) return fresh;
-      return issueRideVerification(tx, ride.id);
+      return issueRideVerification(tx, ride.id, { carryAttempts: true });
     });
   }
 
   const state = safeVerification(record);
   return {
     rideId: ride.id,
-    code: state.verified || state.expired || state.locked ? null : verificationCodeFor(record.salt, ride.id),
+    code:
+      state.verified || state.expired || state.locked
+        ? null
+        : verificationCodeFor(record.salt, ride.id, record.algorithm ?? RIDE_VERIFICATION_ALGORITHM_V1),
     issuedAt: record.createdAt.toISOString(),
     expiresAt: state.expiresAt,
     verified: state.verified,
     expired: state.expired,
     locked: state.locked,
     attemptsRemaining: state.attemptsRemaining,
-    required: true
+    required: true,
+    legacy: false,
+    verifiedAt: state.verifiedAt
   };
 }
 
@@ -1940,6 +2152,7 @@ type VerificationOutcome =
   | { outcome: "locked" }
   | { outcome: "expired" }
   | { outcome: "not_issued" }
+  | { outcome: "legacy" }
   | { outcome: "rate_limited" };
 
 /**
@@ -1952,7 +2165,10 @@ type VerificationOutcome =
  * replays return the already-verified state and can never restart a closed ride.
  */
 export async function verifyPassenger(input: { userId: string; rideId: string; code: string }) {
-  const driver = await getDriverForUser(input.userId);
+  // A suspended driver may finish the ride they already hold (the same rule as
+  // `driverUpdateRideStatus`); suspension blocks accepting new work, not safely
+  // completing an existing assignment. The assignment check below remains.
+  const driver = await getDriverForUser(input.userId, false);
   const provided = input.code.trim();
   const pattern = new RegExp(`^\\d{${RIDE_VERIFICATION_CODE_LENGTH}}$`);
   if (!pattern.test(provided)) {
@@ -1974,7 +2190,8 @@ export async function verifyPassenger(input: { userId: string; rideId: string; c
     }
 
     const record = await tx.rideVerification.findUnique({ where: { rideId: ride.id } });
-    if (!record || record.invalidatedAt) return { outcome: "not_issued" };
+    if (!record) return { outcome: "legacy" };
+    if (record.invalidatedAt) return { outcome: "not_issued" };
     const now = new Date();
     if (record.verifiedAt) {
       return {
@@ -2070,19 +2287,25 @@ export async function verifyPassenger(input: { userId: string; rideId: string; c
       throw new ApiError(
         429,
         "verification_locked",
-        "Too many incorrect pickup codes. Support must reset the code before this trip can start."
+        "Too many incorrect pickup codes. The rider or support must reset the code before this trip can start."
       );
     case "expired":
       throw new ApiError(
         409,
         "verification_expired",
-        "This pickup code has expired. Ask support to reset the code before starting the trip."
+        "This pickup code has expired. The rider can reset it from their trip screen, or support can reset it."
       );
     case "not_issued":
       throw new ApiError(
         409,
         "verification_not_issued",
         "The passenger has not opened their trip screen yet. Ask them to open it to receive their pickup code."
+      );
+    case "legacy":
+      throw new ApiError(
+        409,
+        "verification_not_required",
+        "This trip was matched before protected pickup verification was introduced, so it has no pickup code. Start the trip normally; the legacy exception is recorded."
       );
     case "rate_limited":
       throw new ApiError(
@@ -2150,6 +2373,110 @@ export async function overrideRideVerification(input: {
       rideId: ride.id,
       action: input.action,
       verification: safeVerification(record)
+    };
+  });
+}
+
+/**
+ * Rider-initiated reset for an expired or locked code.
+ *
+ * A long wait at the pick-up can outlive the two-hour code, and five wrong
+ * attempts can lock a legitimate trip. Until now both required Control Center
+ * support. This escape hatch stays with the rider, rotates the salt (the old code
+ * and any shared screenshot stop working), clears attempts, writes an audit row
+ * and is rate-limited per ride. It never reveals a code; the rider's normal
+ * verification endpoint returns the new one.
+ */
+export async function resetRideVerificationByRider(input: { userId: string; rideId: string }) {
+  return prisma.$transaction(async (tx) => {
+    await lockRideVerification(tx, input.rideId);
+    const ride = await loadRide(tx, input.rideId);
+    if (ride.riderId !== input.userId) {
+      throw new ApiError(403, "forbidden", "Only the rider on this trip can reset its pickup code.");
+    }
+    if (!["driver_assigned", "driver_arriving"].includes(ride.status)) {
+      throw new ApiError(
+        409,
+        "verification_not_available",
+        "Pickup codes can only be reset before the trip starts."
+      );
+    }
+
+    const record = await tx.rideVerification.findUnique({ where: { rideId: ride.id } });
+    if (!record) {
+      throw new ApiError(
+        409,
+        "verification_not_required",
+        "This trip was matched before protected pickup verification was introduced, so it has no code to reset."
+      );
+    }
+    if (record.invalidatedAt) {
+      throw new ApiError(
+        409,
+        "verification_not_issued",
+        "No active pickup code is attached to this assignment. Ask support to issue one."
+      );
+    }
+    if (record.verifiedAt) {
+      throw new ApiError(409, "already_verified", "This trip's pickup code has already been verified.");
+    }
+
+    const now = new Date();
+    const expired = record.expiresAt.getTime() <= now.getTime();
+    const locked = record.attemptCount >= record.maxAttempts;
+    if (!expired && !locked) {
+      throw new ApiError(
+        409,
+        "verification_active",
+        "The current pickup code is still active. Use it, or ask support if you have lost it."
+      );
+    }
+
+    const since = new Date(now.getTime() - RIDE_VERIFICATION_RIDER_RESET_WINDOW_MS);
+    const recentResets = await tx.auditLog.count({
+      where: {
+        entity: "Ride",
+        entityId: ride.id,
+        action: "ride.verification_rider_reset",
+        createdAt: { gte: since }
+      }
+    });
+    if (recentResets >= RIDE_VERIFICATION_MAX_RIDER_RESETS_PER_WINDOW) {
+      throw new ApiError(
+        429,
+        "verification_reset_rate_limited",
+        "This pickup code was reset several times recently. Contact NaijaDrive support for help."
+      );
+    }
+
+    const next = await issueRideVerification(tx, ride.id);
+    await addRideEvent(tx, {
+      rideId: ride.id,
+      status: ride.status,
+      label: "Pickup code reissued",
+      description: expired
+        ? "The rider reissued an expired pickup code. The previous code no longer works."
+        : "The rider reissued a locked pickup code. The previous code no longer works.",
+      actorId: input.userId
+    });
+    await recordAudit({
+      tx,
+      actorId: input.userId,
+      action: "ride.verification_rider_reset",
+      entity: "Ride",
+      entityId: ride.id,
+      metadata: {
+        rideNumber: ride.rideNumber,
+        attemptsBefore: record.attemptCount,
+        expired,
+        locked
+      }
+    });
+
+    return {
+      rideId: ride.id,
+      reissued: true,
+      verification: safeVerification(next)
     };
   });
 }

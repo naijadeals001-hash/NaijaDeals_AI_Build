@@ -326,6 +326,28 @@ export type ApiSavedPlace = {
   createdAt: string;
 };
 
+export type ApiRideVerificationState = {
+  required: boolean;
+  verified: boolean;
+  expired: boolean;
+  locked: boolean;
+  attemptsRemaining: number;
+  expiresAt: string | null;
+  verifiedAt: string | null;
+  legacy: boolean;
+};
+
+export type ApiRideVerificationSupportRow = {
+  rideId: string;
+  rideNumber: string;
+  status: string;
+  acceptedAt: string | null;
+  assignmentExpiresAt: string | null;
+  rider: { name: string };
+  driver: { name: string; vehiclePlate: string } | null;
+  verification: ApiRideVerificationState;
+};
+
 export type ApiDriverBoard = {
   driver: {
     id: string;
@@ -511,7 +533,14 @@ export const apiClient = {
 
   adminRides: () => requestJson<{ rides: ApiRide[] }>("/api/admin/rides"),
   adminCancelRide: (id: string, reason?: string) =>
-    requestJson<ApiRide>(`/api/admin/rides/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) })
+    requestJson<ApiRide>(`/api/admin/rides/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) }),
+  adminRideVerificationQueue: () =>
+    requestJson<{ rides: ApiRideVerificationSupportRow[] }>("/api/admin/rides/verification"),
+  adminRideVerificationAction: (id: string, action: "reset" | "verify", reason: string) =>
+    requestJson<{ rideId: string; action: string; verification: ApiRideVerificationState }>(
+      `/api/drive/rides/${id}/verification/support`,
+      { method: "POST", body: JSON.stringify({ action, reason }) }
+    )
 };
 
 export function koboToNaira(value: ApiMoney, currency = "NGN") {

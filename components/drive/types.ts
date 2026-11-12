@@ -75,6 +75,8 @@ export type DriverVerification = {
   attemptsRemaining: number;
   expiresAt: string | null;
   verifiedAt: string | null;
+  /** The ride was assigned before protected pickup verification existed. */
+  legacy: boolean;
 };
 
 export type DriverBoardRide = ApiRide & {
@@ -138,15 +140,17 @@ export type DriveTracking = {
 
 export type RideVerification = {
   rideId: string;
-  /** Null after verification, expiry or lockout; only the rider endpoint returns it. */
+  /** Null after verification, expiry, lockout or for a legacy ride. */
   code: string | null;
-  issuedAt: string;
+  issuedAt: string | null;
   expiresAt: string | null;
   verified: boolean;
   expired: boolean;
   locked: boolean;
   attemptsRemaining: number;
   required: boolean;
+  /** Matched before protected pickup verification existed; no code is required. */
+  legacy: boolean;
   verifiedAt?: string | null;
 };
 
