@@ -53,6 +53,16 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
   if (pathname?.startsWith("/naijashop")) {
     return <>{children}</>;
   }
+  // These commerce surfaces render the shared Marketplace header and footer
+  // themselves (see components/shop/shop-header.tsx). Returning the page
+  // unwrapped here keeps exactly one header, sidebar, mobile nav and footer.
+  if (
+    ["/search", "/cart", "/checkout", "/orders", "/tracking", "/returns"].some(
+      (route) => pathname === route || pathname?.startsWith(`${route}/`)
+    )
+  ) {
+    return <>{children}</>;
+  }
   if (pathname?.startsWith("/naijaeats")) {
     return <>{children}</>;
   }

@@ -56,6 +56,12 @@ import {
   type CheckoutResult
 } from "@/lib/api-client";
 import { ModuleLanding } from "@/components/sections/module-landing";
+import { announceShopCartCount } from "@/components/shop/shop-header";
+
+/** Authoritative cart badge count: active lines only, saved-for-later excluded. */
+function activeCartCount(cart: ApiCart | null | undefined) {
+  return (cart?.items ?? []).filter((item) => !item.savedForLater).reduce((sum, item) => sum + item.quantity, 0);
+}
 
 function ErrorBox({ message, action }: { message: string; action?: React.ReactNode }) {
   return (
@@ -172,7 +178,7 @@ export function NaijaShopPage() {
   const PAGE_SIZE = 12;
   const collectionRef = useRef<HTMLDivElement>(null);
   const [allMenuOpen, setAllMenuOpen] = useState(false);
-  const [session, setSession] = useState<{ name: string; cartCount: number; destination: string }>({ name: "", cartCount: 0, destination: "Lagos, Nigeria" });
+  const [session, setSession] = useState<{ name: string; cartCount: number; destination: string }>({ name: "", cartCount: 0, destination: "" });
   const [storefront, setStorefront] = useState({
     announcement: "",
     heroTitle: "Shop verified sellers across Africa",
@@ -231,7 +237,7 @@ export function NaijaShopPage() {
       setSession({
         name: profile?.name?.split(" ")[0] ?? "",
         cartCount: cartValue?.items?.filter((item) => !item.savedForLater).reduce((sum, item) => sum + item.quantity, 0) ?? 0,
-        destination: chosen ? [chosen.city, chosen.state].filter(Boolean).join(", ") : "Lagos, Nigeria"
+        destination: chosen ? [chosen.city, chosen.state].filter(Boolean).join(", ") : ""
       });
     });
     return () => { active = false; };
@@ -612,7 +618,7 @@ function MarketplaceBar({ categories, session }: { categories: ApiCategory[]; se
         <Link href="/account" className="hidden items-start gap-1.5 px-2 text-xs leading-tight text-white/80 hover:text-white sm:flex">
           <MapPin className="mt-0.5 h-4 w-4 text-primary-live" aria-hidden="true" />
           <span>
-            Deliver to <span className="font-extrabold text-white">{session.destination}</span>
+            Deliver to <span className="font-extrabold text-white">{session.destination || "Choose delivery location"}</span>
           </span>
         </Link>
 
@@ -862,9 +868,9 @@ function ShopResultRow({ product, onAdd }: { product: ApiProduct; onAdd: (produc
         <Link href={`/product/${product.slug}`} className="mt-0.5 line-clamp-2 text-lg font-medium leading-snug text-[#0f1111] hover:text-[#c45500] hover:underline">
           {product.name}
         </Link>
-        <div className="mt-1 flex items-center gap-1 text-sm" aria-label={reviewCount ? `${rating.toFixed(1)} out of 5 stars, ${reviewCount} ratings` : "No ratings yet"}>
+        <div className="mt-1 flex items-center gap-1 text-sm" aria-label={reviewCount ? `${rating.toFixed(1)} out of 5 stars, ${reviewCount} ${reviewCount === 1 ? "rating" : "ratings"}` : "No ratings yet"}>
           <span className="text-[#ffa41c]" aria-hidden="true">{"★".repeat(Math.round(rating))}<span className="text-[#d5d9d9]">{"★".repeat(5 - Math.round(rating))}</span></span>
-          <span className="text-xs text-[#007185]">{reviewCount > 0 ? `${reviewCount} ratings` : "No ratings yet"}</span>
+          <span className="text-xs text-[#007185]">{reviewCount > 0 ? `${reviewCount} ${reviewCount === 1 ? "rating" : "ratings"}` : "No ratings yet"}</span>
         </div>
         <div className="mt-1 flex flex-wrap items-baseline gap-2">
           <span className="text-2xl font-medium text-[#0f1111]">{koboToNaira(product.priceKobo)}</span>
@@ -875,7 +881,7 @@ function ShopResultRow({ product, onAdd }: { product: ApiProduct; onAdd: (produc
             </>
           ) : null}
         </div>
-        <p className="mt-1 text-xs text-[#0f1111]">Delivery to <span className="font-bold">Lagos</span> · options shown at checkout</p>
+        <p className="mt-1 text-xs text-[#0f1111]">Delivery options and fees are confirmed at checkout</p>
         <p className="text-xs text-muted">Sold by {product.vendor?.name ?? "a verified seller"}{available > 0 ? ` · ${available} in stock` : " · out of stock"}</p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {product.saleMode === "contact" ? (
@@ -995,11 +1001,13 @@ export function SearchPage() {
     setAdding(product.id);
     setError("");
     try {
-      await apiClient.addCartItem(product.id, 1);
+      const cart = await apiClient.addCartItem(product.id, 1);
+      announceShopCartCount(activeCartCount(cart));
       setNotice(`${product.name} added to cart.`);
     } catch (err) {
       if (err instanceof ApiRequestError && err.status === 401) {
-        router.push("/login?next=/cart");
+        const next = typeof window === "undefined" ? "/search" : `${window.location.pathname}${window.location.search}`;
+        router.push(`/login?next=${encodeURIComponent(next)}`);
         return;
       }
       setError(err instanceof Error ? err.message : "Could not add this item to the cart.");
@@ -1029,6 +1037,21 @@ export function SearchPage() {
     const timeout = setTimeout(() => void load(), 250);
     return () => clearTimeout(timeout);
   }, [load]);
+
+  // Mirror the applied scope into the address bar. Refresh and back/forward
+  // then restore the same search instead of silently resetting to the default.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const next = new URLSearchParams();
+    const trimmed = query.trim();
+    if (trimmed) next.set("q", trimmed);
+    if (category !== "all") next.set("category", category);
+    if (sort !== "newest") next.set("sort", sort);
+    const href = next.toString() ? `/search?${next.toString()}` : "/search";
+    if (`${window.location.pathname}${window.location.search}` !== href) {
+      window.history.replaceState(window.history.state, "", href);
+    }
+  }, [query, category, sort]);
 
   return (
     <div className="space-y-5">
@@ -1092,7 +1115,11 @@ export function SearchPage() {
         <>
           <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border-soft pb-2">
             <h2 className="text-xl font-extrabold text-[#0f1111]">Results</h2>
-            <p className="text-sm text-muted">1–{products.length} of {products.length} results{query ? ` for "${query}"` : ""}</p>
+            <p role="status" className="text-sm text-muted">
+              {products.length} {products.length === 1 ? "result" : "results"}
+              {query ? ` for “${query}”` : ""}
+              {category !== "all" ? ` in ${categories.find((item) => item.slug === category)?.name ?? category}` : ""}
+            </p>
           </div>
           {products.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border-soft bg-canvas p-8 text-center">
@@ -1122,7 +1149,9 @@ export function ShopCartPage() {
 
   const load = useCallback(async () => {
     try {
-      setCart(await apiClient.getCart());
+      const next = await apiClient.getCart();
+      setCart(next);
+      announceShopCartCount(activeCartCount(next));
       setStatus("ready");
     } catch (err) {
       if (err instanceof ApiRequestError && err.status === 401) setStatus("signed-out");
@@ -1140,7 +1169,9 @@ export function ShopCartPage() {
   async function update(itemId: string, quantity: number, savedForLater?: boolean) {
     setBusy(itemId);
     try {
-      setCart(await apiClient.updateCartItem(itemId, quantity, savedForLater));
+      const next = await apiClient.updateCartItem(itemId, quantity, savedForLater);
+      setCart(next);
+      announceShopCartCount(activeCartCount(next));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update cart.");
     } finally {
@@ -1151,7 +1182,9 @@ export function ShopCartPage() {
   async function remove(itemId: string) {
     setBusy(itemId);
     try {
-      setCart(await apiClient.deleteCartItem(itemId));
+      const next = await apiClient.deleteCartItem(itemId);
+      setCart(next);
+      announceShopCartCount(activeCartCount(next));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not remove item.");
     } finally {
@@ -1165,7 +1198,7 @@ export function ShopCartPage() {
       <div className="rounded-2xl border border-border-soft bg-canvas p-8 text-center">
         <ShoppingCart className="mx-auto mb-3 h-8 w-8 text-primary" />
         <h1 className="font-display text-2xl font-extrabold">Sign in to see your cart</h1>
-        <Link href="/login" className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-primary px-5 text-sm font-bold text-white">
+        <Link href="/login?next=/cart" className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-primary px-5 text-sm font-bold text-white">
           Sign in
         </Link>
       </div>
@@ -1181,7 +1214,7 @@ export function ShopCartPage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-extrabold">Shopping Cart</h1>
-          <p className="text-sm text-muted">{active.length === 0 ? "No items selected" : active.length + " line item(s)"}</p>
+          <p className="text-sm text-muted">{active.length === 0 ? "Your cart is empty" : `${active.length} ${active.length === 1 ? "item" : "items"}`}</p>
         </div>
         <Link href="/naijashop" className="text-sm font-bold text-primary underline">
           Continue shopping
@@ -1189,18 +1222,21 @@ export function ShopCartPage() {
       </header>
       {error ? <ErrorBox message={error} /> : null}
       {active.length === 0 ? (
-        <div className="space-y-4 rounded-2xl border border-border-soft bg-canvas p-4">
-          <p className="border-b border-border-soft pb-3 text-lg font-bold">No items selected</p>
-          <button type="button" disabled className="min-h-12 w-full cursor-not-allowed rounded-full bg-[#FFD814] px-5 text-sm font-bold text-[#0F1111] opacity-80">
-            Proceed to checkout (0 items)
-          </button>
-          <p className="text-sm font-semibold text-[#007185]">Select all items</p>
-          <Link href="/naijashop" className="inline-block text-sm font-bold text-primary underline">
-            Continue shopping
+        <div className="rounded-2xl border border-dashed border-border-soft bg-canvas p-8 text-center">
+          <ShoppingCart className="mx-auto mb-3 h-8 w-8 text-primary" aria-hidden />
+          <p className="font-display text-xl font-extrabold">Your cart is empty</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+            Add a listing from NaijaShop to start a checkout. Your saved items and browsing history stay unchanged.
+          </p>
+          <Link
+            href="/naijashop"
+            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-bold text-white transition hover:bg-[#0b4d2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
+          >
+            Browse the marketplace
           </Link>
         </div>
       ) : (
-        <div className="grid gap-5 lg:grid-cols[2]">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
           <div className="space-y-3">
             {active.map((item) => (
               <article key={item.id} className="flex gap-3 rounded-2xl border border-border-soft bg-canvas p-3">
@@ -1304,16 +1340,38 @@ type AddressForm = {
   postalCode: string;
 };
 
+type SavedAddress = {
+  id: string;
+  label?: string | null;
+  countryCode?: string | null;
+  state?: string | null;
+  city?: string | null;
+  line1?: string | null;
+  line2?: string | null;
+  postalCode?: string | null;
+  phone?: string | null;
+  isDefault?: boolean;
+};
+
 const emptyAddress: AddressForm = {
   label: "Home",
   contactName: "",
   contactPhone: "",
   countryCode: "NG",
-  state: "Lagos",
-  city: "Ikeja",
+  state: "",
+  city: "",
   line1: "",
   line2: "",
   postalCode: ""
+};
+
+const ADDRESS_HINTS: Partial<Record<keyof AddressForm, string>> = {
+  contactName: "Name of the person receiving the order",
+  contactPhone: "Phone number the courier can call",
+  line1: "Street, house number and area",
+  line2: "Flat, floor or nearby landmark",
+  city: "Delivery city",
+  state: "Delivery state"
 };
 
 export function ShopCheckoutPage() {
@@ -1326,6 +1384,10 @@ export function ShopCheckoutPage() {
   const [methods, setMethods] = useState<ApiPaymentMethod[]>([]);
   const [selected, setSelected] = useState("");
   const [payingOrder, setPayingOrder] = useState("");
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [accountName, setAccountName] = useState("");
+  const [accountPhone, setAccountPhone] = useState("");
+  const [selectedSavedId, setSelectedSavedId] = useState("");
 
   useEffect(() => {
     apiClient
@@ -1337,6 +1399,43 @@ export function ShopCheckoutPage() {
       .catch(() => undefined);
   }, []);
 
+  // The saved-address source is read-only here: choosing one only fills this
+  // checkout form. It never edits, replaces or deletes the saved address.
+  useEffect(() => {
+    let active = true;
+    Promise.allSettled([apiClient.getAddresses(), apiClient.getAccount()]).then(([addresses, account]) => {
+      if (!active) return;
+      if (addresses.status === "fulfilled" && Array.isArray(addresses.value)) {
+        setSavedAddresses(addresses.value as unknown as SavedAddress[]);
+      }
+      if (account.status === "fulfilled") {
+        const profile = account.value as { name?: string; phone?: string | null };
+        setAccountName(profile.name ?? "");
+        setAccountPhone(profile.phone ?? "");
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  function applySavedAddress(saved: SavedAddress) {
+    setAddress({
+      label: saved.label?.trim() || "Home",
+      contactName: accountName,
+      contactPhone: saved.phone?.trim() || accountPhone,
+      countryCode: saved.countryCode || "NG",
+      state: saved.state ?? "",
+      city: saved.city ?? "",
+      line1: saved.line1 ?? "",
+      line2: saved.line2 ?? "",
+      postalCode: saved.postalCode ?? ""
+    });
+    setSelectedSavedId(saved.id);
+    // The address already exists on the account; saving again would duplicate it.
+    setSaveAddress(false);
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setStatus("submitting");
@@ -1344,11 +1443,14 @@ export function ShopCheckoutPage() {
     try {
       const checkout = await apiClient.checkout({ address, saveAddress });
       setResult(checkout);
+      // The checked-out cart is closed server-side; reflect the authoritative
+      // empty badge rather than leaving the pre-checkout count in the header.
+      announceShopCartCount(0);
       setStatus("form");
       if (checkout.paymentMethods.length > 0) setSelected(checkout.paymentMethods[0].id);
     } catch (err) {
       if (err instanceof ApiRequestError && err.status === 401) {
-        router.push("/login");
+        router.push("/login?next=/checkout");
         return;
       }
       setError(err instanceof Error ? err.message : "Checkout failed.");
@@ -1387,10 +1489,50 @@ export function ShopCheckoutPage() {
     return (
       <div className="mx-auto max-w-3xl space-y-5">
         <header>
+          <p className="text-[10.5px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">NaijaDeals Marketplace</p>
           <h1 className="font-display text-3xl font-extrabold">Checkout</h1>
-          <p className="text-sm text-muted">Delivery is calculated from the destination state and city.</p>
+          <p className="text-sm text-muted">
+            Delivery is calculated from the address you enter below. A browsing city does not set your delivery address.
+          </p>
         </header>
         {error ? <ErrorBox message={error} /> : null}
+        {savedAddresses.length > 0 ? (
+          <section aria-labelledby="checkout-saved-addresses" className="rounded-2xl border border-[#dce6d8] bg-white p-5">
+            <h2 id="checkout-saved-addresses" className="font-display text-lg font-extrabold">
+              Saved delivery addresses
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Choose an address to fill this checkout. Your saved address is not changed.
+            </p>
+            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+              {savedAddresses.map((saved) => {
+                const lines = [saved.line1, saved.line2, saved.city, saved.state].filter(Boolean).join(", ");
+                const active = selectedSavedId === saved.id;
+                return (
+                  <li key={saved.id}>
+                    <button
+                      type="button"
+                      onClick={() => applySavedAddress(saved)}
+                      aria-pressed={active}
+                      className={`w-full rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] ${
+                        active ? "border-[#0b5c33] bg-[#eef4ea]" : "border-[#dce6d8] bg-white hover:border-[#0b5c33]/50"
+                      }`}
+                    >
+                      <span className="block text-[12px] font-extrabold text-[#14241b]">
+                        {saved.label?.trim() || "Saved address"}
+                        {saved.isDefault ? " · Default" : ""}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] leading-4 text-[#4b5b51]">{lines || "Address on file"}</span>
+                      <span className="mt-1 block text-[10.5px] font-bold text-[#0b5c33]">
+                        {active ? "Using this address for checkout" : "Use this address"}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ) : null}
         <form onSubmit={submit} className="grid gap-3 rounded-2xl border border-border-soft bg-canvas p-5 sm:grid-cols-2">
           {(
             [
@@ -1407,7 +1549,14 @@ export function ShopCheckoutPage() {
               <input
                 required={field !== "line2"}
                 value={address[field]}
-                onChange={(event) => setAddress((current) => ({ ...current, [field]: event.target.value }))}
+                placeholder={ADDRESS_HINTS[field]}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setAddress((current) => ({ ...current, [field]: value }));
+                  // The highlighted saved card no longer describes the form once
+                  // the customer edits it by hand.
+                  if (selectedSavedId) setSelectedSavedId("");
+                }}
                 className="mt-1 min-h-11 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold outline-none focus:border-primary"
               />
             </label>
@@ -1605,7 +1754,7 @@ function PayOrderPanel({ order, onPaid }: { order: ApiOrder; onPaid: () => void 
   );
 }
 
-export function OrdersPageApi() {
+export function OrdersPageApi({ mode = "orders" }: { mode?: "orders" | "returns" }) {
   const [orders, setOrders] = useState<ApiOrder[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error" | "signed-out">("loading");
   const [error, setError] = useState("");
@@ -1639,7 +1788,8 @@ export function OrdersPageApi() {
   async function buyAgain(item: ApiOrder["items"][number]) {
     setError(""); setNotice("");
     try {
-      await apiClient.addCartItem(item.productId, 1, item.variantId ?? null);
+      const cart = await apiClient.addCartItem(item.productId, 1, item.variantId ?? null);
+      announceShopCartCount(activeCartCount(cart));
       setNotice("Added to cart at the current price and availability.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not add this item to your cart.");
@@ -1702,7 +1852,7 @@ export function OrdersPageApi() {
       <div className="rounded-2xl border border-border-soft bg-canvas p-8 text-center">
         <PackageCheck className="mx-auto mb-3 h-8 w-8 text-primary" />
         <h1 className="font-display text-2xl font-extrabold">Sign in to view orders</h1>
-        <Link href="/login" className="mt-4 inline-block rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white">
+        <Link href="/login?next=/orders" className="mt-4 inline-block rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white">
           Sign in
         </Link>
       </div>
@@ -1712,28 +1862,32 @@ export function OrdersPageApi() {
   return (
     <div className="space-y-5">
       <header className="space-y-3">
-        <h1 className="font-display text-3xl font-extrabold sm:text-4xl">Your Orders</h1>
+        <h1 className="font-display text-3xl font-extrabold sm:text-4xl">{mode === "returns" ? "Returns & Orders" : "Your Orders"}</h1>
         <div className="flex items-center gap-2 rounded-xl border border-border-soft bg-canvas px-3">
           <Search className="h-5 w-5 shrink-0 text-[#007185]" aria-hidden="true" />
           <input value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search all orders" aria-label="Search all orders" className="min-h-12 flex-1 bg-transparent text-sm outline-none" />
-          <button type="button" className="flex min-h-11 items-center gap-1 border-l border-border-soft pl-3 text-sm font-bold" onClick={() => setOrderQuery("")}>Filter <ChevronRight className="h-4 w-4" /></button>
+          <button type="button" disabled={!orderQuery} className="flex min-h-11 items-center gap-1 border-l border-border-soft pl-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setOrderQuery("")}>Clear <X className="h-4 w-4" aria-hidden /></button>
         </div>
       </header>
 
-      {orders.length > 0 ? (
+      {orders.some((order) => (order.deliveries?.length ?? 0) > 0) ? (
         <section aria-label="Track deliveries" className="space-y-2">
           <h2 className="font-display text-xl font-extrabold">Track deliveries</h2>
           <div className="flex snap-x gap-3 overflow-x-auto pb-2">
-            {orders.slice(0, 6).map((order) => (
-              <article key={order.id} className="w-64 shrink-0 snap-start rounded-xl border border-border-soft bg-canvas p-3">
-                <p className="text-sm font-bold">Delivered today</p>
-                <p className="mt-1 truncate text-xs text-muted">{order.orderNumber}</p>
-                <div className="mt-2 flex gap-2">
-                  {order.items.slice(0, 2).map((item) => item.imageUrl ? <img key={item.id} src={item.imageUrl} alt={item.productName} className="h-20 w-20 rounded object-contain" /> : null)}
-                </div>
-                <Link href={`/orders`} className="mt-2 inline-block text-xs font-bold text-[#007185] hover:underline">View order details</Link>
-              </article>
-            ))}
+            {orders.filter((order) => (order.deliveries?.length ?? 0) > 0).slice(0, 6).map((order) => {
+              const delivery = order.deliveries?.[0];
+              return (
+                <article key={order.id} className="w-64 shrink-0 snap-start rounded-xl border border-border-soft bg-canvas p-3">
+                  <p className="text-sm font-bold">{delivery ? statusLabel(delivery.status) : statusLabel(order.status)}</p>
+                  <p className="mt-1 truncate text-xs text-muted">{order.orderNumber}</p>
+                  {delivery?.trackingNumber ? <p className="truncate text-[11px] text-muted">{delivery.provider} · {delivery.trackingNumber}</p> : null}
+                  <div className="mt-2 flex gap-2">
+                    {order.items.slice(0, 2).map((item) => item.imageUrl ? <img key={item.id} src={item.imageUrl} alt={item.productName} className="h-20 w-20 rounded object-contain" /> : null)}
+                  </div>
+                  <Link href={`/orders/${order.id}`} className="mt-2 inline-block text-xs font-bold text-[#007185] hover:underline">View order details</Link>
+                </article>
+              );
+            })}
           </div>
         </section>
       ) : null}
@@ -1757,8 +1911,8 @@ export function OrdersPageApi() {
           <div className="rounded-xl border border-border-soft bg-canvas p-4">
             <h2 className="font-display text-lg font-extrabold">View your return status</h2>
             <p className="mt-1 text-xs text-muted">Track returns and refunds for delivered items.</p>
-            <p className="mt-3 text-sm font-bold">{orders.filter((order) => (order.returnRequests?.length ?? 0) > 0).length} return request(s)</p>
-            <Link href="/orders" className="mt-2 inline-block text-xs font-bold text-[#007185] hover:underline">See returns</Link>
+            <p className="mt-3 text-sm font-bold">{orders.filter((order) => (order.returnRequests?.length ?? 0) > 0).length} return request{orders.filter((order) => (order.returnRequests?.length ?? 0) > 0).length === 1 ? "" : "s"}</p>
+            <Link href="/returns" className="mt-2 inline-block text-xs font-bold text-[#007185] hover:underline">See returns</Link>
           </div>
         </section>
       ) : null}
@@ -2035,20 +2189,33 @@ export function TrackingPageReal({ id }: { id: string }) {
       <div className="rounded-2xl border border-border-soft bg-canvas p-8 text-center">
         <Truck className="mx-auto mb-3 h-8 w-8 text-primary" />
         <h1 className="font-display text-2xl font-extrabold">Sign in to view tracking</h1>
-        <Link href="/login" className="mt-4 inline-block rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white">
+        <Link href={`/login?next=${encodeURIComponent(`/tracking/${id}`)}`} className="mt-4 inline-block rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white">
           Sign in
         </Link>
       </div>
     );
   }
-  if (status === "error" || !data) return <ErrorBox message={error || "Tracking unavailable."} />;
+  if (status === "error" || !data)
+    return (
+      <ErrorBox
+        message={error || "Tracking unavailable."}
+        action={
+          <Link href="/orders" className="mt-2 inline-block font-bold underline">
+            Back to orders
+          </Link>
+        }
+      />
+    );
 
   const events = (data.events as Array<Record<string, unknown>>) ?? [];
 
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="font-display text-3xl font-extrabold">Delivery tracking</h1>
+        <Link href="/orders" className="inline-flex items-center gap-1 text-xs font-bold text-[#0b5c33] hover:underline">
+          <ChevronLeft className="h-3.5 w-3.5" aria-hidden /> Your Orders
+        </Link>
+        <h1 className="mt-2 font-display text-3xl font-extrabold">Delivery tracking</h1>
         <p className="text-sm text-muted">
           Order {String(data.orderNumber)} · {statusLabel(String(data.status))}
         </p>
