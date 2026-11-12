@@ -14,7 +14,11 @@ export type ShopProduct = {
   images?: Array<{ url: string }>;
   category?: { name: string; slug: string } | null;
   rating?: { average: number | null; count: number } | null;
-  stock?: { quantity?: number } | null;
+  stock?: { quantity?: number; reserved?: number } | null;
+  /** Server-calculated available units (variants summed when present). */
+  available?: number | null;
+  vendor?: { id?: string; name: string; slug?: string; market?: string } | null;
+  saleMode?: "escrow" | "contact";
 };
 
 function naira(value: string | number | bigint) {
@@ -56,6 +60,15 @@ export function ShopProductCard({
   const image = product.images?.[0]?.url ?? null;
   const href = `/product/${product.slug}`;
   const dense = variant === "deal";
+  const vendorName = product.vendor?.name?.trim() || null;
+  const available =
+    typeof product.available === "number"
+      ? product.available
+      : typeof product.stock?.quantity === "number"
+        ? Math.max(product.stock.quantity - (product.stock.reserved ?? 0), 0)
+        : null;
+  const soldOut = available === 0;
+  const contactOnly = product.saleMode === "contact";
 
   return (
     <article
@@ -101,7 +114,7 @@ export function ShopProductCard({
         <span className={`font-extrabold text-[#C81919] ${dense ? "text-[11px] sm:text-[16px]" : "text-[13px] sm:text-[16px]"}`}>
           {naira(product.priceKobo)}
         </span>
-        {compare ? (
+        {compare && compare > price ? (
           <span className={`text-[#565959] line-through ${dense ? "text-[8px] sm:text-[11.5px]" : "text-[10px] sm:text-[11.5px]"}`}>
             {naira(compare)}
           </span>
@@ -127,21 +140,39 @@ export function ShopProductCard({
         )}
       </p>
 
-      {onAdd ? (
+      <p className="mt-0.5 flex min-h-[0.875rem] flex-wrap items-center gap-x-1 text-[8px] leading-[1.1] text-[#565959] sm:min-h-[1rem] sm:text-[11px]">
+        {available === null ? null : soldOut ? (
+          <span className="font-semibold text-[#b12704]">Out of stock</span>
+        ) : (
+          <span className="font-semibold text-[#067d62]">In stock</span>
+        )}
+        {vendorName ? <span className="min-w-0 truncate">Sold by {vendorName}</span> : null}
+      </p>
+
+      {contactOnly ? (
+        <Link
+          href={href}
+          className={`mt-1 flex w-full items-center justify-center rounded-full bg-[#0f1b2d] font-bold leading-none text-white transition hover:bg-[#1b2c46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f1111]/40 ${
+            dense ? "h-7 text-[8.5px] sm:h-9 sm:text-[12.5px]" : "h-9 text-[10.5px] sm:text-[12.5px]"
+          }`}
+        >
+          Contact seller
+        </Link>
+      ) : onAdd ? (
         <button
           type="button"
           onClick={() => onAdd(product)}
-          disabled={adding}
-          aria-label={`Add ${product.name} to cart`}
-          className={`mt-1 flex w-full items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-full bg-[#ffd814] font-bold leading-none text-[#0f1111] transition hover:bg-[#f7ca00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f1111]/40 disabled:opacity-60 ${
+          disabled={adding || soldOut}
+          aria-label={soldOut ? `${product.name} is out of stock` : `Add ${product.name} to cart`}
+          className={`mt-1 flex w-full items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-full bg-[#ffd814] font-bold leading-none text-[#0f1111] transition hover:bg-[#f7ca00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f1111]/40 disabled:cursor-not-allowed disabled:opacity-60 ${
             dense
               ? "h-7 px-1 text-[8.5px] sm:h-9 sm:px-3 sm:text-[12.5px]"
               : "h-9 px-2 text-[10.5px] sm:h-9 sm:px-3 sm:text-[12.5px]"
           }`}
-          title={`Add ${product.name} to cart`}
+          title={soldOut ? `${product.name} is out of stock` : `Add ${product.name} to cart`}
         >
           {adding ? <Loader2 className="h-3 w-3 shrink-0 animate-spin" aria-hidden /> : null}
-          {added ? "Added ✓" : "Add to Cart"}
+          {soldOut ? "Out of stock" : added ? "Added ✓" : adding ? "Adding…" : "Add to Cart"}
         </button>
       ) : null}
     </article>

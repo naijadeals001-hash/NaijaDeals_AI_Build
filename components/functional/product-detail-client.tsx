@@ -40,8 +40,9 @@ export function ProductDetailClient({ id }: { id: string }) {
         const item = await apiClient.getProduct(id);
         const items = await apiClient.getProducts({ category: item.category.slug, sort: "trust" });
         if (!active) return;
+        const purchasableVariant = item.variants?.find((variant) => variant.stock - variant.reserved > 0) ?? item.variants?.[0];
         setProduct(item);
-        setVariantId(item.variants?.[0]?.id ?? null);
+        setVariantId(purchasableVariant?.id ?? null);
         setRelated(items.filter((candidate) => candidate.id !== item.id).slice(0, 4));
         setStatus("ready");
       } catch (err) {
@@ -65,8 +66,14 @@ export function ProductDetailClient({ id }: { id: string }) {
     ? selectedVariant.stock - selectedVariant.reserved
     : product?.available ?? 0;
 
+  // Switching to a variant with less stock must not leave an unorderable
+  // quantity selected in the form.
+  useEffect(() => {
+    setQuantity((current) => Math.min(Math.max(current, 1), Math.max(available, 1)));
+  }, [available]);
+
   async function addToCart(thenCheckout = false) {
-    if (!product) return;
+    if (!product || product.isSample) return;
     setAdding(true);
     setError("");
     try {
@@ -131,15 +138,25 @@ export function ProductDetailClient({ id }: { id: string }) {
       <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
         <section className="overflow-hidden rounded-2xl border border-border-soft bg-canvas shadow-sm">
           <div className="grid gap-3 p-4 sm:grid-cols-[92px_1fr]">
-            <div className="hidden gap-3 sm:grid">
-              {product.images.map((image) => (
-                <div key={image.id} className="grid aspect-square place-items-center overflow-hidden rounded-xl border border-border-soft bg-surface-low">
-                  <img src={image.url} alt={image.alt || product.name} className="h-full w-full object-cover" />
-                </div>
-              ))}
-            </div>
+            {product.images.length > 0 ? (
+              <div className="hidden gap-3 sm:grid">
+                {product.images.map((image) => (
+                  <div key={image.id} className="grid aspect-square place-items-center overflow-hidden rounded-xl border border-border-soft bg-surface-low">
+                    <img src={image.url} alt={image.alt || product.name} className="h-full w-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <div className="relative grid min-h-[340px] place-items-center overflow-hidden rounded-2xl bg-surface-low">
-              <img src={product.images[0]?.url} alt={product.images[0]?.alt || product.name} className="max-h-[420px] w-full object-contain" />
+              {product.images[0] ? (
+                <img
+                  src={product.images[0].url}
+                  alt={product.images[0].alt || product.name}
+                  className="max-h-[420px] w-full object-contain"
+                />
+              ) : (
+                <p className="px-4 text-center text-sm font-semibold text-muted">The seller has not provided an image for this listing.</p>
+              )}
             </div>
           </div>
           <div className="p-5">
@@ -155,7 +172,7 @@ export function ProductDetailClient({ id }: { id: string }) {
                 <span className="rounded-full bg-surface-low px-3 py-1 font-bold text-muted">No reviews yet</span>
               )}
               <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-3 py-1 font-bold text-primary">
-                <Store className="h-4 w-4" /> {product.vendor.name}
+                <Store className="h-4 w-4" /> {product.vendor.name} · Verified seller
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-surface-low px-3 py-1 font-bold">
                 <MapPin className="h-4 w-4" /> {product.vendor.market}
@@ -206,33 +223,42 @@ export function ProductDetailClient({ id }: { id: string }) {
                   onChange={(event) => setVariantId(event.target.value || null)}
                   className="mt-1 min-h-11 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold"
                 >
-                  {product.variants.map((variant) => (
-                    <option key={variant.id} value={variant.id}>
-                      {variant.name} — {koboToNaira(variant.priceKobo)} ({variant.stock - variant.reserved} left)
+                  {product.variants.map((variant) => {
+                    const variantAvailable = Math.max(variant.stock - variant.reserved, 0);
+                    return (
+                      <option key={variant.id} value={variant.id} disabled={variantAvailable === 0}>
+                        {variant.name} — {koboToNaira(variant.priceKobo)} ({variantAvailable === 0 ? "out of stock" : `${variantAvailable} left`})
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+            ) : null}
+
+            {available > 0 ? (
+              <label className="mt-4 block">
+                <span className="text-sm font-black">Quantity</span>
+                <select
+                  value={Math.min(quantity, Math.max(available, 1))}
+                  onChange={(event) => setQuantity(Number(event.target.value))}
+                  className="mt-1 min-h-11 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold"
+                >
+                  {Array.from({ length: Math.min(available, 10) }).map((_, index) => (
+                    <option key={index + 1} value={index + 1}>
+                      {index + 1}
                     </option>
                   ))}
                 </select>
               </label>
             ) : null}
 
-            <label className="mt-4 block">
-              <span className="text-sm font-black">Quantity</span>
-              <select
-                value={quantity}
-                onChange={(event) => setQuantity(Number(event.target.value))}
-                className="mt-1 min-h-11 w-full rounded-lg border border-border-soft bg-surface-low px-3 text-sm font-semibold"
-              >
-                {Array.from({ length: Math.min(Math.max(available, 1), 10) }).map((_, index) => (
-                  <option key={index + 1} value={index + 1}>
-                    {index + 1}
-                  </option>
-                ))}
-              </select>
-            </label>
-
             {error ? <p className="mt-3 text-sm font-bold text-crimson">{error}</p> : null}
 
-            {product.saleMode === "contact" ? (
+            {product.isSample ? (
+              <p className="mt-4 rounded-xl border border-[#B45309]/40 bg-amber/10 p-4 text-sm font-bold text-ink">
+                Demo listing only. This item is demonstration data and cannot be purchased.
+              </p>
+            ) : product.saleMode === "contact" ? (
               <div className="mt-4 rounded-xl border border-night/20 bg-surface-low p-4">
                 <p className="text-sm font-extrabold">Contact seller</p>
                 <p className="mt-1 text-xs leading-relaxed text-muted">
@@ -315,7 +341,13 @@ export function ProductDetailClient({ id }: { id: string }) {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {related.map((item) => (
               <Link key={item.id} href={`/product/${item.slug}`} className="rounded-2xl border border-border-soft bg-canvas p-3 hover:shadow-soft">
-                <img src={item.images[0]?.url} alt="" className="aspect-[4/3] w-full rounded-xl object-cover" />
+                {item.images[0] ? (
+                  <img src={item.images[0].url} alt="" className="aspect-[4/3] w-full rounded-xl object-cover" />
+                ) : (
+                  <span className="grid aspect-[4/3] w-full place-items-center rounded-xl bg-surface-low text-xs font-semibold text-muted">
+                    No image
+                  </span>
+                )}
                 <p className="mt-2 line-clamp-2 text-sm font-bold">{item.name}</p>
                 <p className="text-sm font-black text-primary">{koboToNaira(item.priceKobo)}</p>
               </Link>

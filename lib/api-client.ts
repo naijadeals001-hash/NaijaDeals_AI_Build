@@ -48,6 +48,18 @@ export type ApiProduct = {
   available?: number;
 };
 
+/** Envelope returned when the catalogue is requested with `page`/`pageSize`. */
+export type ApiProductPage = {
+  items: ApiProduct[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasMore: boolean;
+  sort: string;
+  query: string | null;
+};
+
 export type ApiCartItem = {
   id: string;
   productId: string;
@@ -374,6 +386,8 @@ export const apiClient = {
   logout: () => requestJson<{ signedOut: boolean }>("/api/auth/logout", { method: "POST" }),
 
   getProducts: (params?: Record<string, string | undefined>) => requestJson<ApiProduct[]>(withParams("/api/products", params)),
+  getProductPage: (params?: Record<string, string | undefined>) =>
+    requestJson<ApiProductPage>(withParams("/api/products", params)),
   getProduct: (id: string) => requestJson<ApiProduct>(`/api/products/${id}`),
   getCategories: () => requestJson<ApiCategory[]>("/api/categories"),
 

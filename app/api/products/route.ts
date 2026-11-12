@@ -1,68 +1,55 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { availableQuantity, isFixtureListing, listProducts, ratingSummary, saleModesFor } from "@/lib/services/core/catalog.service";
+import {
+  availableQuantity,
+  CatalogQueryError,
+  isFixtureListing,
+  parseCatalogQuery,
+  queryCatalogProducts,
+  ratingSummary,
+  saleModesFor
+} from "@/lib/services/core/catalog.service";
 import { jsonSafe } from "@/lib/services/core/serialize";
 import { searchProductIds } from "@/lib/infra/catalogue-index";
 import { isSearchConfigured } from "@/lib/infra/search";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Public catalogue/search endpoint.
+ *
+ * Paginated callers (`page` or `pageSize` present) receive
+ * `{ items, total, page, pageSize, totalPages, hasMore, sort, query }`.
+ * Legacy callers that omit both still receive the historical JSON array, with
+ * pagination facts in `X-Total-Count` / `X-Page` / `X-Page-Size` headers, so
+ * existing marketplace scripts keep working.
+ */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const query = searchParams.get("q")?.trim().toLowerCase();
-  const category = searchParams.get("category")?.trim().toLowerCase();
-  const market = searchParams.get("market")?.trim().toLowerCase();
-  const price = searchParams.get("price");
-  const sort = searchParams.get("sort");
-  const vendor = searchParams.get("vendor");
 
-  let products = await listProducts();
-
-  if (query) {
-    // Meilisearch answers typo-tolerant queries when it is configured and
-    // populated. Anything that makes the index untrustworthy (engine down,
-    // empty index) returns null and the substring scan below runs instead, so
-    // search is never less available than it was before the engine existed.
-    const ranked = isSearchConfigured() ? await searchProductIds(query, { limit: 200 }) : null;
-    if (ranked) {
-      const rank = new Map(ranked.map((id, index) => [id, index]));
-      products = products
-        .filter((product) => rank.has(product.id))
-        .sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
-    } else {
-      products = products.filter((product) =>
-        [product.name, product.description, product.brand, product.vendor.name, product.vendor.market, product.category.name]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase()
-          .includes(query)
-      );
+  let parsed: ReturnType<typeof parseCatalogQuery>;
+  try {
+    parsed = parseCatalogQuery(searchParams);
+  } catch (error) {
+    if (error instanceof CatalogQueryError) {
+      return NextResponse.json({ error: error.message, code: error.code, field: error.field }, { status: 400 });
     }
+    throw error;
   }
-  if (category && category !== "all") {
-    products = products.filter(
-      (product) => product.category.slug.toLowerCase() === category || product.category.name.toLowerCase() === category
-    );
-  }
-  if (market && market !== "all") {
-    products = products.filter((product) => product.vendor.market.toLowerCase().includes(market));
-  }
-  if (vendor) products = products.filter((product) => product.vendor.slug === vendor);
-  if (price === "under-50k") products = products.filter((product) => product.priceKobo < BigInt(5000000));
-  if (price === "50k-200k") products = products.filter((product) => product.priceKobo >= BigInt(5000000) && product.priceKobo < BigInt(20000000));
-  if (price === "200k-plus") products = products.filter((product) => product.priceKobo >= BigInt(20000000));
 
-  if (sort === "price-asc") products = [...products].sort((a, b) => Number(a.priceKobo - b.priceKobo));
-  if (sort === "price-desc") products = [...products].sort((a, b) => Number(b.priceKobo - a.priceKobo));
-  if (sort === "trust") products = [...products].sort((a, b) => b.vendor.trustScore - a.vendor.trustScore);
+  // Meilisearch answers typo-tolerant queries when it is configured and
+  // populated. Anything that makes the index untrustworthy (engine down,
+  // empty index) returns null and the substring scan inside the service runs
+  // instead, so search is never less available than it was before the engine
+  // existed.
+  const rankedIds =
+    parsed.query.q && isSearchConfigured()
+      ? await searchProductIds(parsed.query.q, { limit: 200 })
+      : null;
 
-  // Acceptance-suite rows ("Test checkout …", "Last Unit …") are database rows,
-  // never storefront products, so they are stripped at the API boundary too.
-  const FIXTURE = /^(variant fixture|test |upload test|last unit|product test)/i;
-  products = products.filter((product) => !FIXTURE.test(product.name) && !/mw[0-9a-z]{8,}$/i.test(product.slug));
-
-  const saleModes = await saleModesFor(products.map((product) => product.id));
-  const payload = products.map((product) => ({
+  const result = await queryCatalogProducts(parsed.query, { rankedIds });
+  const saleModes = await saleModesFor(result.items.map((product) => product.id));
+  const items = result.items.map((product) => ({
     ...product,
     isSample: isFixtureListing(product),
     saleMode: saleModes.get(product.id) ?? "escrow",
@@ -70,5 +57,29 @@ export async function GET(request: NextRequest) {
     rating: ratingSummary(product.reviews)
   }));
 
-  return NextResponse.json(jsonSafe(payload));
+  const headers = {
+    "Cache-Control": "no-store",
+    "X-Total-Count": String(result.total),
+    "X-Page": String(result.page),
+    "X-Page-Size": String(result.pageSize ?? result.total),
+    "X-Total-Pages": String(result.totalPages)
+  };
+
+  if (!parsed.paginated) {
+    return NextResponse.json(jsonSafe(items), { headers });
+  }
+
+  return NextResponse.json(
+    jsonSafe({
+      items,
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+      totalPages: result.totalPages,
+      hasMore: result.hasMore,
+      sort: parsed.query.sort,
+      query: parsed.query.q
+    }),
+    { headers }
+  );
 }
