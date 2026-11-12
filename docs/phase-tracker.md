@@ -586,3 +586,53 @@ reading the Affiliate build knows what it started on top of.
   prompt.
 - Owner visual approval of Aura remains outstanding and is still required for Aura's own
   acceptance.
+
+## Closure, lock-order and custody hardening (2026-11-12, commit `315f273`)
+
+**Scope delivered**
+
+- One closure workflow for admin `refunded`/`cancelled` actions across `paid`,
+  `partially_refunded` and `refund_pending` orders. Remaining refundable is computed
+  server-side; pending/lost/uncertain claims fail closed; `AdminAction` and audit metadata
+  record the remaining amount and custody decision.
+- Canonical `Order -> Payment -> Delivery -> wallet` lock order with re-reads and
+  compare-and-set across confirm, failure callback, checkout expiry, refund, completion,
+  assignment, courier updates, cancellation and seller return receipt.
+- Full refunds no longer cancel collected deliveries or restore their stock. Collected
+  parcels keep status/courier plus a custody tracking event; forward delivery transitions
+  after refund return `409 order_refunded`, while `failed`/`returned` remain available.
+- Seller return receipt persists a refund intent and retries with deterministic attempt
+  keys; a definitive failure, process death before submission, or crash after the refund
+  is recoverable without double restock or a second provider call.
+- `confirmPayment` derives `duplicate` from the winning locked transaction; the loser
+  returns `duplicate: true` and sends no duplicate paid notification/conversion.
+
+**Executed evidence**
+
+| Command | Result |
+| --- | --- |
+| `npx tsc --noEmit` | exit 0 |
+| `npm run build` | exit 0 |
+| `npx tsx scripts/closure-lock-custody-acceptance.ts` on `naijadeals_closure_lock_test` | 13/13 PASS, 0 failures, reconciliation CLEAN, journal difference 0, no open reservations |
+| `npx tsx scripts/checkout-refund-delivery-acceptance.ts` on `naijadeals_checkout_refund_test` | 10/10 PASS, 0 failures, CLEAN |
+
+The closure suite covers: partial-refund admin closure, partially-refunded admin
+cancellation, pending-claim refusal then reconciliation, duplicate/concurrent closures,
+service-level permission and region denial, refund at pickup, refund/assignment/courier
+races, delivered refund custody, stale courier rejection, concurrent duplicate
+confirmations (wallet and local test provider), seller return failure/recovery/crash
+window, cart mutation racing checkout, and whole-book reconciliation.
+
+**Blocked / limited**
+
+- `scripts/escrow-completion-acceptance.ts` could not complete in this session: the local
+  PostgreSQL instance was at 96/100 `naijadeals_core` idle connections, so the suite hit
+  `FATAL: too many clients already`. The failure was connection exhaustion, not an
+  assertion. Its cleanup was updated to remove the new `AdminAction` fixture rows; a
+  rerun requires available test connections.
+- No schema migration was required. A future first-class
+  `return_requested`/`return_in_progress` delivery state is a proposed owner decision, not
+  implemented or backfilled. See `docs/decisions.md` for the concrete policy proposal.
+- Historical collected-but-cancelled deliveries were not audited or modified; the
+  proposed operational query is documented, and `naijadeals_core` was not queried.
+- Local commits only. No push, deployment, live charge, payout or production migration.

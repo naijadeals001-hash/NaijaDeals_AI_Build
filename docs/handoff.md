@@ -4241,3 +4241,140 @@ Interruption evidence is produced by `scripts/escrow-refund-interruption-child.t
   `scripts/optimize-photography.mjs`, drive files and unrelated untracked scripts were left
   unstaged and untouched.
 
+
+## Closure, lock-order and custody hardening (2026-11-12)
+
+**Branch:** `naijashop-marketplace`  
+**Implementation commit:** `315f2731c73663287375a308357f4dbfaca7cdb1` (`fix(shop): close orders through one refund workflow and keep custody`)  
+**HEAD at start of work:** `afeb8cd` (verified). No push, deployment, live charge, payout or
+production migration was performed.
+
+### 1. Entry-point audit and fixes
+
+- `adminUpdateOrderStatus` only diverted `paymentStatus: "paid"` orders to
+  `refundPayment`; manually setting a `partially_refunded`/`refund_pending` order to
+  `refunded`/`cancelled` wrote the status directly. It now obtains the order lock, lets
+  `needsRefundClosure` classify the order, computes
+  `remaining = totalKobo - Order.refundedKobo` server-side, and closes through
+  `refundPayment`. Unpaid cancellation shares `cancelUnpaidOrderTx` (reservation release,
+  pending-payment failure, uncollected-delivery cancellation). The legacy
+  `PATCH /api/orders/[id]/status` route previously used `requireAdmin()` without
+  `orders:write` or region scope; it now uses `requireAdminPermission("orders:write")`,
+  `assertOrderRegion`, and the same status validation as the canonical route. The modern
+  route and service re-check permission/region when a session actor is supplied.
+- Customer `cancelOrder` previously decided from an unlocked pre-read; a concurrent
+  `confirmPayment` could leave a paid order cancelled with no refund. It now locks the
+  order, re-reads payments, routes refundable orders to `refundPayment`, and only performs
+  the unpaid cancellation inside the lock.
+- Settlement (`settleRefund`) now calls `settleRefundDeliveryCustody` before deciding
+  stock restoration. `input.restock` is clamped by the custody decision under the same
+  order lock: a delivery picked up between the caller's read and the refund can no longer
+  be restocked.
+- Admin closure writes an `AdminAction` + `SystemEvent` + `AuditLog` record containing the
+  remaining refundable amount, custody class and restock flag. `refundPayment` continues
+  to write the financial `payment.refunded` audit.
+
+### 2. Lock order
+
+`Order -> Payment -> Delivery -> wallet rows` is now used by:
+
+- `confirmPayment`, `markPaymentFailed`, `expireAbandonedCheckouts` (previously
+  Payment -> Order);
+- `refundPayment` / `settleRefund`, `cancelOrder`, `cancelUnpaidOrderTx`;
+- `updateDeliveryStatus` (now transactional when called without a transaction),
+  `cancelOneDelivery`, `settleRefundDeliveryCustody`;
+- `updateCourierDelivery` (courier ownership re-read under the lock), `assignCourier`
+  (already order-first), admin delivery/status and order/status routes;
+- seller `resolveReturn` (approve/reject/receive) and `requestReturn`.
+
+`updateOrderStatus` and `updateDeliveryStatus` retain compare-and-set writes. A courier
+that was reassigned receives 403; after a refund, forward delivery transitions receive
+`409 order_refunded`, while `failed`/`returned` record custody recovery.
+
+### 3. Physical custody
+
+A full refund no longer deletes collected custody. Uncollected deliveries are cancelled
+and restocked once. `picked_up`/`in_transit`/`delivery_attempted`/`failed` deliveries
+keep their status and courier; a tracking event, `SystemEvent` and audit record describe
+the refund while the parcel was in custody. Delivered deliveries keep their history.
+`classifyDeliveryCustody` is the single decision used by admin closure and refund
+settlement. A concrete owner-decision proposal (recovery queue, return states, who bears
+the return leg, non-recoverable parcels, receipt evidence, legacy audit) is in
+`docs/decisions.md`; no final policy, fee or backfill was invented.
+
+### 4. Seller return atomicity
+
+`resolveReturn(..., "receive")` no longer restocks/commits `RECEIVED` and then calls
+`refundPayment` with no recovery state. Physical receipt and a durable
+`return.refund_intent` `SystemEvent` commit together; restock is conditional on
+`ReturnRequest.restocked`. The refund runs outside that transaction with
+`return:<returnId>:<attempt>`:
+
+- PENDING/COMPLETED intent keys are reused (the existing refund service resumes/settles
+  idempotently);
+- a definitively FAILED attempt is released back to the order and the next receive
+  allocates attempt 2;
+- a crash after the provider/refund committed but before `ReturnRequest` was finalised
+  settles from stored refund evidence with no second provider call;
+- an already fully refunded order finalises the return with `refundKobo = 0` and an
+  explicit `return.refund_skipped_already_refunded` event, never invented money.
+
+### 5. Duplicate confirmation
+
+`confirmPayment` now returns `{ duplicate: true, status: "COMPLETED" }` only for the
+loser of a concurrent confirmation or a replay. The winning transaction returns
+`settledNow`; the duplicate path skips `notifyOrderPaid` and affiliate conversion.
+A provider completion observed after a local attempt was marked FAILED records
+`payment.verified_after_failure` and returns 409 `payment_reconciliation_required`
+instead of silently discarding the charge.
+
+### 6. Executed verification (isolated TEST databases only)
+
+Database `naijadeals_closure_lock_test` was created for this work, migrated with
+`prisma migrate deploy` (which writes `DatabaseClassification: default=TEST`), and used
+only through the fail-closed `TEST_DATABASE_URL` guard. No connection was made to
+`naijadeals_core`; no live provider was contacted.
+
+| Command | Actual result |
+| --- | --- |
+| `npx tsc --noEmit` | exit 0 |
+| `npm run build` | exit 0 |
+| `npx tsx scripts/closure-lock-custody-acceptance.ts` | **13/13 PASS**, 0 failures. Includes: partial refund + admin closure; partial + admin cancellation; pending external claim blocked 409 `refund_pending`, released then closed; duplicate/concurrent closure (1 settled, 1 duplicate); permission 403 / region 403 / authorised closure; pickup custody retained (stock 4, no restock, forward advance 409, `failed` accepted); in-transit refund-first and courier-first races; delivered refund no restock; assignment/cancellation race and stale courier 403; concurrent duplicate confirmations for wallet and local test provider (one false + one true, retry true, escrow=1, hold tx=1, delivery=1); seller return attempt 1 FAILED then attempt 2 COMPLETED, crash-window settlement with 0 provider calls, stock restored once; cart mutation race one order and consistent reservation; whole book wallets=37, no non-SYSTEM negative projections, no open reservations, 19 orders balanced, difference=0, `status=CLEAN`, `issues=0`. |
+| `npx tsx scripts/checkout-refund-delivery-acceptance.ts` | **10/10 PASS**, 0 failures, `reconcile status=CLEAN`, issues=0. |
+| `npx tsx scripts/escrow-completion-acceptance.ts` | **BLOCKED by environment**: local PostgreSQL had 96 idle `naijadeals_core` connections; the suite failed with `FATAL: too many clients already`, not an assertion. Its cleanup now deletes the new `AdminAction` fixture rows. |
+
+Note on the checkout run: the first attempt exhausted connections on the shared local
+instance; rerunning with `connection_limit=1` passed 10/10. The closure suite was executed
+with `connection_limit=8` on a fresh database.
+
+### 7. Migration needs and remaining gaps
+
+- **No migration was required.** The implementation uses existing
+  `DeliveryStatus.cancelled`, `TrackingEvent`, `SystemEvent`, `AuditLog`, `AdminAction` and
+  `ReturnRequest` fields.
+- A first-class reverse-logistics state machine (`return_requested`,
+  `return_in_progress`) is proposed only; it needs owner approval, a versioned migration
+  and no historical backfill.
+- Legacy deliveries that are `cancelled` but have `picked_up`/`in_transit` tracking were
+  not audited or changed. The review query is documented in `docs/decisions.md`.
+- No return-leg fee, recovery surcharge, write-off policy or refund-funding change was
+  invented.
+- Admin closure's `AdminAction` is written after the refund transaction commits; the
+  financial audit still commits with the refund. A crash between those two writes loses
+  the supplementary AdminAction, not the refund record.
+- `confirmPayment` pre-checks a locally `FAILED` payment before calling the provider. A
+  provider `COMPLETED` callback that arrives only after another process marked the
+  attempt failed therefore returns `409 payment_failed` without a fresh verification or
+  audit row. The in-flight race (verification already started, attempt failed meanwhile)
+  is audited as `payment.verified_after_failure`; the late-callback case remains a
+  finance reconciliation gap and needs an approved recovery policy before automatic
+  handling.
+- Local commits only; remote preservation/push was not requested and was not performed.
+
+## Next executable step
+
+Owner review of the reverse-custody proposal in `docs/decisions.md`, then either (a)
+approve the proposed return states and migration, or (b) keep the current
+tracking/audit custody trail. Separately, rerun
+`scripts/escrow-completion-acceptance.ts` when the local PostgreSQL connection budget is
+available.

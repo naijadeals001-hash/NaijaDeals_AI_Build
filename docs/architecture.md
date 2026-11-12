@@ -50,6 +50,52 @@ cookie that pins the homepage design assignment. Authorization is enforced per r
   `region_forbidden` errors.
 - Role administration is super-admin only (`requireSuperAdmin`, `roles:write`).
 
+## Order closure, locking and physical custody (2026-11-12, commit `315f273`)
+
+**One closure workflow.** Every paid or partially refunded order is closed through
+`refundPayment` (`lib/payments/service.ts`). Admin `refunded`/`cancelled` actions
+(`lib/services/core/admin.service.ts`) compute the remaining refundable amount from
+`Order.totalKobo - Order.refundedKobo`, refund that amount, and never write a closing
+status directly. A pending, lost or contradicted refund claim returns 409 instead of
+closing around it. Unpaid admin cancellation shares the customer path
+(`cancelUnpaidOrderTx`) so reservations, pending payments and uncollected deliveries
+are handled together. Both admin order routes enforce `orders:write` and order region
+scope; the service repeats the check when a session actor is supplied.
+
+**Canonical lock order.** `Order -> Payment -> Delivery -> wallet rows`. Refunds,
+completion, dispute resolution, courier updates, assignment, cancellation and seller
+return receipt all take the order row lock first, then re-read what they validated.
+Delivery and order status writes are compare-and-set, so a stale pre-lock read cannot
+authorise a write. Checkout still locks the ACTIVE cart first; the checkout expiry
+sweep locks the order before its payments.
+
+**Physical custody on refund.** A full refund is a financial fact, not proof that goods
+came back:
+
+| Delivery state | Refund handling | Stock |
+| --- | --- | --- |
+| none / pending_assignment / assigned / pickup_started | cancel delivery, release courier | restored once |
+| picked_up / in_transit / delivery_attempted / failed | keep status + courier, append custody tracking and audit | never restored by the refund |
+| delivered | keep delivered history | never restored; seller return receipt handles it |
+| returned | keep returned history | restorable when the caller requests it |
+| cancelled (legacy) | unchanged | not treated as proof of custody |
+
+A refunded order blocks further forward delivery transitions with `409 order_refunded`;
+`returned`/`failed` remain allowed so operations can record recovery. Collected parcels
+stay visible in the courier/operations queues.
+
+**Seller return receipt.** Physical receipt and a durable `SystemEvent` refund intent
+commit together; the refund itself runs outside that transaction. The intent carries a
+deterministic attempt key (`return:<returnId>:<attempt>`), reuses PENDING/COMPLETED
+attempts, and allocates a new attempt only after a definitive FAILED attempt released
+its reservation. Restock is conditional (`ReturnRequest.restocked`), so retries cannot
+double-restock, and a crash after the refund but before the return status update settles
+from stored evidence without calling the provider again.
+
+**Duplicate confirmations.** `confirmPayment` derives `duplicate` from whether its locked
+transaction actually moved the payment row; the losing concurrent confirmation returns
+`duplicate: true` and sends no second paid notification or affiliate conversion.
+
 ## Data model
 
 39 models across identity (User, Role, UserRole, Session), commerce (Vendor, Category, Product,

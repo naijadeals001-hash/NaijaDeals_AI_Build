@@ -126,6 +126,56 @@ is ledger mechanics, not an approved fee policy. A business decision is required
 - **Verification:** `scripts/aura-orchestration-test.ts` asserts `webAccess`,
   `imageInput` and `streaming` flags, and exercises the live model.
 
+## Decision: order-first locking and refund-derived order closure (2026-11-12)
+
+- **Context:** Admin closures handled only `paymentStatus: "paid"`; a partially refunded
+  order could be moved to `refunded` by a status edit without refunding the balance,
+  restoring stock twice, or cancelling a collected parcel. Courier, assignment and
+  refund paths also locked Payment/Delivery and Order in different orders.
+- **Decision:** `Order -> Payment -> Delivery -> wallet rows` is the only lock order.
+  Every paid closure calls `refundPayment` for `totalKobo - refundedKobo`; pending or
+  contradicted claims fail closed. Delivery/order transitions are compare-and-set.
+  Full refunds cancel only uncollected deliveries; collected parcels retain status,
+  courier and custody events. Seller return receipt uses a persisted refund intent with
+  deterministic attempts (no new migration; `SystemEvent` is the durable record).
+- **Impact:** `Order.refundedKobo` remains a reservation cap; settled refunds are still
+  the `COMPLETED` `Refund` rows. No fee, recovery-charge or return-fee policy is added.
+- **Verification:** `scripts/closure-lock-custody-acceptance.ts` on
+  `naijadeals_closure_lock_test` (13 checks, 0 failures, reconciliation CLEAN) and
+  `scripts/checkout-refund-delivery-acceptance.ts` (10 checks, 0 failures).
+
+## Open decision (owner approval required) — refund/recovery and reverse custody
+
+Implemented behaviour is safe but not a final business policy. The following are
+concrete recommendations; none is approved by existing code:
+
+1. **Custody record.** Uncollected deliveries are cancelled and restocked; collected
+   (`picked_up`/`in_transit`/`delivery_attempted`/`failed`) deliveries remain open with a
+   refund custody event and no stock restoration. Recommended: operations owns a
+   recovery queue keyed by the existing delivery and tracking history. Do not delete or
+   rewrite the delivery to close the refund.
+2. **Return statuses.** Recommended: if the owner wants first-class reverse logistics,
+   add `return_requested` and `return_in_progress` delivery states in a versioned
+   migration, with `picked_up/in_transit -> return_requested -> return_in_progress ->
+   returned`. Until then, `returned` plus the existing tracking/custody events is the
+   recovery trail. No backfill is proposed for historical rows.
+3. **Who pays the return leg.** The current code invents no fee and charges no one.
+   Recommended owner decision: the platform absorbs the return leg for a full refund
+   caused by seller/platform fault, and the existing delivery fee treatment is not
+   changed. This needs an approved policy before any deduction or surcharge.
+4. **Non-recoverable parcel.** Recommended: no automatic stock restoration. Operations
+   records the loss and a finance-approved inventory adjustment is proposed separately;
+   the refund must not be reversed to compensate.
+5. **Return receipt evidence.** Recommended: seller/warehouse receipt is the only event
+   that restocks (already implemented as one conditional restock). Courier `returned`
+   alone should not restock until a future receipt policy is approved.
+6. **Return window and refund timing.** The existing 14-day window and refund-at-receipt
+   behaviour are retained; changing either is a business decision.
+7. **Legacy audit (not executed).** Before any future migration, operations should
+   review deliveries that are `cancelled` but have `picked_up`/`in_transit` tracking
+   events, and any fully refunded order whose stock was restored after collection. This
+   agent did not query `naijadeals_core` or mutate historical records.
+
 ## Decision: consequential Aura actions are bound to a reviewed proposal hash
 
 - **Context:** An assistant that can prepare payments is a prompt-injection target;
