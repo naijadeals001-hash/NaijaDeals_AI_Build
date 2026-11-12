@@ -21,6 +21,7 @@ import {
   Truck
 } from "lucide-react";
 import { ApiRequestError, apiClient, koboToNaira, type ApiProduct } from "@/lib/api-client";
+import { announceShopCartCount } from "@/components/shop/shop-header";
 
 type DetailStatus = "loading" | "error" | "ready";
 
@@ -144,7 +145,13 @@ export function ProductDetailClient({
     setAdding(true);
     setError("");
     try {
-      await apiClient.addCartItem(product.id, quantity, variantId);
+      const cart = await apiClient.addCartItem(product.id, quantity, variantId);
+      // The shared Shop header owns one authoritative cart badge. Announce the
+      // server-returned total instead of incrementing a local counter, so the
+      // detail route behaves like the storefront, department and search routes.
+      announceShopCartCount(
+        cart.items.filter((item) => !item.savedForLater).reduce((sum, item) => sum + item.quantity, 0)
+      );
       if (thenCheckout) router.push("/checkout");
     } catch (err) {
       if (err instanceof ApiRequestError && err.status === 401) {
@@ -204,7 +211,7 @@ export function ProductDetailClient({
             href="/naijashop"
             className="inline-flex min-h-11 items-center rounded-xl border border-crimson/30 px-4 text-sm font-bold text-crimson"
           >
-            Back to NaijaShop
+            Back to Shop
           </Link>
         </div>
       </div>
@@ -220,7 +227,7 @@ export function ProductDetailClient({
       ) : null}
       <nav aria-label="Breadcrumb" className="text-sm text-muted">
         <Link href="/naijashop" className="font-bold text-primary underline">
-          NaijaShop
+          Shop
         </Link>{" "}
         /{" "}
         <Link href={`/naijashop/c/${product.category.slug}`} className="hover:underline">
