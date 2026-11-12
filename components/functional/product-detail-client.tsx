@@ -304,6 +304,11 @@ export function ProductDetailClient({
           <div className="p-5">
             <p className="text-xs font-black uppercase tracking-wide text-muted">{product.brand || product.category.name}</p>
             <h1 className="mt-2 font-display text-2xl font-extrabold sm:text-3xl">{product.name}</h1>
+            {product.isDemo ? (
+              <p className="mt-2 inline-flex rounded-full bg-[#F2D48C] px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[#07351f]">
+                DEMO — inventory, specifications and availability are illustrative
+              </p>
+            ) : null}
             <div className="mt-3 flex flex-wrap gap-2 text-sm">
               {product.rating?.average ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-soft px-3 py-1 font-bold text-amber">

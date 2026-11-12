@@ -293,6 +293,7 @@ function buildWhere(query: CatalogQuery): Prisma.ProductWhereInput {
   const where: Prisma.ProductWhereInput = {
     status: "ACTIVE",
     isSample: false,
+    category: { isActive: true },
     vendor: {
       status: "VERIFIED",
       ...(query.market ? { market: { contains: query.market, mode: "insensitive" as const } } : {}),
@@ -302,6 +303,7 @@ function buildWhere(query: CatalogQuery): Prisma.ProductWhereInput {
 
   if (query.category) {
     where.category = {
+      isActive: true,
       OR: [
         { slug: query.category },
         { name: { equals: query.category, mode: "insensitive" } }

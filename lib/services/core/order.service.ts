@@ -9,6 +9,7 @@ import type {
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
+import { assertFinancialOperationsAllowed } from "@/lib/payments/review-financial-guard";
 import { loadRefundLifecycles } from "@/lib/payments/refund-lifecycle";
 import { recordAudit } from "./audit.service";
 import { enqueueVendorNotification } from "./notification.service";
@@ -664,6 +665,7 @@ export async function postEscrowRelease(
     actorId?: string | null;
   }
 ): Promise<ReleasePostingResult> {
+  await assertFinancialOperationsAllowed("Escrow release");
   const obligation = releaseObligation({
     escrowAmountKobo: input.escrow.amountKobo,
     orderTotalKobo: input.orderTotalKobo,

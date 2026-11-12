@@ -37,6 +37,7 @@ export type ApiProduct = {
   compareAtKobo?: ApiMoney | null;
   status: string;
   isSample?: boolean;
+  isDemo?: boolean;
   saleMode?: ApiSaleMode;
   category: ApiCategory;
   vendor: ApiVendor;

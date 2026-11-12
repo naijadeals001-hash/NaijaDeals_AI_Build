@@ -252,15 +252,9 @@ export async function createDepartment(input: {
   const name = text(input.name, "Department name", 3, 80);
   const description = text(input.description, "Department description", 10, 400);
   const slug = readSlug(input.slug?.trim() ? input.slug : slugify(name), "Department slug");
-  if (input.imageAlt !== undefined && String(input.imageAlt).trim()) {
-    throw new ApiError(
-      409,
-      "schema_field_pending",
-      "Department image alt text cannot be saved yet: Category.imageAlt is pending the coordinator-owned migration.",
-      { field: "Category.imageAlt" }
-    );
-  }
+  const imageAlt = input.imageAlt === undefined ? undefined : String(input.imageAlt).trim();
   const image = validateImage(input.imageUrl, "Department image", false);
+  if (image.imageUrl && !imageAlt) throw new ApiError(400, "alt_required", "Accessible alt text is required for the department image.");
   const sortOrder =
     input.sortOrder === undefined
       ? ((await prisma.category.aggregate({ _max: { sortOrder: true } }))._max.sortOrder ?? -1) + 1
@@ -274,6 +268,7 @@ export async function createDepartment(input: {
           slug,
           description,
           imageUrl: image.imageUrl,
+          imageAlt: imageAlt ?? null,
           sortOrder,
           isDemo: Boolean(input.isDemo)
         }
@@ -311,14 +306,7 @@ export async function updateDepartment(input: {
   if (!input.id) throw new ApiError(400, "validation_error", "Department id is required.");
   const existing = await prisma.category.findUnique({ where: { id: input.id } });
   if (!existing) throw new ApiError(404, "department_not_found", "Department not found.");
-  if (input.imageAlt !== undefined && String(input.imageAlt).trim()) {
-    throw new ApiError(
-      409,
-      "schema_field_pending",
-      "Department image alt text cannot be saved yet: Category.imageAlt is pending the coordinator-owned migration.",
-      { field: "Category.imageAlt" }
-    );
-  }
+  const imageAlt = input.imageAlt === undefined ? undefined : String(input.imageAlt).trim();
   const name = input.name === undefined ? existing.name : text(input.name, "Department name", 3, 80);
   const slug = input.slug === undefined ? existing.slug : readSlug(input.slug, "Department slug");
   const description =
@@ -328,6 +316,8 @@ export async function updateDepartment(input: {
     "Department image",
     false
   );
+  const effectiveAlt = imageAlt ?? existing.imageAlt;
+  if (image.imageUrl && !effectiveAlt) throw new ApiError(400, "alt_required", "Accessible alt text is required for the department image.");
   const sortOrder =
     input.sortOrder === undefined ? existing.sortOrder : integer(input.sortOrder, "Department order", 0, 9999);
   await assertUniqueCategoryIdentity({ name, slug, excludeId: existing.id });
@@ -340,6 +330,7 @@ export async function updateDepartment(input: {
           slug,
           description,
           imageUrl: image.imageUrl,
+          imageAlt: effectiveAlt ?? null,
           sortOrder,
           isActive: typeof input.isActive === "boolean" ? input.isActive : existing.isActive,
           isDemo: typeof input.isDemo === "boolean" ? input.isDemo : existing.isDemo

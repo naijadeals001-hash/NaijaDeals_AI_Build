@@ -586,3 +586,8 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Image validation before publish | existing project asset or https required; alt required; publish blocked otherwise | VERIFIED |
 | Catalogue image remediation queue | no queue surface; publish blocks missing imagery instead | NOT IMPLEMENTED |
 | Admin department/product delete or archive | no delete; unpublish and inactive only | NOT IMPLEMENTED |
+| Department image alt text | `Category.imageAlt` migration applied REVIEW + TEST; admin form persists and requires alt | VERIFIED |
+| Public DEMO classification | `Product.isDemo` badge on cards ("DEMO — illustrative listing") and product detail ("inventory, specifications and availability are illustrative") | VERIFIED |
+| Inactive department visibility | inactive departments omitted from navigation and from `/api/products` results (category filter) | VERIFIED |
+| Nonexistent product route | genuine HTTP 404 (`P2025` mapped to notFound) | VERIFIED |
+| Escrow release financial boundary | `postEscrowRelease` guarded; harness boundaryComplete true, 46/46 | VERIFIED |

@@ -270,6 +270,7 @@ model Category {
   slug        String    @unique
   description String?
   imageUrl    String?
+  imageAlt    String?
   sortOrder   Int       @default(0)
   isActive    Boolean   @default(true)
   /// Explicit demonstration classification; never shown as real supply.

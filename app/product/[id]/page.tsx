@@ -42,6 +42,7 @@ export default async function ProductDetail({ params }: { params: { id: string }
     ) as unknown as ApiProduct[];
   } catch (error) {
     if ((error as { digest?: string })?.digest === "NEXT_NOT_FOUND") throw error;
+    if ((error as { code?: string })?.code === "P2025") notFound();
     initialError = "Product not found.";
   }
 

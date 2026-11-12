@@ -9,6 +9,7 @@ type Department = {
   slug: string;
   description: string | null;
   imageUrl: string | null;
+  imageAlt: string | null;
   sortOrder: number;
   isActive: boolean;
   isDemo: boolean;
@@ -57,6 +58,7 @@ const emptyDepartment = {
   slug: "",
   description: "",
   imageUrl: "",
+  imageAlt: "",
   sortOrder: "",
   isDemo: true,
   isActive: true
@@ -182,6 +184,7 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
             slug: department.slug.trim() || undefined,
             description: department.description,
             imageUrl: department.imageUrl,
+            imageAlt: department.imageAlt,
             sortOrder: department.sortOrder === "" ? undefined : Number(department.sortOrder),
             isDemo: department.isDemo,
             isActive: department.isActive
@@ -196,6 +199,7 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
             slug: department.slug.trim() || undefined,
             description: department.description,
             imageUrl: department.imageUrl,
+            imageAlt: department.imageAlt,
             sortOrder: department.sortOrder === "" ? undefined : Number(department.sortOrder),
             isDemo: department.isDemo
           },
@@ -294,6 +298,7 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
       slug: entry.slug,
       description: entry.description ?? "",
       imageUrl: entry.imageUrl ?? "",
+                  imageAlt: entry.imageAlt ?? "",
       sortOrder: String(entry.sortOrder),
       isDemo: entry.isDemo,
       isActive: entry.isActive
@@ -435,6 +440,16 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
               className="mt-1 min-h-10 w-full rounded-lg border border-[#30363D] bg-[#161B22] px-3 text-sm"
             />
           </label>
+          <label className="text-xs font-bold">
+            Image alt text
+            <input
+              value={department.imageAlt}
+              disabled={!canWrite}
+              onChange={(event) => setDepartment({ ...department, imageAlt: event.target.value })}
+              placeholder="Describe the department image"
+              className="mt-1 min-h-10 w-full rounded-lg border border-[#30363D] bg-[#161B22] px-3 text-sm"
+            />
+          </label>
           <label className="text-xs font-bold md:col-span-2">
             Description
             <textarea
@@ -467,13 +482,12 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
           ) : null}
         </div>
         <p className="mt-3 rounded-lg border border-[#F2D48C]/30 bg-[#F2D48C]/10 p-2 text-xs text-[#F2D48C]">
-          Department image alt text is not persisted yet: the proposed `Category.imageAlt` column is pending the
-          coordinator-owned migration. Product images require accessible alt text today.
+          Department images require accessible alt text and a readable project asset before products can publish.
         </p>
         {department.imageUrl ? (
           <div className="mt-3 flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={department.imageUrl} alt="" className="h-16 w-24 rounded-lg object-cover" />
+            <img src={department.imageUrl} alt={department.imageAlt || "Department image preview"} className="h-16 w-24 rounded-lg object-cover" />
             <span className="text-xs text-[#8B949E]">Preview must render before publishing products in this department.</span>
           </div>
         ) : null}

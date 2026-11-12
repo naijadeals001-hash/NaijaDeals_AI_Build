@@ -195,6 +195,7 @@ function parse(response, body) {
     await dept.getByLabel(/^Slug/).fill(DEPT_SLUG);
     await dept.getByLabel(/^Order/).fill("0");
     await dept.getByLabel(/^Image \(/).fill(IMAGE_ONE);
+    await dept.getByLabel("Image alt text").fill("Department banner showing headphones, laptop and watch");
     await dept.getByLabel("Description").fill("DEMO department created through the Control Center catalogue workflow.");
     await dept.getByRole("button", { name: "Create department" }).click();
     const createdDept = await waitFor(async () => {
@@ -247,16 +248,15 @@ function parse(response, body) {
       }
     });
     check(
-      "department alt text is explicitly blocked pending Category.imageAlt",
-      altProbe.status === 409 &&
-        altProbe.body?.code === "schema_field_pending" &&
-        altProbe.body?.details?.field === "Category.imageAlt",
-      `status=${altProbe.status} code=${altProbe.body?.code ?? "none"}`
+      "department alt text is persisted",
+      altProbe.status === 201 && altProbe.body?.imageAlt === "Probe alt text",
+      `status=${altProbe.status} alt=${altProbe.body?.imageAlt ?? "none"}`
     );
-    const altProbeLeak = (await adminCatalogue()).departments.some(
-      (entry) => entry.slug === `demo-alt-probe-${stamp}`
-    );
-    check("blocked alt probe created no department", !altProbeLeak, `leaked=${altProbeLeak}`);
+    const altDept = (await adminCatalogue()).departments.find((entry) => entry.slug === `demo-alt-probe-${stamp}`);
+    check("alt probe department stored once", Boolean(altDept) && altDept.imageAlt === "Probe alt text", altDept ? String(altDept.imageAlt) : "missing");
+    if (altDept) {
+      await api("/api/admin/catalogue/departments", { method: "PATCH", data: { id: altDept.id, isActive: false } });
+    }
 
     const duplicateDept = await api("/api/admin/catalogue/departments", {
       method: "POST",
@@ -265,6 +265,7 @@ function parse(response, body) {
         slug: DEPT_SLUG_EDITED,
         description: "DEMO duplicate slug probe that must be refused.",
         imageUrl: IMAGE_ONE,
+        imageAlt: "Duplicate probe image",
         isDemo: true
       }
     });
