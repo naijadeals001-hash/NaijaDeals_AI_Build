@@ -29,6 +29,7 @@ import {
   Megaphone,
   Link2,
   Star,
+  Sparkles,
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { normalizeTab, TAB_LABELS, type AdminTab } from "@/lib/admin/admin-navigation";
@@ -103,6 +104,12 @@ const adminNavItems: NavItem[] = [
     ],
   },
   {
+    id: "plus",
+    label: "Plus+",
+    icon: <Sparkles className="h-5 w-5" />,
+    href: "/admin/plus",
+  },
+  {
     id: "people",
     label: "People",
     icon: <Users className="h-5 w-5" />,
@@ -141,6 +148,7 @@ export function AdminShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isSuperAdminPath = pathname?.startsWith("/super-admin") ?? false;
+  const isPlusPath = pathname?.startsWith("/admin/plus") ?? false;
   const currentTab = normalizeTab(searchParams.get("tab"));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -187,6 +195,8 @@ export function AdminShell({
     if (href === "#") return false;
     if (href === "/super-admin") return isSuperAdminPath;
     if (isSuperAdminPath) return false;
+    if (href === "/admin/plus") return isPlusPath;
+    if (isPlusPath) return false;
     const tab: AdminTab = normalizeTab(href.includes("tab=") ? href.split("tab=")[1] : "overview");
     return currentTab === tab;
   };
