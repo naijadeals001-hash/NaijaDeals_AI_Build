@@ -8,6 +8,34 @@ export function isTestPaymentsEnabled() {
   return process.env.ENABLE_TEST_PAYMENTS === "true" && process.env.NODE_ENV !== "production";
 }
 
+/**
+ * A provider answered with a non-2xx status. The status is kept so callers can
+ * distinguish a definitive rejection (the request was not processed) from a
+ * transport/5xx/timeout failure whose outcome is unknown. Retrying an unknown
+ * refund can pay a customer twice, so the distinction must survive the adapter
+ * boundary instead of being flattened into a message.
+ */
+export class PaymentProviderError extends Error {
+  httpStatus: number;
+
+  constructor(message: string, httpStatus: number) {
+    super(message);
+    this.name = "PaymentProviderError";
+    this.httpStatus = httpStatus;
+  }
+}
+
+/**
+ * True only where the provider's own response proves it did not process the
+ * request. Timeouts, rate limits and 5xx responses are deliberately excluded:
+ * those may have been processed before the connection broke.
+ */
+export function isDefinitiveProviderRejection(error: unknown): boolean {
+  if (!(error instanceof PaymentProviderError)) return false;
+  const status = error.httpStatus;
+  return status >= 400 && status < 500 && status !== 408 && status !== 425 && status !== 429;
+}
+
 async function jsonRequest(url: string, init?: RequestInit) {
   const response = await fetch(url, { ...init, signal: AbortSignal.timeout(15000) });
   const text = await response.text();
@@ -20,7 +48,7 @@ async function jsonRequest(url: string, init?: RequestInit) {
   if (!response.ok) {
     const message =
       (body as { message?: string })?.message || `Payment provider returned HTTP ${response.status}.`;
-    throw new Error(message);
+    throw new PaymentProviderError(message, response.status);
   }
   return body as Record<string, unknown>;
 }

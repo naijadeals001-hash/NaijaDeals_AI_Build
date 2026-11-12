@@ -953,28 +953,28 @@ async function completionMathRegression() {
     escrowAmountKobo: TOTAL_KOBO,
     orderTotalKobo: TOTAL_KOBO,
     payableKobo: PAYABLE_KOBO,
-    refundedKobo: BigInt(0)
+    completedRefundKobo: BigInt(0)
   });
   const partial = releaseObligation({
     escrowAmountKobo: TOTAL_KOBO,
     orderTotalKobo: TOTAL_KOBO,
     payableKobo: PAYABLE_KOBO,
-    refundedKobo: BigInt(55_000)
+    completedRefundKobo: BigInt(55_000)
   });
   const full = releaseObligation({
     escrowAmountKobo: TOTAL_KOBO,
     orderTotalKobo: TOTAL_KOBO,
     payableKobo: PAYABLE_KOBO,
-    refundedKobo: TOTAL_KOBO
+    completedRefundKobo: TOTAL_KOBO
   });
   const over = releaseObligation({
     escrowAmountKobo: TOTAL_KOBO,
     orderTotalKobo: TOTAL_KOBO,
     payableKobo: PAYABLE_KOBO,
-    refundedKobo: TOTAL_KOBO + BigInt(1)
+    completedRefundKobo: TOTAL_KOBO + BigInt(1)
   });
   record(
-    "release obligation derives the remainder from frozen amounts and refundedKobo",
+    "release obligation derives the remainder from frozen amounts and completed refunds",
     clean.releasableKobo === TOTAL_KOBO &&
       clean.payableKobo === PAYABLE_KOBO &&
       clean.platformKobo === TOTAL_KOBO - PAYABLE_KOBO &&

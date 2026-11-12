@@ -1,6 +1,10 @@
 import "dotenv/config";
 import { prisma } from "../lib/prisma";
-import { compareWalletProjection, loadOpenHoldLedger } from "../lib/services/core/reconciliation-correct";
+import {
+  compareWalletProjection,
+  loadOpenHoldLedger,
+  loadRefundReconciliation
+} from "../lib/services/core/reconciliation-correct";
 
 /**
  * Read-only wallet reconciliation. No writes.
@@ -17,8 +21,10 @@ import { compareWalletProjection, loadOpenHoldLedger } from "../lib/services/cor
  * and imported here, so the Control Center and this checker apply one tested
  * convention. Open holds are read from the records that own them: wallet-paid
  * `Ride` rows in `held` state and `EscrowHold` rows in an open status (less the
- * order's refunded amount, because a partial refund returns held money). Holds
- * with no attributable wallet are reported, never dropped.
+ * refunds that have actually COMPLETED, because only settled refunds return held
+ * money). Reserved, submitted and unknown refund claims are reported separately
+ * and never silently make the report CLEAN. Holds with no attributable wallet
+ * are reported, never dropped.
  *
  * The earlier form of this script compared `availableKobo + heldKobo` with the
  * full journal net. That is the superseded convention documented as wrong in
@@ -108,12 +114,18 @@ const EXPECTED = process.env.RECONCILE_DB ?? "naijadeals_affiliate_test";
     amountKobo: hold.amountKobo.toString(),
     reason: hold.reason
   }));
+  // Pending refund claims are obligations, not wallet movements. They must be
+  // reported separately so a correctly reserved claim never makes the report
+  // CLEAN and an ambiguous provider outcome never hides behind "pending".
+  const refundAccounting = await loadRefundReconciliation(prisma);
+  const refundReview = refundAccounting.status === "REVIEW";
+  const refundPending = refundAccounting.status === "PENDING";
   console.log(
     JSON.stringify(
       {
         database: DB,
         convention:
-          "availableKobo == ledgerNet - open counterparty hold credits; heldKobo == open buyer holds + open counterparty holds; duplicate identities and unattributed holds are reported",
+          "availableKobo == ledgerNet - open counterparty hold credits; heldKobo == open buyer holds + open counterparty holds; open escrow exposure subtracts COMPLETED refunds only; pending refund states are reported separately; duplicate identities and unattributed holds are reported",
         wallets: rows.length,
         openRides: openRides.length,
         openEscrows: openEscrows.length,
@@ -124,7 +136,43 @@ const EXPECTED = process.env.RECONCILE_DB ?? "naijadeals_affiliate_test";
         duplicateIdentities: duplicates.length,
         duplicates,
         mismatchRows: mismatches.slice(0, 50),
-        status: mismatches.length || duplicates.length || unattributed.length ? "REVIEW" : "CLEAN"
+        refundAccounting: {
+          status: refundAccounting.status,
+          pendingObligations: refundAccounting.pendingObligationCount,
+          uncertainOutcomes: refundAccounting.uncertainCount,
+          discrepancies: refundAccounting.discrepancyCount,
+          staleReservations: refundAccounting.staleReservationCount,
+          legacyUnclassified: refundAccounting.legacyCount,
+          reservationMismatches: refundAccounting.reservationMismatches.map((row) => ({
+            orderId: row.orderId,
+            orderNumber: row.orderNumber,
+            reservedKobo: row.reservedKobo.toString(),
+            expectedKobo: row.expectedKobo.toString(),
+            completedKobo: row.completedKobo.toString(),
+            totalKobo: row.totalKobo.toString()
+          })),
+          rows: refundAccounting.rows.map((row) => ({
+            refundId: row.refundId,
+            orderId: row.orderId,
+            orderNumber: row.orderNumber,
+            provider: row.provider,
+            amountKobo: row.amountKobo.toString(),
+            refundStatus: row.refundStatus,
+            lifecycleState: row.lifecycleState,
+            acknowledged: row.acknowledged,
+            providerReference: row.providerReference,
+            classification: row.classification,
+            severity: row.severity,
+            ageSeconds: row.ageSeconds,
+            detail: row.detail
+          }))
+        },
+        status:
+          mismatches.length || duplicates.length || unattributed.length || refundReview
+            ? "REVIEW"
+            : refundPending
+              ? "PENDING"
+              : "CLEAN"
       },
       null,
       2

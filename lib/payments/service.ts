@@ -3,7 +3,11 @@ import type { Order, Payment, Prisma, PrismaClient, Refund } from "@prisma/clien
 import { prisma } from "@/lib/prisma";
 import { getCountry, commissionFor } from "@/lib/config/commerce";
 import { ApiError } from "@/lib/auth/guard";
-import { adapters, type AdapterId, isTestPaymentsEnabled } from "./adapters";
+import { adapters, isDefinitiveProviderRejection, type AdapterId, isTestPaymentsEnabled } from "./adapters";
+import {
+  loadRefundLifecycle,
+  recordRefundLifecycle
+} from "./refund-lifecycle";
 import type { PaymentVerifyResult } from "./types";
 import { updateOrderStatus } from "@/lib/services/core/order.service";
 import { recordAudit } from "@/lib/services/core/audit.service";
@@ -651,7 +655,8 @@ function computeRefundBasis(
 async function claimRefund(
   tx: Prisma.TransactionClient,
   input: { orderId: string; paymentId: string; actorId: string; reason: string; idempotencyKey: string },
-  basis: RefundBasis
+  basis: RefundBasis,
+  meta: { provider: string; escrowReleasedAtClaim: boolean }
 ) {
   const claim = await tx.order.updateMany({
     where: { id: input.orderId, refundedKobo: basis.alreadyRefundedKobo },
@@ -660,7 +665,7 @@ async function claimRefund(
   if (claim.count === 0) {
     throw new ApiError(409, "refund_conflict", "Another refund changed this order. Reload and try again.");
   }
-  return tx.refund.create({
+  const refund = await tx.refund.create({
     data: {
       orderId: input.orderId,
       paymentId: input.paymentId,
@@ -671,6 +676,21 @@ async function claimRefund(
       status: "PENDING"
     }
   });
+  // The reservation and its lifecycle event commit together: a crash can leave
+  // a reserved attempt but never a reservation with no record of why it exists.
+  await recordRefundLifecycle(tx, {
+    refundId: refund.id,
+    actorId: input.actorId,
+    payload: {
+      state: "reserved",
+      provider: meta.provider,
+      amountKobo: basis.requestedKobo.toString(),
+      priorRefundedKobo: basis.alreadyRefundedKobo.toString(),
+      escrowReleasedAtClaim: meta.escrowReleasedAtClaim,
+      note: input.reason
+    }
+  });
+  return refund;
 }
 
 /**
@@ -679,53 +699,111 @@ async function claimRefund(
  * The buyer of record is the escrow's `buyerWalletId`: the customer for a wallet
  * payment, the platform for a verified external payment. That keeps stored
  * balances and the journal on the same side of every movement.
+ *
+ * The vendor/platform split is computed from the refunds that have actually
+ * settled (`COMPLETED`), not from the order's reservation total. That matters
+ * for odd-kobo cumulative allocations: a pending claim can fail, and a split
+ * based on its reservation would leave the vendor one kobo over its exact share.
+ * Settlements are serialised by the order row lock, so the completed total is
+ * stable while this function runs.
  */
 async function settleRefund(
   tx: Prisma.TransactionClient,
   input: {
     locked: LockedRefundOrder;
-    basis: RefundBasis;
-    escrowReleased: boolean;
     refund: Refund;
-    providerReference?: string;
+    providerReference?: string | null;
     reason: string;
     restock?: boolean;
   }
 ) {
-  const { locked, basis, refund } = input;
+  const { locked, refund } = input;
   const { order, completedPayment, escrow } = locked;
-  const requested = basis.requestedKobo;
+  if (refund.status === "COMPLETED") {
+    const completed = await tx.refund.aggregate({
+      where: { orderId: order.id, status: "COMPLETED" },
+      _sum: { amountKobo: true }
+    });
+    return {
+      orderId: order.id,
+      refundedKobo: refund.amountKobo.toString(),
+      totalRefundedKobo: (completed._sum.amountKobo ?? refund.amountKobo).toString(),
+      reservedKobo: order.refundedKobo.toString(),
+      refundId: refund.id,
+      idempotent: true,
+      status: "COMPLETED" as const
+    };
+  }
+  if (refund.status !== "PENDING") {
+    throw new ApiError(409, "refund_failed", "This refund attempt is no longer pending and cannot be settled.");
+  }
+
+  const requested = refund.amountKobo;
+  const completed = await tx.refund.aggregate({
+    where: { orderId: order.id, status: "COMPLETED" },
+    _sum: { amountKobo: true }
+  });
+  const alreadySettledKobo = completed._sum.amountKobo ?? BigInt(0);
+  const settledAfterKobo = alreadySettledKobo + requested;
+  if (settledAfterKobo > order.totalKobo) {
+    throw new ApiError(409, "refund_conflict", "Refund settlement would exceed the order total.");
+  }
+  const isFullRefund = settledAfterKobo === order.totalKobo;
+  const escrowReleased = !escrow || escrow.status === "released";
+
   const vendorWallet = await ensureWallet(tx, { vendorId: order.vendorId, ownerType: "VENDOR" });
   const platform = await ensureWallet(tx, { ownerType: "SYSTEM" });
   const buyerWalletId = escrow
     ? escrow.buyerWalletId
-    : (await ensureWallet(tx, { userId: order.customerId, ownerType: "CUSTOMER" })).id;
+    : completedPayment.provider === "wallet"
+      ? (await ensureWallet(tx, { userId: order.customerId, ownerType: "CUSTOMER" })).id
+      : platform.id;
   const payable = order.subtotalKobo - order.commissionKobo + order.deliveryFeeKobo;
   const { vendorShareKobo: vendorShare, platformShareKobo: platformShare } = allocateRefundShares({
     totalKobo: order.totalKobo,
     payableKobo: payable,
-    alreadyRefundedKobo: basis.alreadyRefundedKobo,
+    alreadyRefundedKobo: alreadySettledKobo,
     requestedKobo: requested
   });
 
-  if (input.escrowReleased) {
+  if (escrowReleased) {
     // Money already left escrow: reverse each recipient's spendable balance.
     if (completedPayment.provider === "wallet") {
       await tx.wallet.update({ where: { id: buyerWalletId }, data: { availableKobo: { increment: requested } } });
-    }
-    if (vendorShare > BigInt(0)) {
-      const debit = await tx.wallet.updateMany({
-        where: { id: vendorWallet.id, availableKobo: { gte: vendorShare } },
-        data: { availableKobo: { decrement: vendorShare } }
+      if (vendorShare > BigInt(0)) {
+        const debit = await tx.wallet.updateMany({
+          where: { id: vendorWallet.id, availableKobo: { gte: vendorShare } },
+          data: { availableKobo: { decrement: vendorShare } }
+        });
+        if (debit.count === 0) throw new ApiError(409, "refund_conflict", "Seller payable is no longer available to reverse.");
+      }
+      if (platformShare > BigInt(0)) {
+        const debit = await tx.wallet.updateMany({
+          where: { id: platform.id, availableKobo: { gte: platformShare } },
+          data: { availableKobo: { decrement: platformShare } }
+        });
+        if (debit.count === 0) throw new ApiError(409, "refund_conflict", "Platform fee balance is no longer available to reverse.");
+      }
+    } else {
+      // The platform was the buyer of record for the external payment. The
+      // external inflow credit (`requested`) and the platform's own share
+      // reversal (`platformShare`) net to `requested - platformShare`, which is
+      // the vendor share clawed back before the provider refund leaves. SYSTEM
+      // is negative by convention after an external hold, so demanding a
+      // positive fee balance here would reject every correct external refund.
+      if (vendorShare > BigInt(0)) {
+        const debit = await tx.wallet.updateMany({
+          where: { id: vendorWallet.id, availableKobo: { gte: vendorShare } },
+          data: { availableKobo: { decrement: vendorShare } }
+        });
+        if (debit.count === 0) throw new ApiError(409, "refund_conflict", "Seller payable is no longer available to reverse.");
+      }
+      const platformNetCreditKobo = requested - platformShare;
+      if (platformNetCreditKobo < BigInt(0)) throw new Error("Refund platform share exceeds the refund amount.");
+      await tx.wallet.update({
+        where: { id: platform.id },
+        data: { availableKobo: { increment: platformNetCreditKobo } }
       });
-      if (debit.count === 0) throw new ApiError(409, "refund_conflict", "Seller payable is no longer available to reverse.");
-    }
-    if (platformShare > BigInt(0)) {
-      const debit = await tx.wallet.updateMany({
-        where: { id: platform.id, availableKobo: { gte: platformShare } },
-        data: { availableKobo: { decrement: platformShare } }
-      });
-      if (debit.count === 0) throw new ApiError(409, "refund_conflict", "Platform fee balance is no longer available to reverse.");
     }
   } else {
     // The escrow is still open: return the refunded amount from the buyer's hold
@@ -743,7 +821,7 @@ async function settleRefund(
     if (vendor.count === 0) throw new ApiError(409, "refund_conflict", "Seller escrow hold is no longer available to reverse.");
   }
 
-  const ledgerEntries = input.escrowReleased
+  const ledgerEntries = escrowReleased
     ? completedPayment.provider === "wallet"
       ? [
           { walletId: buyerWalletId, direction: "CREDIT" as const, amountKobo: requested, memo: "Buyer partial refund credited to wallet" },
@@ -752,12 +830,22 @@ async function settleRefund(
         ]
       : [
           { walletId: vendorWallet.id, direction: "DEBIT" as const, amountKobo: vendorShare, memo: "Seller payable reversed" },
-          { walletId: platform.id, direction: "DEBIT" as const, amountKobo: platformShare, memo: "Commission and fee reversed" }
+          { walletId: platform.id, direction: "DEBIT" as const, amountKobo: platformShare, memo: "Commission and fee reversed" },
+          { walletId: platform.id, direction: "CREDIT" as const, amountKobo: requested, memo: "External refund settled through the platform account" }
         ]
     : [
         { walletId: buyerWalletId, direction: "CREDIT" as const, amountKobo: requested, memo: "Escrow returned to the buyer of record" },
         { walletId: vendorWallet.id, direction: "DEBIT" as const, amountKobo: requested, memo: "Vendor escrow payable reversed" }
       ];
+
+  const postings = ledgerEntries.filter((entry) => entry.amountKobo > BigInt(0));
+  const debitKobo = postings
+    .filter((entry) => entry.direction === "DEBIT")
+    .reduce((sum, entry) => sum + entry.amountKobo, BigInt(0));
+  const creditKobo = postings
+    .filter((entry) => entry.direction === "CREDIT")
+    .reduce((sum, entry) => sum + entry.amountKobo, BigInt(0));
+  if (debitKobo !== creditKobo) throw new Error("Refund journal does not balance.");
 
   await tx.walletTransaction.create({
     data: {
@@ -766,14 +854,34 @@ async function settleRefund(
       type: "refund",
       amountKobo: requested,
       reference: `REFUND-${refund.id}`,
-      description: `${basis.isFullRefund ? "Refund" : "Partial refund"} for ${order.orderNumber}: ${input.reason}`,
-      ledger: { create: ledgerEntries.filter((entry) => entry.amountKobo > BigInt(0)) }
+      description: `${isFullRefund ? "Refund" : "Partial refund"} for ${order.orderNumber}: ${input.reason}`,
+      ledger: { create: postings }
     }
   });
 
-  await tx.refund.update({
-    where: { id: refund.id },
-    data: { status: "COMPLETED", completedAt: new Date(), providerReference: input.providerReference ?? null }
+  const closed = await tx.refund.updateMany({
+    where: { id: refund.id, status: "PENDING" },
+    data: {
+      status: "COMPLETED",
+      completedAt: new Date(),
+      providerReference: input.providerReference ?? refund.providerReference ?? null
+    }
+  });
+  if (closed.count !== 1) {
+    throw new ApiError(409, "refund_conflict", "This refund changed while it was settling. Reload and try again.");
+  }
+  await recordRefundLifecycle(tx, {
+    refundId: refund.id,
+    actorId: refund.actorId,
+    payload: {
+      state: "confirmed",
+      provider: completedPayment.provider,
+      providerReference: input.providerReference ?? refund.providerReference ?? null,
+      providerStatus: "SETTLED",
+      amountKobo: requested.toString(),
+      priorRefundedKobo: alreadySettledKobo.toString(),
+      note: isFullRefund ? "Refund settled in full." : "Partial refund settled."
+    }
   });
 
   // Durable affiliate reversal intent, written in the same transaction as the
@@ -835,14 +943,14 @@ async function settleRefund(
     update: {}
   });
 
-  if (basis.isFullRefund) {
+  if (isFullRefund) {
     await tx.payment.update({ where: { id: completedPayment.id }, data: { status: "REFUNDED" } });
     // The order-level payment state must move with the payment record, or a
     // fully refunded order keeps reporting `paymentStatus: "paid"`.
     await tx.order.update({ where: { id: order.id }, data: { paymentStatus: "refunded" } });
     // A hold that was already released keeps its real history; the refund is
     // recorded on the order and the refund row instead.
-    if (escrow && !input.escrowReleased) {
+    if (escrow && !escrowReleased) {
       await tx.escrowHold.update({
         where: { id: escrow.id },
         data: { status: "refunded", events: { create: { from: escrow.status, to: "refunded", note: input.reason } } }
@@ -863,7 +971,7 @@ async function settleRefund(
   await recordAudit({
     tx,
     actorId: refund.actorId,
-    action: basis.isFullRefund ? "payment.refunded" : "payment.partially_refunded",
+    action: isFullRefund ? "payment.refunded" : "payment.partially_refunded",
     entity: "Order",
     entityId: order.id,
     metadata: {
@@ -872,25 +980,632 @@ async function settleRefund(
       before: {
         paymentStatus: order.paymentStatus,
         orderStatus: order.status,
-        refundedKobo: basis.alreadyRefundedKobo.toString()
+        refundedKobo: order.refundedKobo.toString(),
+        completedRefundKobo: alreadySettledKobo.toString()
       },
       after: {
-        paymentStatus: basis.isFullRefund ? "refunded" : "partially_refunded",
-        refundedKobo: (basis.alreadyRefundedKobo + requested).toString()
+        paymentStatus: isFullRefund ? "refunded" : "partially_refunded",
+        orderStatus: isFullRefund ? "refunded" : order.status,
+        completedRefundKobo: settledAfterKobo.toString()
       },
       amountKobo: requested.toString(),
+      vendorShareKobo: vendorShare.toString(),
+      platformShareKobo: platformShare.toString(),
       reason: input.reason,
       provider: completedPayment.provider,
-      restocked: Boolean(input.restock) && basis.isFullRefund
+      restocked: Boolean(input.restock) && isFullRefund
     }
   });
 
   return {
     orderId: order.id,
     refundedKobo: requested.toString(),
-    totalRefundedKobo: (basis.alreadyRefundedKobo + requested).toString(),
-    refundId: refund.id
+    totalRefundedKobo: settledAfterKobo.toString(),
+    reservedKobo: order.refundedKobo.toString(),
+    refundId: refund.id,
+    status: "COMPLETED" as const
   };
+}
+
+/* ------------------------------------------------- external refund state --- */
+
+type RefundRowWithPayment = Prisma.RefundGetPayload<{ include: { payment: true } }>;
+
+/**
+ * Reserve an external refund without contacting the provider.
+ *
+ * A reservation is a promise that `Order.refundedKobo` covers the amount, so it
+ * must be committed before the provider call. Exporting it separately lets a
+ * recovery path prove the interrupted-reservation case with the same production
+ * code that `refundPayment` uses; it is not a second booking implementation.
+ */
+export async function reserveExternalRefundClaim(input: {
+  orderId: string;
+  actorId: string;
+  reason: string;
+  idempotencyKey: string;
+  amountKobo?: bigint;
+  restock?: boolean;
+}) {
+  const order = await prisma.order.findUnique({
+    where: { id: input.orderId },
+    include: { payments: true }
+  });
+  if (!order) throw new ApiError(404, "order_not_found", "Order not found.");
+  const initialBasis = computeRefundBasis(order, input.amountKobo, "initial");
+  if (input.restock && !initialBasis.isFullRefund) {
+    throw new ApiError(400, "invalid_restock", "Stock can only be restocked on a full refund.");
+  }
+  const completed = order.payments.find((payment) => payment.status === "COMPLETED");
+  if (!completed) throw new ApiError(409, "no_payment", "No completed payment was found for this order.");
+  if (completed.provider === "wallet") {
+    throw new ApiError(400, "not_external_refund", "Wallet refunds must settle atomically; use refundPayment.");
+  }
+
+  const claimed = await prisma.$transaction(async (tx) => {
+    const locked = await lockAndReadRefundOrder(tx, order.id);
+    const basis = computeRefundBasis(locked.order, input.amountKobo, "locked");
+    if (input.restock && !basis.isFullRefund) {
+      throw new ApiError(400, "invalid_restock", "Stock can only be restocked on a full refund.");
+    }
+    const refund = await claimRefund(
+      tx,
+      {
+        orderId: order.id,
+        paymentId: locked.completedPayment.id,
+        actorId: input.actorId,
+        reason: input.reason,
+        idempotencyKey: input.idempotencyKey
+      },
+      basis,
+      {
+        provider: completed.provider,
+        escrowReleasedAtClaim: locked.escrow?.status === "released"
+      }
+    );
+    return {
+      refundId: refund.id,
+      requestedKobo: basis.requestedKobo,
+      alreadyRefundedKobo: basis.alreadyRefundedKobo,
+      escrowReleasedAtClaim: locked.escrow?.status === "released"
+    };
+  });
+  return claimed;
+}
+
+const defaultRefundReason = (refund: Refund) => refund.reason;
+
+/**
+ * Mark the reservation as submitted, in its own committed transaction, before
+ * the provider is called. If the process dies immediately after this point the
+ * attempt is unacknowledged and therefore unknown, never silently repeated.
+ */
+async function beginExternalRefundSubmission(input: {
+  refundId: string;
+  actorId: string;
+  provider: string;
+}): Promise<{ submitted: boolean; state: string; acknowledged: boolean }> {
+  return prisma.$transaction(async (tx) => {
+    const refund = await tx.refund.findUniqueOrThrow({ where: { id: input.refundId } });
+    await lockAndReadRefundOrder(tx, refund.orderId);
+    const fresh = await tx.refund.findUniqueOrThrow({ where: { id: input.refundId } });
+    if (fresh.status === "COMPLETED") return { submitted: false, state: "confirmed", acknowledged: true };
+    if (fresh.status === "FAILED") return { submitted: false, state: "failed", acknowledged: false };
+    const lifecycle = await loadRefundLifecycle(tx, input.refundId);
+    if (!lifecycle) {
+      return { submitted: false, state: "legacy", acknowledged: false };
+    }
+    if (lifecycle.state === "reserved") {
+      await recordRefundLifecycle(tx, {
+        refundId: input.refundId,
+        actorId: input.actorId,
+        payload: {
+          state: "submitted",
+          acknowledged: false,
+          provider: input.provider,
+          providerStatus: "REQUEST_SENT",
+          amountKobo: fresh.amountKobo.toString()
+        }
+      });
+      return { submitted: true, state: "reserved", acknowledged: false };
+    }
+    return { submitted: false, state: lifecycle.state ?? "legacy", acknowledged: lifecycle.acknowledged };
+  });
+}
+
+/**
+ * Release a reservation after a definitive outcome. The order lock and the
+ * lifecycle check make this refuse once the provider has confirmed the money
+ * moved: a confirmed refund must be settled, never reverted.
+ */
+async function failExternalRefundReservation(input: {
+  refundId: string;
+  providerReference?: string | null;
+  reason: string;
+  note: string;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const refund = await tx.refund.findUniqueOrThrow({ where: { id: input.refundId } });
+    await lockAndReadRefundOrder(tx, refund.orderId);
+    const fresh = await tx.refund.findUniqueOrThrow({ where: { id: input.refundId } });
+    if (fresh.status === "FAILED") return { reverted: false, status: "FAILED" as const, refundId: fresh.id };
+    if (fresh.status === "COMPLETED") {
+      throw new ApiError(409, "refund_settled", "This refund has already settled and cannot be reverted.");
+    }
+    const lifecycle = await loadRefundLifecycle(tx, fresh.id);
+    if (lifecycle?.state === "confirmed") {
+      throw new ApiError(
+        409,
+        "refund_confirmed",
+        "The provider confirmed this refund. It must be settled locally, never released back to the order."
+      );
+    }
+    const reverted = await tx.order.updateMany({
+      where: { id: fresh.orderId, refundedKobo: { gte: fresh.amountKobo } },
+      data: { refundedKobo: { decrement: fresh.amountKobo } }
+    });
+    if (reverted.count !== 1) {
+      throw new ApiError(
+        409,
+        "reconciliation_required",
+        "The refund reservation no longer matches the order. Reconcile before retrying."
+      );
+    }
+    await tx.refund.update({
+      where: { id: fresh.id },
+      data: {
+        status: "FAILED",
+        providerReference: input.providerReference ?? fresh.providerReference ?? null
+      }
+    });
+    await recordRefundLifecycle(tx, {
+      refundId: fresh.id,
+      actorId: fresh.actorId,
+      payload: {
+        state: "failed",
+        providerReference: input.providerReference ?? fresh.providerReference ?? null,
+        amountKobo: fresh.amountKobo.toString(),
+        note: `${input.reason}: ${input.note}`
+      }
+    });
+    return { reverted: true, status: "FAILED" as const, refundId: fresh.id };
+  });
+}
+
+/** Record an ambiguous provider outcome. The reservation deliberately stays. */
+async function markExternalRefundUnknown(refundId: string, note: string) {
+  await prisma.$transaction(async (tx) => {
+    const refund = await tx.refund.findUniqueOrThrow({ where: { id: refundId } });
+    await lockAndReadRefundOrder(tx, refund.orderId);
+    const fresh = await tx.refund.findUniqueOrThrow({ where: { id: refundId } });
+    if (fresh.status !== "PENDING") return;
+    const lifecycle = await loadRefundLifecycle(tx, refundId);
+    if (lifecycle?.state === "confirmed") return;
+    await recordRefundLifecycle(tx, {
+      refundId,
+      actorId: fresh.actorId,
+      payload: {
+        state: "unknown",
+        amountKobo: fresh.amountKobo.toString(),
+        note
+      }
+    });
+  });
+}
+
+/** Provider acknowledged the request but reports it as still processing. */
+async function recordExternalRefundPending(input: {
+  refundId: string;
+  provider: string;
+  providerReference?: string | null;
+}) {
+  await prisma.$transaction(async (tx) => {
+    const refund = await tx.refund.findUniqueOrThrow({ where: { id: input.refundId } });
+    await lockAndReadRefundOrder(tx, refund.orderId);
+    const fresh = await tx.refund.findUniqueOrThrow({ where: { id: input.refundId } });
+    if (fresh.status !== "PENDING") return;
+    const lifecycle = await loadRefundLifecycle(tx, input.refundId);
+    if (lifecycle?.state === "confirmed" || lifecycle?.state === "failed") return;
+    await tx.refund.update({
+      where: { id: fresh.id },
+      data: { providerReference: input.providerReference ?? fresh.providerReference ?? null }
+    });
+    await recordRefundLifecycle(tx, {
+      refundId: fresh.id,
+      actorId: fresh.actorId,
+      payload: {
+        state: "submitted",
+        acknowledged: true,
+        provider: input.provider,
+        providerReference: input.providerReference ?? null,
+        providerStatus: "PENDING",
+        amountKobo: fresh.amountKobo.toString()
+      }
+    });
+  });
+}
+
+/** Provider confirmed completion. Settlement is a separate, recoverable step. */
+async function recordExternalRefundConfirmed(input: {
+  refundId: string;
+  provider: string;
+  providerReference?: string | null;
+}) {
+  await prisma.$transaction(async (tx) => {
+    const refund = await tx.refund.findUniqueOrThrow({ where: { id: input.refundId } });
+    await lockAndReadRefundOrder(tx, refund.orderId);
+    const fresh = await tx.refund.findUniqueOrThrow({ where: { id: input.refundId } });
+    if (fresh.status === "COMPLETED") return;
+    if (fresh.status === "FAILED") {
+      throw new ApiError(409, "refund_failed", "This refund is already failed; a confirmation cannot reopen it.");
+    }
+    await tx.refund.update({
+      where: { id: fresh.id },
+      data: { providerReference: input.providerReference ?? fresh.providerReference ?? null }
+    });
+    await recordRefundLifecycle(tx, {
+      refundId: fresh.id,
+      actorId: fresh.actorId,
+      payload: {
+        state: "confirmed",
+        provider: input.provider,
+        providerReference: input.providerReference ?? null,
+        providerStatus: "COMPLETED",
+        amountKobo: fresh.amountKobo.toString()
+      }
+    });
+  });
+}
+
+/**
+ * Settle a provider-confirmed refund from local evidence. This is the recovery
+ * path after a crash between confirmation and posting; it never contacts the
+ * provider again.
+ */
+export async function settleConfirmedExternalRefund(input: {
+  refundId: string;
+  actorId?: string;
+  reason?: string;
+  restock?: boolean;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const refund = await tx.refund.findUniqueOrThrow({ where: { id: input.refundId } });
+    const locked = await lockAndReadRefundOrder(tx, refund.orderId);
+    const fresh = await tx.refund.findUniqueOrThrow({ where: { id: input.refundId } });
+    if (fresh.status === "COMPLETED") {
+      const completed = await tx.refund.aggregate({
+        where: { orderId: fresh.orderId, status: "COMPLETED" },
+        _sum: { amountKobo: true }
+      });
+      return {
+        orderId: fresh.orderId,
+        refundedKobo: fresh.amountKobo.toString(),
+        totalRefundedKobo: (completed._sum.amountKobo ?? fresh.amountKobo).toString(),
+        reservedKobo: locked.order.refundedKobo.toString(),
+        refundId: fresh.id,
+        idempotent: true,
+        status: "COMPLETED" as const
+      };
+    }
+    if (fresh.status === "FAILED") {
+      throw new ApiError(409, "refund_failed", "This refund attempt failed. Use a new idempotency key.");
+    }
+    const lifecycle = await loadRefundLifecycle(tx, fresh.id);
+    if (lifecycle?.state !== "confirmed") {
+      throw new ApiError(
+        409,
+        "refund_not_confirmed",
+        "The provider has not confirmed this refund, so it cannot be settled."
+      );
+    }
+    return settleRefund(tx, {
+      locked,
+      refund: fresh,
+      providerReference: lifecycle.providerReference,
+      reason: input.reason ?? defaultRefundReason(fresh),
+      restock: input.restock
+    });
+  });
+}
+
+async function submitExternalRefundClaim(input: {
+  refundId: string;
+  actorId: string;
+  reason: string;
+  restock?: boolean;
+  idempotencyKey: string;
+}) {
+  const refund = await prisma.refund.findUnique({
+    where: { id: input.refundId },
+    include: { payment: true }
+  });
+  if (!refund) throw new ApiError(404, "refund_not_found", "Refund attempt not found.");
+  if (refund.status === "COMPLETED") {
+    return {
+      orderId: refund.orderId,
+      refundedKobo: refund.amountKobo.toString(),
+      idempotent: true,
+      refundId: refund.id,
+      status: "COMPLETED" as const
+    };
+  }
+  if (refund.status === "FAILED") {
+    throw new ApiError(409, "refund_failed", "This refund attempt failed. Use a new idempotency key.");
+  }
+
+  const provider = refund.payment.provider as AdapterId;
+  if (provider === "wallet") {
+    throw new ApiError(400, "not_external_refund", "Wallet refunds settle atomically and cannot be submitted externally.");
+  }
+  const adapter = adapters[provider];
+  if (!adapter?.refund) {
+    await failExternalRefundReservation({
+      refundId: refund.id,
+      reason: "Provider does not support refunds",
+      note: `${provider} refunds are not configured on this server.`
+    });
+    throw new ApiError(503, "refund_unsupported", `${provider} refunds are not configured on this server.`);
+  }
+
+  const begin = await beginExternalRefundSubmission({
+    refundId: refund.id,
+    actorId: input.actorId,
+    provider
+  });
+  if (!begin.submitted) {
+    if (begin.state === "confirmed") {
+      return settleConfirmedExternalRefund({
+        refundId: refund.id,
+        actorId: input.actorId,
+        reason: input.reason,
+        restock: input.restock
+      });
+    }
+    if (begin.state === "failed") {
+      throw new ApiError(409, "refund_failed", "This refund attempt failed. Use a new idempotency key.");
+    }
+    if (begin.state === "submitted" && begin.acknowledged) {
+      throw new ApiError(
+        409,
+        "refund_pending",
+        "This refund request is already with the provider and has not completed. Do not resubmit it."
+      );
+    }
+    if (begin.state === "submitted" || begin.state === "unknown") {
+      throw new ApiError(
+        409,
+        "refund_unknown",
+        "This refund request was already submitted and its provider outcome is not confirmed. Do not resubmit it; reconcile first."
+      );
+    }
+    throw new ApiError(
+      409,
+      "refund_pending",
+      "This refund attempt has no recorded provider submission. It must be reconciled before any retry."
+    );
+  }
+
+  let result;
+  try {
+    result = await adapter.refund({
+      reference: refund.payment.providerReference,
+      amountMinor: refund.amountKobo,
+      currency: refund.payment.currency,
+      idempotencyKey: input.idempotencyKey
+    });
+  } catch (error) {
+    if (isDefinitiveProviderRejection(error)) {
+      const message = error instanceof Error ? error.message : "The provider rejected the refund request.";
+      await failExternalRefundReservation({
+        refundId: refund.id,
+        reason: "Provider rejected the refund",
+        note: message
+      });
+      throw new ApiError(502, "refund_failed", `${message} The amount was released back to the order.`);
+    }
+    await markExternalRefundUnknown(
+      refund.id,
+      error instanceof Error ? error.message : "The provider request did not return a definitive outcome."
+    );
+    throw new ApiError(
+      502,
+      "refund_unknown",
+      "The provider did not confirm whether this refund was processed. It is not retried automatically; reconcile the attempt first."
+    );
+  }
+
+  if (result.status === "COMPLETED") {
+    await recordExternalRefundConfirmed({
+      refundId: refund.id,
+      provider,
+      providerReference: result.providerReference ?? null
+    });
+    return settleConfirmedExternalRefund({
+      refundId: refund.id,
+      actorId: input.actorId,
+      reason: input.reason,
+      restock: input.restock
+    });
+  }
+
+  if (result.status === "FAILED") {
+    await failExternalRefundReservation({
+      refundId: refund.id,
+      providerReference: result.providerReference ?? null,
+      reason: "Provider reported the refund as failed",
+      note: "The provider rejected the refund request."
+    });
+    throw new ApiError(502, "refund_failed", "The provider reported that this refund failed. The amount was released back to the order.");
+  }
+
+  await recordExternalRefundPending({
+    refundId: refund.id,
+    provider,
+    providerReference: result.providerReference ?? null
+  });
+  throw new ApiError(
+    502,
+    "refund_pending",
+    `${adapter.label} accepted the refund request and has not completed it. The amount remains reserved and blocks release until it settles.`
+  );
+}
+
+async function resumeRefundAttempt(
+  prior: RefundRowWithPayment,
+  input: { orderId: string; actorId: string; reason: string; restock?: boolean; idempotencyKey?: string }
+) {
+  if (prior.status === "COMPLETED") {
+    return { orderId: prior.orderId, refundedKobo: prior.amountKobo.toString(), idempotent: true, refundId: prior.id, status: "COMPLETED" as const };
+  }
+  if (prior.status === "FAILED") {
+    throw new ApiError(409, "refund_failed", "This refund attempt failed. Use a new idempotency key.");
+  }
+  if (prior.payment.provider === "wallet") {
+    throw new ApiError(409, "refund_pending", "This wallet refund is still settling. Reload before retrying.");
+  }
+  const lifecycle = await loadRefundLifecycle(prisma, prior.id);
+  if (!lifecycle) {
+    throw new ApiError(
+      409,
+      "refund_pending",
+      "This refund attempt predates lifecycle tracking and is still pending. Do not resubmit it; reconcile first."
+    );
+  }
+  if (lifecycle.state === "confirmed") {
+    return settleConfirmedExternalRefund({
+      refundId: prior.id,
+      actorId: input.actorId,
+      reason: input.reason,
+      restock: input.restock
+    });
+  }
+  if (lifecycle.state === "reserved") {
+    return submitExternalRefundClaim({
+      refundId: prior.id,
+      actorId: input.actorId,
+      reason: input.reason,
+      restock: input.restock,
+      idempotencyKey: input.idempotencyKey ?? prior.idempotencyKey
+    });
+  }
+  if (lifecycle.state === "submitted" && lifecycle.acknowledged) {
+    throw new ApiError(
+      409,
+      "refund_pending",
+      "The provider accepted this refund request and has not completed it. The amount stays reserved; do not resubmit."
+    );
+  }
+  if (lifecycle.state === "submitted" || lifecycle.state === "unknown") {
+    throw new ApiError(
+      409,
+      "refund_unknown",
+      "This refund was already submitted and its provider outcome is not confirmed. Do not resubmit it; reconcile first."
+    );
+  }
+  throw new ApiError(
+    409,
+    "reconciliation_required",
+    "This refund is pending but its lifecycle says it failed. Reconcile the attempt before retrying."
+  );
+}
+
+/**
+ * Operator recovery for an attempt whose provider outcome was unknown or whose
+ * confirmation never settled. The caller must have verified the outcome in the
+ * provider dashboard; this function records that decision and never calls the
+ * provider. `confirmed` settles the refund, `failed` releases the reservation.
+ */
+export async function reconcileExternalRefundOutcome(input: {
+  refundId: string;
+  actorId: string;
+  outcome: "confirmed" | "failed";
+  providerReference?: string;
+  note?: string;
+}) {
+  const refund = await prisma.refund.findUnique({
+    where: { id: input.refundId },
+    include: { payment: true }
+  });
+  if (!refund) throw new ApiError(404, "refund_not_found", "Refund attempt not found.");
+  if (refund.payment.provider === "wallet") {
+    throw new ApiError(400, "not_external_refund", "Wallet refunds settle atomically and need no manual reconciliation.");
+  }
+  if (refund.status === "COMPLETED") {
+    return {
+      orderId: refund.orderId,
+      refundedKobo: refund.amountKobo.toString(),
+      idempotent: true,
+      refundId: refund.id,
+      status: "COMPLETED" as const
+    };
+  }
+  if (refund.status === "FAILED") {
+    throw new ApiError(409, "refund_failed", "This refund attempt already failed. Use a new idempotency key.");
+  }
+  const lifecycle = await loadRefundLifecycle(prisma, refund.id);
+  if (!lifecycle) {
+    throw new ApiError(
+      409,
+      "reconciliation_required",
+      "This refund has no lifecycle record. Establish its provider state outside this service before recording an outcome."
+    );
+  }
+
+  if (input.outcome === "confirmed") {
+    if (lifecycle.state === "reserved") {
+      throw new ApiError(
+        409,
+        "refund_not_submitted",
+        "This refund was never submitted to the provider, so it cannot be confirmed. Resume it instead."
+      );
+    }
+    if (lifecycle.state === "failed") {
+      throw new ApiError(409, "reconciliation_required", "A failed refund cannot be confirmed. Check the provider reference.");
+    }
+    await recordExternalRefundConfirmed({
+      refundId: refund.id,
+      provider: refund.payment.provider,
+      providerReference: input.providerReference ?? lifecycle.providerReference ?? null
+    });
+    return settleConfirmedExternalRefund({
+      refundId: refund.id,
+      actorId: input.actorId,
+      reason: input.note ?? defaultRefundReason(refund)
+    });
+  }
+
+  if (lifecycle.state === "confirmed") {
+    throw new ApiError(409, "refund_confirmed", "A provider-confirmed refund must be settled, not released.");
+  }
+  return failExternalRefundReservation({
+    refundId: refund.id,
+    providerReference: input.providerReference ?? lifecycle.providerReference ?? null,
+    reason: "Operator established the refund was not processed",
+    note: input.note ?? "Recorded from provider reconciliation."
+  });
+}
+
+async function resolveRefundConflict(
+  error: unknown,
+  input: { orderId: string; actorId: string; reason: string; restock?: boolean; idempotencyKey?: string },
+  external: boolean
+) {
+  const sameKeyConflict =
+    (error as { code?: string }).code === "P2002" ||
+    (!external && error instanceof ApiError && error.code === "refund_conflict");
+  if (!sameKeyConflict) throw error;
+  const raced = await prisma.refund.findUnique({
+    where: { idempotencyKey: input.idempotencyKey ?? "" },
+    include: { payment: true }
+  });
+  if (!raced) throw error;
+  if (raced.status === "COMPLETED") {
+    return { orderId: raced.orderId, refundedKobo: raced.amountKobo.toString(), idempotent: true, refundId: raced.id, status: "COMPLETED" as const };
+  }
+  if (!external) {
+    throw new ApiError(409, "refund_pending", "An identical refund request is still being settled. Reload before retrying.");
+  }
+  return resumeRefundAttempt(raced, input);
 }
 
 export async function refundPayment(input: {
@@ -904,13 +1619,12 @@ export async function refundPayment(input: {
   idempotencyKey?: string;
 }) {
   const idempotencyKey = input.idempotencyKey ?? `refund:${input.orderId}:${randomBytes(10).toString("hex")}`;
-  const prior = await prisma.refund.findUnique({ where: { idempotencyKey } });
+  const prior = await prisma.refund.findUnique({
+    where: { idempotencyKey },
+    include: { payment: true }
+  });
   if (prior) {
-    if (prior.status === "COMPLETED") {
-      return { orderId: prior.orderId, refundedKobo: prior.amountKobo.toString(), idempotent: true, refundId: prior.id };
-    }
-    throw new ApiError(409, prior.status === "PENDING" ? "refund_pending" : "refund_failed",
-      prior.status === "PENDING" ? "This refund is awaiting provider reconciliation." : "This refund attempt failed. Use a new idempotency key.");
+    return resumeRefundAttempt(prior, { ...input, idempotencyKey });
   }
 
   const order = await prisma.order.findUnique({
@@ -928,83 +1642,22 @@ export async function refundPayment(input: {
   if (!completed) throw new ApiError(409, "no_payment", "No completed payment was found for this order.");
   const external = completed.provider !== "wallet";
 
-  const revertClaim = async (refundId: string, requested: bigint) => {
-    await prisma.$transaction([
-      prisma.refund.update({ where: { id: refundId }, data: { status: "FAILED" } }),
-      prisma.order.update({ where: { id: order.id }, data: { refundedKobo: { decrement: requested } } })
-    ]);
-  };
-
   try {
     if (external) {
-      // External providers keep the reservation separate from settlement because
-      // the provider call must happen between them. Completion refuses while a
-      // PENDING claim exists, so the reserved amount cannot be released early.
-      const claimed = await prisma.$transaction(async (tx) => {
-        const locked = await lockAndReadRefundOrder(tx, order.id);
-        const basis = computeRefundBasis(locked.order, input.amountKobo, "locked");
-        if (input.restock && !basis.isFullRefund) {
-          throw new ApiError(400, "invalid_restock", "Stock can only be restocked on a full refund.");
-        }
-        const refund = await claimRefund(
-          tx,
-          {
-            orderId: order.id,
-            paymentId: locked.completedPayment.id,
-            actorId: input.actorId,
-            reason: input.reason,
-            idempotencyKey
-          },
-          basis
-        );
-        return { refundId: refund.id, basis, escrowReleased: locked.escrow?.status === "released" };
+      const claimed = await reserveExternalRefundClaim({
+        orderId: order.id,
+        actorId: input.actorId,
+        reason: input.reason,
+        idempotencyKey,
+        amountKobo: input.amountKobo,
+        restock: input.restock
       });
-
-      const adapter = adapters[completed.provider as AdapterId];
-      if (!adapter?.refund) {
-        await revertClaim(claimed.refundId, claimed.basis.requestedKobo);
-        throw new ApiError(503, "refund_unsupported", `${completed.provider} refunds are not configured on this server.`);
-      }
-      let result;
-      try {
-        result = await adapter.refund({
-          reference: completed.providerReference,
-          amountMinor: claimed.basis.requestedKobo,
-          currency: order.currency,
-          idempotencyKey
-        });
-      } catch (error) {
-        await revertClaim(claimed.refundId, claimed.basis.requestedKobo);
-        throw error;
-      }
-      if (result.status !== "COMPLETED") {
-        await prisma.refund.update({
-          where: { id: claimed.refundId },
-          data: { providerReference: result.providerReference, status: "PENDING" }
-        });
-        throw new ApiError(502, "refund_pending", `${adapter.label} has not confirmed this refund. The amount stays reserved for reconciliation.`);
-      }
-
-      return await prisma.$transaction(async (tx) => {
-        const locked = await lockAndReadRefundOrder(tx, order.id);
-        const refundRow = await tx.refund.findUniqueOrThrow({ where: { id: claimed.refundId } });
-        if (refundRow.status === "COMPLETED") {
-          return { orderId: order.id, refundedKobo: refundRow.amountKobo.toString(), idempotent: true, refundId: refundRow.id };
-        }
-        if (refundRow.status !== "PENDING") {
-          throw new ApiError(409, "refund_failed", "This refund attempt failed. Use a new idempotency key.");
-        }
-        return settleRefund(tx, {
-          locked,
-          basis: claimed.basis,
-          // A claim made against an already-released hold is a post-release
-          // refund; a completion cannot move the escrow after the claim.
-          escrowReleased: claimed.escrowReleased || locked.escrow?.status === "released",
-          refund: refundRow,
-          providerReference: result.providerReference,
-          reason: input.reason,
-          restock: input.restock
-        });
+      return await submitExternalRefundClaim({
+        refundId: claimed.refundId,
+        actorId: input.actorId,
+        reason: input.reason,
+        restock: input.restock,
+        idempotencyKey
       });
     }
 
@@ -1026,38 +1679,21 @@ export async function refundPayment(input: {
           reason: input.reason,
           idempotencyKey
         },
-        basis
+        basis,
+        {
+          provider: completed.provider,
+          escrowReleasedAtClaim: !locked.escrow || locked.escrow.status === "released"
+        }
       );
       return settleRefund(tx, {
         locked,
-        basis,
-        escrowReleased: !locked.escrow || locked.escrow.status === "released",
         refund,
         reason: input.reason,
         restock: input.restock
       });
     });
   } catch (error) {
-    // Two concurrent requests can carry the same idempotency key. The order-row
-    // claim (or the unique Refund key) lets exactly one win; the loser must
-    // return the winner's result instead of surfacing a raw constraint error.
-    // A conflict caused by a *different* refund has no row under this key and is
-    // rethrown unchanged.
-    const sameKeyConflict = (error as { code?: string }).code === "P2002" ||
-      (!external && error instanceof ApiError && error.code === "refund_conflict");
-    if (sameKeyConflict) {
-      const raced = await prisma.refund.findUnique({ where: { idempotencyKey } });
-      if (raced?.status === "COMPLETED") {
-        return { orderId: raced.orderId, refundedKobo: raced.amountKobo.toString(), idempotent: true, refundId: raced.id };
-      }
-      if (raced?.status === "PENDING") {
-        throw new ApiError(409, "refund_pending", "An identical refund request is still being settled. Reload before retrying.");
-      }
-      if (raced?.status === "FAILED") {
-        throw new ApiError(409, "refund_failed", "This refund attempt failed. Use a new idempotency key.");
-      }
-    }
-    throw error;
+    return resolveRefundConflict(error, { ...input, idempotencyKey }, external);
   }
 }
 

@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
+import { loadRefundLifecycles, type RefundLifecycleState } from "@/lib/payments/refund-lifecycle";
 
 /**
  * Reconciliation for the NaijaPay books.
@@ -26,10 +27,13 @@ import { ApiError } from "@/lib/auth/guard";
  *  - `Ride` rows with `paymentMethod = wallet` and `paymentStatus = held`:
  *    the rider wallet is the buyer, the SYSTEM wallet is the counterparty.
  *  - `EscrowHold` rows in a status that still holds funds: the buyer wallet is
- *    the buyer, the vendor wallet is the counterparty. A partial refund against
- *    an open hold reduces the money actually held, so the exposure is
- *    `amountKobo - Order.refundedKobo` (clamped at zero). A full refund moves
- *    the hold to `refunded`, which is not an open status.
+ *    the buyer, the vendor wallet is the counterparty. Only a *completed* refund
+ *    has returned money to the buyer, so the exposure is
+ *    `amountKobo - settled refunds`, clamped at zero. An external claim that is
+ *    only reserved or submitted has not moved money; subtracting it here would
+ *    report a phantom wallet difference and hide the real obligation. Pending
+ *    claims are reported separately by `loadRefundReconciliation`. A full refund
+ *    moves the hold to `refunded`, which is not an open status.
  *
  * The lifecycle this reproduces (verified against the posting services):
  *
@@ -69,7 +73,14 @@ export type IssueClass =
   | "hold_attribution"
   | "journal_unbalanced"
   | "account_drift"
-  | "documentation_posted_as_money";
+  | "documentation_posted_as_money"
+  | "refund_pending_obligation"
+  | "refund_uncertain_outcome"
+  | "refund_confirmed_unsettled"
+  | "refund_reservation_mismatch"
+  | "refund_state_conflict"
+  | "refund_stale_reservation"
+  | "refund_legacy_unclassified";
 
 export type ReconciliationIssue = {
   severity: IssueSeverity;
@@ -157,7 +168,7 @@ export async function loadOpenHoldLedger(db: Db): Promise<OpenHoldLedger> {
         vendorWalletId: true,
         amountKobo: true,
         status: true,
-        order: { select: { orderNumber: true, refundedKobo: true } }
+        order: { select: { orderNumber: true, refundedKobo: true, totalKobo: true } }
       }
     }),
     db.wallet.findMany({
@@ -165,6 +176,22 @@ export async function loadOpenHoldLedger(db: Db): Promise<OpenHoldLedger> {
       select: { id: true, userId: true }
     })
   ]);
+
+  // Only settled refunds have left the escrow. Reserved/submitted/unknown
+  // claims are obligations, not movements, and must not shrink the exposure.
+  const settledRefundRows = openEscrows.length
+    ? await db.refund.groupBy({
+        by: ["orderId"],
+        where: {
+          orderId: { in: openEscrows.map((escrow) => escrow.orderId) },
+          status: "COMPLETED"
+        },
+        _sum: { amountKobo: true }
+      })
+    : [];
+  const settledRefundByOrder = new Map(
+    settledRefundRows.map((row) => [row.orderId, row._sum.amountKobo ?? BigInt(0)])
+  );
 
   const customerWalletByUser = new Map(customerWallets.map((wallet) => [wallet.userId as string, wallet.id]));
   const systemWallet = await db.wallet.findFirst({ where: { ownerType: "SYSTEM" }, select: { id: true } });
@@ -199,8 +226,10 @@ export async function loadOpenHoldLedger(db: Db): Promise<OpenHoldLedger> {
   }
 
   for (const escrow of openEscrows) {
-    const refunded = escrow.order?.refundedKobo ?? BigInt(0);
-    const exposure = escrow.amountKobo > refunded ? escrow.amountKobo - refunded : BigInt(0);
+    const settled = settledRefundByOrder.get(escrow.orderId) ?? BigInt(0);
+    const reserved = escrow.order?.refundedKobo ?? BigInt(0);
+    const exposure = escrow.amountKobo > settled ? escrow.amountKobo - settled : BigInt(0);
+    const pendingReservation = reserved > settled ? reserved - settled : BigInt(0);
     const hold: OpenHold = {
       kind: "escrow",
       id: escrow.id,
@@ -208,7 +237,10 @@ export async function loadOpenHoldLedger(db: Db): Promise<OpenHoldLedger> {
       amountKobo: exposure,
       buyerWalletId: escrow.buyerWalletId,
       counterpartyWalletId: escrow.vendorWalletId,
-      detail: `${escrow.order?.orderNumber ?? escrow.orderId} escrow ${escrow.status}, ${escrow.amountKobo.toString()} held less ${refunded.toString()} refunded`
+      detail:
+        `${escrow.order?.orderNumber ?? escrow.orderId} escrow ${escrow.status}, ` +
+        `${escrow.amountKobo.toString()} held less ${settled.toString()} settled refund(s)` +
+        (pendingReservation > BigInt(0) ? `, ${pendingReservation.toString()} reserved by a pending claim` : "")
     };
     holds.push(hold);
     addTo(buyerHeld, escrow.buyerWalletId, exposure);
@@ -272,7 +304,265 @@ export async function journalTotals() {
   };
 }
 
-export async function reconcile(): Promise<{ totals: Awaited<ReturnType<typeof journalTotals>>; issues: ReconciliationIssue[] }> {
+/**
+ * Classify every refund attempt that could still affect the books.
+ *
+ * A pending refund is not automatically a discrepancy, and it is definitely not
+ * automatically clean:
+ *
+ *  - reserved (or a provider-acknowledged submitted) is a correctly accounted
+ *    obligation: the amount is capped on the order, nothing has moved, and a
+ *    release must wait. It still means the books are not CLEAN.
+ *  - submitted without acknowledgement, and explicit unknown, are uncertain
+ *    provider outcomes. The provider may or may not have processed the refund;
+ *    only a provider reconciliation or an operator decision may resolve them.
+ *  - confirmed but still PENDING locally, or a failed lifecycle under a pending
+ *    row, or a COMPLETED/FAILED row contradicted by its lifecycle, is a genuine
+ *    discrepancy.
+ *
+ * A reservation that has sat untouched beyond the configured window is called
+ * out as stale so an abandoned attempt cannot look like normal work in flight.
+ */
+export type RefundReconciliationClass =
+  | "pending_obligation"
+  | "stale_reservation"
+  | "uncertain_outcome"
+  | "confirmed_not_settled"
+  | "failed_but_reserved"
+  | "legacy_unclassified"
+  | "state_conflict";
+
+export type RefundReconciliationRow = {
+  refundId: string;
+  orderId: string;
+  orderNumber: string;
+  provider: string;
+  amountKobo: bigint;
+  refundStatus: string;
+  lifecycleState: RefundLifecycleState | null;
+  acknowledged: boolean;
+  providerReference: string | null;
+  classification: RefundReconciliationClass;
+  severity: IssueSeverity;
+  ageSeconds: number;
+  detail: string;
+};
+
+export type RefundReservationMismatch = {
+  orderId: string;
+  orderNumber: string;
+  reservedKobo: bigint;
+  expectedKobo: bigint;
+  completedKobo: bigint;
+  totalKobo: bigint;
+};
+
+export type RefundReconciliation = {
+  rows: RefundReconciliationRow[];
+  pendingObligationCount: number;
+  uncertainCount: number;
+  discrepancyCount: number;
+  staleReservationCount: number;
+  legacyCount: number;
+  reservationMismatches: RefundReservationMismatch[];
+  status: "CLEAN" | "PENDING" | "REVIEW";
+};
+
+export async function loadRefundReconciliation(db: Db, now = new Date()): Promise<RefundReconciliation> {
+  const staleMs = Number(process.env.REFUND_RESERVATION_STALE_MS ?? 15 * 60 * 1000) || 15 * 60 * 1000;
+
+  const lifecycleEntityRows = await db.systemEvent.findMany({
+    where: { type: "refund.lifecycle", entity: "Refund", entityId: { not: null } },
+    select: { entityId: true }
+  });
+  const lifecycleIds = [
+    ...new Set(
+      lifecycleEntityRows
+        .map((row) => row.entityId)
+        .filter((id): id is string => typeof id === "string" && id.length > 0)
+    )
+  ];
+
+  const refundInclude = {
+    order: { select: { orderNumber: true, refundedKobo: true, totalKobo: true } },
+    payment: { select: { provider: true } }
+  } as const;
+
+  const pendingRefunds = await db.refund.findMany({
+    where: { status: "PENDING" },
+    include: refundInclude
+  });
+  const pendingIds = new Set(pendingRefunds.map((refund) => refund.id));
+  const extraIds = lifecycleIds.filter((id) => !pendingIds.has(id));
+  const extraRefunds = extraIds.length
+    ? await db.refund.findMany({ where: { id: { in: extraIds } }, include: refundInclude })
+    : [];
+  const refunds = [...pendingRefunds, ...extraRefunds];
+  const lifecycles = await loadRefundLifecycles(
+    db,
+    refunds.map((refund) => refund.id)
+  );
+
+  const rows: RefundReconciliationRow[] = [];
+  for (const refund of refunds) {
+    const lifecycle = lifecycles.get(refund.id) ?? null;
+    const ageSeconds = Math.max(0, Math.round((now.getTime() - refund.createdAt.getTime()) / 1000));
+    let classification: RefundReconciliationClass;
+    let severity: IssueSeverity;
+    let detail: string;
+
+    if (refund.status === "COMPLETED") {
+      if (!lifecycle || lifecycle.state === "confirmed") continue;
+      classification = "state_conflict";
+      severity = "broken";
+      detail = `Refund ${refund.id} is COMPLETED but the recorded lifecycle state is ${lifecycle.state}.`;
+    } else if (refund.status === "FAILED") {
+      if (!lifecycle || lifecycle.state === "failed") continue;
+      classification = "state_conflict";
+      severity = "broken";
+      detail = `Refund ${refund.id} is FAILED but the recorded lifecycle state is ${lifecycle.state}.`;
+    } else if (!lifecycle || !lifecycle.state) {
+      classification = "legacy_unclassified";
+      severity = "unexplained";
+      detail =
+        `Refund ${refund.id} is pending with no lifecycle record. Its provider state cannot be established ` +
+        "from the books; do not resubmit it.";
+    } else if (lifecycle.state === "confirmed") {
+      classification = "confirmed_not_settled";
+      severity = "broken";
+      detail =
+        `Refund ${refund.id} was confirmed by the provider but its local settlement is still missing. ` +
+        "The money is out of step until it is settled.";
+    } else if (lifecycle.state === "failed") {
+      classification = "failed_but_reserved";
+      severity = "broken";
+      detail = `Refund ${refund.id} is still PENDING while its lifecycle says failed. Its reservation must be released.`;
+    } else if (lifecycle.state === "unknown") {
+      classification = "uncertain_outcome";
+      severity = "unexplained";
+      detail =
+        `Refund ${refund.id} has an unknown provider outcome. The provider may have processed it; ` +
+        "reconcile with the provider before any retry.";
+    } else if (lifecycle.state === "submitted") {
+      if (!lifecycle.acknowledged) {
+        classification = "uncertain_outcome";
+        severity = "unexplained";
+        detail =
+          `Refund ${refund.id} was submitted but the provider never acknowledged the request. ` +
+          "The outcome is unknown; do not resubmit it.";
+      } else {
+        classification = "pending_obligation";
+        severity = "info";
+        detail =
+          `Refund ${refund.id} is acknowledged by the provider as pending. ` +
+          "The amount is correctly reserved and must not be released yet.";
+      }
+    } else if (ageSeconds * 1000 > staleMs) {
+      classification = "stale_reservation";
+      severity = "unexplained";
+      detail =
+        `Refund ${refund.id} has been reserved for ${ageSeconds}s without a provider submission. ` +
+        "It is safe to resume, but the abandoned attempt needs review.";
+    } else {
+      classification = "pending_obligation";
+      severity = "info";
+      detail =
+        `Refund ${refund.id} is reserved and not yet submitted. ` +
+        "The amount is correctly capped and no money has moved.";
+    }
+
+    rows.push({
+      refundId: refund.id,
+      orderId: refund.orderId,
+      orderNumber: refund.order?.orderNumber ?? refund.orderId,
+      provider: refund.payment.provider,
+      amountKobo: refund.amountKobo,
+      refundStatus: refund.status,
+      lifecycleState: lifecycle?.state ?? null,
+      acknowledged: lifecycle?.acknowledged ?? false,
+      providerReference: lifecycle?.providerReference ?? refund.providerReference ?? null,
+      classification,
+      severity,
+      ageSeconds,
+      detail
+    });
+  }
+
+  // The order-level reservation (`refundedKobo`) must equal every claim that
+  // has not failed: pending claims are capped but not settled, completed claims
+  // have settled. A mismatch means a claim was reverted without its row, or a
+  // settlement posted without its claim.
+  const orders = await db.order.findMany({
+    where: { OR: [{ refundedKobo: { gt: 0 } }, { refunds: { some: {} } }] },
+    select: {
+      id: true,
+      orderNumber: true,
+      refundedKobo: true,
+      totalKobo: true,
+      refunds: { select: { amountKobo: true, status: true } }
+    }
+  });
+  const reservationMismatches: RefundReservationMismatch[] = [];
+  for (const order of orders) {
+    let expectedKobo = BigInt(0);
+    let completedKobo = BigInt(0);
+    for (const refund of order.refunds) {
+      if (refund.status !== "FAILED") expectedKobo += refund.amountKobo;
+      if (refund.status === "COMPLETED") completedKobo += refund.amountKobo;
+    }
+    if (
+      expectedKobo !== order.refundedKobo ||
+      completedKobo > order.totalKobo ||
+      order.refundedKobo > order.totalKobo
+    ) {
+      reservationMismatches.push({
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        reservedKobo: order.refundedKobo,
+        expectedKobo,
+        completedKobo,
+        totalKobo: order.totalKobo
+      });
+    }
+  }
+
+  const pendingObligationCount = rows.filter((row) => row.classification === "pending_obligation").length;
+  const uncertainCount = rows.filter((row) => row.classification === "uncertain_outcome").length;
+  const staleReservationCount = rows.filter((row) => row.classification === "stale_reservation").length;
+  const legacyCount = rows.filter((row) => row.classification === "legacy_unclassified").length;
+  const discrepancyCount =
+    rows.filter(
+      (row) =>
+        row.classification === "confirmed_not_settled" ||
+        row.classification === "failed_but_reserved" ||
+        row.classification === "state_conflict"
+    ).length + reservationMismatches.length;
+
+  const status: RefundReconciliation["status"] =
+    discrepancyCount > 0 || uncertainCount > 0 || staleReservationCount > 0 || legacyCount > 0
+      ? "REVIEW"
+      : pendingObligationCount > 0
+        ? "PENDING"
+        : "CLEAN";
+
+  return {
+    rows,
+    pendingObligationCount,
+    uncertainCount,
+    discrepancyCount,
+    staleReservationCount,
+    legacyCount,
+    reservationMismatches,
+    status
+  };
+}
+
+export async function reconcile(): Promise<{
+  totals: Awaited<ReturnType<typeof journalTotals>>;
+  issues: ReconciliationIssue[];
+  refunds: RefundReconciliation;
+  status: "CLEAN" | "PENDING" | "REVIEW";
+}> {
   const issues: ReconciliationIssue[] = [];
 
   // ---- journal integrity: entries that do not sum to zero ------------------
@@ -433,7 +723,73 @@ export async function reconcile(): Promise<{ totals: Awaited<ReturnType<typeof j
     }
   }
 
-  return { totals: await journalTotals(), issues };
+  // ---- refund attempts and their reservations ------------------------------
+  const refunds = await loadRefundReconciliation(prisma);
+  const refundKind: Record<RefundReconciliationClass, IssueClass> = {
+    pending_obligation: "refund_pending_obligation",
+    stale_reservation: "refund_stale_reservation",
+    uncertain_outcome: "refund_uncertain_outcome",
+    confirmed_not_settled: "refund_confirmed_unsettled",
+    failed_but_reserved: "refund_state_conflict",
+    legacy_unclassified: "refund_legacy_unclassified",
+    state_conflict: "refund_state_conflict"
+  };
+  const refundRemediation: Record<RefundReconciliationClass, string> = {
+    pending_obligation:
+      "No action is required while the provider processes the refund. Do not release this escrow until it settles.",
+    stale_reservation:
+      "Resume the stored idempotency key to submit the untouched reservation, or release it after verifying the provider was never called.",
+    uncertain_outcome:
+      "Verify the attempt in the provider dashboard. Record the provider's outcome explicitly; never resubmit an ambiguous refund.",
+    confirmed_not_settled:
+      "Settle the confirmed refund from local evidence. Never call the provider again for the same attempt.",
+    failed_but_reserved:
+      "The lifecycle says the refund failed but the claim is still pending. Release the reservation through the recovery path after establishing why.",
+    legacy_unclassified:
+      "This attempt predates lifecycle tracking. Establish its provider state outside this service before touching the reservation.",
+    state_conflict:
+      "The refund row and its lifecycle disagree. An operator must establish which record is wrong before any money moves."
+  };
+  for (const row of refunds.rows) {
+    issues.push({
+      severity: row.severity,
+      kind: refundKind[row.classification],
+      subject: row.refundId,
+      deltaKobo: row.amountKobo.toString(),
+      detail: `${row.detail} Order ${row.orderNumber}, provider ${row.provider}.`,
+      evidence: [
+        `refund status ${row.refundStatus}`,
+        `lifecycle ${row.lifecycleState ?? "none"} acknowledged=${row.acknowledged}`,
+        `provider reference ${row.providerReference ?? "none"}`,
+        `age ${row.ageSeconds}s`
+      ],
+      fixtureProvenance: false,
+      remediation: refundRemediation[row.classification]
+    });
+  }
+  for (const mismatch of refunds.reservationMismatches) {
+    issues.push({
+      severity: "broken",
+      kind: "refund_reservation_mismatch",
+      subject: mismatch.orderId,
+      deltaKobo: (mismatch.reservedKobo - mismatch.expectedKobo).toString(),
+      detail:
+        `Order ${mismatch.orderNumber} reserves ${NGN(mismatch.reservedKobo)} against refunds but its non-failed ` +
+        `claims total ${NGN(mismatch.expectedKobo)} (completed ${NGN(mismatch.completedKobo)}, order total ${NGN(mismatch.totalKobo)}).`,
+      evidence: ["Refund rows are the source of truth for the reservation; order.refundedKobo is a projection of them."],
+      fixtureProvenance: false,
+      remediation: "Do not adjust the order to match. Establish which refund row is wrong before moving money."
+    });
+  }
+
+  const status: "CLEAN" | "PENDING" | "REVIEW" =
+    issues.some((issue) => issue.severity === "broken" || issue.severity === "unexplained")
+      ? "REVIEW"
+      : refunds.status === "PENDING"
+        ? "PENDING"
+        : "CLEAN";
+
+  return { totals: await journalTotals(), issues, refunds, status };
 }
 
 /**
