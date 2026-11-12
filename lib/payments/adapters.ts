@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { assertFinancialOperationsAllowed } from "./review-financial-guard";
 import type { PaymentAdapter, PaymentInitInput, PaymentInitResult, PaymentVerifyResult, WebhookResult } from "./types";
 
 const PAYSTACK_BASE = "https://api.paystack.co";
@@ -37,6 +38,7 @@ export function isDefinitiveProviderRejection(error: unknown): boolean {
 }
 
 async function jsonRequest(url: string, init?: RequestInit) {
+  await assertFinancialOperationsAllowed("Provider request");
   const response = await fetch(url, { ...init, signal: AbortSignal.timeout(15000) });
   const text = await response.text();
   let body: unknown = null;

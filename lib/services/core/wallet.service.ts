@@ -1,4 +1,5 @@
 import { LedgerDirection, type Prisma, type PrismaClient, type WalletTransactionType } from "@prisma/client";
+import { assertFinancialOperationsAllowed } from "@/lib/payments/review-financial-guard";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "./audit.service";
 import { recordSystemEvent } from "./event.service";
@@ -56,6 +57,7 @@ export async function postBalancedTransaction(input: {
   description: string;
   entries: Array<{ walletId: string; direction: LedgerDirection; amountKobo: bigint; memo: string }>;
 }) {
+  await assertFinancialOperationsAllowed("Ledger posting");
   if (input.amountKobo <= BigInt(0)) throw new Error("Wallet transaction amount must be positive.");
   if (sumDebits(input.entries) !== sumCredits(input.entries)) {
     throw new Error("Ledger entries must balance before posting.");
