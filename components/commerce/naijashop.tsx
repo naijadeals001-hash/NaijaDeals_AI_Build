@@ -1754,7 +1754,7 @@ function PayOrderPanel({ order, onPaid }: { order: ApiOrder; onPaid: () => void 
   );
 }
 
-export function OrdersPageApi({ mode = "orders" }: { mode?: "orders" | "returns" }) {
+export function OrdersPageApi() {
   const [orders, setOrders] = useState<ApiOrder[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error" | "signed-out">("loading");
   const [error, setError] = useState("");
@@ -1819,19 +1819,6 @@ export function OrdersPageApi({ mode = "orders" }: { mode?: "orders" | "returns"
     }
   }
 
-  async function requestReturn(order: ApiOrder) {
-    const reason = window.prompt("Why are you returning this order?");
-    if (!reason) return;
-    setError("");
-    try {
-      await apiClient.requestReturn(order.id, reason);
-      setNotice("Return requested. The seller will review it.");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not request a return.");
-    }
-  }
-
   async function submitReview(event: React.FormEvent) {
     event.preventDefault();
     if (!reviewFor) return;
@@ -1862,7 +1849,7 @@ export function OrdersPageApi({ mode = "orders" }: { mode?: "orders" | "returns"
   return (
     <div className="space-y-5">
       <header className="space-y-3">
-        <h1 className="font-display text-3xl font-extrabold sm:text-4xl">{mode === "returns" ? "Returns & Orders" : "Your Orders"}</h1>
+        <h1 className="font-display text-3xl font-extrabold sm:text-4xl">Your Orders</h1>
         <div className="flex items-center gap-2 rounded-xl border border-border-soft bg-canvas px-3">
           <Search className="h-5 w-5 shrink-0 text-[#007185]" aria-hidden="true" />
           <input value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search all orders" aria-label="Search all orders" className="min-h-12 flex-1 bg-transparent text-sm outline-none" />
@@ -1931,7 +1918,9 @@ export function OrdersPageApi({ mode = "orders" }: { mode?: "orders" | "returns"
             const delivery = order.deliveries?.[0];
             const canCancel = ["created", "payment_pending", "vendor_notified"].includes(order.status);
             const canConfirm = order.status === "delivered";
-            const canReturn = ["delivered", "completed"].includes(order.status) && !order.returnRequests?.length;
+            const canReturn =
+              ["delivered", "completed"].includes(order.status) &&
+              !order.returnRequests?.some((request) => ["REQUESTED", "APPROVED", "RECEIVED"].includes(request.status));
             const unpaid = order.paymentStatus === "pending" && ["created", "payment_pending"].includes(order.status);
             return (
               <article key={order.id} className="rounded-2xl border border-border-soft bg-canvas p-5">
@@ -1984,9 +1973,12 @@ export function OrdersPageApi({ mode = "orders" }: { mode?: "orders" | "returns"
                     </button>
                   ) : null}
                   {canReturn ? (
-                    <button onClick={() => void requestReturn(order)} className="min-h-10 rounded-lg border border-border-soft px-3 text-sm font-bold">
+                    <Link
+                      href={`/returns?order=${order.id}`}
+                      className="inline-flex min-h-10 items-center rounded-lg border border-border-soft px-3 text-sm font-bold"
+                    >
                       Request return
-                    </button>
+                    </Link>
                   ) : null}
                   {["delivered", "completed"].includes(order.status)
                     ? order.items.map((item) => (
