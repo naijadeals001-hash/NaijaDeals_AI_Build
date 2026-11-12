@@ -3865,3 +3865,27 @@ here.
 - The two financial defects in §1 remain unfixed and are not enabled.
 - Nothing was pushed or deployed. The working tree's NaijaPay changes and unrelated modified files
   were not staged.
+
+## 2026-11-11 — NaijaDrive read-only audit, driver economics and market registry
+
+Read-only documentation increment at HEAD `ecd0e54` on `naijashop-marketplace`. No code, schema,
+payment, ledger or UI file was changed by this pass; no commit and no push. Added
+`docs/nairadrive/current-state-audit.md`, `docs/nairadrive/driver-economics.md` and
+`docs/nairadrive/market-registry.md`.
+
+Key findings: both financial defects are still present (`completeOrder` releases the original
+`escrow.amountKobo` after a partial refund; the external-escrow branch increments SYSTEM available
+against its own DEBIT leg, a 2× projection gap). The last full HTTP drive suite is 28/28 from
+2026-11-03; `scripts/drive-tests.ts` and `scripts/nairadrive-e2e.ts` were updated for the pickup gate
+and not re-executed, so only the service-level 81/81 acceptance and 9/9 visual check are current for
+that slice. Real driver onboarding/documents, driver payouts, commission and safety triage are absent;
+the generic `/onboarding/driver` form writes only to localStorage and falsely claims admin visibility.
+The ride-assignment notification link `/naijadrive/rides/[id]` has no route. `npx tsc --noEmit` exited
+0. No market rate, commission or guarantee is approved or encoded; the registry marks Lagos
+`preparing` and Abuja `researching`.
+
+A concurrent uncommitted earnings-breakdown change appeared in the working tree during this pass
+(`components/drive/earnings-breakdown.tsx`, `lib/services/core/driver-economics.ts`, plus a
+`driver-workspace.tsx` modification; a temporary app/e2e-earnings-preview route appeared and was
+removed). It is not part of HEAD `ecd0e54`, was not authored by this read-only pass and is not covered
+by the audit findings above. Final `npx tsc --noEmit` after the temporary route was removed: exit 0.
