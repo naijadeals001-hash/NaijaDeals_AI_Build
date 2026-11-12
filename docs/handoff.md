@@ -4428,10 +4428,51 @@ delivery-behaviour rule changed.
 - Local QA server only: `http://localhost:3100/returns` from the isolated
   `.next-returns-full` build. No push, deployment or production change.
 
+## NaijaDeals Plus+ — honest membership landing (2026-11-12)
+
+Cross-ecosystem membership page at `/naijashop/plus`, built as an honest status page
+because no plan, price, benefit or billing term is approved.
+
+- `7981c22` adds `lib/data/plus.ts`, `components/plus/*` and the rewritten page:
+  NaijaDeals wordmark with a subordinate gold Plus+ label, `membershipOpen: false`,
+  `plansConfigured: 0`, `benefitsConfigured: 0`, no price, trial, billing form or join
+  control, an explicit empty exclusive-benefits register, and a separate labelled
+  "Explore more with NaijaDeals" rail of the ten canonical services (sourced from
+  `publicServices`, not duplicated).
+- Two independent reviews (browser + code, neither by the implementer) found real
+  defects, fixed in `c8d0f1a`/`30b0784`: market facts now come from the same
+  DB-override-first country configuration checkout uses (with an honest "could not be
+  read" state); membership/checkout status strings are wired to the flags; the
+  configured-benefits branch is no longer pre-broken (copy, pluralisation,
+  `eligibleCountries`); the unsupported "reviewed 5 November 2026" attestation is gone
+  and its contrast failure fixed; boundary arrows use `aria-disabled` so focus is not
+  dropped; "join creator rooms" reworded to what NaijaStream supports; duplicate
+  carousel landmark name removed; scroll state no longer re-renders per frame; the dead
+  `PlusPanel` advertising unapproved benefits was deleted; the NaijaFresh footer now
+  labels the page "NaijaDeals Plus+".
+- `5a51d1f` fixes a shell defect the review exposed: the xl department rail wrapped
+  every category, growing the sticky shop header to 1078 px and occluding the whole
+  viewport at 1440. It is now one nowrap scrollable row; header height is 110 px at
+  1024/1440 and 192 px at 390/768, with the full list still in the All drawer.
+
+Verification executed: `npx tsc --noEmit --incremental false` exit 0; production build
+in `.next-programme` exit 0; canonical preview `http://localhost:3047/naijashop/plus`
+200 on the TEST-classified `naijadeals_checkout_refund_test`; committed regression
+`npx tsx scripts/plus-honesty-tests.ts http://localhost:3047` **19/19 PASS exit 0**
+(no price/currency/trial/billing/join, not-open status, empty register, 10 cards and
+10 CTAs, separated rail labels, `aria-disabled` arrows, focus retained at the boundary,
+no console errors); screenshots inspected in `qa-artifacts/plus-review-final/`.
+
+Honest boundaries: no membership model, plan, price, entitlement enforcement,
+redemption, Control Center Plus+ administration or advertiser/sponsorship surface
+exists. Nothing is gated by Plus+ and no payment can be taken. The page says so.
+
 ## Next executable step
 
-Owner review of the reverse-custody proposal in `docs/decisions.md`, then either (a)
-approve the proposed return states and migration, or (b) keep the current
-tracking/audit custody trail. Separately, rerun
-`scripts/escrow-completion-acceptance.ts` when the local PostgreSQL connection budget is
-available.
+Owner decision required before Plus+ can progress: approve plan/price terms, eligible
+countries and the benefit register (including which entitlements are enforced
+server-side), or defer. Without that, build the read-only Control Center view of the
+same flags rather than inventing plans. Separately: owner review of the reverse-custody
+proposal in `docs/decisions.md`; rerun `scripts/escrow-completion-acceptance.ts` when the
+local PostgreSQL connection budget is available; and keep the preview on 3047 (the
+`.next-programme` build at `5a51d1f`).
