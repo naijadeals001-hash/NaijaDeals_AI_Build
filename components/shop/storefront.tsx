@@ -616,10 +616,10 @@ export function NaijaDealsMarketplace() {
 
         {status !== "loading" ? (
           <section aria-labelledby="bulk-heading" className="mt-10 overflow-hidden rounded-[28px] bg-[#07351f] text-white">
-            <div className="grid gap-7 p-5 sm:p-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-10 lg:p-10">
-              <div>
-                <p className="text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-[#f5b52e]">Producer and wholesale connections</p>
-                <h2 id="bulk-heading" className="mt-2 font-display text-[25px] font-extrabold leading-tight tracking-tight sm:text-[30px]">
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-7 p-5 sm:p-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-10 lg:p-10">
+              <div className="min-w-0">
+                <p className="break-words text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-[#f5b52e]">Producer and wholesale connections</p>
+                <h2 id="bulk-heading" className="mt-2 break-words font-display text-[25px] font-extrabold leading-tight tracking-tight sm:text-[30px]">
                   Source in bulk. Move it with NaijaSend.
                 </h2>
                 <p className="mt-2 max-w-xl text-[11.5px] leading-6 text-[#c3d9c7] sm:text-[12.5px]">

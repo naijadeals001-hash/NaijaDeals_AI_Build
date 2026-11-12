@@ -86,7 +86,7 @@ const EXTRA_DEPARTMENTS = [
   {
     name: "Electronics & Appliances", slug: "electronics-appliances",
     description: "DEMO department — demonstration inventory for owner review, not live supply.",
-    imageUrl: "/generated/shop/category-electronics.webp",
+    imageUrl: "/generated/shop/banner-electronics.webp",
     products: [
       { name: "DEMO — Over-ear headphones", slug: "demo-over-ear-headphones", description: "Demonstration listing. Representative headphones; sound and accessories are illustrative.", priceKobo: 3200000n, image: "/generated/shop/product-over-ear-headphones.webp", alt: "Demonstration product image of over-ear headphones" },
       { name: "DEMO — 2-slice toaster", slug: "demo-2-slice-toaster", description: "Demonstration listing. Representative toaster; finish and settings are illustrative.", priceKobo: 2800000n, image: "/generated/shop/product-2-slice-toaster.webp", alt: "Demonstration product image of a two-slice toaster" },

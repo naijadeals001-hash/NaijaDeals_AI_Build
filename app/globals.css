@@ -178,3 +178,6 @@ a {
     animation: none !important;
   }
 }
+
+/* sr-only inside nowrap/truncate text must not extend the document. */
+.sr-only { left: 0; }
