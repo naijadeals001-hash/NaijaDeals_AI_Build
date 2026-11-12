@@ -45,6 +45,7 @@ import { ApiRequestError, apiClient, koboToNaira } from "@/lib/api-client";
 import { DRIVE_CITY, findVehicleClass, formatDistanceShort } from "@/lib/config/drive";
 import { PartnerNotifications } from "@/components/functional/partner-notifications";
 import { TripMap } from "./trip-map";
+import { EarningsBreakdown } from "./earnings-breakdown";
 import {
   DriveApiError,
   getDriverBoard,
@@ -1025,21 +1026,12 @@ export function DriverWorkspace({ userName }: { userName: string }) {
 
             {tab === "earnings" ? (
               <div className="mt-3 space-y-3">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <Metric label="Fare released today" value={money(board.summary.todayFareReleasedKobo)} note="Wallet fares released to your driver wallet." />
-                  <Metric label="Cash recorded today" value={money(board.summary.todayCashRecordedKobo)} note="Cash the server has recorded as collected." />
-                  <Metric label="Cash still to record" value={money(board.summary.todayCashPendingKobo)} note="Completed cash rides with no collection recorded." tone="warn" />
-                </div>
-                <section className="rounded-xl bg-white p-4 ring-1 ring-[#e6ece6]">
-                  <h2 className="text-[14px] font-extrabold">How earnings are recorded</h2>
-                  <p className="mt-1 text-[11.5px] leading-6 text-[#5d6d64]">
-                    NaijaDrive currently releases the full server-locked fare to the driver on a wallet
-                    trip and records cash collection separately. No commission, platform fee or estimated
-                    earnings figure is invented by this page. Payout requests are not available in this
-                    build.
-                  </p>
-                </section>
-                <RecentTrips rides={board.recent.filter((ride) => ride.status === "completed")} busy={busy} onCash={(ride) => void recordCash(ride)} />
+                <EarningsBreakdown summary={board.summary} presence={board.presence} />
+                <RecentTrips
+                  rides={board.recent.filter((ride) => ride.status === "completed")}
+                  busy={busy}
+                  onCash={(ride) => void recordCash(ride)}
+                />
               </div>
             ) : null}
 
