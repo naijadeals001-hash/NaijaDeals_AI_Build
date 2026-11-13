@@ -20,6 +20,7 @@ function credentials(path) {
   const rows = await prisma.$queryRaw`select classification from "DatabaseClassification" limit 1`;
   const classification = rows[0]?.classification;
   check("database is REVIEW", classification === "REVIEW", String(classification));
+  if (classification !== "REVIEW") throw new Error("refusing: database is not classified REVIEW");
 
   const product = await prisma.product.findUnique({ where: { slug: "demo-10-inch-android-tablet" }, include: { images: true, vendor: true } });
   const customer = await prisma.user.findUnique({ where: { email: "review-customer@review.invalid" } });

@@ -4562,3 +4562,18 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 - Final copy correction: HEAD `ba0a2a5`, served build `0DLHlGYoId2XSLKSwcsLZ`;
   "verified sellers" claims removed from homepage hero, footer, marketplace copy and
   category/deals metadata across the checked routes at 390/1440. Independent recheck PASS.
+
+## Catalogue batches A/B (2026-11-12)
+
+- HEAD after `d9b633c` plus baseline-gate fix; served build remains `0DLHlGYoId2XSLKSwcsLZ`.
+- Batch A (`3de3d70`): six DEMO products — iPhone 5s/6, EIZO monitor, DSLR camera,
+  smartwatch, baby shoes — using unused approved Shop assets.
+- Batch B (`d9b633c`): four DEMO groceries — cabbage, carrots, cucumbers, apple mangoes —
+  using existing approved fresh assets. Both batches published through the Control Center
+  with isDemo, NGN, stock 25, matching alt, NOC review content.
+- Baseline now 9 active departments / 41 active products, 0 CRF, all demo.
+- Residue: 103 run-tagged non-public records (40 inactive departments, 63 non-active
+  products) plus archived sunscreen; read-only audit confirms zero public exposure.
+- Workflow gate updated to 9/41; 141/141. Order snapshot script now aborts if not REVIEW.
+- Image gaps (cleaning supplies, headset, console) not generated: gpt-image-2-5-flare 1K,
+  sample 3 credits/task, 9 credits for 3 images; spending authorization not established.

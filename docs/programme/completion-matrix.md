@@ -602,3 +602,7 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Country-scoped administrator enforcement | `scripts/review-scoped-admin-setup.ts` (GH) + `scripts/review-catalogue-scope-journey.cjs` 6/6: NG products hidden, unpublish/create outside scope 403, catalogue intact | VERIFIED |
 | Historical order readability after unpublish | `scripts/review-order-snapshot-journey.cjs` 8/8 with dedicated REVIEW order fixture; snapshot readable after product 404; fixture removed | VERIFIED |
 | Public verified-seller phrase removed | footer, homepage, category/deals metadata, marketplace hero and empty states | VERIFIED |
+| Batch A catalogue additions | 6 DEMO products (2 phones, 1 monitor, DSLR, smartwatch, baby shoes), existing assets, published via Control Center, 37 active | VERIFIED |
+| Batch B produce additions | 4 DEMO groceries (cabbage, carrots, cucumbers, mangoes), existing approved fresh assets, 41 active | VERIFIED |
+| Residue exclusion | 103 run-tagged non-public records; 0 public in API/search/navigation/shelves; read-only audit 321/321 | VERIFIED |
+| Catalogue baseline | 9 active departments / 41 active products / all isDemo / 0 CRF | VERIFIED |

@@ -41,7 +41,7 @@ const SHOT_DIR = "qa-artifacts/visual/catalogue-workflow";
 const IMAGE_ONE = "/generated/shop/category-home-kitchen.webp";
 const IMAGE_TWO = "/generated/shop/product-retro-kitchen-blender.webp";
 const SEED_BASELINE = { departments: 7, products: 23 };
-const EXPANDED_BASELINE = { departments: 9, products: 31 };
+const EXPANDED_BASELINE = { departments: 9, products: 41 };
 const DEMO_NOTE = "DEMO — demonstration inventory, not live supply";
 const [email, password] = fs.readFileSync(CREDENTIAL_FILE, "utf8").trim().split(/\r?\n/);
 
@@ -788,8 +788,8 @@ function parse(response, body) {
     const counts = activeCounts(catalogue);
     check(
       "expansion matches the approved active-catalogue delta",
-      counts.departments === (baselineIsSeed ? 9 : SEED_BASELINE.departments + 2) &&
-        counts.products === SEED_BASELINE.products + EXPANSION_PRODUCTS.length,
+      counts.departments === 9 &&
+        counts.products === (baselineIsSeed ? SEED_BASELINE.products + EXPANSION_PRODUCTS.length : baseline.counts.products),
       countsLabel(counts)
     );
   }
@@ -1781,7 +1781,7 @@ function parse(response, body) {
       finalCatalogue.products.some((entry) => entry.slug === spec.slug && entry.status === "ACTIVE")
     );
     check(
-      "final catalogue retains the approved 9-department / 31-product expansion batch",
+      "final catalogue retains the approved 9-department / 41-product catalogue baseline",
       finalCounts.departments === EXPANDED_BASELINE.departments &&
         finalCounts.products === EXPANDED_BASELINE.products &&
         retainedExpansion.length === EXPANSION_PRODUCTS.length,
