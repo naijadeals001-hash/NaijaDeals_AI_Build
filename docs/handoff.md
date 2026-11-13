@@ -4542,3 +4542,20 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   surfaces; seller chip uses isDemo.
 - Workflow 141/141 (includes preview, cleanup baseline, expansion), smoke 12/12, basket
   10/10, financial 46/46.
+
+## Seller wording, scoped admin and order snapshot checks (2026-11-12)
+
+- HEAD `05b776c`; served build `SZsvxYa9pKj48OHCHkPSf`.
+- Global footer/Shop copy no longer claims "verified Nigerian sellers"; it states sellers
+  across Africa with demonstration inventory labelled.
+- Admin draft preview shows "Demonstration seller" instead of the vendor VERIFIED status.
+- "Demonstration seller" is visible (not truncated) on homepage, category, search and
+  related cards at 390/1440.
+- Country scope: GH-scoped admin fixture; NG products hidden, unpublish/create outside
+  scope 403, catalogue intact (`scripts/review-catalogue-scope-journey.cjs` 6/6).
+- Historical order: dedicated REVIEW order fixture remains readable via the customer order
+  API after the product is unpublished, then restored; fixture deleted
+  (`scripts/review-order-snapshot-journey.cjs` 8/8).
+- Asset gaps (cleaning supplies, gaming headset, console): Kie model
+  `gpt-image-2-5-flare-text-to-image`, 1K, sample 3 credits/task, 9 credits for 3 images;
+  not generated pending budget confirmation.

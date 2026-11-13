@@ -50,7 +50,7 @@
       "action": "create",
       "name": "Power & Solar",
       "slug": "power-solar",
-      "description": "DEMO department — demonstration power and solar inventory for owner review, not live supply.",
+      "description": "DEMO department \u2014 demonstration power and solar inventory for owner review, not live supply.",
       "imageUrl": "/generated/shop/category-power-solar.webp",
       "imageAlt": "Solar panel, portable power station and power bank on a pale blue surface",
       "sortOrder": 30,
@@ -65,7 +65,7 @@
       "action": "create",
       "name": "Gaming",
       "slug": "gaming",
-      "description": "DEMO department — demonstration gaming inventory for owner review, not live supply.",
+      "description": "DEMO department \u2014 demonstration gaming inventory for owner review, not live supply.",
       "imageUrl": "/generated/shop/category-gaming.webp",
       "imageAlt": "Game controller, mechanical keyboard and headset on a dark surface",
       "sortOrder": 31,
@@ -80,7 +80,7 @@
       "action": "update-image-alt",
       "name": "Groceries & Household Essentials",
       "slug": "groceries-household",
-      "description": "DEMO department — demonstration groceries for owner review, not live supply.",
+      "description": "DEMO department \u2014 demonstration groceries for owner review, not live supply.",
       "imageUrl": "/generated/shop/category-groceries.webp",
       "imageAlt": "Basket of fresh tomatoes, peppers, leafy greens and onions",
       "sortOrder": 20,
@@ -96,7 +96,7 @@
   "products": [
     {
       "id": "batch-groceries-red-bell-peppers",
-      "name": "DEMO — Red bell peppers, 500g",
+      "name": "DEMO \u2014 Red bell peppers, 500g",
       "slug": "demo-red-bell-peppers-500g",
       "departmentSlug": "groceries-household",
       "priceKobo": 180000,
@@ -119,7 +119,7 @@
     },
     {
       "id": "batch-groceries-diced-onions",
-      "name": "DEMO — Diced onions, 500g",
+      "name": "DEMO \u2014 Diced onions, 500g",
       "slug": "demo-diced-onions-500g",
       "departmentSlug": "groceries-household",
       "priceKobo": 220000,
@@ -142,7 +142,7 @@
     },
     {
       "id": "batch-groceries-green-beans",
-      "name": "DEMO — Green beans, 500g",
+      "name": "DEMO \u2014 Green beans, 500g",
       "slug": "demo-green-beans-500g",
       "departmentSlug": "groceries-household",
       "priceKobo": 150000,
@@ -165,7 +165,7 @@
     },
     {
       "id": "batch-power-solar-inverter",
-      "name": "DEMO — Solar power inverter",
+      "name": "DEMO \u2014 Solar power inverter",
       "slug": "demo-solar-power-inverter",
       "departmentSlug": "power-solar",
       "priceKobo": 28500000,
@@ -188,7 +188,7 @@
     },
     {
       "id": "batch-power-solar-panel-array",
-      "name": "DEMO — Rooftop solar panel array with mounting frame",
+      "name": "DEMO \u2014 Rooftop solar panel array with mounting frame",
       "slug": "demo-rooftop-solar-panel-array",
       "departmentSlug": "power-solar",
       "priceKobo": 42000000,
@@ -211,7 +211,7 @@
     },
     {
       "id": "batch-power-solar-charging-station",
-      "name": "DEMO — Portable solar battery charging station",
+      "name": "DEMO \u2014 Portable solar battery charging station",
       "slug": "demo-portable-solar-charging-station",
       "departmentSlug": "power-solar",
       "priceKobo": 19500000,
@@ -234,7 +234,7 @@
     },
     {
       "id": "batch-gaming-controller-pair",
-      "name": "DEMO — Wireless game controllers, black and white pair",
+      "name": "DEMO \u2014 Wireless game controllers, black and white pair",
       "slug": "demo-wireless-game-controllers-pair",
       "departmentSlug": "gaming",
       "priceKobo": 5200000,
@@ -257,7 +257,7 @@
     },
     {
       "id": "batch-gaming-controller-coloured-buttons",
-      "name": "DEMO — Game controller with coloured buttons",
+      "name": "DEMO \u2014 Game controller with coloured buttons",
       "slug": "demo-game-controller-coloured-buttons",
       "departmentSlug": "gaming",
       "priceKobo": 2900000,
@@ -283,7 +283,7 @@
     {
       "id": "grocery-household-cleaning-supplies",
       "departmentSlug": "groceries-household",
-      "intendedProduct": "DEMO — Household cleaning supplies",
+      "intendedProduct": "DEMO \u2014 Household cleaning supplies",
       "missingSubject": "Multi-surface household cleaner bottle with a cloth or sponge set",
       "reason": "The department covers Household Essentials, but the registry contains only produce product images. No approved household-cleaning product asset exists.",
       "existingNearMatch": null,
@@ -293,7 +293,7 @@
     {
       "id": "gaming-headset",
       "departmentSlug": "gaming",
-      "intendedProduct": "DEMO — Gaming headset",
+      "intendedProduct": "DEMO \u2014 Gaming headset",
       "missingSubject": "Over-ear gaming headset with boom microphone",
       "reason": "The Gaming department has controller assets only. The headset in category-gaming.webp is part of a department banner composition, not a standalone product image.",
       "existingNearMatch": "/generated/shop/category-gaming.webp",
@@ -303,12 +303,23 @@
     {
       "id": "gaming-console",
       "departmentSlug": "gaming",
-      "intendedProduct": "DEMO — Game console",
+      "intendedProduct": "DEMO \u2014 Game console",
       "missingSubject": "Home game console with one controller",
       "reason": "No console asset exists in scripts/image-registry.json or public/generated/shop.",
       "existingNearMatch": null,
       "recommendedAction": "Prepare an original image through the approved Kie.ai workflow after explicit generation authorization; do not reuse a controller image as a console.",
       "blockedBy": "No approved asset in scripts/image-registry.json and no generation authorization."
     }
-  ]
+  ],
+  "pricing_check": {
+    "date": "2026-11-12",
+    "provider": "Kie.ai",
+    "model": "gpt-image-2-5-flare-text-to-image",
+    "resolution": "1K",
+    "credits_per_task_sample": 3,
+    "estimated_tasks": 3,
+    "estimated_credits": 9,
+    "usd_estimate": "requires current account credit price; provider page does not publish a unit price",
+    "status": "prepared, NOT generated \u2014 awaiting budget confirmation"
+  }
 }
