@@ -745,6 +745,49 @@ async function runStateInterception(browser, eligible, taxonomy) {
     await context.close();
   }
 
+  // Storefront: if taxonomy image files are unavailable (for example a build
+  // that predates the committed artwork), every card falls back to the icon
+  // instead of showing a broken image.
+  {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await page.route("**/generated/**", (route) => route.fulfill({ status: 404, contentType: "text/plain", body: "missing" }));
+    await page.goto(`${BASE}/naijashop`, { waitUntil: "load", timeout: 180000 });
+    await waitForRail(page);
+    await page.locator("[data-category-rail]").scrollIntoViewIfNeeded();
+    await page.$$eval("[data-category-card] img", (images) => {
+      for (const image of images) image.loading = "eager";
+    });
+    await page
+      .waitForFunction(
+        () => {
+          const cards = Array.from(document.querySelectorAll("[data-category-card]"));
+          return cards.length > 8 && cards.every((card) => Boolean(card.querySelector("svg")));
+        },
+        null,
+        { timeout: 30000 }
+      )
+      .catch(() => undefined);
+    await page.waitForTimeout(500);
+    const fallback = await page.evaluate(() => {
+      const cards = Array.from(document.querySelectorAll("[data-category-card]"));
+      return {
+        cards: cards.length,
+        withIcon: cards.filter((card) => Boolean(card.querySelector("svg"))).length,
+        brokenImages: cards.filter((card) => {
+          const img = card.querySelector("img");
+          return Boolean(img && img.complete && img.naturalWidth === 0);
+        }).length
+      };
+    });
+    check(
+      "image 404s: every card falls back to the honest icon",
+      fallback.cards > 8 && fallback.withIcon === fallback.cards && fallback.brokenImages === 0,
+      JSON.stringify(fallback)
+    );
+    await context.close();
+  }
+
   // Storefront: browsingVisible=false and canPublish=false nodes stay out of
   // the rail, exactly as the effective taxonomy states.
   if (taxonomy && eligible.length >= 3) {
