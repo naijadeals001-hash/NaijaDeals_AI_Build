@@ -26,6 +26,13 @@ import {
   validateTaxonomy
 } from "../lib/data/taxonomy";
 
+/**
+ * REVIEW acceptance expectations. Update these deliberately when a reviewed
+ * catalogue batch changes the accepted totals; the seed fails otherwise.
+ */
+const EXPECTED_ACTIVE_PRODUCTS_ON_EXISTING = 41;
+const EXPECTED_ACTIVE_PRODUCTS_TOTAL = 49;
+
 type ExistingSnapshot = {
   id: string;
   key: string | null;
@@ -214,12 +221,23 @@ async function main(): Promise<void> {
           (sum, entry) => sum + entry.activeProducts,
           0
         );
-        if (totalActiveProductsBefore !== 41) {
+        if (totalActiveProductsBefore !== EXPECTED_ACTIVE_PRODUCTS_ON_EXISTING) {
           throw new Error(
-            `expected 41 active products on the existing categories, found ${totalActiveProductsBefore}`
+            `expected ${EXPECTED_ACTIVE_PRODUCTS_ON_EXISTING} active products on the existing categories, found ${totalActiveProductsBefore}`
+          );
+        }
+        const totalActiveAllBefore = activeProductGroupsBefore.reduce(
+          (sum, group) => sum + group._count._all,
+          0
+        );
+        if (totalActiveAllBefore !== EXPECTED_ACTIVE_PRODUCTS_TOTAL) {
+          throw new Error(
+            `expected ${EXPECTED_ACTIVE_PRODUCTS_TOTAL} active products in total, found ${totalActiveAllBefore}`
           );
         }
         const totalProductsBefore = await tx.product.count();
+        const imageRowsBefore = await tx.productImage.count();
+        const stockRowsBefore = await tx.inventoryStock.count();
         const categoryRequestsBefore = await tx.categoryRequest.count();
 
         const idByKey = new Map<string, string>();
@@ -429,6 +447,17 @@ async function main(): Promise<void> {
           (sum, entry) => sum + (activeCountAfter.get(entry.id) ?? 0),
           0
         );
+        const totalActiveAllAfterGroups = await tx.product.groupBy({
+          by: ["status"],
+          where: { status: "ACTIVE" },
+          _count: { _all: true }
+        });
+        const totalActiveAllAfter = totalActiveAllAfterGroups.reduce(
+          (sum, group) => sum + group._count._all,
+          0
+        );
+        const imageRowsAfter = await tx.productImage.count();
+        const stockRowsAfter = await tx.inventoryStock.count();
         const categoryRequestsAfter = await tx.categoryRequest.count();
 
         for (const snapshot of before) {
@@ -469,6 +498,22 @@ async function main(): Promise<void> {
             `active product count changed from ${totalActiveProductsBefore} to ${totalActiveProductsAfter}`
           );
         }
+        if (totalActiveAllAfter !== totalActiveAllBefore) {
+          throw new Error(
+            `total active product count changed from ${totalActiveAllBefore} to ${totalActiveAllAfter}`
+          );
+        }
+        if (totalActiveAllAfter !== EXPECTED_ACTIVE_PRODUCTS_TOTAL) {
+          throw new Error(
+            `expected ${EXPECTED_ACTIVE_PRODUCTS_TOTAL} active products after seeding, found ${totalActiveAllAfter}`
+          );
+        }
+        if (imageRowsAfter !== imageRowsBefore) {
+          throw new Error(`product image rows changed from ${imageRowsBefore} to ${imageRowsAfter}`);
+        }
+        if (stockRowsAfter !== stockRowsBefore) {
+          throw new Error(`inventory rows changed from ${stockRowsBefore} to ${stockRowsAfter}`);
+        }
         if (categoryRequestsAfter !== categoryRequestsBefore) {
           throw new Error(
             `category request count changed from ${categoryRequestsBefore} to ${categoryRequestsAfter}`
@@ -483,6 +528,11 @@ async function main(): Promise<void> {
           if (!saved) throw new Error(`taxonomy node ${definition.key} is missing after seeding`);
           if (saved.level !== definition.level) {
             throw new Error(`${definition.key}: saved level ${saved.level} != ${definition.level}`);
+          }
+          if (saved.isSelectable !== definition.isSelectable) {
+            throw new Error(
+              `${definition.key}: saved isSelectable ${saved.isSelectable} != ${definition.isSelectable}`
+            );
           }
           if (definition.parentKey) {
             const expectedParentId = idByKey.get(definition.parentKey);
@@ -506,7 +556,6 @@ async function main(): Promise<void> {
             products: productCountAfter.get(entry.id) ?? 0
           }))
           .filter((entry) => entry.products > 0);
-        void newLeavesWithProducts;
 
         const taxonomyCategoryIds = [...idByKey.values()];
         const aliasCount = await tx.categoryAlias.count({
@@ -551,8 +600,16 @@ async function main(): Promise<void> {
             totalAfter: totalProductsAfter,
             activeBefore: totalActiveProductsBefore,
             activeAfter: totalActiveProductsAfter,
+            activeAllBefore: totalActiveAllBefore,
+            activeAllAfter: totalActiveAllAfter,
+            expectedActiveAll: EXPECTED_ACTIVE_PRODUCTS_TOTAL,
+            imageRowsBefore,
+            imageRowsAfter,
+            stockRowsBefore,
+            stockRowsAfter,
             categoryIdChanges: 0,
-            newLeavesWithProducts: 0
+            newLeavesWithProducts: newLeavesWithProducts.length,
+            newLeavesWithoutProducts: newLeafKeys.size - newLeavesWithProducts.length
           },
           categoryRequests: {
             before: categoryRequestsBefore,
@@ -571,7 +628,9 @@ async function main(): Promise<void> {
               (rule) => rule.categoryId === idByKey.get(key)
             )?.canPublish
           })),
-          newZeroInventoryLeaves: [...newLeafKeys].sort()
+          newZeroInventoryLeaves: [...newLeafKeys].sort(),
+          newLeavesWithProducts: newLeavesWithProducts.length,
+          newLeavesWithoutProducts: newLeafKeys.size - newLeavesWithProducts.length
         };
       },
       { maxWait: 15000, timeout: 180000 }
@@ -585,10 +644,15 @@ async function main(): Promise<void> {
     console.log(`Created: ${summary.nodes.created}; updated: ${summary.nodes.updated}`);
     console.log(
       `Existing catalogue: ${summary.existingCategories.length} categories; ` +
-        `${summary.products.totalAfter} products (${summary.products.activeAfter} active)`
+        `${summary.products.totalAfter} products (${summary.products.activeAfter} active on existing categories, ` +
+        `${summary.products.activeAllAfter}/${summary.products.expectedActiveAll} active in total)`
     );
     console.log(
       `Product category changes: ${summary.products.categoryIdChanges}; new-leaf products: ${summary.products.newLeavesWithProducts}`
+    );
+    console.log(
+      `Images: before ${summary.products.imageRowsBefore}, after ${summary.products.imageRowsAfter}; ` +
+        `inventory rows: before ${summary.products.stockRowsBefore}, after ${summary.products.stockRowsAfter}`
     );
     console.log(
       `Aliases: ${summary.aliases} (writes ${summary.aliasWrites}); attributes: ${summary.attributes} (writes ${summary.attributeWrites}); country rules: ${summary.countryRules} (writes ${summary.countryRuleWrites})`
@@ -599,7 +663,10 @@ async function main(): Promise<void> {
     for (const restricted of summary.restrictedLeaves) {
       console.log(`Restricted: ${restricted.key} canPublish NG = ${String(restricted.canPublishNG)}`);
     }
-    console.log(`New zero-inventory leaves: ${summary.newZeroInventoryLeaves.length}`);
+    console.log(
+      `New selectable leaves: ${summary.newZeroInventoryLeaves.length} ` +
+        `(with products: ${summary.newLeavesWithProducts}, zero inventory: ${summary.newLeavesWithoutProducts})`
+    );
     console.log("Result: PASS");
   } catch (error) {
     fail(sanitize(error instanceof Error ? error.message : String(error)));

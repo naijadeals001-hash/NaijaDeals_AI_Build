@@ -1,5 +1,9 @@
 # Taxonomy coverage — 2026-11-13
 
+> Historical record of the first taxonomy batch (73 nodes). The taxonomy was later
+> extended to 161 nodes (11 departments / 37 categories / 113 selectable subcategories),
+> and the current product-to-leaf plan and populated-leaf counts live in
+> `docs/taxonomy/coverage-gaps.md`. The eight products and images below are unchanged.
 Hierarchy: 5 departments / 17 categories / 51 subcategories (73 nodes), 387 aliases, 150 attributes, 2 country restrictions.
 Existing 41 active products keep their IDs/slugs/images/stock and remain on their original selectable category nodes (0 projected category changes in the dry run). Eight new DEMO products were published through the seller + Control Center workflow with original Kie imagery.
 

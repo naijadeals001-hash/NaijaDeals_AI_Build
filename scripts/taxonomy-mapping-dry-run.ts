@@ -61,6 +61,9 @@ type ProposalDocument = {
   }>;
 };
 
+const EXPECTED_ACTIVE_PRODUCTS_ON_EXISTING = 41;
+const EXPECTED_ACTIVE_PRODUCTS_TOTAL = 49;
+
 function fail(message: string): never {
   console.error(`FAIL: ${message}`);
   process.exit(2);
@@ -315,8 +318,16 @@ async function main(): Promise<void> {
         `expected ${EXISTING_CATEGORY_KEYS.length} existing active categories, found ${existingCategories.length}`
       );
     }
-    if (existingActiveProducts !== 41) {
-      problems.push(`expected 41 active products on existing categories, found ${existingActiveProducts}`);
+    if (existingActiveProducts !== EXPECTED_ACTIVE_PRODUCTS_ON_EXISTING) {
+      problems.push(
+        `expected ${EXPECTED_ACTIVE_PRODUCTS_ON_EXISTING} active products on existing categories, found ${existingActiveProducts}`
+      );
+    }
+    const totalActiveProducts = totalProducts.rows[0]?.active ?? 0;
+    if (totalActiveProducts !== EXPECTED_ACTIVE_PRODUCTS_TOTAL) {
+      problems.push(
+        `expected ${EXPECTED_ACTIVE_PRODUCTS_TOTAL} active products in total, found ${totalActiveProducts}`
+      );
     }
     if (unmappedActive.length > 0) {
       problems.push(
@@ -343,9 +354,11 @@ async function main(): Promise<void> {
       },
       catalogue: {
         totalProducts: totalProducts.rows[0]?.total ?? 0,
-        activeProducts: totalProducts.rows[0]?.active ?? 0,
+        activeProducts: totalActiveProducts,
+        expectedActiveProducts: EXPECTED_ACTIVE_PRODUCTS_TOTAL,
         existingCategoriesFound: existingCategories.length,
         existingActiveProducts,
+        expectedExistingActiveProducts: EXPECTED_ACTIVE_PRODUCTS_ON_EXISTING,
         proposalNodesPresentInDatabase: proposalRows.length,
         productsOnExistingCategories: proposalProducts,
         activeProductsOnExistingCategories: proposalActiveProducts,
@@ -394,7 +407,8 @@ async function main(): Promise<void> {
         `Projected Product.categoryId changes: ${summary.mapping.projectedProductCategoryIdChanges}`
       );
       console.log(
-        `New zero-inventory selectable leaves: ${newLeaves.length} (products found: ${newLeavesWithProducts.length})`
+        `New selectable leaves: ${newLeaves.length} ` +
+          `(with products: ${newLeavesWithProducts.length}, zero inventory: ${newLeaves.length - newLeavesWithProducts.length})`
       );
       console.log(`Restricted leaves: ${RESTRICTED_CATEGORY_KEYS.join(", ")}`);
       console.log(`Category requests: ${summary.catalogue.categoryRequests}`);

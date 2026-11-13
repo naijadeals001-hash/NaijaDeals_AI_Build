@@ -1,12 +1,12 @@
 {
   "meta": {
-    "version": 1,
+    "version": 2,
     "generatedAt": "2026-11-13",
     "scope": "NaijaDeals marketplace taxonomy proposal (REVIEW only)",
-    "totalNodes": 73,
-    "departments": 5,
-    "categories": 17,
-    "subcategories": 51,
+    "totalNodes": 161,
+    "departments": 11,
+    "categories": 37,
+    "subcategories": 113,
     "existingCategoryKeys": [
       "phones-tablets",
       "computers",
@@ -20,13 +20,43 @@
     ],
     "restrictedCategoryKeys": [
       "seeds-seedlings",
-      "fertilizers-crop-nutrition"
+      "fertilizers-crop-nutrition",
+      "pesticides-crop-protection",
+      "otc-medicines-treatments",
+      "vitamins-minerals-supplements",
+      "herbal-traditional-remedies",
+      "health-monitors",
+      "mobility-support-aids",
+      "car-seats-boosters",
+      "infant-formula",
+      "brake-system-parts",
+      "suspension-steering-parts",
+      "tyres-tubes",
+      "motorcycle-brakes-safety",
+      "motorcycle-tyres-wheels",
+      "motorcycle-helmets-protection",
+      "electrical-installation-materials"
+    ],
+    "departmentKeys": [
+      "electronics",
+      "home",
+      "fashion",
+      "food",
+      "agriculture",
+      "health-wellness",
+      "baby-kids-toys",
+      "sports-outdoors",
+      "automotive-motorcycle",
+      "tools-building",
+      "books-stationery"
     ],
     "notes": [
       "Existing categories keep their ids, slugs, names, images, imageAlt, isDemo flag and current demo descriptions. Existing products are never moved.",
       "Aliases are search vocabulary and localized labels, not synonyms that merge distinct products.",
       "Mudu, paint bucket, basket and bag are informal market measures with no assumed conversion; listings must state an explicit metric weight or volume.",
-      "canPublish is false for NG on the restricted leaves until reviewer verification is recorded."
+      "canPublish is false for NG on every restricted leaf until reviewer verification is recorded. Other countries must add their own rules before enabling those leaves.",
+      "Health & Wellness, Baby, Kids & Toys, Sports & Outdoors, Automotive & Motorcycle, Tools & Building Materials and Books & Stationery were added on 2026-11-13. Regulated leaves are not publishable; wholesale stays a purchasing mode and origin/material/style stay attributes.",
+      "Department imagery for the six added departments is intentionally absent pending approved original assets; the storefront renders its honest fallback tile."
     ]
   },
   "nodes": [
@@ -4046,6 +4076,121 @@
         "escrow",
         "contact"
       ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "pesticide",
+          "locale": "en"
+        },
+        {
+          "alias": "herbicide",
+          "locale": "en"
+        },
+        {
+          "alias": "insecticide",
+          "locale": "en"
+        },
+        {
+          "alias": "fungicide",
+          "locale": "en"
+        },
+        {
+          "alias": "pesticide",
+          "locale": "fr"
+        },
+        {
+          "alias": "herbicide",
+          "locale": "fr"
+        },
+        {
+          "alias": "pesticida",
+          "locale": "pt"
+        },
+        {
+          "alias": "herbicida",
+          "locale": "pt"
+        },
+        {
+          "alias": "dawa ya wadudu",
+          "locale": "sw"
+        },
+        {
+          "alias": "مبيدات",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Herbicide",
+            "Insecticide",
+            "Fungicide",
+            "Nematicide",
+            "Other"
+          ]
+        },
+        {
+          "key": "active_ingredient",
+          "label": "Active ingredient",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "formulation",
+          "label": "Formulation",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Liquid",
+            "Granule",
+            "Powder",
+            "Other"
+          ]
+        },
+        {
+          "key": "pack_size_litres",
+          "label": "Pack size (litres)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "registration_number",
+          "label": "Registration number",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Pesticides are regulated and require registration. Publishing in Nigeria requires reviewer verification of the registration, approved label and sealed retail packaging; decanted or unregistered products are not permitted. This leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Hazard class, PPE guidance and re-entry intervals must be shown; no household or veterinary use claims."
+      ],
+      "key": "pesticides-crop-protection",
+      "parentKey": "farm-inputs",
+      "name": "Pesticides & Crop Protection",
+      "slug": "pesticides-crop-protection",
+      "description": "Herbicides, insecticides, fungicides and other crop-protection chemicals sold in sealed, labelled packs. Excludes veterinary medicines, household insecticides, fertilizers and unregistered or decanted products.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 35
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
       "reviewRequired": false,
       "aliases": [
         {
@@ -4669,6 +4814,6323 @@
       "isSelectable": true,
       "showOnHomepage": false,
       "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "health-wellness",
+      "parentKey": null,
+      "name": "Health & Wellness",
+      "slug": "health-wellness",
+      "description": "Medicines, supplements, monitoring devices and first-aid supplies. Excludes beauty cosmetics (Beauty & Personal Care), fitness equipment (Sports & Outdoors) and prepared meals. Regulated leaves are not publishable until the country review is recorded.",
+      "level": 0,
+      "isSelectable": false,
+      "showOnHomepage": true,
+      "sortOrder": 60
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "medicines-treatments",
+      "parentKey": "health-wellness",
+      "name": "Medicines & Treatments",
+      "slug": "medicines-treatments",
+      "description": "Over-the-counter medicines and topical treatments. Excludes prescription-only medicines, unregistered products and veterinary medicines.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "over-the-counter medicine",
+          "locale": "en"
+        },
+        {
+          "alias": "pain relievers",
+          "locale": "en"
+        },
+        {
+          "alias": "antimalarials",
+          "locale": "en"
+        },
+        {
+          "alias": "médicaments en vente libre",
+          "locale": "fr"
+        },
+        {
+          "alias": "antipaludiques",
+          "locale": "fr"
+        },
+        {
+          "alias": "medicamentos sem receita",
+          "locale": "pt"
+        },
+        {
+          "alias": "antimaláricos",
+          "locale": "pt"
+        },
+        {
+          "alias": "dawa za kupunguza maumivu",
+          "locale": "sw"
+        },
+        {
+          "alias": "أدوية بدون وصفة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "dosage_form",
+          "label": "Dosage form",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Tablet",
+            "Capsule",
+            "Syrup",
+            "Suspension",
+            "Cream",
+            "Ointment",
+            "Other"
+          ]
+        },
+        {
+          "key": "active_ingredient",
+          "label": "Active ingredient",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "pack_size",
+          "label": "Pack size",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "registration_number",
+          "label": "Registration number",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Medicines are regulated by NAFDAC. Publishing in Nigeria requires reviewer verification of product registration, sealed retail packaging and permitted import status; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. No therapeutic claims beyond the approved label; prescription-only medicines are not permitted."
+      ],
+      "key": "otc-medicines-treatments",
+      "parentKey": "medicines-treatments",
+      "name": "Over-the-Counter Medicines",
+      "slug": "otc-medicines-treatments",
+      "description": "Non-prescription pain relievers, antimalarials, antihistamines, cough remedies and topical treatments sold in their original sealed pack. Excludes prescription-only medicines, injectables, veterinary medicines and unregistered products.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "vitamins-supplements",
+      "parentKey": "health-wellness",
+      "name": "Vitamins & Supplements",
+      "slug": "vitamins-supplements",
+      "description": "Dietary supplements, vitamins, minerals and herbal products. Excludes medicines, prescription nutrition and products making unverified therapeutic claims.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "vitamins",
+          "locale": "en"
+        },
+        {
+          "alias": "multivitamins",
+          "locale": "en"
+        },
+        {
+          "alias": "dietary supplements",
+          "locale": "en"
+        },
+        {
+          "alias": "vitamines",
+          "locale": "fr"
+        },
+        {
+          "alias": "compléments alimentaires",
+          "locale": "fr"
+        },
+        {
+          "alias": "vitaminas",
+          "locale": "pt"
+        },
+        {
+          "alias": "suplementos alimentares",
+          "locale": "pt"
+        },
+        {
+          "alias": "vitamini",
+          "locale": "sw"
+        },
+        {
+          "alias": "فيتامينات",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "supplement_type",
+          "label": "Supplement type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Multivitamin",
+            "Single vitamin",
+            "Mineral",
+            "Sports nutrition",
+            "Other"
+          ]
+        },
+        {
+          "key": "active_ingredient",
+          "label": "Active ingredient",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "servings",
+          "label": "Servings per pack",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "registration_number",
+          "label": "Registration number",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Supplements are regulated and require registration before sale in Nigeria. Publishing requires reviewer verification; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Health claims must not exceed the approved label."
+      ],
+      "key": "vitamins-minerals-supplements",
+      "parentKey": "vitamins-supplements",
+      "name": "Vitamins & Minerals",
+      "slug": "vitamins-minerals-supplements",
+      "description": "Multivitamins, single vitamins, minerals and sports-nutrition supplements in sealed retail packs. Excludes medicines, infant formula and injectable products.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "herbal remedy",
+          "locale": "en"
+        },
+        {
+          "alias": "herbal medicine",
+          "locale": "en"
+        },
+        {
+          "alias": "traditional remedy",
+          "locale": "en"
+        },
+        {
+          "alias": "remèdes à base de plantes",
+          "locale": "fr"
+        },
+        {
+          "alias": "remédios à base de plantas",
+          "locale": "pt"
+        },
+        {
+          "alias": "dawa za mitishamba",
+          "locale": "sw"
+        },
+        {
+          "alias": "أدوية عشبية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "form",
+          "label": "Form",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Powder",
+            "Tea",
+            "Bitters",
+            "Capsule",
+            "Paste",
+            "Other"
+          ]
+        },
+        {
+          "key": "botanical_ingredients",
+          "label": "Botanical ingredients",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "net_weight_g",
+          "label": "Net weight (g)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Herbal preparations with health claims are regulated in Nigeria. Publishing requires reviewer verification and must not claim to cure disease; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. No disease-treatment claims; pregnancy and interaction warnings are required from the seller."
+      ],
+      "key": "herbal-traditional-remedies",
+      "parentKey": "vitamins-supplements",
+      "name": "Herbal & Traditional Remedies",
+      "slug": "herbal-traditional-remedies",
+      "description": "Herbal powders, teas, bitters and traditional preparations sold as wellness products. Excludes medicines, raw agricultural produce and products claiming to cure disease.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "medical-devices-aids",
+      "parentKey": "health-wellness",
+      "name": "Medical Devices & Aids",
+      "slug": "medical-devices-aids",
+      "description": "Home monitoring devices, mobility aids and first-aid supplies. Excludes medicines, hospital-grade equipment and implanted devices.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "blood pressure monitor",
+          "locale": "en"
+        },
+        {
+          "alias": "thermometer",
+          "locale": "en"
+        },
+        {
+          "alias": "pulse oximeter",
+          "locale": "en"
+        },
+        {
+          "alias": "glucose meter",
+          "locale": "en"
+        },
+        {
+          "alias": "tensiomètre",
+          "locale": "fr"
+        },
+        {
+          "alias": "thermomètre",
+          "locale": "fr"
+        },
+        {
+          "alias": "medidor de pressão",
+          "locale": "pt"
+        },
+        {
+          "alias": "termómetro",
+          "locale": "pt"
+        },
+        {
+          "alias": "kipimo cha shinikizo la damu",
+          "locale": "sw"
+        },
+        {
+          "alias": "جهاز قياس ضغط الدم",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "device_type",
+          "label": "Device type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Blood-pressure monitor",
+            "Thermometer",
+            "Pulse oximeter",
+            "Glucose meter",
+            "Other"
+          ]
+        },
+        {
+          "key": "power_source",
+          "label": "Power source",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Battery",
+            "Mains",
+            "Rechargeable",
+            "Other"
+          ]
+        },
+        {
+          "key": "certification",
+          "label": "Certification / standards marking",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Medical devices are regulated by NAFDAC. Publishing in Nigeria requires reviewer verification of the device registration; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Readings are not a diagnosis; listings must not claim to replace clinical advice."
+      ],
+      "key": "health-monitors",
+      "parentKey": "medical-devices-aids",
+      "name": "Health Monitors",
+      "slug": "health-monitors",
+      "description": "Blood-pressure monitors, thermometers, pulse oximeters and glucose meters for home use. Excludes hospital-grade monitors, test strips sold alone and implanted devices.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "wheelchair",
+          "locale": "en"
+        },
+        {
+          "alias": "crutches",
+          "locale": "en"
+        },
+        {
+          "alias": "walking frame",
+          "locale": "en"
+        },
+        {
+          "alias": "fauteuil roulant",
+          "locale": "fr"
+        },
+        {
+          "alias": "béquilles",
+          "locale": "fr"
+        },
+        {
+          "alias": "cadeira de rodas",
+          "locale": "pt"
+        },
+        {
+          "alias": "muletas",
+          "locale": "pt"
+        },
+        {
+          "alias": "kiti cha magurudumu",
+          "locale": "sw"
+        },
+        {
+          "alias": "كرسي متحرك",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "aid_type",
+          "label": "Aid type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Wheelchair",
+            "Walking frame",
+            "Crutches",
+            "Cane",
+            "Orthopaedic support",
+            "Other"
+          ]
+        },
+        {
+          "key": "max_user_weight_kg",
+          "label": "Maximum user weight (kg)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "certification",
+          "label": "Certification / standards marking",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Medical devices and assistive products are regulated in Nigeria. Publishing requires reviewer verification; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Sizing and maximum user weight must be stated explicitly."
+      ],
+      "key": "mobility-support-aids",
+      "parentKey": "medical-devices-aids",
+      "name": "Mobility & Support Aids",
+      "slug": "mobility-support-aids",
+      "description": "Wheelchairs, walking frames, crutches, canes and orthopaedic supports. Excludes physiotherapy services and custom-fitted prosthetics.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "first aid kit",
+          "locale": "en"
+        },
+        {
+          "alias": "bandages",
+          "locale": "en"
+        },
+        {
+          "alias": "plasters",
+          "locale": "en"
+        },
+        {
+          "alias": "gauze",
+          "locale": "en"
+        },
+        {
+          "alias": "trousse de premiers secours",
+          "locale": "fr"
+        },
+        {
+          "alias": "pansements",
+          "locale": "fr"
+        },
+        {
+          "alias": "kit de primeiros socorros",
+          "locale": "pt"
+        },
+        {
+          "alias": "ligaduras",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifaa vya huduma ya kwanza",
+          "locale": "sw"
+        },
+        {
+          "alias": "إسعافات أولية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "item_type",
+          "label": "Item type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "First-aid kit",
+            "Bandage",
+            "Plaster",
+            "Gauze / dressing",
+            "Sling",
+            "Other"
+          ]
+        },
+        {
+          "key": "pack_count",
+          "label": "Pack count",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "sterility",
+          "label": "Sterility",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Sterile",
+            "Non-sterile",
+            "Not stated"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Non-medicated supplies only. Antiseptics and medicated creams must be listed under the restricted Over-the-Counter Medicines leaf."
+      ],
+      "key": "first-aid-supplies",
+      "parentKey": "medical-devices-aids",
+      "name": "First-Aid Supplies",
+      "slug": "first-aid-supplies",
+      "description": "Non-medicated bandages, dressings, plasters, gauze, slings and first-aid kits. Excludes antiseptics, medicated creams and medicines, which belong to Over-the-Counter Medicines.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "baby-kids-toys",
+      "parentKey": null,
+      "name": "Baby, Kids & Toys",
+      "slug": "baby-kids-toys",
+      "description": "Nursery gear, feeding, hygiene and toys for babies and children. Excludes children's clothing and footwear, which remain under Fashion & Accessories, and school books, which belong to Books & Stationery.",
+      "level": 0,
+      "isSelectable": false,
+      "showOnHomepage": true,
+      "sortOrder": 70
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "baby-gear-nursery",
+      "parentKey": "baby-kids-toys",
+      "name": "Baby Gear & Nursery",
+      "slug": "baby-gear-nursery",
+      "description": "Strollers, child car seats, cots and nursery furniture. Excludes toys, feeding products and children's clothing.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "stroller",
+          "locale": "en"
+        },
+        {
+          "alias": "pram",
+          "locale": "en"
+        },
+        {
+          "alias": "pushchair",
+          "locale": "en"
+        },
+        {
+          "alias": "buggy",
+          "locale": "en"
+        },
+        {
+          "alias": "poussette",
+          "locale": "fr"
+        },
+        {
+          "alias": "carrinho de bebé",
+          "locale": "pt"
+        },
+        {
+          "alias": "kigari cha mtoto",
+          "locale": "sw"
+        },
+        {
+          "alias": "عربة أطفال",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Stroller",
+            "Pram",
+            "Pushchair",
+            "Travel system",
+            "Other"
+          ]
+        },
+        {
+          "key": "folding",
+          "label": "Folding",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "One-hand fold",
+            "Two-hand fold",
+            "Not folding"
+          ]
+        },
+        {
+          "key": "max_child_weight_kg",
+          "label": "Maximum child weight (kg)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Safety harness and brake condition must be stated for used items; the seller is responsible for compliance with applicable child-product standards."
+      ],
+      "key": "strollers-prams",
+      "parentKey": "baby-gear-nursery",
+      "name": "Strollers & Prams",
+      "slug": "strollers-prams",
+      "description": "Pushchairs, strollers, prams and travel systems. Excludes child car seats and ride-on toys.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "child car seat",
+          "locale": "en"
+        },
+        {
+          "alias": "booster seat",
+          "locale": "en"
+        },
+        {
+          "alias": "infant carrier",
+          "locale": "en"
+        },
+        {
+          "alias": "siège auto",
+          "locale": "fr"
+        },
+        {
+          "alias": "rehausseur",
+          "locale": "fr"
+        },
+        {
+          "alias": "cadeira auto",
+          "locale": "pt"
+        },
+        {
+          "alias": "assento elevatório",
+          "locale": "pt"
+        },
+        {
+          "alias": "kiti cha gari cha mtoto",
+          "locale": "sw"
+        },
+        {
+          "alias": "مقعد سيارة للأطفال",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "seat_group",
+          "label": "Seat group",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Group 0+",
+            "Group 1",
+            "Group 2",
+            "Group 3",
+            "Combination",
+            "Other"
+          ]
+        },
+        {
+          "key": "installation",
+          "label": "Installation",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "ISOFIX",
+            "Seat belt",
+            "Both",
+            "Other"
+          ]
+        },
+        {
+          "key": "certification",
+          "label": "Certification / standards marking",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Child restraint systems are safety-critical products. Publishing in Nigeria requires reviewer verification of a recognised safety standard marking and the absence of crash damage; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Used seats must disclose age, history and any damage; no seat with an unknown crash history may be listed."
+      ],
+      "key": "car-seats-boosters",
+      "parentKey": "baby-gear-nursery",
+      "name": "Child Car Seats & Boosters",
+      "slug": "car-seats-boosters",
+      "description": "Infant carriers, child car seats and booster cushions for vehicle use. Excludes strollers and general vehicle parts.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "cot",
+          "locale": "en"
+        },
+        {
+          "alias": "crib",
+          "locale": "en"
+        },
+        {
+          "alias": "changing table",
+          "locale": "en"
+        },
+        {
+          "alias": "lit bébé",
+          "locale": "fr"
+        },
+        {
+          "alias": "table à langer",
+          "locale": "fr"
+        },
+        {
+          "alias": "berço",
+          "locale": "pt"
+        },
+        {
+          "alias": "trocador",
+          "locale": "pt"
+        },
+        {
+          "alias": "kitanda cha mtoto",
+          "locale": "sw"
+        },
+        {
+          "alias": "سرير أطفال",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Cot",
+            "Crib",
+            "Bedside sleeper",
+            "Changing table",
+            "Nursery storage",
+            "Other"
+          ]
+        },
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Wood",
+            "Metal",
+            "MDF",
+            "Plastic",
+            "Other"
+          ]
+        },
+        {
+          "key": "assembled_dimensions",
+          "label": "Assembled dimensions (L x W x H)",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "cots-nursery-furniture",
+      "parentKey": "baby-gear-nursery",
+      "name": "Cots & Nursery Furniture",
+      "slug": "cots-nursery-furniture",
+      "description": "Cots, cribs, bedside sleepers, changing tables and nursery storage. Excludes mattresses sold as general bedding and adult bedroom furniture.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "baby-feeding-care",
+      "parentKey": "baby-kids-toys",
+      "name": "Baby Feeding & Care",
+      "slug": "baby-feeding-care",
+      "description": "Infant formula, bottles, sterilising, nappies and baby hygiene. Excludes medicines, children's clothing and nursery furniture.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "baby formula",
+          "locale": "en"
+        },
+        {
+          "alias": "follow-on formula",
+          "locale": "en"
+        },
+        {
+          "alias": "lait infantile",
+          "locale": "fr"
+        },
+        {
+          "alias": "lait en poudre pour bébé",
+          "locale": "fr"
+        },
+        {
+          "alias": "leite em pó infantil",
+          "locale": "pt"
+        },
+        {
+          "alias": "leite de fórmula",
+          "locale": "pt"
+        },
+        {
+          "alias": "maziwa ya watoto",
+          "locale": "sw"
+        },
+        {
+          "alias": "حليب الأطفال",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "formula_stage",
+          "label": "Formula stage",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Stage 1 (0-6 months)",
+            "Stage 2 (6-12 months)",
+            "Stage 3 (12+ months)",
+            "Specialised",
+            "Other"
+          ]
+        },
+        {
+          "key": "net_weight_g",
+          "label": "Net weight (g)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "batch_number",
+          "label": "Batch number",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "expiry_date",
+          "label": "Expiry date",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Infant formula is a regulated food for special nutritional use. Publishing in Nigeria requires reviewer verification of NAFDAC registration, batch traceability and an unbroken sealed pack; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Listings must not discourage breastfeeding or make unapproved health claims; batch and expiry evidence are required."
+      ],
+      "key": "infant-formula",
+      "parentKey": "baby-feeding-care",
+      "name": "Infant Formula",
+      "slug": "infant-formula",
+      "description": "First infant formula, follow-on formula and specialised formula in sealed retail packaging. Excludes breast-milk substitutes marketed for children over 36 months, medicines and homemade preparations.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "baby bottle",
+          "locale": "en"
+        },
+        {
+          "alias": "teat",
+          "locale": "en"
+        },
+        {
+          "alias": "steriliser",
+          "locale": "en"
+        },
+        {
+          "alias": "breast pump",
+          "locale": "en"
+        },
+        {
+          "alias": "biberon",
+          "locale": "fr"
+        },
+        {
+          "alias": "stérilisateur",
+          "locale": "fr"
+        },
+        {
+          "alias": "biberão",
+          "locale": "pt"
+        },
+        {
+          "alias": "esterilizador",
+          "locale": "pt"
+        },
+        {
+          "alias": "chupa ya mtoto",
+          "locale": "sw"
+        },
+        {
+          "alias": "زجاجة رضاعة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Bottle",
+            "Teat",
+            "Steriliser",
+            "Breast pump",
+            "Cleaning accessory",
+            "Other"
+          ]
+        },
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "BPA-free plastic",
+            "Glass",
+            "Silicone",
+            "Stainless steel",
+            "Other"
+          ]
+        },
+        {
+          "key": "capacity_ml",
+          "label": "Capacity (ml)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Materials must be food-contact safe and BPA status stated where applicable."
+      ],
+      "key": "bottles-teats-sterilisers",
+      "parentKey": "baby-feeding-care",
+      "name": "Bottles, Teats & Sterilisers",
+      "slug": "bottles-teats-sterilisers",
+      "description": "Baby bottles, teats, breast pumps, sterilisers and bottle-cleaning accessories. Excludes infant formula and general kitchen appliances.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "nappies",
+          "locale": "en"
+        },
+        {
+          "alias": "diapers",
+          "locale": "en"
+        },
+        {
+          "alias": "baby wipes",
+          "locale": "en"
+        },
+        {
+          "alias": "couches bébé",
+          "locale": "fr"
+        },
+        {
+          "alias": "lingettes bébé",
+          "locale": "fr"
+        },
+        {
+          "alias": "fraldas",
+          "locale": "pt"
+        },
+        {
+          "alias": "toalhetes de bebé",
+          "locale": "pt"
+        },
+        {
+          "alias": "nebi",
+          "locale": "sw"
+        },
+        {
+          "alias": "حفاضات",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Disposable nappy",
+            "Reusable nappy",
+            "Nappy liner",
+            "Baby wipes",
+            "Other"
+          ]
+        },
+        {
+          "key": "size",
+          "label": "Size",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Newborn",
+            "S",
+            "M",
+            "L",
+            "XL",
+            "Other"
+          ]
+        },
+        {
+          "key": "pack_count",
+          "label": "Pack count",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "nappies-wipes",
+      "parentKey": "baby-feeding-care",
+      "name": "Nappies & Baby Wipes",
+      "slug": "nappies-wipes",
+      "description": "Disposable and reusable nappies, nappy liners and baby wipes. Excludes medicated nappy-rash creams and adult incontinence products.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "baby wash",
+          "locale": "en"
+        },
+        {
+          "alias": "baby lotion",
+          "locale": "en"
+        },
+        {
+          "alias": "baby shampoo",
+          "locale": "en"
+        },
+        {
+          "alias": "gel lavant bébé",
+          "locale": "fr"
+        },
+        {
+          "alias": "lotion bébé",
+          "locale": "fr"
+        },
+        {
+          "alias": "gel de banho bebé",
+          "locale": "pt"
+        },
+        {
+          "alias": "loção para bebé",
+          "locale": "pt"
+        },
+        {
+          "alias": "sabuni ya mtoto",
+          "locale": "sw"
+        },
+        {
+          "alias": "مستلزمات استحمام الأطفال",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Baby wash",
+            "Baby shampoo",
+            "Baby lotion",
+            "Barrier balm",
+            "Bathing accessory",
+            "Other"
+          ]
+        },
+        {
+          "key": "suitability",
+          "label": "Suitability",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Newborn",
+            "Sensitive skin",
+            "All ages",
+            "Other"
+          ]
+        },
+        {
+          "key": "volume_ml",
+          "label": "Volume (ml)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "No unverified therapeutic claims. Medicated nappy-rash products belong under medicines and remain restricted."
+      ],
+      "key": "baby-bathing-skincare",
+      "parentKey": "baby-feeding-care",
+      "name": "Baby Bathing & Skincare",
+      "slug": "baby-bathing-skincare",
+      "description": "Baby wash, shampoo, lotion, barrier balm and bathing accessories formulated for infants. Excludes medicated creams and adult cosmetics.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "toys-play",
+      "parentKey": "baby-kids-toys",
+      "name": "Toys & Play",
+      "slug": "toys-play",
+      "description": "Toys, games and play equipment for babies and children. Excludes video games and consoles, which belong to Gaming, and collectible adult models sold as decorative items.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "baby toys",
+          "locale": "en"
+        },
+        {
+          "alias": "teething toys",
+          "locale": "en"
+        },
+        {
+          "alias": "stacking toys",
+          "locale": "en"
+        },
+        {
+          "alias": "jouets pour bébé",
+          "locale": "fr"
+        },
+        {
+          "alias": "jouets d'éveil",
+          "locale": "fr"
+        },
+        {
+          "alias": "brinquedos para bebé",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifaa vya kuchezea vya watoto wachanga",
+          "locale": "sw"
+        },
+        {
+          "alias": "ألعاب أطفال صغار",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "toy_type",
+          "label": "Toy type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Teether",
+            "Rattle",
+            "Stacking toy",
+            "Soft play",
+            "Activity centre",
+            "Other"
+          ]
+        },
+        {
+          "key": "recommended_age_months",
+          "label": "Recommended age (months)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "safety_marking",
+          "label": "Safety marking",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Choking-hazard warnings and recommended age are mandatory. No loose small parts for children under three."
+      ],
+      "key": "baby-toddler-toys",
+      "parentKey": "toys-play",
+      "name": "Baby & Toddler Toys",
+      "slug": "baby-toddler-toys",
+      "description": "Teething toys, rattles, stacking toys and soft play for children under three. Excludes small-parts toys unsuitable for young children.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "stem toys",
+          "locale": "en"
+        },
+        {
+          "alias": "building blocks",
+          "locale": "en"
+        },
+        {
+          "alias": "learning toys",
+          "locale": "en"
+        },
+        {
+          "alias": "jouets éducatifs",
+          "locale": "fr"
+        },
+        {
+          "alias": "jouets de construction",
+          "locale": "fr"
+        },
+        {
+          "alias": "brinquedos educativos",
+          "locale": "pt"
+        },
+        {
+          "alias": "blocos de construção",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifaa vya kuchezea vya kuelimisha",
+          "locale": "sw"
+        },
+        {
+          "alias": "ألعاب تعليمية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "toy_type",
+          "label": "Toy type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Building blocks",
+            "Puzzle",
+            "Science kit",
+            "Learning toy",
+            "Other"
+          ]
+        },
+        {
+          "key": "recommended_age_years",
+          "label": "Recommended age (years)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "piece_count",
+          "label": "Number of pieces",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "educational-stem-toys",
+      "parentKey": "toys-play",
+      "name": "Educational & STEM Toys",
+      "slug": "educational-stem-toys",
+      "description": "Building blocks, puzzles, science kits and learning toys. Excludes school textbooks and classroom furniture.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "ride-on car",
+          "locale": "en"
+        },
+        {
+          "alias": "balance bike",
+          "locale": "en"
+        },
+        {
+          "alias": "tricycle",
+          "locale": "en"
+        },
+        {
+          "alias": "porteur enfant",
+          "locale": "fr"
+        },
+        {
+          "alias": "tricycle enfant",
+          "locale": "fr"
+        },
+        {
+          "alias": "triciclo infantil",
+          "locale": "pt"
+        },
+        {
+          "alias": "baiskeli ya mtoto",
+          "locale": "sw"
+        },
+        {
+          "alias": "دراجة أطفال",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "toy_type",
+          "label": "Toy type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Balance bike",
+            "Tricycle",
+            "Pedal car",
+            "Ride-on",
+            "Other"
+          ]
+        },
+        {
+          "key": "max_child_weight_kg",
+          "label": "Maximum child weight (kg)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "power",
+          "label": "Power",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Manual",
+            "Battery",
+            "Other"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Battery-powered ride-ons must state voltage and charger requirements; helmets are not included unless explicitly listed."
+      ],
+      "key": "ride-on-toys",
+      "parentKey": "toys-play",
+      "name": "Ride-On Toys",
+      "slug": "ride-on-toys",
+      "description": "Balance bikes, tricycles, pedal cars and ride-on toys for children. Excludes adult bicycles and motorised road vehicles.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "doll",
+          "locale": "en"
+        },
+        {
+          "alias": "teddy bear",
+          "locale": "en"
+        },
+        {
+          "alias": "soft toy",
+          "locale": "en"
+        },
+        {
+          "alias": "action figure",
+          "locale": "en"
+        },
+        {
+          "alias": "poupée",
+          "locale": "fr"
+        },
+        {
+          "alias": "peluche",
+          "locale": "fr"
+        },
+        {
+          "alias": "boneca",
+          "locale": "pt"
+        },
+        {
+          "alias": "peluche",
+          "locale": "pt"
+        },
+        {
+          "alias": "doli",
+          "locale": "sw"
+        },
+        {
+          "alias": "دمية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "toy_type",
+          "label": "Toy type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Doll",
+            "Action figure",
+            "Teddy bear",
+            "Plush toy",
+            "Other"
+          ]
+        },
+        {
+          "key": "height_cm",
+          "label": "Height (cm)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "recommended_age",
+          "label": "Recommended age",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "0-3",
+            "3-6",
+            "6-12",
+            "12+",
+            "Not stated"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "dolls-plush-toys",
+      "parentKey": "toys-play",
+      "name": "Dolls & Plush Toys",
+      "slug": "dolls-plush-toys",
+      "description": "Dolls, action figures, teddy bears and soft toys. Excludes video games, collectible display models and pet toys.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "sports-outdoors",
+      "parentKey": null,
+      "name": "Sports & Outdoors",
+      "slug": "sports-outdoors",
+      "description": "Fitness equipment, ball and racquet sports, camping gear and cycling. Excludes sportswear and footwear, which remain under Fashion & Accessories, and fitness services or coaching.",
+      "level": 0,
+      "isSelectable": false,
+      "showOnHomepage": true,
+      "sortOrder": 80
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "fitness-strength",
+      "parentKey": "sports-outdoors",
+      "name": "Fitness & Strength",
+      "slug": "fitness-strength",
+      "description": "Home gym equipment, free weights and exercise accessories. Excludes sportswear, gym memberships and commercial gym installations.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "dumbbells",
+          "locale": "en"
+        },
+        {
+          "alias": "barbell",
+          "locale": "en"
+        },
+        {
+          "alias": "kettlebell",
+          "locale": "en"
+        },
+        {
+          "alias": "weight plates",
+          "locale": "en"
+        },
+        {
+          "alias": "haltères",
+          "locale": "fr"
+        },
+        {
+          "alias": "barre de musculation",
+          "locale": "fr"
+        },
+        {
+          "alias": "halteres",
+          "locale": "pt"
+        },
+        {
+          "alias": "pesos de ginásio",
+          "locale": "pt"
+        },
+        {
+          "alias": "vyuma vya mazoezi",
+          "locale": "sw"
+        },
+        {
+          "alias": "أثقال رياضية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "equipment_type",
+          "label": "Equipment type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Dumbbell",
+            "Barbell",
+            "Kettlebell",
+            "Weight plate",
+            "Bench",
+            "Set",
+            "Other"
+          ]
+        },
+        {
+          "key": "total_weight_kg",
+          "label": "Total weight (kg)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "adjustable",
+          "label": "Adjustable",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Yes",
+            "No"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Actual total weight must be stated; nominal plate sizes alone are not sufficient."
+      ],
+      "key": "home-gym-weights",
+      "parentKey": "fitness-strength",
+      "name": "Home Gym & Weights",
+      "slug": "home-gym-weights",
+      "description": "Dumbbells, barbells, kettlebells, weight plates and benches for home training. Excludes cardio machines and commercial gym equipment.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "yoga mat",
+          "locale": "en"
+        },
+        {
+          "alias": "resistance bands",
+          "locale": "en"
+        },
+        {
+          "alias": "exercise ball",
+          "locale": "en"
+        },
+        {
+          "alias": "tapis de yoga",
+          "locale": "fr"
+        },
+        {
+          "alias": "bandes de résistance",
+          "locale": "fr"
+        },
+        {
+          "alias": "tapete de ioga",
+          "locale": "pt"
+        },
+        {
+          "alias": "bandas de resistência",
+          "locale": "pt"
+        },
+        {
+          "alias": "mkeka wa yoga",
+          "locale": "sw"
+        },
+        {
+          "alias": "سجادة يوغا",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "accessory_type",
+          "label": "Accessory type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Yoga mat",
+            "Resistance band",
+            "Exercise ball",
+            "Skipping rope",
+            "Other"
+          ]
+        },
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "PVC",
+            "TPE",
+            "Rubber",
+            "Fabric",
+            "Other"
+          ]
+        },
+        {
+          "key": "thickness_mm",
+          "label": "Thickness (mm)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "yoga-fitness-accessories",
+      "parentKey": "fitness-strength",
+      "name": "Yoga & Fitness Accessories",
+      "slug": "yoga-fitness-accessories",
+      "description": "Yoga mats, resistance bands, exercise balls, skipping ropes and small fitness accessories. Excludes weights, cardio machines and clothing.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "treadmill",
+          "locale": "en"
+        },
+        {
+          "alias": "exercise bike",
+          "locale": "en"
+        },
+        {
+          "alias": "rowing machine",
+          "locale": "en"
+        },
+        {
+          "alias": "elliptical trainer",
+          "locale": "en"
+        },
+        {
+          "alias": "tapis de course",
+          "locale": "fr"
+        },
+        {
+          "alias": "vélo d'appartement",
+          "locale": "fr"
+        },
+        {
+          "alias": "passadeira de corrida",
+          "locale": "pt"
+        },
+        {
+          "alias": "bicicleta estática",
+          "locale": "pt"
+        },
+        {
+          "alias": "mashine ya kukimbia",
+          "locale": "sw"
+        },
+        {
+          "alias": "جهاز مشي رياضي",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "machine_type",
+          "label": "Machine type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Treadmill",
+            "Exercise bike",
+            "Rowing machine",
+            "Elliptical",
+            "Other"
+          ]
+        },
+        {
+          "key": "max_user_weight_kg",
+          "label": "Maximum user weight (kg)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "power_source",
+          "label": "Power source",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Manual",
+            "Mains",
+            "Battery",
+            "Other"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Assembly requirements and maximum user weight must be stated. Electrical machines require a compatible plug and voltage disclosure."
+      ],
+      "key": "cardio-machines",
+      "parentKey": "fitness-strength",
+      "name": "Cardio Machines",
+      "slug": "cardio-machines",
+      "description": "Treadmills, exercise bikes, rowing machines and elliptical trainers for home use. Excludes commercial gym installations and outdoor bicycles.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "ball-racquet-sports",
+      "parentKey": "sports-outdoors",
+      "name": "Ball & Racquet Sports",
+      "slug": "ball-racquet-sports",
+      "description": "Football, basketball, tennis, badminton and table-tennis equipment. Excludes sportswear, footwear and spectator merchandise.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "football",
+          "locale": "en"
+        },
+        {
+          "alias": "soccer ball",
+          "locale": "en"
+        },
+        {
+          "alias": "basketball",
+          "locale": "en"
+        },
+        {
+          "alias": "goal posts",
+          "locale": "en"
+        },
+        {
+          "alias": "ballon de football",
+          "locale": "fr"
+        },
+        {
+          "alias": "ballon de basket",
+          "locale": "fr"
+        },
+        {
+          "alias": "bola de futebol",
+          "locale": "pt"
+        },
+        {
+          "alias": "bola de basquetebol",
+          "locale": "pt"
+        },
+        {
+          "alias": "mpira wa miguu",
+          "locale": "sw"
+        },
+        {
+          "alias": "كرة قدم",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "equipment_type",
+          "label": "Equipment type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Football",
+            "Basketball",
+            "Goal post",
+            "Net",
+            "Pump",
+            "Training aid",
+            "Other"
+          ]
+        },
+        {
+          "key": "size",
+          "label": "Size",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Size 3",
+            "Size 4",
+            "Size 5",
+            "Size 6",
+            "Size 7",
+            "Other"
+          ]
+        },
+        {
+          "key": "surface",
+          "label": "Surface",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Indoor",
+            "Outdoor",
+            "All-weather",
+            "Not stated"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "football-basketball-equipment",
+      "parentKey": "ball-racquet-sports",
+      "name": "Football & Basketball",
+      "slug": "football-basketball-equipment",
+      "description": "Footballs, basketballs, goal posts, nets, pumps and training equipment. Excludes sportswear, footwear and stadium installations.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "tennis racket",
+          "locale": "en"
+        },
+        {
+          "alias": "badminton",
+          "locale": "en"
+        },
+        {
+          "alias": "table tennis",
+          "locale": "en"
+        },
+        {
+          "alias": "squash racket",
+          "locale": "en"
+        },
+        {
+          "alias": "raquette de tennis",
+          "locale": "fr"
+        },
+        {
+          "alias": "badminton",
+          "locale": "fr"
+        },
+        {
+          "alias": "tenis de mesa",
+          "locale": "pt"
+        },
+        {
+          "alias": "raquete de ténis",
+          "locale": "pt"
+        },
+        {
+          "alias": "raketi ya tenisi",
+          "locale": "sw"
+        },
+        {
+          "alias": "مضرب تنس",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "sport",
+          "label": "Sport",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Tennis",
+            "Badminton",
+            "Squash",
+            "Table tennis",
+            "Other"
+          ]
+        },
+        {
+          "key": "item_type",
+          "label": "Item type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Racket",
+            "Bat",
+            "Net",
+            "Ball / shuttlecock",
+            "Accessory",
+            "Other"
+          ]
+        },
+        {
+          "key": "grip_size",
+          "label": "Grip size",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "racquet-sports-equipment",
+      "parentKey": "ball-racquet-sports",
+      "name": "Racquet Sports",
+      "slug": "racquet-sports-equipment",
+      "description": "Tennis, badminton, squash and table-tennis racquets, bats, nets and balls. Excludes court construction and apparel.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "outdoor-camping",
+      "parentKey": "sports-outdoors",
+      "name": "Outdoor & Camping",
+      "slug": "outdoor-camping",
+      "description": "Tents, sleeping gear, camp cooking and outdoor accessories. Excludes hiking clothing and footwear, and vehicle camping equipment.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "tent",
+          "locale": "en"
+        },
+        {
+          "alias": "sleeping bag",
+          "locale": "en"
+        },
+        {
+          "alias": "camping chair",
+          "locale": "en"
+        },
+        {
+          "alias": "tente de camping",
+          "locale": "fr"
+        },
+        {
+          "alias": "sac de couchage",
+          "locale": "fr"
+        },
+        {
+          "alias": "tenda de campismo",
+          "locale": "pt"
+        },
+        {
+          "alias": "saco-cama",
+          "locale": "pt"
+        },
+        {
+          "alias": "hema ya kambi",
+          "locale": "sw"
+        },
+        {
+          "alias": "خيمة تخييم",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "item_type",
+          "label": "Item type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Tent",
+            "Sleeping bag",
+            "Sleeping mat",
+            "Camping chair",
+            "Other"
+          ]
+        },
+        {
+          "key": "capacity_persons",
+          "label": "Capacity (persons)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "season_rating",
+          "label": "Season rating",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "1-season",
+            "2-season",
+            "3-season",
+            "4-season",
+            "Not stated"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "tents-sleeping-bags",
+      "parentKey": "outdoor-camping",
+      "name": "Tents & Sleeping Gear",
+      "slug": "tents-sleeping-bags",
+      "description": "Tents, sleeping bags, sleeping mats and camping furniture. Excludes awnings and vehicle roof tents.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "camping stove",
+          "locale": "en"
+        },
+        {
+          "alias": "cool box",
+          "locale": "en"
+        },
+        {
+          "alias": "flask",
+          "locale": "en"
+        },
+        {
+          "alias": "réchaud de camping",
+          "locale": "fr"
+        },
+        {
+          "alias": "glacière",
+          "locale": "fr"
+        },
+        {
+          "alias": "fogão de campismo",
+          "locale": "pt"
+        },
+        {
+          "alias": "geleira portátil",
+          "locale": "pt"
+        },
+        {
+          "alias": "jiko la kambi",
+          "locale": "sw"
+        },
+        {
+          "alias": "موقد تخييم",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "item_type",
+          "label": "Item type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Stove",
+            "Cool box",
+            "Flask",
+            "Water container",
+            "Outdoor cookware",
+            "Other"
+          ]
+        },
+        {
+          "key": "fuel_type",
+          "label": "Fuel type",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Gas",
+            "Petrol",
+            "Electric",
+            "Charcoal",
+            "Not applicable"
+          ]
+        },
+        {
+          "key": "capacity_litres",
+          "label": "Capacity (litres)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Fuel is not included unless explicitly listed. Gas canisters must state compatibility and safety markings."
+      ],
+      "key": "camping-cooking-coolers",
+      "parentKey": "outdoor-camping",
+      "name": "Camping Cooking & Coolers",
+      "slug": "camping-cooking-coolers",
+      "description": "Portable camping stoves, cool boxes, flasks, water containers and outdoor cookware. Excludes home kitchen appliances and fuel sold separately.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "cycling-scooters",
+      "parentKey": "sports-outdoors",
+      "name": "Cycling & Scooters",
+      "slug": "cycling-scooters",
+      "description": "Bicycles, cycling helmets, protection and cycling accessories. Excludes motorcycles and motorised road vehicles, which belong to Automotive & Motorcycle.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "bicycle",
+          "locale": "en"
+        },
+        {
+          "alias": "bike",
+          "locale": "en"
+        },
+        {
+          "alias": "mountain bike",
+          "locale": "en"
+        },
+        {
+          "alias": "road bike",
+          "locale": "en"
+        },
+        {
+          "alias": "vélo",
+          "locale": "fr"
+        },
+        {
+          "alias": "vélo tout-terrain",
+          "locale": "fr"
+        },
+        {
+          "alias": "bicicleta",
+          "locale": "pt"
+        },
+        {
+          "alias": "bicicleta de montanha",
+          "locale": "pt"
+        },
+        {
+          "alias": "baiskeli",
+          "locale": "sw"
+        },
+        {
+          "alias": "دراجة هوائية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "bike_type",
+          "label": "Bike type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Mountain",
+            "Road",
+            "Hybrid",
+            "Children's",
+            "Folding",
+            "Other"
+          ]
+        },
+        {
+          "key": "wheel_size_inches",
+          "label": "Wheel size (inches)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "frame_size_cm",
+          "label": "Frame size (cm)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "condition",
+          "label": "Condition",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "New",
+            "Used"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Used bicycles must disclose frame damage, brake condition and wheel trueness."
+      ],
+      "key": "bicycles",
+      "parentKey": "cycling-scooters",
+      "name": "Bicycles",
+      "slug": "bicycles",
+      "description": "Mountain, road, hybrid and children's bicycles sold complete. Excludes motorcycle parts, electric scooters and ride-on toys for toddlers.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "cycling helmet",
+          "locale": "en"
+        },
+        {
+          "alias": "knee pads",
+          "locale": "en"
+        },
+        {
+          "alias": "elbow pads",
+          "locale": "en"
+        },
+        {
+          "alias": "casque de vélo",
+          "locale": "fr"
+        },
+        {
+          "alias": "genouillères",
+          "locale": "fr"
+        },
+        {
+          "alias": "capacete de bicicleta",
+          "locale": "pt"
+        },
+        {
+          "alias": "joelheiras",
+          "locale": "pt"
+        },
+        {
+          "alias": "kofia ya baiskeli",
+          "locale": "sw"
+        },
+        {
+          "alias": "خوذة دراجة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "protection_type",
+          "label": "Protection type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Helmet",
+            "Knee pad",
+            "Elbow pad",
+            "Reflective vest",
+            "Other"
+          ]
+        },
+        {
+          "key": "size",
+          "label": "Size",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "certification",
+          "label": "Certification / standards marking",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": true,
+          "note": "Publishable, but helmet listings must state a recognised safety-standard marking and must not offer a helmet with unknown crash history."
+        }
+      ],
+      "notes": [
+        "Safety equipment: a recognised standards marking is mandatory in the listing description."
+      ],
+      "key": "cycling-helmets-protection",
+      "parentKey": "cycling-scooters",
+      "name": "Cycling Helmets & Protection",
+      "slug": "cycling-helmets-protection",
+      "description": "Cycling helmets, knee pads, elbow pads and reflective protection. Excludes motorcycle helmets and general workwear.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "bike pump",
+          "locale": "en"
+        },
+        {
+          "alias": "bike lock",
+          "locale": "en"
+        },
+        {
+          "alias": "bicycle lights",
+          "locale": "en"
+        },
+        {
+          "alias": "bike saddle",
+          "locale": "en"
+        },
+        {
+          "alias": "antivol vélo",
+          "locale": "fr"
+        },
+        {
+          "alias": "pompe à vélo",
+          "locale": "fr"
+        },
+        {
+          "alias": "cadeado de bicicleta",
+          "locale": "pt"
+        },
+        {
+          "alias": "bomba de ar para bicicleta",
+          "locale": "pt"
+        },
+        {
+          "alias": "kufuli ya baiskeli",
+          "locale": "sw"
+        },
+        {
+          "alias": "ملحقات الدراجة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "accessory_type",
+          "label": "Accessory type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Pump",
+            "Lock",
+            "Light",
+            "Saddle",
+            "Rack",
+            "Repair kit",
+            "Other"
+          ]
+        },
+        {
+          "key": "compatible_bike_type",
+          "label": "Compatible bike type",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "cycling-accessories",
+      "parentKey": "cycling-scooters",
+      "name": "Cycling Accessories",
+      "slug": "cycling-accessories",
+      "description": "Bike pumps, locks, lights, saddles, racks and repair kits. Excludes complete bicycles and motorcycle accessories.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "automotive-motorcycle",
+      "parentKey": null,
+      "name": "Automotive & Motorcycle",
+      "slug": "automotive-motorcycle",
+      "description": "Car and motorcycle parts, riding protection, care products and in-car accessories. Excludes complete vehicles, vehicle sales, ride-hailing services and generators, which belong to Power & Solar.",
+      "level": 0,
+      "isSelectable": false,
+      "showOnHomepage": true,
+      "sortOrder": 90
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "car-parts",
+      "parentKey": "automotive-motorcycle",
+      "name": "Car Parts",
+      "slug": "car-parts",
+      "description": "Mechanical, electrical and body parts for passenger cars and light commercial vehicles. Excludes complete vehicles, motorcycle parts and heavy-truck components.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "brake pads",
+          "locale": "en"
+        },
+        {
+          "alias": "brake discs",
+          "locale": "en"
+        },
+        {
+          "alias": "brake shoes",
+          "locale": "en"
+        },
+        {
+          "alias": "brake fluid",
+          "locale": "en"
+        },
+        {
+          "alias": "plaquettes de frein",
+          "locale": "fr"
+        },
+        {
+          "alias": "disques de frein",
+          "locale": "fr"
+        },
+        {
+          "alias": "pastilhas de travão",
+          "locale": "pt"
+        },
+        {
+          "alias": "discos de travão",
+          "locale": "pt"
+        },
+        {
+          "alias": "pedi za breki",
+          "locale": "sw"
+        },
+        {
+          "alias": "فحمات فرامل",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "part_type",
+          "label": "Part type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Brake pad",
+            "Brake disc",
+            "Brake shoe",
+            "Drum",
+            "Calliper",
+            "Brake fluid",
+            "Brake line",
+            "Other"
+          ]
+        },
+        {
+          "key": "vehicle_compatibility",
+          "label": "Vehicle compatibility",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "part_number",
+          "label": "Part number",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "certification",
+          "label": "Certification / standards marking",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Braking components are safety-critical. Publishing in Nigeria requires reviewer verification of vehicle compatibility and a recognised standards marking; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Used brake parts are not permitted."
+      ],
+      "key": "brake-system-parts",
+      "parentKey": "car-parts",
+      "name": "Brake System Parts",
+      "slug": "brake-system-parts",
+      "description": "Brake pads, discs, shoes, drums, callipers, brake fluid and brake lines. Excludes tyres and suspension components.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "shock absorbers",
+          "locale": "en"
+        },
+        {
+          "alias": "control arms",
+          "locale": "en"
+        },
+        {
+          "alias": "tie rod",
+          "locale": "en"
+        },
+        {
+          "alias": "ball joint",
+          "locale": "en"
+        },
+        {
+          "alias": "amortisseurs",
+          "locale": "fr"
+        },
+        {
+          "alias": "rotules de direction",
+          "locale": "fr"
+        },
+        {
+          "alias": "amortecedores",
+          "locale": "pt"
+        },
+        {
+          "alias": "braços de suspensão",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifaa vya kusimamisha gari",
+          "locale": "sw"
+        },
+        {
+          "alias": "قطع نظام التعليق",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "part_type",
+          "label": "Part type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Shock absorber",
+            "Strut",
+            "Control arm",
+            "Ball joint",
+            "Tie rod",
+            "Steering rack",
+            "Other"
+          ]
+        },
+        {
+          "key": "vehicle_compatibility",
+          "label": "Vehicle compatibility",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "part_number",
+          "label": "Part number",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Suspension and steering components are safety-critical. Publishing in Nigeria requires reviewer verification of compatibility and standards marking; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Used safety-critical steering parts are not permitted."
+      ],
+      "key": "suspension-steering-parts",
+      "parentKey": "car-parts",
+      "name": "Suspension & Steering Parts",
+      "slug": "suspension-steering-parts",
+      "description": "Shock absorbers, struts, control arms, ball joints, tie rods and steering racks. Excludes brake components, tyres and wheels.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "tyre",
+          "locale": "en"
+        },
+        {
+          "alias": "tire",
+          "locale": "en"
+        },
+        {
+          "alias": "inner tube",
+          "locale": "en"
+        },
+        {
+          "alias": "pneu",
+          "locale": "fr"
+        },
+        {
+          "alias": "chambre à air",
+          "locale": "fr"
+        },
+        {
+          "alias": "pneu",
+          "locale": "pt"
+        },
+        {
+          "alias": "câmara de ar",
+          "locale": "pt"
+        },
+        {
+          "alias": "tairi",
+          "locale": "sw"
+        },
+        {
+          "alias": "إطار سيارة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Tyre",
+            "Inner tube",
+            "Valve",
+            "Other"
+          ]
+        },
+        {
+          "key": "tyre_size",
+          "label": "Tyre size",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "load_index",
+          "label": "Load index",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "condition",
+          "label": "Condition",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "New",
+            "Used"
+          ]
+        },
+        {
+          "key": "tread_depth_mm",
+          "label": "Tread depth (mm)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Tyres are safety-critical. Publishing in Nigeria requires reviewer verification of size, load rating and remaining tread; retreaded or damaged tyres are not permitted. This leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Used tyres must state exact tread depth and inspection result."
+      ],
+      "key": "tyres-tubes",
+      "parentKey": "car-parts",
+      "name": "Tyres & Tubes",
+      "slug": "tyres-tubes",
+      "description": "Passenger-car and light-truck tyres, inner tubes and wheel valves. Excludes motorcycle tyres and complete wheels with damaged rims.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "oil filter",
+          "locale": "en"
+        },
+        {
+          "alias": "air filter",
+          "locale": "en"
+        },
+        {
+          "alias": "engine oil",
+          "locale": "en"
+        },
+        {
+          "alias": "coolant",
+          "locale": "en"
+        },
+        {
+          "alias": "filtre à huile",
+          "locale": "fr"
+        },
+        {
+          "alias": "huile moteur",
+          "locale": "fr"
+        },
+        {
+          "alias": "filtro de óleo",
+          "locale": "pt"
+        },
+        {
+          "alias": "óleo do motor",
+          "locale": "pt"
+        },
+        {
+          "alias": "chujio cha mafuta",
+          "locale": "sw"
+        },
+        {
+          "alias": "فلاتر المحرك",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Oil filter",
+            "Air filter",
+            "Fuel filter",
+            "Engine oil",
+            "Coolant",
+            "Transmission fluid",
+            "Other"
+          ]
+        },
+        {
+          "key": "vehicle_compatibility",
+          "label": "Vehicle compatibility",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "volume_litres",
+          "label": "Volume (litres)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "specification",
+          "label": "Specification / viscosity grade",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Fluids must state the specification grade. Hazard symbols and safe-handling information are required for chemical products."
+      ],
+      "key": "engine-filters-fluids",
+      "parentKey": "car-parts",
+      "name": "Engine Filters & Fluids",
+      "slug": "engine-filters-fluids",
+      "description": "Oil, air and fuel filters, engine oil, coolant and transmission fluid. Excludes brake fluid, fuel sold as a commodity and industrial lubricants.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "car battery",
+          "locale": "en"
+        },
+        {
+          "alias": "headlight",
+          "locale": "en"
+        },
+        {
+          "alias": "alternator",
+          "locale": "en"
+        },
+        {
+          "alias": "spark plug",
+          "locale": "en"
+        },
+        {
+          "alias": "batterie de voiture",
+          "locale": "fr"
+        },
+        {
+          "alias": "phare de voiture",
+          "locale": "fr"
+        },
+        {
+          "alias": "bateria de automóvel",
+          "locale": "pt"
+        },
+        {
+          "alias": "farol de carro",
+          "locale": "pt"
+        },
+        {
+          "alias": "betri ya gari",
+          "locale": "sw"
+        },
+        {
+          "alias": "كهرباء السيارة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "part_type",
+          "label": "Part type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Battery",
+            "Alternator",
+            "Starter",
+            "Bulb",
+            "Headlamp",
+            "Wiring",
+            "Other"
+          ]
+        },
+        {
+          "key": "vehicle_compatibility",
+          "label": "Vehicle compatibility",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "voltage",
+          "label": "Voltage / capacity",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Batteries must state voltage and capacity. Used batteries must disclose age and test result."
+      ],
+      "key": "auto-electrical-lighting",
+      "parentKey": "car-parts",
+      "name": "Auto Electrical & Lighting",
+      "slug": "auto-electrical-lighting",
+      "description": "Car batteries, alternators, starters, bulbs, headlamps and wiring. Excludes in-car entertainment, dash cameras and vehicle audio upgrades.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 50
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "bumper",
+          "locale": "en"
+        },
+        {
+          "alias": "side mirror",
+          "locale": "en"
+        },
+        {
+          "alias": "windscreen wiper",
+          "locale": "en"
+        },
+        {
+          "alias": "grille",
+          "locale": "en"
+        },
+        {
+          "alias": "pare-chocs",
+          "locale": "fr"
+        },
+        {
+          "alias": "rétroviseur",
+          "locale": "fr"
+        },
+        {
+          "alias": "para-choques",
+          "locale": "pt"
+        },
+        {
+          "alias": "espelho retrovisor",
+          "locale": "pt"
+        },
+        {
+          "alias": "bampa ya gari",
+          "locale": "sw"
+        },
+        {
+          "alias": "قطع هيكل السيارة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "part_type",
+          "label": "Part type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Bumper",
+            "Mirror",
+            "Grille",
+            "Wiper",
+            "Door",
+            "Trim",
+            "Other"
+          ]
+        },
+        {
+          "key": "vehicle_compatibility",
+          "label": "Vehicle compatibility",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "condition",
+          "label": "Condition",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "New",
+            "Used"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "body-exterior-parts",
+      "parentKey": "car-parts",
+      "name": "Body & Exterior Parts",
+      "slug": "body-exterior-parts",
+      "description": "Bumpers, mirrors, grilles, wipers, doors and exterior trim. Excludes structural chassis repair parts and paint, which belongs to Paints & Coatings.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 60
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "motorcycle-parts",
+      "parentKey": "automotive-motorcycle",
+      "name": "Motorcycle Parts & Gear",
+      "slug": "motorcycle-parts",
+      "description": "Motorcycle mechanical parts, tyres, helmets and riding protection. Excludes complete motorcycles, bicycle parts and car parts.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "motorcycle brake pads",
+          "locale": "en"
+        },
+        {
+          "alias": "motorcycle brake disc",
+          "locale": "en"
+        },
+        {
+          "alias": "plaquettes de frein moto",
+          "locale": "fr"
+        },
+        {
+          "alias": "disque de frein moto",
+          "locale": "fr"
+        },
+        {
+          "alias": "pastilhas de travão para mota",
+          "locale": "pt"
+        },
+        {
+          "alias": "travão de mota",
+          "locale": "pt"
+        },
+        {
+          "alias": "breki za pikipiki",
+          "locale": "sw"
+        },
+        {
+          "alias": "فرامل دراجة نارية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "part_type",
+          "label": "Part type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Brake pad",
+            "Brake disc",
+            "Brake shoe",
+            "Brake cable",
+            "Brake fluid",
+            "Other"
+          ]
+        },
+        {
+          "key": "motorcycle_compatibility",
+          "label": "Motorcycle compatibility",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "part_number",
+          "label": "Part number",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Motorcycle braking components are safety-critical. Publishing in Nigeria requires reviewer verification of compatibility and standards marking; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Used brake components are not permitted."
+      ],
+      "key": "motorcycle-brakes-safety",
+      "parentKey": "motorcycle-parts",
+      "name": "Motorcycle Brakes",
+      "slug": "motorcycle-brakes-safety",
+      "description": "Motorcycle brake pads, discs, shoes, cables and brake fluid. Excludes car brake parts and motorcycle engine components.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "motorcycle tyre",
+          "locale": "en"
+        },
+        {
+          "alias": "motorcycle rim",
+          "locale": "en"
+        },
+        {
+          "alias": "pneu de moto",
+          "locale": "fr"
+        },
+        {
+          "alias": "jante de moto",
+          "locale": "fr"
+        },
+        {
+          "alias": "pneu de mota",
+          "locale": "pt"
+        },
+        {
+          "alias": "jante de mota",
+          "locale": "pt"
+        },
+        {
+          "alias": "tairi la pikipiki",
+          "locale": "sw"
+        },
+        {
+          "alias": "إطار دراجة نارية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Tyre",
+            "Inner tube",
+            "Rim",
+            "Spoke set",
+            "Other"
+          ]
+        },
+        {
+          "key": "tyre_size",
+          "label": "Tyre size",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "condition",
+          "label": "Condition",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "New",
+            "Used"
+          ]
+        },
+        {
+          "key": "tread_depth_mm",
+          "label": "Tread depth (mm)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Motorcycle tyres are safety-critical. Publishing in Nigeria requires reviewer verification of size and remaining tread; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Used tyres must state exact tread depth."
+      ],
+      "key": "motorcycle-tyres-wheels",
+      "parentKey": "motorcycle-parts",
+      "name": "Motorcycle Tyres & Wheels",
+      "slug": "motorcycle-tyres-wheels",
+      "description": "Motorcycle tyres, inner tubes, rims and spokes. Excludes car tyres and complete motorcycles.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "motorcycle chain",
+          "locale": "en"
+        },
+        {
+          "alias": "sprocket",
+          "locale": "en"
+        },
+        {
+          "alias": "piston kit",
+          "locale": "en"
+        },
+        {
+          "alias": "clutch plate",
+          "locale": "en"
+        },
+        {
+          "alias": "chaîne de moto",
+          "locale": "fr"
+        },
+        {
+          "alias": "pignon de moto",
+          "locale": "fr"
+        },
+        {
+          "alias": "corrente de mota",
+          "locale": "pt"
+        },
+        {
+          "alias": "kit de pistão",
+          "locale": "pt"
+        },
+        {
+          "alias": "mnyororo wa pikipiki",
+          "locale": "sw"
+        },
+        {
+          "alias": "قطع محرك الدراجة النارية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "part_type",
+          "label": "Part type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Chain",
+            "Sprocket",
+            "Piston kit",
+            "Clutch plate",
+            "Carburettor",
+            "Gasket",
+            "Other"
+          ]
+        },
+        {
+          "key": "motorcycle_compatibility",
+          "label": "Motorcycle compatibility",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "part_number",
+          "label": "Part number",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "motorcycle-engine-drive-parts",
+      "parentKey": "motorcycle-parts",
+      "name": "Motorcycle Engine & Drive Parts",
+      "slug": "motorcycle-engine-drive-parts",
+      "description": "Chains, sprockets, pistons, clutch plates, carburettors and engine gaskets. Excludes brake components and complete engines.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "motorcycle helmet",
+          "locale": "en"
+        },
+        {
+          "alias": "riding gloves",
+          "locale": "en"
+        },
+        {
+          "alias": "riding jacket",
+          "locale": "en"
+        },
+        {
+          "alias": "casque de moto",
+          "locale": "fr"
+        },
+        {
+          "alias": "gants de moto",
+          "locale": "fr"
+        },
+        {
+          "alias": "capacete de mota",
+          "locale": "pt"
+        },
+        {
+          "alias": "luvas de mota",
+          "locale": "pt"
+        },
+        {
+          "alias": "kofia ya pikipiki",
+          "locale": "sw"
+        },
+        {
+          "alias": "خوذة دراجة نارية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "item_type",
+          "label": "Item type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Helmet",
+            "Gloves",
+            "Jacket",
+            "Boots",
+            "Reflective protection",
+            "Other"
+          ]
+        },
+        {
+          "key": "size",
+          "label": "Size",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "certification",
+          "label": "Certification / standards marking",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Motorcycle helmets and protective gear are safety equipment. Publishing in Nigeria requires reviewer verification of a recognised standards marking and the absence of crash damage; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Helmets with unknown crash history are not permitted."
+      ],
+      "key": "motorcycle-helmets-protection",
+      "parentKey": "motorcycle-parts",
+      "name": "Motorcycle Helmets & Riding Gear",
+      "slug": "motorcycle-helmets-protection",
+      "description": "Motorcycle helmets, riding gloves, jackets, boots and reflective protection. Excludes bicycle helmets and general workwear.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "car-care-accessories",
+      "parentKey": "automotive-motorcycle",
+      "name": "Car Care & Accessories",
+      "slug": "car-care-accessories",
+      "description": "Cleaning and care products, interior accessories and in-car electronics. Excludes mechanical parts, tyres and vehicle audio systems requiring professional installation.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "car shampoo",
+          "locale": "en"
+        },
+        {
+          "alias": "car wax",
+          "locale": "en"
+        },
+        {
+          "alias": "car polish",
+          "locale": "en"
+        },
+        {
+          "alias": "microfibre cloth",
+          "locale": "en"
+        },
+        {
+          "alias": "shampooing auto",
+          "locale": "fr"
+        },
+        {
+          "alias": "cire de voiture",
+          "locale": "fr"
+        },
+        {
+          "alias": "champô automóvel",
+          "locale": "pt"
+        },
+        {
+          "alias": "cera para carro",
+          "locale": "pt"
+        },
+        {
+          "alias": "sabuni ya gari",
+          "locale": "sw"
+        },
+        {
+          "alias": "منتجات تنظيف السيارات",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Shampoo",
+            "Wax",
+            "Polish",
+            "Degreaser",
+            "Microfibre cloth",
+            "Washing accessory",
+            "Other"
+          ]
+        },
+        {
+          "key": "volume_ml",
+          "label": "Volume (ml)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "surface",
+          "label": "Surface",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Paint",
+            "Glass",
+            "Interior",
+            "Wheels",
+            "All surfaces"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Chemical products must state hazard symbols and safe-handling information."
+      ],
+      "key": "car-care-cleaning",
+      "parentKey": "car-care-accessories",
+      "name": "Car Care & Cleaning",
+      "slug": "car-care-cleaning",
+      "description": "Car shampoo, wax, polish, degreasers, microfibre cloths and washing accessories. Excludes industrial workshop chemicals and paint refinishing.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "seat cover",
+          "locale": "en"
+        },
+        {
+          "alias": "floor mats",
+          "locale": "en"
+        },
+        {
+          "alias": "steering cover",
+          "locale": "en"
+        },
+        {
+          "alias": "housse de siège",
+          "locale": "fr"
+        },
+        {
+          "alias": "tapis de voiture",
+          "locale": "fr"
+        },
+        {
+          "alias": "capas de assentos",
+          "locale": "pt"
+        },
+        {
+          "alias": "tapetes de carro",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifuniko vya viti",
+          "locale": "sw"
+        },
+        {
+          "alias": "إكسسوارات داخلية للسيارة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "item_type",
+          "label": "Item type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Seat cover",
+            "Floor mat",
+            "Steering cover",
+            "Sunshade",
+            "Organiser",
+            "Other"
+          ]
+        },
+        {
+          "key": "vehicle_compatibility",
+          "label": "Vehicle compatibility",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Seat covers must not obstruct airbags; the seller must state airbag compatibility."
+      ],
+      "key": "car-interior-accessories",
+      "parentKey": "car-care-accessories",
+      "name": "Car Interior Accessories",
+      "slug": "car-interior-accessories",
+      "description": "Seat covers, floor mats, steering covers, sunshades and organisers. Excludes in-car electronics and complete seat replacement.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "dash camera",
+          "locale": "en"
+        },
+        {
+          "alias": "car charger",
+          "locale": "en"
+        },
+        {
+          "alias": "reverse camera",
+          "locale": "en"
+        },
+        {
+          "alias": "car stereo",
+          "locale": "en"
+        },
+        {
+          "alias": "caméra de tableau de bord",
+          "locale": "fr"
+        },
+        {
+          "alias": "chargeur de voiture",
+          "locale": "fr"
+        },
+        {
+          "alias": "câmara de tablier",
+          "locale": "pt"
+        },
+        {
+          "alias": "carregador de carro",
+          "locale": "pt"
+        },
+        {
+          "alias": "kamera ya gari",
+          "locale": "sw"
+        },
+        {
+          "alias": "إلكترونيات السيارة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "device_type",
+          "label": "Device type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Dash camera",
+            "Reverse camera",
+            "Charger",
+            "Phone holder",
+            "Portable stereo",
+            "Other"
+          ]
+        },
+        {
+          "key": "power_source",
+          "label": "Power source",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "12V socket",
+            "USB",
+            "Hardwired",
+            "Battery",
+            "Other"
+          ]
+        },
+        {
+          "key": "vehicle_compatibility",
+          "label": "Vehicle compatibility",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "in-car-electronics",
+      "parentKey": "car-care-accessories",
+      "name": "In-Car Electronics",
+      "slug": "in-car-electronics",
+      "description": "Dash cameras, reverse cameras, car chargers, phone holders and portable stereos. Excludes engine electrics and professionally installed audio systems.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "tools-building",
+      "parentKey": null,
+      "name": "Tools & Building Materials",
+      "slug": "tools-building-materials",
+      "description": "Power tools, hand tools, construction materials and workplace safety equipment. Excludes farm tools (Agriculture & Business), kitchen appliances and industrial production machinery.",
+      "level": 0,
+      "isSelectable": false,
+      "showOnHomepage": true,
+      "sortOrder": 100
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "power-tools",
+      "parentKey": "tools-building",
+      "name": "Power Tools",
+      "slug": "power-tools",
+      "description": "Electric and battery-powered drills, grinders, saws and planers. Excludes industrial production machinery and petrol-powered garden equipment.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "drill",
+          "locale": "en"
+        },
+        {
+          "alias": "impact driver",
+          "locale": "en"
+        },
+        {
+          "alias": "cordless drill",
+          "locale": "en"
+        },
+        {
+          "alias": "perceuse",
+          "locale": "fr"
+        },
+        {
+          "alias": "visseuse",
+          "locale": "fr"
+        },
+        {
+          "alias": "berbequim",
+          "locale": "pt"
+        },
+        {
+          "alias": "aparafusadora",
+          "locale": "pt"
+        },
+        {
+          "alias": "drili",
+          "locale": "sw"
+        },
+        {
+          "alias": "مثقاب كهربائي",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "tool_type",
+          "label": "Tool type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Drill",
+            "Impact driver",
+            "Hammer drill",
+            "Drill bit set",
+            "Other"
+          ]
+        },
+        {
+          "key": "power_source",
+          "label": "Power source",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Corded electric",
+            "Battery",
+            "Other"
+          ]
+        },
+        {
+          "key": "voltage",
+          "label": "Voltage / power rating",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "battery_included",
+          "label": "Battery included",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Yes",
+            "No",
+            "Not applicable"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Battery platform and whether a battery or charger is included must be stated explicitly."
+      ],
+      "key": "drills-drivers",
+      "parentKey": "power-tools",
+      "name": "Drills & Drivers",
+      "slug": "drills-drivers",
+      "description": "Corded and cordless drills, impact drivers, hammer drills and drill bit sets. Excludes rotary hammers sold for industrial demolition and bench drills.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "angle grinder",
+          "locale": "en"
+        },
+        {
+          "alias": "cut-off saw",
+          "locale": "en"
+        },
+        {
+          "alias": "grinding disc",
+          "locale": "en"
+        },
+        {
+          "alias": "meuleuse d'angle",
+          "locale": "fr"
+        },
+        {
+          "alias": "disque à tronçonner",
+          "locale": "fr"
+        },
+        {
+          "alias": "rebarbadora",
+          "locale": "pt"
+        },
+        {
+          "alias": "disco de corte",
+          "locale": "pt"
+        },
+        {
+          "alias": "mashine ya kusaga",
+          "locale": "sw"
+        },
+        {
+          "alias": "جلاخة زاوية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "tool_type",
+          "label": "Tool type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Angle grinder",
+            "Bench grinder",
+            "Cut-off machine",
+            "Cutting disc",
+            "Other"
+          ]
+        },
+        {
+          "key": "power_source",
+          "label": "Power source",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Corded electric",
+            "Battery",
+            "Other"
+          ]
+        },
+        {
+          "key": "disc_diameter_mm",
+          "label": "Disc diameter (mm)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Disc maximum speed must match the tool rating; eye and hearing protection requirements must be stated."
+      ],
+      "key": "grinders-cutters",
+      "parentKey": "power-tools",
+      "name": "Grinders & Cutters",
+      "slug": "grinders-cutters",
+      "description": "Angle grinders, bench grinders, cut-off machines and cutting discs. Excludes industrial fixed machinery and welding equipment.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "circular saw",
+          "locale": "en"
+        },
+        {
+          "alias": "jigsaw",
+          "locale": "en"
+        },
+        {
+          "alias": "planer",
+          "locale": "en"
+        },
+        {
+          "alias": "mitre saw",
+          "locale": "en"
+        },
+        {
+          "alias": "scie circulaire",
+          "locale": "fr"
+        },
+        {
+          "alias": "scie sauteuse",
+          "locale": "fr"
+        },
+        {
+          "alias": "serra circular",
+          "locale": "pt"
+        },
+        {
+          "alias": "serra tico-tico",
+          "locale": "pt"
+        },
+        {
+          "alias": "msumeno wa umeme",
+          "locale": "sw"
+        },
+        {
+          "alias": "منشار كهربائي",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "tool_type",
+          "label": "Tool type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Circular saw",
+            "Jigsaw",
+            "Mitre saw",
+            "Reciprocating saw",
+            "Planer",
+            "Other"
+          ]
+        },
+        {
+          "key": "power_source",
+          "label": "Power source",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Corded electric",
+            "Battery",
+            "Other"
+          ]
+        },
+        {
+          "key": "blade_diameter_mm",
+          "label": "Blade diameter (mm)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "saws-planers",
+      "parentKey": "power-tools",
+      "name": "Saws & Planers",
+      "slug": "saws-planers",
+      "description": "Circular saws, jigsaws, mitre saws, reciprocating saws and planers. Excludes chainsaws and industrial sawmill equipment.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "hand-tools",
+      "parentKey": "tools-building",
+      "name": "Hand Tools",
+      "slug": "hand-tools",
+      "description": "Spanners, sockets, hammers, measuring tools and screwdrivers. Excludes power tools, farm hand tools and automotive diagnostic equipment.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "spanner",
+          "locale": "en"
+        },
+        {
+          "alias": "socket set",
+          "locale": "en"
+        },
+        {
+          "alias": "adjustable wrench",
+          "locale": "en"
+        },
+        {
+          "alias": "torque wrench",
+          "locale": "en"
+        },
+        {
+          "alias": "clé à molette",
+          "locale": "fr"
+        },
+        {
+          "alias": "jeu de douilles",
+          "locale": "fr"
+        },
+        {
+          "alias": "chave inglesa",
+          "locale": "pt"
+        },
+        {
+          "alias": "conjunto de chaves de caixa",
+          "locale": "pt"
+        },
+        {
+          "alias": "spana",
+          "locale": "sw"
+        },
+        {
+          "alias": "مفاتيح ربط",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "tool_type",
+          "label": "Tool type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Spanner",
+            "Socket set",
+            "Adjustable wrench",
+            "Torque wrench",
+            "Pliers set",
+            "Other"
+          ]
+        },
+        {
+          "key": "measurement_system",
+          "label": "Measurement system",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Metric",
+            "Imperial",
+            "Both",
+            "Not stated"
+          ]
+        },
+        {
+          "key": "piece_count",
+          "label": "Number of pieces",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "spanners-sockets",
+      "parentKey": "hand-tools",
+      "name": "Spanners & Socket Sets",
+      "slug": "spanners-sockets",
+      "description": "Combination spanners, socket sets, adjustable wrenches, torque wrenches and pliers sets. Excludes power tools and plumbing-specific tools.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "hammer",
+          "locale": "en"
+        },
+        {
+          "alias": "tape measure",
+          "locale": "en"
+        },
+        {
+          "alias": "spirit level",
+          "locale": "en"
+        },
+        {
+          "alias": "screwdriver set",
+          "locale": "en"
+        },
+        {
+          "alias": "marteau",
+          "locale": "fr"
+        },
+        {
+          "alias": "mètre ruban",
+          "locale": "fr"
+        },
+        {
+          "alias": "martelo",
+          "locale": "pt"
+        },
+        {
+          "alias": "fita métrica",
+          "locale": "pt"
+        },
+        {
+          "alias": "nyundo",
+          "locale": "sw"
+        },
+        {
+          "alias": "مطرقة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "tool_type",
+          "label": "Tool type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Hammer",
+            "Mallet",
+            "Tape measure",
+            "Spirit level",
+            "Square",
+            "Screwdriver set",
+            "Other"
+          ]
+        },
+        {
+          "key": "size",
+          "label": "Size / length",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "piece_count",
+          "label": "Number of pieces",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "hammers-measuring-tools",
+      "parentKey": "hand-tools",
+      "name": "Hammers & Measuring Tools",
+      "slug": "hammers-measuring-tools",
+      "description": "Hammers, mallets, tape measures, spirit levels, squares and screwdriver sets. Excludes power tools and precision laboratory instruments.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "building-materials",
+      "parentKey": "tools-building",
+      "name": "Building Materials",
+      "slug": "building-materials",
+      "description": "Cement, aggregates, roofing, timber, paint, plumbing and electrical installation materials. Excludes complete buildings, professional installation labour and industrial plant.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "cement",
+          "locale": "en"
+        },
+        {
+          "alias": "sand",
+          "locale": "en"
+        },
+        {
+          "alias": "gravel",
+          "locale": "en"
+        },
+        {
+          "alias": "concrete blocks",
+          "locale": "en"
+        },
+        {
+          "alias": "cinder blocks",
+          "locale": "en"
+        },
+        {
+          "alias": "ciment",
+          "locale": "fr"
+        },
+        {
+          "alias": "sable",
+          "locale": "fr"
+        },
+        {
+          "alias": "cimento",
+          "locale": "pt"
+        },
+        {
+          "alias": "areia",
+          "locale": "pt"
+        },
+        {
+          "alias": "saruji",
+          "locale": "sw"
+        },
+        {
+          "alias": "أسمنت",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "material_type",
+          "label": "Material type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Cement",
+            "Sand",
+            "Gravel",
+            "Crushed stone",
+            "Block",
+            "Other"
+          ]
+        },
+        {
+          "key": "quantity",
+          "label": "Quantity per order",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "unit",
+          "label": "Unit",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "bag",
+            "tonne",
+            "truckload",
+            "piece",
+            "Other"
+          ]
+        },
+        {
+          "key": "delivery_area",
+          "label": "Delivery area",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Delivery cost and area are quoted by the seller; the listing must state the exact quantity and unit. No automatic truckload conversion is assumed."
+      ],
+      "key": "cement-blocks-aggregates",
+      "parentKey": "building-materials",
+      "name": "Cement, Blocks & Aggregates",
+      "slug": "cement-blocks-aggregates",
+      "description": "Cement bags, sand, gravel, crushed stone and blocks sold in bulk or by truckload. Excludes decorative stone and ready-mix concrete requiring plant delivery.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "roofing sheet",
+          "locale": "en"
+        },
+        {
+          "alias": "timber",
+          "locale": "en"
+        },
+        {
+          "alias": "plywood",
+          "locale": "en"
+        },
+        {
+          "alias": "ceiling board",
+          "locale": "en"
+        },
+        {
+          "alias": "tôle de toiture",
+          "locale": "fr"
+        },
+        {
+          "alias": "bois de construction",
+          "locale": "fr"
+        },
+        {
+          "alias": "chapa de cobertura",
+          "locale": "pt"
+        },
+        {
+          "alias": "madeira de construção",
+          "locale": "pt"
+        },
+        {
+          "alias": "bati la paa",
+          "locale": "sw"
+        },
+        {
+          "alias": "ألواح تسقيف",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "material_type",
+          "label": "Material type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Roofing sheet",
+            "Timber",
+            "Plywood",
+            "Ceiling board",
+            "Roofing accessory",
+            "Other"
+          ]
+        },
+        {
+          "key": "dimensions",
+          "label": "Dimensions",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "quantity",
+          "label": "Quantity per order",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "unit",
+          "label": "Unit",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "piece",
+            "bundle",
+            "cubic metre",
+            "Other"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "roofing-sheets-timber",
+      "parentKey": "building-materials",
+      "name": "Roofing, Timber & Boards",
+      "slug": "roofing-sheets-timber",
+      "description": "Roofing sheets, timber, plywood, ceiling boards and roofing accessories. Excludes structural steel beams and complete roofing installation.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "wall paint",
+          "locale": "en"
+        },
+        {
+          "alias": "emulsion paint",
+          "locale": "en"
+        },
+        {
+          "alias": "primer",
+          "locale": "en"
+        },
+        {
+          "alias": "wood varnish",
+          "locale": "en"
+        },
+        {
+          "alias": "peinture murale",
+          "locale": "fr"
+        },
+        {
+          "alias": "sous-couche",
+          "locale": "fr"
+        },
+        {
+          "alias": "tinta de parede",
+          "locale": "pt"
+        },
+        {
+          "alias": "verniz para madeira",
+          "locale": "pt"
+        },
+        {
+          "alias": "rangi ya ukuta",
+          "locale": "sw"
+        },
+        {
+          "alias": "دهانات",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Emulsion paint",
+            "Gloss paint",
+            "Primer",
+            "Undercoat",
+            "Varnish",
+            "Wood stain",
+            "Other"
+          ]
+        },
+        {
+          "key": "volume_litres",
+          "label": "Volume (litres)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "colour",
+          "label": "Colour",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "finish",
+          "label": "Finish",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Matt",
+            "Satin",
+            "Gloss",
+            "Not stated"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Chemical products must state hazard symbols, ventilation guidance and safe disposal."
+      ],
+      "key": "paints-coatings",
+      "parentKey": "building-materials",
+      "name": "Paints & Coatings",
+      "slug": "paints-coatings",
+      "description": "Emulsion and gloss wall paint, primers, undercoats, varnish and wood stain. Excludes automotive refinishing paint and artist materials.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "pvc pipe",
+          "locale": "en"
+        },
+        {
+          "alias": "tap",
+          "locale": "en"
+        },
+        {
+          "alias": "valve",
+          "locale": "en"
+        },
+        {
+          "alias": "pipe fitting",
+          "locale": "en"
+        },
+        {
+          "alias": "tuyau pvc",
+          "locale": "fr"
+        },
+        {
+          "alias": "robinet",
+          "locale": "fr"
+        },
+        {
+          "alias": "tubo pvc",
+          "locale": "pt"
+        },
+        {
+          "alias": "torneira",
+          "locale": "pt"
+        },
+        {
+          "alias": "bomba za maji",
+          "locale": "sw"
+        },
+        {
+          "alias": "تجهيزات السباكة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "item_type",
+          "label": "Item type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Pipe",
+            "Tap",
+            "Valve",
+            "Connector",
+            "Cistern fitting",
+            "Other"
+          ]
+        },
+        {
+          "key": "diameter",
+          "label": "Diameter / size",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Potable-water applications require the seller to state food-grade suitability."
+      ],
+      "key": "plumbing-fittings",
+      "parentKey": "building-materials",
+      "name": "Plumbing & Fittings",
+      "slug": "plumbing-fittings",
+      "description": "PVC and PPR pipes, taps, valves, connectors and cistern fittings. Excludes complete sanitaryware suites and professional installation.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "electrical cable",
+          "locale": "en"
+        },
+        {
+          "alias": "distribution board",
+          "locale": "en"
+        },
+        {
+          "alias": "socket outlet",
+          "locale": "en"
+        },
+        {
+          "alias": "conduit",
+          "locale": "en"
+        },
+        {
+          "alias": "câble électrique",
+          "locale": "fr"
+        },
+        {
+          "alias": "tableau électrique",
+          "locale": "fr"
+        },
+        {
+          "alias": "cabo elétrico",
+          "locale": "pt"
+        },
+        {
+          "alias": "quadro elétrico",
+          "locale": "pt"
+        },
+        {
+          "alias": "waya za umeme",
+          "locale": "sw"
+        },
+        {
+          "alias": "مواد كهربائية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "item_type",
+          "label": "Item type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Cable",
+            "Conduit",
+            "Distribution board",
+            "Socket outlet",
+            "Switch",
+            "Other"
+          ]
+        },
+        {
+          "key": "rating",
+          "label": "Current / voltage rating",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "certification",
+          "label": "Certification / standards marking",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Fixed-installation electrical materials are safety-critical and subject to standards certification. Publishing in Nigeria requires reviewer verification of the standards marking; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Unmarked or undersized cable is not permitted."
+      ],
+      "key": "electrical-installation-materials",
+      "parentKey": "building-materials",
+      "name": "Electrical Installation Materials",
+      "slug": "electrical-installation-materials",
+      "description": "Electrical cable, conduits, distribution boards, sockets and switches for fixed installation. Excludes generators, solar systems and consumer electronics.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 50
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "workplace-safety",
+      "parentKey": "tools-building",
+      "name": "Workplace Safety",
+      "slug": "workplace-safety",
+      "description": "Personal protective equipment and site safety supplies. Excludes fire-fighting systems and medical first-aid supplies.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "safety gloves",
+          "locale": "en"
+        },
+        {
+          "alias": "safety boots",
+          "locale": "en"
+        },
+        {
+          "alias": "hard hat",
+          "locale": "en"
+        },
+        {
+          "alias": "reflective vest",
+          "locale": "en"
+        },
+        {
+          "alias": "gants de sécurité",
+          "locale": "fr"
+        },
+        {
+          "alias": "chaussures de sécurité",
+          "locale": "fr"
+        },
+        {
+          "alias": "luvas de segurança",
+          "locale": "pt"
+        },
+        {
+          "alias": "botas de segurança",
+          "locale": "pt"
+        },
+        {
+          "alias": "glavu za usalama",
+          "locale": "sw"
+        },
+        {
+          "alias": "معدات الوقاية الشخصية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "item_type",
+          "label": "Item type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Gloves",
+            "Boots",
+            "Hard hat",
+            "Reflective vest",
+            "Goggles",
+            "Hearing protection",
+            "Other"
+          ]
+        },
+        {
+          "key": "size",
+          "label": "Size",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "certification",
+          "label": "Certification / standards marking",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "PPE listings must state the protection standard and size; decorative clothing is not PPE."
+      ],
+      "key": "ppe-workwear",
+      "parentKey": "workplace-safety",
+      "name": "PPE & Workwear",
+      "slug": "ppe-workwear",
+      "description": "Safety gloves, safety boots, hard hats, reflective vests, goggles and hearing protection. Excludes fashion clothing and motorcycle riding gear.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "books-stationery",
+      "parentKey": null,
+      "name": "Books & Stationery",
+      "slug": "books-stationery",
+      "description": "Physical books, paper, writing supplies, office consumables and art materials. Excludes digital subscriptions, software licences, school uniforms and furniture.",
+      "level": 0,
+      "isSelectable": false,
+      "showOnHomepage": true,
+      "sortOrder": 110
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "books",
+      "parentKey": "books-stationery",
+      "name": "Books",
+      "slug": "books",
+      "description": "Printed textbooks, fiction, religious books and children's books. Excludes e-books, audiobook subscriptions and magazines sold as advertising space.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "textbook",
+          "locale": "en"
+        },
+        {
+          "alias": "school textbook",
+          "locale": "en"
+        },
+        {
+          "alias": "university textbook",
+          "locale": "en"
+        },
+        {
+          "alias": "manuel scolaire",
+          "locale": "fr"
+        },
+        {
+          "alias": "livre universitaire",
+          "locale": "fr"
+        },
+        {
+          "alias": "manual escolar",
+          "locale": "pt"
+        },
+        {
+          "alias": "livro universitário",
+          "locale": "pt"
+        },
+        {
+          "alias": "kitabu cha masomo",
+          "locale": "sw"
+        },
+        {
+          "alias": "كتاب مدرسي",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "education_level",
+          "label": "Education level",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Primary",
+            "Secondary",
+            "Tertiary",
+            "Professional",
+            "Other"
+          ]
+        },
+        {
+          "key": "subject",
+          "label": "Subject",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "isbn",
+          "label": "ISBN",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "condition",
+          "label": "Condition",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "New",
+            "Used"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Used textbooks must disclose highlighting, missing pages and cover damage."
+      ],
+      "key": "textbooks-education",
+      "parentKey": "books",
+      "name": "Textbooks & Education",
+      "slug": "textbooks-education",
+      "description": "Primary, secondary, university and professional textbooks, workbooks and revision guides. Excludes past examination papers sold by unauthorised providers and digital course access.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "novel",
+          "locale": "en"
+        },
+        {
+          "alias": "poetry",
+          "locale": "en"
+        },
+        {
+          "alias": "short stories",
+          "locale": "en"
+        },
+        {
+          "alias": "roman",
+          "locale": "fr"
+        },
+        {
+          "alias": "poésie",
+          "locale": "fr"
+        },
+        {
+          "alias": "romance",
+          "locale": "pt"
+        },
+        {
+          "alias": "poesia",
+          "locale": "pt"
+        },
+        {
+          "alias": "riwaya",
+          "locale": "sw"
+        },
+        {
+          "alias": "رواية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "genre",
+          "label": "Genre",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Literary fiction",
+            "Crime",
+            "Romance",
+            "Science fiction",
+            "Poetry",
+            "Drama",
+            "Other"
+          ]
+        },
+        {
+          "key": "author",
+          "label": "Author",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "isbn",
+          "label": "ISBN",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "language",
+          "label": "Language",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "English",
+            "French",
+            "Portuguese",
+            "Arabic",
+            "Swahili",
+            "Other"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "fiction-literature",
+      "parentKey": "books",
+      "name": "Fiction & Literature",
+      "slug": "fiction-literature",
+      "description": "Novels, poetry, short-story collections, plays and literary criticism. Excludes textbooks and children's picture books.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "bible",
+          "locale": "en"
+        },
+        {
+          "alias": "quran",
+          "locale": "en"
+        },
+        {
+          "alias": "devotional",
+          "locale": "en"
+        },
+        {
+          "alias": "bible",
+          "locale": "fr"
+        },
+        {
+          "alias": "coran",
+          "locale": "fr"
+        },
+        {
+          "alias": "bíblia",
+          "locale": "pt"
+        },
+        {
+          "alias": "alcorão",
+          "locale": "pt"
+        },
+        {
+          "alias": "biblia",
+          "locale": "sw"
+        },
+        {
+          "alias": "كتب دينية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "book_type",
+          "label": "Book type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Bible",
+            "Qur'an",
+            "Devotional",
+            "Inspirational",
+            "Other"
+          ]
+        },
+        {
+          "key": "language",
+          "label": "Language",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "English",
+            "French",
+            "Portuguese",
+            "Arabic",
+            "Swahili",
+            "Other"
+          ]
+        },
+        {
+          "key": "isbn",
+          "label": "ISBN",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "religious-inspirational-books",
+      "parentKey": "books",
+      "name": "Religious & Inspirational Books",
+      "slug": "religious-inspirational-books",
+      "description": "Bibles, Qur'ans, devotionals and inspirational titles. Excludes religious artefacts, apparel and audio subscriptions.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "storybook",
+          "locale": "en"
+        },
+        {
+          "alias": "picture book",
+          "locale": "en"
+        },
+        {
+          "alias": "children's book",
+          "locale": "en"
+        },
+        {
+          "alias": "livre pour enfants",
+          "locale": "fr"
+        },
+        {
+          "alias": "album jeunesse",
+          "locale": "fr"
+        },
+        {
+          "alias": "livro infantil",
+          "locale": "pt"
+        },
+        {
+          "alias": "livro de histórias",
+          "locale": "pt"
+        },
+        {
+          "alias": "kitabu cha watoto",
+          "locale": "sw"
+        },
+        {
+          "alias": "كتب أطفال",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "book_type",
+          "label": "Book type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Picture book",
+            "Early reader",
+            "Storybook",
+            "Activity book",
+            "Other"
+          ]
+        },
+        {
+          "key": "recommended_age_years",
+          "label": "Recommended age (years)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "isbn",
+          "label": "ISBN",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "childrens-books",
+      "parentKey": "books",
+      "name": "Children's Books",
+      "slug": "childrens-books",
+      "description": "Picture books, early readers, storybooks and activity books for children. Excludes school textbooks and toys.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "stationery-office",
+      "parentKey": "books-stationery",
+      "name": "Stationery & Office",
+      "slug": "stationery-office",
+      "description": "Paper products, writing instruments, office consumables and printer supplies. Excludes furniture, printers and software.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "exercise book",
+          "locale": "en"
+        },
+        {
+          "alias": "jotter",
+          "locale": "en"
+        },
+        {
+          "alias": "printing paper",
+          "locale": "en"
+        },
+        {
+          "alias": "cahier",
+          "locale": "fr"
+        },
+        {
+          "alias": "papier d'impression",
+          "locale": "fr"
+        },
+        {
+          "alias": "caderno",
+          "locale": "pt"
+        },
+        {
+          "alias": "papel de impressão",
+          "locale": "pt"
+        },
+        {
+          "alias": "daftari",
+          "locale": "sw"
+        },
+        {
+          "alias": "دفاتر",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Exercise book",
+            "Notebook",
+            "Printing paper",
+            "Notepad",
+            "Envelope",
+            "Other"
+          ]
+        },
+        {
+          "key": "ruling",
+          "label": "Ruling",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Ruled",
+            "Plain",
+            "Squared",
+            "Not applicable"
+          ]
+        },
+        {
+          "key": "sheets",
+          "label": "Sheets per pack",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "paper_size",
+          "label": "Paper size",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "notebooks-paper",
+      "parentKey": "stationery-office",
+      "name": "Notebooks & Paper",
+      "slug": "notebooks-paper",
+      "description": "Exercise books, notebooks, printing paper, notepads and envelopes. Excludes books and paper towels.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "pen",
+          "locale": "en"
+        },
+        {
+          "alias": "pencil",
+          "locale": "en"
+        },
+        {
+          "alias": "marker",
+          "locale": "en"
+        },
+        {
+          "alias": "ruler",
+          "locale": "en"
+        },
+        {
+          "alias": "stylo",
+          "locale": "fr"
+        },
+        {
+          "alias": "crayon",
+          "locale": "fr"
+        },
+        {
+          "alias": "caneta",
+          "locale": "pt"
+        },
+        {
+          "alias": "lápis",
+          "locale": "pt"
+        },
+        {
+          "alias": "kalamu",
+          "locale": "sw"
+        },
+        {
+          "alias": "أقلام",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "instrument_type",
+          "label": "Instrument type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Pen",
+            "Pencil",
+            "Marker",
+            "Highlighter",
+            "Ruler",
+            "Geometry set",
+            "Other"
+          ]
+        },
+        {
+          "key": "ink_type",
+          "label": "Ink type",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Ballpoint",
+            "Gel",
+            "Fountain",
+            "Permanent",
+            "Not applicable"
+          ]
+        },
+        {
+          "key": "pack_count",
+          "label": "Pack count",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "writing-drawing-instruments",
+      "parentKey": "stationery-office",
+      "name": "Writing & Drawing Instruments",
+      "slug": "writing-drawing-instruments",
+      "description": "Pens, pencils, markers, highlighters, rulers and geometry sets. Excludes printer ink, art paint and office machines.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "stapler",
+          "locale": "en"
+        },
+        {
+          "alias": "scissors",
+          "locale": "en"
+        },
+        {
+          "alias": "glue",
+          "locale": "en"
+        },
+        {
+          "alias": "file folder",
+          "locale": "en"
+        },
+        {
+          "alias": "agrafeuse",
+          "locale": "fr"
+        },
+        {
+          "alias": "ciseaux",
+          "locale": "fr"
+        },
+        {
+          "alias": "agrafador",
+          "locale": "pt"
+        },
+        {
+          "alias": "tesoura",
+          "locale": "pt"
+        },
+        {
+          "alias": "kifaa cha kudubinia",
+          "locale": "sw"
+        },
+        {
+          "alias": "مستلزمات مكتبية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "item_type",
+          "label": "Item type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Stapler",
+            "Scissors",
+            "Glue",
+            "File / folder",
+            "Calculator",
+            "Desk organiser",
+            "Other"
+          ]
+        },
+        {
+          "key": "pack_count",
+          "label": "Pack count",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "office-school-supplies",
+      "parentKey": "stationery-office",
+      "name": "Office & School Supplies",
+      "slug": "office-school-supplies",
+      "description": "Staplers, scissors, glue, files, folders, calculators and desk organisers. Excludes furniture, computers and cleaning products.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "ink cartridge",
+          "locale": "en"
+        },
+        {
+          "alias": "toner cartridge",
+          "locale": "en"
+        },
+        {
+          "alias": "cartouche d'encre",
+          "locale": "fr"
+        },
+        {
+          "alias": "toner",
+          "locale": "fr"
+        },
+        {
+          "alias": "cartucho de tinta",
+          "locale": "pt"
+        },
+        {
+          "alias": "toner",
+          "locale": "pt"
+        },
+        {
+          "alias": "katriji ya wino",
+          "locale": "sw"
+        },
+        {
+          "alias": "حبر الطابعة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Ink cartridge",
+            "Toner cartridge",
+            "Refill kit",
+            "Other"
+          ]
+        },
+        {
+          "key": "printer_compatibility",
+          "label": "Printer compatibility",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "authenticity",
+          "label": "Authenticity",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Original",
+            "Compatible",
+            "Refilled",
+            "Not stated"
+          ]
+        },
+        {
+          "key": "yield_pages",
+          "label": "Approximate yield (pages)",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Compatible and refilled cartridges must be identified as such; no counterfeit original branding."
+      ],
+      "key": "printer-ink-toner",
+      "parentKey": "stationery-office",
+      "name": "Printer Ink & Toner",
+      "slug": "printer-ink-toner",
+      "description": "Ink cartridges, toner cartridges and refill kits for home and office printers. Excludes printers, paper and photocopiers.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "art-craft",
+      "parentKey": "books-stationery",
+      "name": "Art & Craft",
+      "slug": "art-craft",
+      "description": "Art materials and craft supplies for drawing, painting and handmade work. Excludes dressmaking fabric and industrial equipment.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "acrylic paint",
+          "locale": "en"
+        },
+        {
+          "alias": "paint brush",
+          "locale": "en"
+        },
+        {
+          "alias": "canvas",
+          "locale": "en"
+        },
+        {
+          "alias": "sketchbook",
+          "locale": "en"
+        },
+        {
+          "alias": "peinture acrylique",
+          "locale": "fr"
+        },
+        {
+          "alias": "pinceau",
+          "locale": "fr"
+        },
+        {
+          "alias": "tinta acrílica",
+          "locale": "pt"
+        },
+        {
+          "alias": "pincel",
+          "locale": "pt"
+        },
+        {
+          "alias": "rangi za kuchora",
+          "locale": "sw"
+        },
+        {
+          "alias": "أدوات فنية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Acrylic paint",
+            "Watercolour",
+            "Brush",
+            "Canvas",
+            "Sketchbook",
+            "Drawing medium",
+            "Other"
+          ]
+        },
+        {
+          "key": "volume_ml",
+          "label": "Volume (ml)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "colour",
+          "label": "Colour",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "art-supplies",
+      "parentKey": "art-craft",
+      "name": "Art Supplies",
+      "slug": "art-supplies",
+      "description": "Acrylic and watercolour paint, brushes, canvas, sketchbooks and drawing media. Excludes wall paint and industrial coatings.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "beads",
+          "locale": "en"
+        },
+        {
+          "alias": "craft glue",
+          "locale": "en"
+        },
+        {
+          "alias": "felt",
+          "locale": "en"
+        },
+        {
+          "alias": "ribbon",
+          "locale": "en"
+        },
+        {
+          "alias": "perles",
+          "locale": "fr"
+        },
+        {
+          "alias": "colle artisanale",
+          "locale": "fr"
+        },
+        {
+          "alias": "missangas",
+          "locale": "pt"
+        },
+        {
+          "alias": "cola artesanal",
+          "locale": "pt"
+        },
+        {
+          "alias": "shanga",
+          "locale": "sw"
+        },
+        {
+          "alias": "مواد حرفية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "material_type",
+          "label": "Material type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Beads",
+            "Craft glue",
+            "Felt",
+            "Ribbon",
+            "Other"
+          ]
+        },
+        {
+          "key": "pack_count",
+          "label": "Pack count",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "colour",
+          "label": "Colour",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "craft-materials",
+      "parentKey": "art-craft",
+      "name": "Craft Materials",
+      "slug": "craft-materials",
+      "description": "Beads, craft glue, felt, ribbon and handmade-project supplies. Excludes dressmaking fabric, tools and finished jewellery.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
     }
   ]
 }

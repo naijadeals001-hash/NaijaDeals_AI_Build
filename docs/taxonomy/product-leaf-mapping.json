@@ -1,0 +1,920 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-13",
+  "database": "naijadeals_review",
+  "reviewOnly": true,
+  "applied": false,
+  "note": "Read-only plan. No Product.categoryId is written. Ambiguous products keep their current assignment and require classification review.",
+  "summary": {
+    "total": 49,
+    "mapped": 42,
+    "ambiguous": 7,
+    "alreadyOnProposedLeaf": 8,
+    "proposedMoves": 34
+  },
+  "products": [
+    {
+      "productId": "cmwdyexl50005v4s0txgo7qfa",
+      "name": "DEMO — 10-inch Android tablet",
+      "currentCategory": {
+        "key": "phones-tablets",
+        "slug": "phones-tablets",
+        "name": "Phones & Tablets",
+        "path": "Electronics & Technology / Phones & Tablets"
+      },
+      "proposedLeaf": {
+        "key": "tablets",
+        "slug": "tablets",
+        "path": "Electronics & Technology / Phones & Tablets / Tablets"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Tablet computer; the Tablets leaf explicitly covers Wi-Fi/cellular tablets and excludes smartphones."
+    },
+    {
+      "productId": "cmwdyexlb000bv4s0ap4xt4ti",
+      "name": "DEMO — Android smartphone, 6-inch display",
+      "currentCategory": {
+        "key": "phones-tablets",
+        "slug": "phones-tablets",
+        "name": "Phones & Tablets",
+        "path": "Electronics & Technology / Phones & Tablets"
+      },
+      "proposedLeaf": {
+        "key": "smartphones",
+        "slug": "smartphones",
+        "path": "Electronics & Technology / Phones & Tablets / Smartphones"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Android smartphone with a 6-inch display matches the Smartphones leaf."
+    },
+    {
+      "productId": "cmwdyexle000iv4s0hijvnav5",
+      "name": "DEMO — 14-inch business laptop",
+      "currentCategory": {
+        "key": "computers",
+        "slug": "computers",
+        "name": "Computers",
+        "path": "Electronics & Technology / Computers"
+      },
+      "proposedLeaf": {
+        "key": "laptops",
+        "slug": "laptops",
+        "path": "Electronics & Technology / Computers / Laptops"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "14-inch portable computer; Laptops covers notebooks and 2-in-1s."
+    },
+    {
+      "productId": "cmwdyexlg000ov4s025pxj9yx",
+      "name": "DEMO — Mechanical keyboard",
+      "currentCategory": {
+        "key": "computers",
+        "slug": "computers",
+        "name": "Computers",
+        "path": "Electronics & Technology / Computers"
+      },
+      "proposedLeaf": {
+        "key": "computer-accessories",
+        "slug": "computer-accessories",
+        "path": "Electronics & Technology / Computers / Computer Accessories"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Mechanical keyboard is listed in the Computer Accessories leaf."
+    },
+    {
+      "productId": "cmwdyexlj000vv4s0mat8d6kk",
+      "name": "DEMO — 5.5L air fryer",
+      "currentCategory": {
+        "key": "home-kitchen",
+        "slug": "home-kitchen",
+        "name": "Home & Kitchen",
+        "path": "Home & Living / Home & Kitchen"
+      },
+      "proposedLeaf": {
+        "key": "small-appliances",
+        "slug": "small-appliances",
+        "path": "Electronics & Technology / Electronics & Appliances / Small Appliances"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "5.5L air fryer is a countertop small appliance."
+    },
+    {
+      "productId": "cmwdyexll0011v4s0civw2edm",
+      "name": "DEMO — Stainless steel cookware set",
+      "currentCategory": {
+        "key": "home-kitchen",
+        "slug": "home-kitchen",
+        "name": "Home & Kitchen",
+        "path": "Home & Living / Home & Kitchen"
+      },
+      "proposedLeaf": {
+        "key": "cookware-bakeware",
+        "slug": "cookware-bakeware",
+        "path": "Home & Living / Home & Kitchen / Cookware & Bakeware"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Cookware set matches the Cookware & Bakeware leaf."
+    },
+    {
+      "productId": "cmwdynxdd0018v4q00rd1lw3x",
+      "name": "DEMO — Over-ear headphones",
+      "currentCategory": {
+        "key": "electronics-appliances",
+        "slug": "electronics-appliances",
+        "name": "Electronics & Appliances",
+        "path": "Electronics & Technology / Electronics & Appliances"
+      },
+      "proposedLeaf": null,
+      "action": "review",
+      "confidence": "medium",
+      "ambiguous": true,
+      "reason": "Over-ear headphones have no personal-audio leaf: TVs & Home Audio covers speakers and home theatre, not headphones. Flagged for a future Audio leaf."
+    },
+    {
+      "productId": "cmwdynxdg001ev4q0aay20n41",
+      "name": "DEMO — 2-slice toaster",
+      "currentCategory": {
+        "key": "electronics-appliances",
+        "slug": "electronics-appliances",
+        "name": "Electronics & Appliances",
+        "path": "Electronics & Technology / Electronics & Appliances"
+      },
+      "proposedLeaf": {
+        "key": "small-appliances",
+        "slug": "small-appliances",
+        "path": "Electronics & Technology / Electronics & Appliances / Small Appliances"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "2-slice toaster is a small kitchen appliance."
+    },
+    {
+      "productId": "cmwdynxdh001kv4q0zsxxx7r0",
+      "name": "DEMO — Retro kitchen blender",
+      "currentCategory": {
+        "key": "electronics-appliances",
+        "slug": "electronics-appliances",
+        "name": "Electronics & Appliances",
+        "path": "Electronics & Technology / Electronics & Appliances"
+      },
+      "proposedLeaf": {
+        "key": "small-appliances",
+        "slug": "small-appliances",
+        "path": "Electronics & Technology / Electronics & Appliances / Small Appliances"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Retro kitchen blender is a small kitchen appliance."
+    },
+    {
+      "productId": "cmwdynxdj001qv4q0vkrulgmu",
+      "name": "DEMO — LED monitor",
+      "currentCategory": {
+        "key": "electronics-appliances",
+        "slug": "electronics-appliances",
+        "name": "Electronics & Appliances",
+        "path": "Electronics & Technology / Electronics & Appliances"
+      },
+      "proposedLeaf": {
+        "key": "computer-accessories",
+        "slug": "computer-accessories",
+        "path": "Electronics & Technology / Computers / Computer Accessories"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "LED monitor is explicitly covered by Computer Accessories (Monitor option)."
+    },
+    {
+      "productId": "cmwdynxdm001xv4q0qeq2r1fb",
+      "name": "DEMO — Running shoes",
+      "currentCategory": {
+        "key": "fashion-accessories",
+        "slug": "fashion-accessories",
+        "name": "Fashion & Accessories",
+        "path": "Fashion & Beauty / Fashion & Accessories"
+      },
+      "proposedLeaf": {
+        "key": "footwear",
+        "slug": "footwear",
+        "path": "Fashion & Beauty / Fashion & Accessories / Footwear"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Running shoes are footwear; the fit attribute includes all adult fits."
+    },
+    {
+      "productId": "cmwdynxdo0023v4q0afcz2f2b",
+      "name": "DEMO — Leather handbag",
+      "currentCategory": {
+        "key": "fashion-accessories",
+        "slug": "fashion-accessories",
+        "name": "Fashion & Accessories",
+        "path": "Fashion & Beauty / Fashion & Accessories"
+      },
+      "proposedLeaf": {
+        "key": "bags-accessories",
+        "slug": "bags-accessories",
+        "path": "Fashion & Beauty / Fashion & Accessories / Bags & Accessories"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Leather handbag is a Bags & Accessories item."
+    },
+    {
+      "productId": "cmwdynxdq0029v4q0ple4660k",
+      "name": "DEMO — Automatic wristwatch",
+      "currentCategory": {
+        "key": "fashion-accessories",
+        "slug": "fashion-accessories",
+        "name": "Fashion & Accessories",
+        "path": "Fashion & Beauty / Fashion & Accessories"
+      },
+      "proposedLeaf": {
+        "key": "bags-accessories",
+        "slug": "bags-accessories",
+        "path": "Fashion & Beauty / Fashion & Accessories / Bags & Accessories"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Automatic wristwatch matches the Watch item type."
+    },
+    {
+      "productId": "cmwdynxds002fv4q0puj39gxq",
+      "name": "DEMO — Eau de parfum, 50ml",
+      "currentCategory": {
+        "key": "beauty-personal-care",
+        "slug": "beauty-personal-care",
+        "name": "Beauty & Personal Care",
+        "path": "Fashion & Beauty / Beauty & Personal Care"
+      },
+      "proposedLeaf": null,
+      "action": "review",
+      "confidence": "medium",
+      "ambiguous": true,
+      "reason": "No fragrance leaf exists; Skincare, Hair Care and Bath & Body do not cover perfume. Flagged for a Fragrance leaf."
+    },
+    {
+      "productId": "cmwdynxdu002mv4q0rx83vc4f",
+      "name": "DEMO — Shampoo bars",
+      "currentCategory": {
+        "key": "beauty-personal-care",
+        "slug": "beauty-personal-care",
+        "name": "Beauty & Personal Care",
+        "path": "Fashion & Beauty / Beauty & Personal Care"
+      },
+      "proposedLeaf": {
+        "key": "hair-care",
+        "slug": "hair-care",
+        "path": "Fashion & Beauty / Beauty & Personal Care / Hair Care"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Shampoo bars are a hair-cleansing product."
+    },
+    {
+      "productId": "cmwdynxdw002sv4q0jkmbobl6",
+      "name": "DEMO — Moisturiser, 100ml",
+      "currentCategory": {
+        "key": "beauty-personal-care",
+        "slug": "beauty-personal-care",
+        "name": "Beauty & Personal Care",
+        "path": "Fashion & Beauty / Beauty & Personal Care"
+      },
+      "proposedLeaf": {
+        "key": "skincare",
+        "slug": "skincare",
+        "path": "Fashion & Beauty / Beauty & Personal Care / Skincare"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Moisturiser is explicitly covered by Skincare."
+    },
+    {
+      "productId": "cmwdynxdy002yv4q0n19qj5vm",
+      "name": "DEMO — Perfume gift set",
+      "currentCategory": {
+        "key": "beauty-personal-care",
+        "slug": "beauty-personal-care",
+        "name": "Beauty & Personal Care",
+        "path": "Fashion & Beauty / Beauty & Personal Care"
+      },
+      "proposedLeaf": null,
+      "action": "review",
+      "confidence": "medium",
+      "ambiguous": true,
+      "reason": "Perfume gift set has no fragrance leaf. Same gap as the eau de parfum."
+    },
+    {
+      "productId": "cmwdynxe2003av4q0dr57u791",
+      "name": "DEMO — Portable power bank",
+      "currentCategory": {
+        "key": "phones-tablets",
+        "slug": "phones-tablets",
+        "name": "Phones & Tablets",
+        "path": "Electronics & Technology / Phones & Tablets"
+      },
+      "proposedLeaf": {
+        "key": "phone-accessories",
+        "slug": "phone-accessories",
+        "path": "Electronics & Technology / Phones & Tablets / Phone Accessories"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Power bank is an explicit Phone Accessories option."
+    },
+    {
+      "productId": "cmwdynxe4003gv4q0n2q8f7bs",
+      "name": "DEMO — Smartphone on desk",
+      "currentCategory": {
+        "key": "phones-tablets",
+        "slug": "phones-tablets",
+        "name": "Phones & Tablets",
+        "path": "Electronics & Technology / Phones & Tablets"
+      },
+      "proposedLeaf": {
+        "key": "smartphones",
+        "slug": "smartphones",
+        "path": "Electronics & Technology / Phones & Tablets / Smartphones"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Smartphone product shot; no accessory is described."
+    },
+    {
+      "productId": "cmwdynxe6003mv4q0y9hwt5ha",
+      "name": "DEMO — Wired gaming mouse",
+      "currentCategory": {
+        "key": "computers",
+        "slug": "computers",
+        "name": "Computers",
+        "path": "Electronics & Technology / Computers"
+      },
+      "proposedLeaf": null,
+      "action": "review",
+      "confidence": "medium",
+      "ambiguous": true,
+      "reason": "Wired gaming mouse fits both Computer Accessories (Mouse) and Gaming Accessories (Gaming mouse); the listing does not settle the primary use. Flagged."
+    },
+    {
+      "productId": "cmwdynxe8003sv4q01d98wnuj",
+      "name": "DEMO — 15.6-inch laptop",
+      "currentCategory": {
+        "key": "computers",
+        "slug": "computers",
+        "name": "Computers",
+        "path": "Electronics & Technology / Computers"
+      },
+      "proposedLeaf": {
+        "key": "laptops",
+        "slug": "laptops",
+        "path": "Electronics & Technology / Computers / Laptops"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "15.6-inch laptop matches Laptops."
+    },
+    {
+      "productId": "cmwdynxea003yv4q0q422vs0c",
+      "name": "DEMO — Coffee maker",
+      "currentCategory": {
+        "key": "home-kitchen",
+        "slug": "home-kitchen",
+        "name": "Home & Kitchen",
+        "path": "Home & Living / Home & Kitchen"
+      },
+      "proposedLeaf": {
+        "key": "small-appliances",
+        "slug": "small-appliances",
+        "path": "Electronics & Technology / Electronics & Appliances / Small Appliances"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Coffee maker is an explicit Small Appliances option."
+    },
+    {
+      "productId": "cmwdynxed0044v4q0vylviitf",
+      "name": "DEMO — Fresh tomatoes, 1kg",
+      "currentCategory": {
+        "key": "groceries-household",
+        "slug": "groceries-household",
+        "name": "Groceries & Household Essentials",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials"
+      },
+      "proposedLeaf": {
+        "key": "fresh-produce",
+        "slug": "fresh-produce",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials / Fresh Produce"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Fresh tomatoes are vegetables sold by weight."
+    },
+    {
+      "productId": "cmwe3jlwu00hpv4u0v6jb5nox",
+      "name": "DEMO — Diced onions, 500g",
+      "currentCategory": {
+        "key": "groceries-household",
+        "slug": "groceries-household",
+        "name": "Groceries & Household Essentials",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials"
+      },
+      "proposedLeaf": {
+        "key": "fresh-produce",
+        "slug": "fresh-produce",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials / Fresh Produce"
+      },
+      "action": "map",
+      "confidence": "medium",
+      "ambiguous": false,
+      "reason": "Pre-cut onions remain a fresh vegetable, not a pantry staple."
+    },
+    {
+      "productId": "cmwe3jlxp00i3v4u0tk3mmez1",
+      "name": "DEMO — Red bell peppers, 500g",
+      "currentCategory": {
+        "key": "groceries-household",
+        "slug": "groceries-household",
+        "name": "Groceries & Household Essentials",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials"
+      },
+      "proposedLeaf": {
+        "key": "fresh-produce",
+        "slug": "fresh-produce",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials / Fresh Produce"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Red bell peppers are fresh vegetables."
+    },
+    {
+      "productId": "cmwe3jlyi00ihv4u003yfo8g7",
+      "name": "DEMO — Green beans, 500g",
+      "currentCategory": {
+        "key": "groceries-household",
+        "slug": "groceries-household",
+        "name": "Groceries & Household Essentials",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials"
+      },
+      "proposedLeaf": {
+        "key": "fresh-produce",
+        "slug": "fresh-produce",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials / Fresh Produce"
+      },
+      "action": "map",
+      "confidence": "medium",
+      "ambiguous": false,
+      "reason": "In this grocery batch green beans means the fresh vegetable, not green coffee beans."
+    },
+    {
+      "productId": "cmwe3jlzg00ivv4u0z3ta3mge",
+      "name": "DEMO — Rooftop solar panel array with mounting frame",
+      "currentCategory": {
+        "key": "power-solar",
+        "slug": "power-solar",
+        "name": "Power & Solar",
+        "path": "Home & Living / Power & Solar"
+      },
+      "proposedLeaf": {
+        "key": "solar-panels",
+        "slug": "solar-panels",
+        "path": "Home & Living / Power & Solar / Solar Panels"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Rooftop panel array with mounting frame matches Solar Panels."
+    },
+    {
+      "productId": "cmwe3jm0b00j9v4u0e5zzgkjw",
+      "name": "DEMO — Portable solar battery charging station",
+      "currentCategory": {
+        "key": "power-solar",
+        "slug": "power-solar",
+        "name": "Power & Solar",
+        "path": "Home & Living / Power & Solar"
+      },
+      "proposedLeaf": null,
+      "action": "review",
+      "confidence": "low",
+      "ambiguous": true,
+      "reason": "Portable solar battery charging station could be an Inverters & Batteries product or a Generators & Backup Power portable power station. Flagged until the specification is checked."
+    },
+    {
+      "productId": "cmwe3jm1800jnv4u02w2ungg7",
+      "name": "DEMO — Solar power inverter",
+      "currentCategory": {
+        "key": "power-solar",
+        "slug": "power-solar",
+        "name": "Power & Solar",
+        "path": "Home & Living / Power & Solar"
+      },
+      "proposedLeaf": {
+        "key": "inverters-batteries",
+        "slug": "inverters-batteries",
+        "path": "Home & Living / Power & Solar / Inverters & Batteries"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Solar power inverter is an explicit Inverters & Batteries option."
+    },
+    {
+      "productId": "cmwe3jm2400k1v4u04h9m2lv5",
+      "name": "DEMO — Wireless game controllers, black and white pair",
+      "currentCategory": {
+        "key": "gaming",
+        "slug": "gaming",
+        "name": "Gaming",
+        "path": "Electronics & Technology / Gaming"
+      },
+      "proposedLeaf": {
+        "key": "gaming-accessories",
+        "slug": "gaming-accessories",
+        "path": "Electronics & Technology / Gaming / Gaming Accessories"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Pair of wireless game controllers matches Gaming Accessories."
+    },
+    {
+      "productId": "cmwe3jm2z00kfv4u07pml13ql",
+      "name": "DEMO — Game controller with coloured buttons",
+      "currentCategory": {
+        "key": "gaming",
+        "slug": "gaming",
+        "name": "Gaming",
+        "path": "Electronics & Technology / Gaming"
+      },
+      "proposedLeaf": {
+        "key": "gaming-accessories",
+        "slug": "gaming-accessories",
+        "path": "Electronics & Technology / Gaming / Gaming Accessories"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Game controller matches Gaming Accessories."
+    },
+    {
+      "productId": "cmwf0qnp3006sv4awq7ihsyt4",
+      "name": "DEMO — Apple iPhone 5s, gold",
+      "currentCategory": {
+        "key": "phones-tablets",
+        "slug": "phones-tablets",
+        "name": "Phones & Tablets",
+        "path": "Electronics & Technology / Phones & Tablets"
+      },
+      "proposedLeaf": {
+        "key": "smartphones",
+        "slug": "smartphones",
+        "path": "Electronics & Technology / Phones & Tablets / Smartphones"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "iPhone 5s is a smartphone."
+    },
+    {
+      "productId": "cmwf0qnqf0076v4awuzap37j6",
+      "name": "DEMO — Apple iPhone 6, silver",
+      "currentCategory": {
+        "key": "phones-tablets",
+        "slug": "phones-tablets",
+        "name": "Phones & Tablets",
+        "path": "Electronics & Technology / Phones & Tablets"
+      },
+      "proposedLeaf": {
+        "key": "smartphones",
+        "slug": "smartphones",
+        "path": "Electronics & Technology / Phones & Tablets / Smartphones"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "iPhone 6 is a smartphone."
+    },
+    {
+      "productId": "cmwf0qnro007kv4aw1n6mals8",
+      "name": "DEMO — EIZO FORIS FG2421 gaming monitor, 24-inch",
+      "currentCategory": {
+        "key": "computers",
+        "slug": "computers",
+        "name": "Computers",
+        "path": "Electronics & Technology / Computers"
+      },
+      "proposedLeaf": {
+        "key": "computer-accessories",
+        "slug": "computer-accessories",
+        "path": "Electronics & Technology / Computers / Computer Accessories"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "24-inch monitor is covered by Computer Accessories; gaming branding does not change the product type."
+    },
+    {
+      "productId": "cmwf0qnsr007yv4aw6ym23yet",
+      "name": "DEMO — Digital SLR camera with zoom lens",
+      "currentCategory": {
+        "key": "electronics-appliances",
+        "slug": "electronics-appliances",
+        "name": "Electronics & Appliances",
+        "path": "Electronics & Technology / Electronics & Appliances"
+      },
+      "proposedLeaf": null,
+      "action": "review",
+      "confidence": "medium",
+      "ambiguous": true,
+      "reason": "Digital SLR with zoom lens has no cameras leaf; no existing leaf covers interchangeable-lens cameras. Flagged."
+    },
+    {
+      "productId": "cmwf0qnto008cv4awngcofj2x",
+      "name": "DEMO — Smartwatch with black silicone strap",
+      "currentCategory": {
+        "key": "electronics-appliances",
+        "slug": "electronics-appliances",
+        "name": "Electronics & Appliances",
+        "path": "Electronics & Technology / Electronics & Appliances"
+      },
+      "proposedLeaf": null,
+      "action": "review",
+      "confidence": "medium",
+      "ambiguous": true,
+      "reason": "Smartwatch is excluded from Smartphones and has no wearables leaf. Flagged."
+    },
+    {
+      "productId": "cmwf0qnum008qv4awn6sdh85d",
+      "name": "DEMO — Red patent leather baby shoes",
+      "currentCategory": {
+        "key": "fashion-accessories",
+        "slug": "fashion-accessories",
+        "name": "Fashion & Accessories",
+        "path": "Fashion & Beauty / Fashion & Accessories"
+      },
+      "proposedLeaf": {
+        "key": "footwear",
+        "slug": "footwear",
+        "path": "Fashion & Beauty / Fashion & Accessories / Footwear"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Baby shoes are footwear; the fit attribute includes Baby."
+    },
+    {
+      "productId": "cmwf116ps00b8v4awo58tomzh",
+      "name": "DEMO — Fresh cabbage, 1 head",
+      "currentCategory": {
+        "key": "groceries-household",
+        "slug": "groceries-household",
+        "name": "Groceries & Household Essentials",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials"
+      },
+      "proposedLeaf": {
+        "key": "fresh-produce",
+        "slug": "fresh-produce",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials / Fresh Produce"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Fresh cabbage sold by the head is fresh produce."
+    },
+    {
+      "productId": "cmwf116qw00bmv4awz8f2ijmd",
+      "name": "DEMO — Fresh carrots, 1kg",
+      "currentCategory": {
+        "key": "groceries-household",
+        "slug": "groceries-household",
+        "name": "Groceries & Household Essentials",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials"
+      },
+      "proposedLeaf": {
+        "key": "fresh-produce",
+        "slug": "fresh-produce",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials / Fresh Produce"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Fresh carrots are fresh produce."
+    },
+    {
+      "productId": "cmwf116rz00c0v4awo0l7hfo9",
+      "name": "DEMO — Fresh cucumbers, 1kg",
+      "currentCategory": {
+        "key": "groceries-household",
+        "slug": "groceries-household",
+        "name": "Groceries & Household Essentials",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials"
+      },
+      "proposedLeaf": {
+        "key": "fresh-produce",
+        "slug": "fresh-produce",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials / Fresh Produce"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Fresh cucumbers are fresh produce."
+    },
+    {
+      "productId": "cmwf116sy00cev4awcywzzy68",
+      "name": "DEMO — Apple mangoes, 1kg",
+      "currentCategory": {
+        "key": "groceries-household",
+        "slug": "groceries-household",
+        "name": "Groceries & Household Essentials",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials"
+      },
+      "proposedLeaf": {
+        "key": "fresh-produce",
+        "slug": "fresh-produce",
+        "path": "Food & Everyday Essentials / Groceries & Household Essentials / Fresh Produce"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Apple mangoes are fresh fruit."
+    },
+    {
+      "productId": "cmwf3oluu000ev4rckkr70d9h",
+      "name": "DEMO — Teff flour, 1kg",
+      "currentCategory": {
+        "key": "teff-flour",
+        "slug": "teff-flour",
+        "name": "Teff Flour",
+        "path": "Food & Everyday Essentials / Grains & Flours / Teff Flour"
+      },
+      "proposedLeaf": {
+        "key": "teff-flour",
+        "slug": "teff-flour",
+        "path": "Food & Everyday Essentials / Grains & Flours / Teff Flour"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Already on the Teff Flour leaf during the taxonomy batch."
+    },
+    {
+      "productId": "cmwf3sz24000gv40ouine4ame",
+      "name": "DEMO — African-print cotton fabric, 6 yards",
+      "currentCategory": {
+        "key": "african-print-fabrics",
+        "slug": "african-print-fabrics",
+        "name": "African-Print Fabrics",
+        "path": "Fashion & Beauty / Fabrics & Textiles / African-Print Fabrics"
+      },
+      "proposedLeaf": {
+        "key": "african-print-fabrics",
+        "slug": "african-print-fabrics",
+        "path": "Fashion & Beauty / Fabrics & Textiles / African-Print Fabrics"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Already on African-Print Fabrics."
+    },
+    {
+      "productId": "cmwf3vzej000kv40wxnreatav",
+      "name": "DEMO — Handwoven kente-style cloth, 2 yards",
+      "currentCategory": {
+        "key": "handwoven-dyed-fabrics",
+        "slug": "handwoven-dyed-fabrics",
+        "name": "Handwoven & Dyed Fabrics",
+        "path": "Fashion & Beauty / Fabrics & Textiles / Handwoven & Dyed Fabrics"
+      },
+      "proposedLeaf": {
+        "key": "handwoven-dyed-fabrics",
+        "slug": "handwoven-dyed-fabrics",
+        "path": "Fashion & Beauty / Fabrics & Textiles / Handwoven & Dyed Fabrics"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Handwoven cloth already on Handwoven & Dyed Fabrics."
+    },
+    {
+      "productId": "cmwf3vzg20013v40w95prnyu6",
+      "name": "DEMO — Raw shea butter, 500g",
+      "currentCategory": {
+        "key": "shea-natural-butters",
+        "slug": "shea-natural-butters",
+        "name": "Shea & Natural Butters",
+        "path": "Fashion & Beauty / Natural & Traditional Beauty / Shea & Natural Butters"
+      },
+      "proposedLeaf": {
+        "key": "shea-natural-butters",
+        "slug": "shea-natural-butters",
+        "path": "Fashion & Beauty / Natural & Traditional Beauty / Shea & Natural Butters"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Raw shea butter already on Shea & Natural Butters."
+    },
+    {
+      "productId": "cmwf3vzgw001mv40wqbihwfzr",
+      "name": "DEMO — African black soap bar, 300g",
+      "currentCategory": {
+        "key": "traditional-cleansers-black-soap",
+        "slug": "traditional-cleansers-black-soap",
+        "name": "Traditional Cleansers & Black Soap",
+        "path": "Fashion & Beauty / Natural & Traditional Beauty / Traditional Cleansers & Black Soap"
+      },
+      "proposedLeaf": {
+        "key": "traditional-cleansers-black-soap",
+        "slug": "traditional-cleansers-black-soap",
+        "path": "Fashion & Beauty / Natural & Traditional Beauty / Traditional Cleansers & Black Soap"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Black soap already on Traditional Cleansers & Black Soap."
+    },
+    {
+      "productId": "cmwf3vzhn0025v40w1qxh63gs",
+      "name": "DEMO — Electric cassava grater",
+      "currentCategory": {
+        "key": "cassava-processing-equipment",
+        "slug": "cassava-processing-equipment",
+        "name": "Cassava Processing Equipment",
+        "path": "Agriculture & Business / Processing Equipment / Cassava Processing Equipment"
+      },
+      "proposedLeaf": {
+        "key": "cassava-processing-equipment",
+        "slug": "cassava-processing-equipment",
+        "path": "Agriculture & Business / Processing Equipment / Cassava Processing Equipment"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Electric cassava grater already on Cassava Processing Equipment."
+    },
+    {
+      "productId": "cmwf3vzig002ov40wtbfi9w1d",
+      "name": "DEMO — Fine white maize meal, 5kg",
+      "currentCategory": {
+        "key": "maize-meal-porridge",
+        "slug": "maize-meal-porridge",
+        "name": "Maize Meal & Porridge",
+        "path": "Food & Everyday Essentials / Grains & Flours / Maize Meal & Porridge"
+      },
+      "proposedLeaf": {
+        "key": "maize-meal-porridge",
+        "slug": "maize-meal-porridge",
+        "path": "Food & Everyday Essentials / Grains & Flours / Maize Meal & Porridge"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Fine white maize meal already on Maize Meal & Porridge."
+    },
+    {
+      "productId": "cmwf3vzj80037v40whlmkv6fb",
+      "name": "DEMO — Woven storage baskets, set of three",
+      "currentCategory": {
+        "key": "storage-organisation",
+        "slug": "storage-organisation",
+        "name": "Storage & Organisation",
+        "path": "Home & Living / Home & Kitchen / Storage & Organisation"
+      },
+      "proposedLeaf": {
+        "key": "storage-organisation",
+        "slug": "storage-organisation",
+        "path": "Home & Living / Home & Kitchen / Storage & Organisation"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Storage baskets already on Storage & Organisation."
+    }
+  ]
+}
