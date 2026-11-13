@@ -210,3 +210,84 @@ Kie MCP `prepare_media_generation` quoted 6 credits / $0.03 per 1K image (credit
 The eight listings were created as seller DRAFTs, given exact alt text and the DEMO flag by an administrator, passed `action=validate`, and were published with `action=publish`. A 160-check run passed on the production build (`BUILD_ID LlrV3NWSANnH6hr6mbNxN`, same as the existing 3047 preview) served from an isolated temporary port against `naijadeals_review`: direct page, leaf catalogue API, rendered leaf page, search API, rendered search page, DEMO label, alt text, exact leaf, attributes, price and stock. Production screenshots are in `qa-artifacts/taxonomy-batch2/` (direct, leaf and search at 1440px; direct at 390px).
 
 **Current canonical-preview image audit (2026-11-13):** the 3047 preview served all 62 audited URLs with HEAD 200 and Chromium `naturalWidth > 0` (57 active-product images plus 5 department banners). No restart was performed by this audit. Six departments (Health & Wellness; Baby, Kids & Toys; Sports & Outdoors; Automotive & Motorcycle; Tools & Building Materials; Books & Stationery) still have `imageUrl = NULL`; no accurate approved banner asset exists for them, so no unrelated image was substituted and none was generated in this slice. Their storefront tiles use the neutral fallback.
+
+## Department banners — the six missing departments (2026-11-13, later slice)
+
+This section supersedes the "six departments have no approved banner art" note above.
+It does not change any earlier product-batch figure.
+
+Six original wide department banners were generated through the permitted Kie.ai
+integration, inspected as contact sheets and at full resolution, and applied to the
+REVIEW catalogue. All 11 departments now have an approved `imageUrl` and `imageAlt`;
+`missingDepartmentArt` is empty.
+
+| Department | Category key | Published asset | Kie task id | Credits | Alt text |
+|---|---|---|---|---:|---|
+| Health & Wellness | `health-wellness` | `/generated/taxonomy/department-health-wellness.webp` | `8b3ecef92c877e92d7b27b137f5d44b0` | 6 | First-aid kit with bandages, gauze, plasters, antiseptic bottle and a digital thermometer beside a folded towel and potted aloe |
+| Baby, Kids & Toys | `baby-kids-toys` | `/generated/taxonomy/department-baby-kids-toys.webp` | `1abe1e5cc4fd0fd8d6822a4382054cb1` | 6 | Two glass baby bottles, a folded cotton blanket, wooden stacking rings, a plush teddy bear and a silicone teether on a neutral surface |
+| Sports & Outdoors | `sports-outdoors` | `/generated/taxonomy/department-sports-outdoors.webp` | `08fea35bf994a6341180a894d480deb4` | 6 | Football, basketball, badminton racket, rolled yoga mat, dumbbells, hiking backpack and water bottle arranged on a neutral backdrop |
+| Automotive & Motorcycle | `automotive-motorcycle` | `/generated/taxonomy/department-automotive-motorcycle.webp` | `ec24acdf54c2cd9a27d987ea153dc29d` | 6 | Car-care kit with folded microfibre cloths, spray bottle, bucket and tyre gauge beside riding gloves and a plain open-face motorcycle helmet |
+| Tools & Building Materials | `tools-building` | `/generated/taxonomy/department-tools-building-materials.webp` | `f56a6ea71ef3512aa3035ad669e6766f` | 6 | Claw hammer, screwdrivers, adjustable spanner, measuring tape and safety goggles beside stacked timber and plain cement bag |
+| Books & Stationery | `books-stationery` | `/generated/taxonomy/department-books-stationery.webp` | `315c013e97bbd5f45210042f2bed7f8d` | 6 | Stack of blank hardback books and notebooks with pencils in a cup, pens, a wooden ruler and a geometry set |
+
+### Generation parameters and price verification
+
+- Model: `gpt-image-2-5-flare-text-to-image`; resolution `1K`; `aspect_ratio` `16:9`.
+  Native output 1672x941 was downscaled once to 1600x900 WebP (quality 86); no
+  upscaling and no claim of native 1600px capture.
+- Price verified 2026-11-13 through the connected Kie MCP
+  `prepare_media_generation` (exact quote): 6 credits / USD 0.03 per 1K image
+  (`https://kie.ai/pricing`, rate card verified 2026-10-27; the USD figure uses
+  Kie's published $0.005/credit conversion). The MCP host again declined submit
+  approval, so the project's existing permitted Kie REST integration
+  (`/api/v1/jobs/createTask`, `/api/v1/jobs/recordInfo`, `/api/v1/chat/credit`)
+  was used. No top-up, purchase or alternative paid provider.
+- Credits read back from each job (6 per image) and the account balance was read
+  before and after: 11,244.8 → 11,208.8. **New: 36 credits. Prior batches: 96.
+  Cumulative: 132.**
+- Prompts, settings, task ids, review notes and provenance are in
+  `docs/taxonomy/generation-ledger.json` under batch `taxonomy-departments`.
+  PNG originals and both contact sheets are under the gitignored
+  `qa-artifacts/taxonomy-departments/`; only WebP derivatives are committed.
+
+### Controlled application and audit
+
+`scripts/apply-department-images.ts` is REVIEW-guarded (`REVIEW_DATABASE_URL`
+required, `--expect-db` must match the URL and `current_database()`,
+`DatabaseClassification` must contain `REVIEW`). It validates each ledger entry
+(generated + reviewed), every WebP (format and 1600x900 dimensions), rejects any
+target that already holds different art, and updates only `Category.imageUrl`
+and `imageAlt` for the six rows in one transaction. Six `AuditLog` rows and six
+`SystemEvent` rows were written with action `taxonomy.department.image` in the
+same transaction. A second `--apply` wrote 0 rows and reported all six as already
+applied. A fingerprint over every other Category row, every Product row and every
+ProductImage row was identical before and after.
+
+### Verification performed
+
+- `GET http://localhost:3047/api/taxonomy` returned 200 with 11 departments /
+  161 nodes; exactly six `imageUrl` values changed from `null` to the new assets,
+  with no other taxonomy node changed.
+- The canonical 3047 process (`next start`, Next 14.2.35) caches its `public/`
+  file list at boot, so newly added asset files return 404 there until that
+  process is restarted. **3047 was deliberately not restarted.** An isolated
+  second instance of the same `.next-programme` build was started on port 3057
+  against `REVIEW_DATABASE_URL`, verified, and stopped afterwards.
+- On that isolated instance every new asset returned HEAD 200,
+  `content-type: image/webp`, Chromium `naturalWidth/Height` 1600x900, and the
+  API returned the six new `imageUrl` values.
+- `npx tsx scripts/taxonomy-coverage-report.ts --expect-db=naijadeals_review
+  --images --base-url=http://localhost:3057 --json` reported **PASS**, no
+  problems, no writes, stable fingerprint, `images.checked=68`, `passed=68`,
+  `failed=0`, `missingDepartmentArt=[]`; taxonomy remains 11 departments /
+  37 categories / 113 leaves (161 nodes), 30/96 publishable leaves populated.
+  Evidence: `qa-artifacts/taxonomy-departments/coverage-after.json`.
+
+### Remaining gap
+
+After the next authorised restart/rebuild of the 3047 preview, the new files will
+be served by that process. Until then, 3047's API already reports the six
+`imageUrl` values while those six asset paths 404 on 3047 only because of its
+boot-time public-file cache. No application code, taxonomy seed, product or
+payment data was changed in this slice.
+
