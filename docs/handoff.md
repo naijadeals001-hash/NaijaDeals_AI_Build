@@ -4559,3 +4559,6 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 - Asset gaps (cleaning supplies, gaming headset, console): Kie model
   `gpt-image-2-5-flare-text-to-image`, 1K, sample 3 credits/task, 9 credits for 3 images;
   not generated pending budget confirmation.
+- Final copy correction: HEAD `ba0a2a5`, served build `0DLHlGYoId2XSLKSwcsLZ`;
+  "verified sellers" claims removed from homepage hero, footer, marketplace copy and
+  category/deals metadata across the checked routes at 390/1440. Independent recheck PASS.
