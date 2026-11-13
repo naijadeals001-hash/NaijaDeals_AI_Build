@@ -164,7 +164,8 @@ export function buildAdminTaxonomyTree(records: AdminCategoryRecord[], actor: Se
   // A pure cycle has no root; surface every unclaimed node as a root so it can
   // be repaired instead of being invisible.
   for (const node of sortCategoryRows([...nodes.values()])) {
-    if (!claimed.has(node.id)) roots.push(node);
+    if (claimed.has(node.id)) continue;
+    roots.push(node);
     finalise(node, new Set());
   }
 

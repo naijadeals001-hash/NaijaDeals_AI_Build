@@ -265,18 +265,92 @@ model Vendor {
 }
 
 model Category {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  slug        String    @unique
-  description String?
-  imageUrl    String?
-  imageAlt    String?
-  sortOrder   Int       @default(0)
-  isActive    Boolean   @default(true)
+  id              String    @id @default(cuid())
+  key             String?   @unique
+  name            String    @unique
+  slug            String    @unique
+  description     String?
+  imageUrl        String?
+  imageAlt        String?
+  parentId        String?
+  /// 0 = department, 1 = category, 2 = subcategory.
+  level           Int       @default(0)
+  /// Sellers may list directly in this node even when it has no products.
+  isSelectable    Boolean   @default(true)
+  showOnHomepage  Boolean   @default(false)
+  deprecatedAt    DateTime?
+  sortOrder       Int       @default(0)
+  isActive        Boolean   @default(true)
   /// Explicit demonstration classification; never shown as real supply.
-  isDemo      Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  products    Product[]
+  isDemo          Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  parent          Category? @relation("CategoryTree", fields: [parentId], references: [id])
+  children        Category[] @relation("CategoryTree")
+  products        Product[]
+  aliases         CategoryAlias[]
+  attributes      CategoryAttribute[]
+  countryRules    CategoryCountryRule[]
+  requests        CategoryRequest[]
+}
+
+model CategoryAlias {
+  id         String   @id @default(cuid())
+  categoryId String
+  alias      String
+  locale     String   @default("en")
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  @@unique([alias, locale])
+  @@index([categoryId])
+}
+
+enum CategoryAttributeType {
+  TEXT
+  NUMBER
+  SELECT
+  BOOLEAN
+}
+
+model CategoryAttribute {
+  id         String                @id @default(cuid())
+  categoryId String
+  key        String
+  label      String
+  type       CategoryAttributeType @default(TEXT)
+  required   Boolean               @default(false)
+  options    Json?
+  category   Category              @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  @@unique([categoryId, key])
+}
+
+model CategoryCountryRule {
+  categoryId String
+  countryCode String
+  canPublish Boolean @default(true)
+  note       String?
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  @@id([categoryId, countryCode])
+}
+
+enum CategoryRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model CategoryRequest {
+  id                 String                @id @default(cuid())
+  sellerId           String
+  suggestedName      String
+  description        String
+  parentId           String?
+  imageUrl           String?
+  status             CategoryRequestStatus @default(PENDING)
+  adminNote          String?
+  resolvedCategoryId String?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  parent             Category?             @relation(fields: [parentId], references: [id])
+  @@index([sellerId, status])
 }
 
 enum SaleMode {
@@ -302,6 +376,7 @@ model Product {
   status         ProductStatus    @default(ACTIVE)
   /// Explicit demonstration classification; never shown as real supply.
   isDemo         Boolean          @default(false)
+  attributes     Json?
   moderationNote String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt

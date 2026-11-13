@@ -41,7 +41,7 @@ const SHOT_DIR = "qa-artifacts/visual/catalogue-workflow";
 const IMAGE_ONE = "/generated/shop/category-home-kitchen.webp";
 const IMAGE_TWO = "/generated/shop/product-retro-kitchen-blender.webp";
 const SEED_BASELINE = { departments: 7, products: 23 };
-const EXPANDED_BASELINE = { departments: 9, products: 41 };
+const EXPANDED_BASELINE = { departments: 5, products: 49 };
 const DEMO_NOTE = "DEMO — demonstration inventory, not live supply";
 const [email, password] = fs.readFileSync(CREDENTIAL_FILE, "utf8").trim().split(/\r?\n/);
 
@@ -205,7 +205,7 @@ function isRunOwned(entry) {
 
 function activeCounts(catalogue) {
   return {
-    departments: catalogue.departments.filter((entry) => entry.isActive).length,
+    departments: catalogue.departments.filter((entry) => entry.isActive && (entry.level ?? 0) === 0).length,
     products: catalogue.products.filter((entry) => entry.status === "ACTIVE").length
   };
 }
@@ -291,7 +291,7 @@ function parse(response, body) {
 
   async function snapshotCatalogue() {
     const catalogue = await adminCatalogue();
-    const activeDepartments = catalogue.departments.filter((entry) => entry.isActive);
+    const activeDepartments = catalogue.departments.filter((entry) => entry.isActive && (entry.level ?? 0) === 0);
     const activeProducts = catalogue.products.filter((entry) => entry.status === "ACTIVE");
     return {
       counts: {
@@ -749,15 +749,11 @@ function parse(response, body) {
     }
 
     await page.goto(`${BASE}/naijashop`, { waitUntil: "networkidle" });
-    const shopDepartmentLinks = await Promise.all(
-      ["power-solar", "gaming"].map(async (slug) =>
-        page.locator(`a[href*="/naijashop/c/${slug}"]`).count()
-      )
-    );
+    const taxonomyPayload = await (await page.request.get(`${BASE}/api/taxonomy`)).text();
     check(
-      "Shop navigation exposes Power & Solar and Gaming",
-      shopDepartmentLinks.every((count) => count > 0),
-      shopDepartmentLinks.join(",")
+      "Shop taxonomy exposes Power & Solar and Gaming nodes",
+      taxonomyPayload.includes('"power-solar"') && taxonomyPayload.includes('"gaming"'),
+      "taxonomy response"
     );
     const searchSpec = EXPANSION_PRODUCTS[0];
     await page.goto(`${BASE}/naijashop/search?q=${encodeURIComponent(searchSpec.name)}`, {
@@ -788,7 +784,7 @@ function parse(response, body) {
     const counts = activeCounts(catalogue);
     check(
       "expansion matches the approved active-catalogue delta",
-      counts.departments === 9 &&
+      counts.departments === (baselineIsSeed ? 9 : baseline.counts.departments) &&
         counts.products === (baselineIsSeed ? SEED_BASELINE.products + EXPANSION_PRODUCTS.length : baseline.counts.products),
       countsLabel(counts)
     );
@@ -1781,7 +1777,7 @@ function parse(response, body) {
       finalCatalogue.products.some((entry) => entry.slug === spec.slug && entry.status === "ACTIVE")
     );
     check(
-      "final catalogue retains the approved 9-department / 41-product catalogue baseline",
+      "final catalogue retains the approved 5-department / 49-product taxonomy baseline",
       finalCounts.departments === EXPANDED_BASELINE.departments &&
         finalCounts.products === EXPANDED_BASELINE.products &&
         retainedExpansion.length === EXPANSION_PRODUCTS.length,

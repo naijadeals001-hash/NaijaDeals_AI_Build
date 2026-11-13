@@ -159,7 +159,11 @@ export async function pruneProcessedSync(olderThanMs = 7 * 24 * 60 * 60_000): Pr
 export async function requestProductSync(productId: string): Promise<void> {
   await markForIndex({ entityType: "PRODUCT", entityId: productId });
   if (isQueueConfigured()) {
-    await enqueue(QUEUE_NAMES.searchIndex, "sync", { productId }, { attempts: 3 });
+    // The durable mark-for-index row above is the source of truth. A missing
+    // queue worker must not block catalogue writes; the indexer retries later.
+    void enqueue(QUEUE_NAMES.searchIndex, "sync", { productId }, { attempts: 3 }).catch((error) => {
+      console.warn("search_sync_enqueue_failed", error instanceof Error ? error.message : String(error));
+    });
   }
 }
 
