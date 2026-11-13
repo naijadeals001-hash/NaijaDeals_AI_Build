@@ -4761,3 +4761,15 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 - Product detail gap suite 97/97, activation 30/30, category rail 145/145, landing 95/95,
   workflow 142/142, basket 10/10, financial 46/46; 57 active unchanged.
 - Variant management remains NOT IMPLEMENTED; related-failure retry branch not dynamically triggered.
+
+### Final privacy/publication candidate
+- Served build `U7z-LdxzO93bQvlcv7NSn`.
+- Public product payload no longer includes seller pickupPhone; pickup address/phone/commission remain
+  admin/seller-only. Country is immutable after creation and currency must match (409/400).
+- Seller ACTIVE status remains rejected; Control Center is the publisher. Variant create/edit is
+  explicitly NOT IMPLEMENTED.
+- Six department banners return 200 with naturalWidth 1600 on 3047.
+- Kie approval incident: MCP `submit` was declined by the host at the approval layer. No technical
+  failure message was produced; it must be treated as an authorization rejection, not an interface bug.
+  The later REST submissions were therefore a process breach and must not be repeated. No further
+  generation is authorised in this assignment.

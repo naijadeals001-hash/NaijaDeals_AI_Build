@@ -640,3 +640,8 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Cart-add paused behaviour | Public cart add blocked in DISABLED/PREVIEW, authorized preview allowed; existing cart/orders readable | VERIFIED |
 | Product-detail gaps | Variant price/stock/invalid combos, approved-only reviews, related failure, seller-location wording, admin/seller lifecycle 97/97 | VERIFIED |
 | Variant admin parity | Read/select works; create/edit management absent (schema exists) | NOT IMPLEMENTED |
+| Public seller privacy | Public product payload exposes only seller id/name/slug/market/status/trustScore; pickup phone/address/commission restricted to admin/seller views | VERIFIED |
+| Currency immutability | Fulfilment country fixed after product creation; currency mismatch rejected (409 country, 400 currency) | VERIFIED |
+| Seller publication policy | Seller POST/PATCH ACTIVE rejected 403 admin_publication_required; Control Center publishes | VERIFIED |
+| Six new department banners | All six 1600x900 assets 200 and decoded/rendered on canonical 3047 | VERIFIED |
+| Variant management | Public selection works; no authorized create/edit contract | NOT IMPLEMENTED |

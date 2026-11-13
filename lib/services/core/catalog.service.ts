@@ -32,7 +32,7 @@ async function shopReadAllowed(options: {
 
 const productInclude = {
   category: true,
-  vendor: { select: { id: true, name: true, slug: true, market: true, status: true, trustScore: true, pickupPhone: true } },
+  vendor: { select: { id: true, name: true, slug: true, market: true, status: true, trustScore: true } },
   // `sortOrder` alone is not a total order: seeded galleries often share a
   // sortOrder, and Postgres may return those rows in any order. A stable
   // secondary key keeps the detail gallery on the same image every request.
