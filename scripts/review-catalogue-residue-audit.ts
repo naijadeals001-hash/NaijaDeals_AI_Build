@@ -356,7 +356,8 @@ async function main() {
   );
   check(
     "run-tagged residue count is fully inventoried",
-    runTagged.length === 103 && residue.length === 104,
+    runTagged.length === runTaggedDepartments.length + runTaggedProducts.length &&
+      residue.length === runTagged.length + unrelatedArchived.length,
     `${runTagged.length} run-tagged records + ${unrelatedArchived.length} unrelated archived = ${residue.length} non-public records`
   );
 

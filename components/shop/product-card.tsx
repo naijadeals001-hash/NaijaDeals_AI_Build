@@ -11,7 +11,7 @@ export type ShopProduct = {
   brand?: string | null;
   priceKobo: string | number | bigint;
   compareAtKobo?: string | number | bigint | null;
-  images?: Array<{ url: string }>;
+  images?: Array<{ url: string; alt?: string | null }>;
   category?: { name: string; slug: string } | null;
   rating?: { average: number | null; count: number } | null;
   stock?: { quantity?: number; reserved?: number } | null;
@@ -89,7 +89,7 @@ export function ShopProductCard({
           {image ? (
             <img
               src={image}
-              alt={product.name}
+              alt={product.images?.[0]?.alt || product.name}
               loading="lazy"
               className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.04]"
             />
