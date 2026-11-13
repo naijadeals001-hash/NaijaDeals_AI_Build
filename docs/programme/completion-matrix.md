@@ -601,3 +601,4 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Narrow-card demonstration label | "Demonstration seller" visible on homepage, category, search and related cards at 390/1440, not truncated | VERIFIED |
 | Country-scoped administrator enforcement | `scripts/review-scoped-admin-setup.ts` (GH) + `scripts/review-catalogue-scope-journey.cjs` 6/6: NG products hidden, unpublish/create outside scope 403, catalogue intact | VERIFIED |
 | Historical order readability after unpublish | `scripts/review-order-snapshot-journey.cjs` 8/8 with dedicated REVIEW order fixture; snapshot readable after product 404; fixture removed | VERIFIED |
+| Public verified-seller phrase removed | footer, homepage, category/deals metadata, marketplace hero and empty states | VERIFIED |

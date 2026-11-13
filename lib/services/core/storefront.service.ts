@@ -33,7 +33,7 @@ export type StorefrontConfig = {
 
 export const DEFAULT_STOREFRONT: StorefrontConfig = {
   announcement: "Demo inventory. These listings are for visual testing only; prices and stock are illustrative.",
-  heroTitle: "Shop verified sellers across Africa",
+  heroTitle: "Shop sellers across Africa",
   heroSubtitle: "Escrow-protected checkout, tracked delivery and server-verified payments.",
   visibleCategories: [],
   categoryOrder: [],

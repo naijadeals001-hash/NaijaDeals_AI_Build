@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: "%s | NaijaDeals"
   },
   description:
-    "Shop, eat, send, ride, stay, stream and pay across Africa from one NaijaDeals account. Verified sellers, escrow payments and tracked delivery.",
+    "Shop, eat, send, ride, stay, stream and pay across Africa from one NaijaDeals account. Sellers across Africa, escrow payments and tracked delivery.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://naijadeals.com"),
   openGraph: {
     title: "NaijaDeals — one app for African life",

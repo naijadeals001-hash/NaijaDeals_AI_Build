@@ -45,7 +45,7 @@ export const publicServices: PublicService[] = [
   {
     key: "shop",
     label: "Shop",
-    description: "Verified sellers, escrow checkout.",
+    description: "Sellers across Africa, escrow checkout.",
     href: "/naijashop",
     icon: ShoppingBag,
     status: liveStatus("shop"),

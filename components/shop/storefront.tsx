@@ -315,7 +315,7 @@ export function NaijaDealsMarketplace() {
                 <ul className="mt-7 flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-semibold text-white/85 sm:text-[10.5px]">
                   <li className="flex items-center gap-1.5">
                     <BadgeCheck className="h-3.5 w-3.5 text-[#8ed14b]" aria-hidden />
-                    Listings from verified sellers
+                    Listings from sellers, with demonstration inventory labelled
                   </li>
                   <li className="flex items-center gap-1.5">
                     <ShieldCheck className="h-3.5 w-3.5 text-[#8ed14b]" aria-hidden />
@@ -420,7 +420,7 @@ export function NaijaDealsMarketplace() {
           className="mt-3 grid grid-cols-2 gap-2 rounded-2xl border border-[#e1e8de] bg-white p-3 sm:grid-cols-4 sm:p-4"
         >
           {[
-            { icon: BadgeCheck, title: "Verified sellers", body: "Seller accounts are reviewed before listings go live." },
+            { icon: BadgeCheck, title: "Reviewed sellers", body: "Seller accounts are reviewed before listings go live." },
             { icon: ShieldCheck, title: "Escrow checkout", body: "Paid orders are held until delivery is confirmed." },
             { icon: Truck, title: "Tracked delivery", body: "Delivery events are recorded by Deliveries & Freight." },
             { icon: Wallet, title: "One account", body: "Cart, orders and addresses across NaijaDeals." }
@@ -515,7 +515,7 @@ export function NaijaDealsMarketplace() {
             <Store className="mx-auto h-8 w-8 text-[#7a9c80]" aria-hidden />
             <h2 className="mt-3 font-display text-[22px] font-extrabold text-[#14241b]">No live seller listings yet</h2>
             <p className="mx-auto mt-1 max-w-xl text-[12px] leading-6 text-[#4b5b51]">
-              The marketplace shows only published listings from verified sellers. Sample and test rows are hidden until a real seller
+              The marketplace shows only published listings from reviewed sellers; demonstration inventory is labelled. Sample and test rows are hidden until a real seller
               publishes stock.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">

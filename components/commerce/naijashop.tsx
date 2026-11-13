@@ -181,7 +181,7 @@ export function NaijaShopPage() {
   const [session, setSession] = useState<{ name: string; cartCount: number; destination: string }>({ name: "", cartCount: 0, destination: "" });
   const [storefront, setStorefront] = useState({
     announcement: "",
-    heroTitle: "Shop verified sellers across Africa",
+    heroTitle: "Shop sellers across Africa",
     heroSubtitle: "Escrow-protected checkout, tracked delivery and server-verified payments.",
     visibleCategories: [] as string[],
     categoryOrder: [] as string[],
@@ -566,7 +566,7 @@ export function NaijaShopPage() {
           <PackageCheck className="mx-auto mb-3 h-8 w-8 text-primary" aria-hidden="true" />
           <p className="font-bold">No live seller listings yet.</p>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            The storefront only shows products published by verified sellers. Once a seller adds a product it appears here with
+            The storefront only shows products published by reviewed sellers. Once a seller adds a product it appears here with
             its real photos, stock and price.
           </p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
