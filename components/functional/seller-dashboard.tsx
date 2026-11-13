@@ -971,12 +971,18 @@ export function SellerDashboard() {
                       >
                         Edit listing
                       </button>
-                      <button
-                        onClick={() => void toggleProduct(product.id, product.status === "ACTIVE" ? "ARCHIVED" : "ACTIVE")}
-                        className="min-h-9 rounded-lg border border-border-soft px-2 text-xs font-bold"
-                      >
-                        {product.status === "ACTIVE" ? "Archive" : "Activate"}
-                      </button>
+                      {product.status === "ACTIVE" ? (
+                        <button
+                          onClick={() => void toggleProduct(product.id, "ARCHIVED")}
+                          className="min-h-9 rounded-lg border border-border-soft px-2 text-xs font-bold"
+                        >
+                          Archive
+                        </button>
+                      ) : (
+                        <span className="inline-flex min-h-9 items-center rounded-lg bg-surface-low px-2 text-[10px] font-bold text-muted">
+                          Awaiting Control Center publication
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>

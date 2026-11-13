@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { updateSellerProduct } from "@/lib/services/core/seller.service";
-import { assertSameOrigin, jsonError, optionalString, readJson, requireActiveVendor } from "@/lib/auth/guard";
+import { ApiError, assertSameOrigin, jsonError, optionalString, readJson, requireActiveVendor } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
 import { requestProductSync } from "@/lib/infra/search-sync";
 
@@ -17,7 +17,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       if (!/^\d+$/.test(text)) throw new Error("Price must be a whole number of kobo.");
       priceKobo = BigInt(text);
     }
-    const status = body.status === "DRAFT" || body.status === "ACTIVE" || body.status === "ARCHIVED" ? body.status : undefined;
+    if (body.status === "ACTIVE") {
+      throw new ApiError(403, "admin_publication_required", "Only the Control Center can publish or reactivate a listing.");
+    }
+    const status = body.status === "DRAFT" || body.status === "ARCHIVED" ? body.status : undefined;
     const product = await updateSellerProduct(user.id, params.id, {
       name: optionalString(body.name, 160) ?? undefined,
       description: optionalString(body.description, 4000) ?? undefined,

@@ -124,7 +124,14 @@ export function CategoryBrowse({
         const flat: ApiCategory[] = [];
         const walk = (node: Record<string, unknown>) => {
           if (node && typeof node.slug === "string" && typeof node.name === "string") {
-            flat.push({ id: String(node.id ?? node.slug), name: node.name, slug: node.slug } as ApiCategory);
+            flat.push({
+              id: String(node.id ?? node.slug),
+              name: node.name,
+              slug: node.slug,
+              imageUrl: typeof node.imageUrl === "string" ? node.imageUrl : null,
+              imageAlt: typeof node.imageAlt === "string" ? node.imageAlt : null,
+              level: typeof node.level === "number" ? node.level : undefined
+            } as ApiCategory & { imageUrl?: string | null; imageAlt?: string | null; level?: number });
           }
           const children = Array.isArray(node?.children) ? node.children : [];
           for (const child of children) walk(child as Record<string, unknown>);
@@ -253,6 +260,16 @@ export function CategoryBrowse({
         <span aria-hidden> › </span>
         <span>{heading}</span>
       </nav>
+      {(() => {
+        const node = knownCategory as (ApiCategory & { imageUrl?: string | null; imageAlt?: string | null; level?: number }) | undefined;
+        if (!node?.imageUrl) return null;
+        return (
+          <div className="mt-3 overflow-hidden rounded-xl ring-1 ring-[#e3e6e6]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={node.imageUrl} alt={node.imageAlt || `${node.name} department`} className="h-28 w-full object-cover sm:h-36" />
+          </div>
+        );
+      })()}
       <div className="mt-1 flex flex-wrap items-end justify-between gap-2">
         <h1 className="font-display text-[22px] font-extrabold">{heading}</h1>
         <p aria-live="polite" className="text-[12px] text-[#565959]">

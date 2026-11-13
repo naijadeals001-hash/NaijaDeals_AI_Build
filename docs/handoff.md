@@ -4706,3 +4706,20 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   activation. Recorded P3s: gari alias relevance, category attributes absent from public
   detail, wholesale taxonomy wording, Aura blocked by Valkey, six departments without banner
   art, REVIEW residue.
+
+## Product detail, admin parity and Shop activation (2026-11-13)
+
+- Final build `YN328Ihs3BSIiA12QGhtn`; application commits 90771ef (product detail),
+  2dcdbdc (admin/seller gallery+attributes), 7974bf6 (activation), 3a567c5 (six Kie
+  department banners), plus coordinator fixes.
+- Product detail: gallery/zoom, stored category attributes, seller-record destination,
+  REVIEW purchase notice, related/reviews; 261/261 isolated audit.
+- Admin/seller parity: gallery up to 6 with alt/order, attributes validated, preview,
+  publish/unpublish; seller activation now 403 `admin_publication_required`; parity 74/74.
+- Shop activation: global/country/city states with reason+audit; public catalogue/checkout/
+  seller listing gates; existing orders readable (fixture unavailable in REVIEW, BLOCKED);
+  other verticals marked NOT_WIRED.
+- Six department banners generated (6 credits each) and applied; cumulative Kie 132 credits;
+  public category pages render banners; department image audit 68/68.
+- P1/P2/P3 rework: seller self-publication closed, 390 admin overflow 0, activation success
+  notice persists, category-browse resolves leaf headings from taxonomy.

@@ -18,11 +18,14 @@ export async function POST(request: Request) {
     const user = await requireActiveVendor();
     const body = await readJson<Record<string, unknown>>(request);
     const requestedStatus = body.status;
-    if (requestedStatus !== undefined && requestedStatus !== "DRAFT" && requestedStatus !== "ACTIVE") {
+    if (requestedStatus === "ACTIVE") {
       return NextResponse.json(
-        { error: 'status must be "DRAFT" or "ACTIVE".', code: "validation_error" },
-        { status: 400 }
+        { error: "Only the Control Center can publish a listing.", code: "admin_publication_required" },
+        { status: 403 }
       );
+    }
+    if (requestedStatus !== undefined && requestedStatus !== "DRAFT") {
+      return NextResponse.json({ error: 'status must be "DRAFT".', code: "validation_error" }, { status: 400 });
     }
     const priceKobo = parseMoney(body.priceKobo, "Price");
     const quantity = Number(body.quantity ?? 0);
@@ -42,7 +45,7 @@ export async function POST(request: Request) {
       quantity,
       lowStockLevel: body.lowStockLevel ? Number(body.lowStockLevel) : 3,
       attributes: body.attributes,
-      status: requestedStatus === "ACTIVE" ? "ACTIVE" : "DRAFT"
+      status: "DRAFT"
     });
     await requestProductSync(product.id);
     return NextResponse.json(jsonSafe(product), { status: 201 });

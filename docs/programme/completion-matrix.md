@@ -623,3 +623,8 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Landing visual acceptance | Independent 390/768/1440 review: 8 shelves before wholesale, no placeholder department cards, 0 broken images, 0 overflow, 0 unexpected console errors | VERIFIED |
 | Workflow baseline preservation | Two runs 142/142; accepted-product field fingerprint identical (id/slug/category/status/DEMO/images/stock/price) both runs | VERIFIED |
 | Computed coverage | 30/96 populated, 66 gaps, 57 ACTIVE / 50 leaf / 7 ambiguous; Batch 2 counted once | VERIFIED |
+| Product-detail redesign | 3-area desktop / ordered mobile, gallery+zoom, stored attributes, seller destination, REVIEW purchase notice, related/reviews; 261/261 audit | VERIFIED |
+| Product gallery/attribute admin parity | Admin gallery/attributes/stock/DEMO/publish; seller form parity; unauthorized/unpublish tests 74/74; sellers cannot activate | VERIFIED |
+| Shop vertical activation | Global/country/city states, reason+audit, super-admin only; Shop catalogue/checkout/seller gates; other verticals NOT_WIRED | VERIFIED |
+| Department banners | Six Kie banners applied to taxonomy; public category pages render them; 68/68 images | VERIFIED |
+| Activation UI/mobile fixes | 390 overflow 0; success notice persists; seller Activate removed | VERIFIED |

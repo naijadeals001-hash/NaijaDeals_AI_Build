@@ -204,8 +204,11 @@ export function VerticalActivationWorkspace({ canWrite }: { canWrite: boolean })
     setStatus(currentEffective.status);
     setReason("");
     setActionError("");
-    setNotice("");
   }, [currentEffective?.status, currentEffective?.scope, currentEffective?.rowId, currentEffective]);
+
+  useEffect(() => {
+    setNotice("");
+  }, [selectedKey, scopeType, countryCode, cityCode]);
 
   const shops = snapshot?.verticals.find((vertical) => vertical.key === "shop");
   const cityOptions = snapshot?.cities[countryCode] ?? [];
@@ -280,7 +283,7 @@ export function VerticalActivationWorkspace({ canWrite }: { canWrite: boolean })
   }
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs font-semibold text-[#8B949E]" role="status">
           Snapshot {dateLabel(snapshot.generatedAt)} · {snapshot.verticals.length} services
@@ -346,8 +349,8 @@ export function VerticalActivationWorkspace({ canWrite }: { canWrite: boolean })
         </div>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-        <section aria-labelledby="vertical-list-heading" className="rounded-2xl border border-[#21262D] bg-[#161B22] p-3 sm:p-4">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+        <section aria-labelledby="vertical-list-heading" className="min-w-0 rounded-2xl border border-[#21262D] bg-[#161B22] p-3 sm:p-4">
           <h2 id="vertical-list-heading" className="px-1 font-display text-base font-extrabold text-[#F0F6FC]">
             Services
           </h2>
@@ -393,7 +396,7 @@ export function VerticalActivationWorkspace({ canWrite }: { canWrite: boolean })
 
         {selected ? (
           <section aria-labelledby="vertical-detail-heading" className="space-y-4">
-            <div className="rounded-2xl border border-[#21262D] bg-[#161B22] p-4 sm:p-5">
+            <div className="min-w-0 rounded-2xl border border-[#21262D] bg-[#161B22] p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#00E676]">Effective state</p>
@@ -616,7 +619,7 @@ export function VerticalActivationWorkspace({ canWrite }: { canWrite: boolean })
               <p className="mt-1 text-[11.5px] text-[#8B949E]">
                 Effective result after applying GLOBAL → country → city → registry. Ignored local rules are marked.
               </p>
-              <div className="mt-3 overflow-x-auto">
+              <div className="mt-3 w-full max-w-full overflow-x-auto">
                 <table className="w-full min-w-[32rem] border-collapse text-left text-[11.5px]">
                   <caption className="sr-only">Effective activation by country and city for {selected.publicLabel}</caption>
                   <thead>
@@ -672,7 +675,7 @@ export function VerticalActivationWorkspace({ canWrite }: { canWrite: boolean })
         ) : null}
       </div>
 
-      <section aria-labelledby="activation-audit-heading" className="rounded-2xl border border-[#21262D] bg-[#161B22] p-4 sm:p-5">
+      <section aria-labelledby="activation-audit-heading" className="min-w-0 rounded-2xl border border-[#21262D] bg-[#161B22] p-4 sm:p-5">
         <h2 id="activation-audit-heading" className="flex items-center gap-2 font-display text-base font-extrabold text-[#F0F6FC]">
           <History className="h-4 w-4 text-[#00E676]" aria-hidden="true" /> Recent activation audit
         </h2>
@@ -684,7 +687,7 @@ export function VerticalActivationWorkspace({ canWrite }: { canWrite: boolean })
             No activation changes recorded yet. The registry defaults are in effect.
           </p>
         ) : (
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-3 w-full max-w-full overflow-x-auto">
             <table className="w-full min-w-[42rem] border-collapse text-left text-[11.5px]">
               <thead>
                 <tr className="border-b border-[#21262D] text-[10px] uppercase tracking-wide text-[#8B949E]">
