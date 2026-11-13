@@ -291,3 +291,205 @@ be served by that process. Until then, 3047's API already reports the six
 boot-time public-file cache. No application code, taxonomy seed, product or
 payment data was changed in this slice.
 
+## Level-1 category tiles — 37-category coverage (2026-11-13, later slice)
+
+This section covers the **37 active level-1 categories** (the middle tier:
+11 departments → 37 categories → 113 leaves). It does not change any earlier
+department-banner or product-batch figure.
+
+TARGET: every active level-1 category has an accurate compact tile image plus
+alt text, reusing approved art first. Result: **35 of 37 covered** (9 pre-existing
+approved tiles, 7 reused approved product photographs, 19 newly generated Kie
+tiles); **2 deliberately skipped** because their entire NG subtree is
+unpublishable. All 35 covered rows now have `imageAlt`.
+
+### Existing approved tiles — preserved, 6 alt gaps filled
+
+Nine level-1 categories already had an approved `imageUrl`. Their art was **not
+overwritten**; only the six rows with `imageAlt = NULL` received missing alt
+text through the guarded apply script.
+
+| Category | Existing asset | Dimensions | Alt |
+|---|---|---|---|
+| Phones & Tablets | `/generated/shop/category-phones-tablets.webp` | 1024x682 | added |
+| Computers | `/generated/shop/category-computers.webp` | 1024x576 | added |
+| Gaming | `/generated/shop/category-gaming.webp` | 1024x576 | already present |
+| Electronics & Appliances | `/generated/shop/banner-electronics.webp` | 1024x576 | added |
+| Home & Kitchen | `/generated/shop/category-home-kitchen.webp` | 1024x576 | added |
+| Power & Solar | `/generated/shop/category-power-solar.webp` | 1024x576 | already present |
+| Fashion & Accessories | `/generated/shop/category-fashion.webp` | 1024x1024 | added |
+| Beauty & Personal Care | `/generated/shop/category-beauty.webp` | 1024x1024 | added |
+| Groceries & Household Essentials | `/generated/shop/category-groceries.webp` | 1024x1066 | already present |
+
+Known pre-existing art limitation (not changed here): `electronics-appliances`
+uses `banner-electronics.webp`, which depicts gaming peripherals on a neon-lit
+desk rather than the whole Electronics & Appliances category. It is treated as
+approved art and was not overwritten; a versioned replacement needs an owner
+decision. `gaming` alt says "dark surface" while the image is neon-lit; the alt
+was already present and was left unchanged.
+
+### Reused approved product photographs — 7 categories, 0 credits
+
+Each source is the first image of an ACTIVE DEMO product inside the target
+category's own subtree; the apply script re-verifies product status, subtree
+membership, first-image position and exact URL before writing.
+
+| Category | Reused asset | Source product | Why it represents the category |
+|---|---|---|---|
+| Fabrics & Textiles | `/generated/taxonomy/african-print-fabrics.webp` | `demo-african-print-cotton-fabric-6-yards-xggck` | Both populated leaves are fabrics; African-print stack is the archetype |
+| Natural & Traditional Beauty | `/generated/taxonomy/black-soap.webp` | `demo-african-black-soap-bar-300g-40xqk` | Frame shows both populated leaves: black soap and shea butter |
+| Power Tools | `/generated/taxonomy/cordless-drill.webp` | `demo-cordless-drill-and-bit-set-18v-dlbqn` | Drill is the archetypal power tool; other leaves are empty |
+| Processing Equipment | `/generated/taxonomy/cassava-grater.webp` | `demo-electric-cassava-grater-bo1z9` | Processing machinery is the subject; cassava processing is the only populated leaf |
+| Stationery & Office | `/generated/taxonomy/exercise-books.webp` | `demo-a5-exercise-books-pack-of-10-m3ss1` | Exercise books are the archetypal stationery item; notebooks/paper is the only populated leaf |
+| Baby Feeding & Care | `/generated/taxonomy/glass-baby-bottles.webp` | `demo-glass-baby-bottles-2-240ml-vz8lq` | Bottles are the archetype of the only populated, publishable feeding leaf |
+| Medical Devices & Aids | `/generated/taxonomy/first-aid-kit.webp` | `demo-compact-first-aid-kit-42-pieces-5x8ln` | First-aid supplies are the only publishable leaf; health monitors and mobility aids are NG-restricted |
+
+Trade-off: a reused tile is identical to the product photograph that also
+appears on that category page. This is deliberate reuse of approved art, not a
+duplicate generation; it avoids spending credits on an unrelated new scene.
+
+### Generated category tiles — 19 images, 114 credits
+
+Model `gpt-image-2-5-flare-text-to-image`, `1K`, `1:1`. Native provider output
+was 1254x1254; each was centre-cropped once to 1024x1024 and encoded as WebP
+(quality 86). No upscaling and no claim of native 1024px capture. Compositions
+were prompted with a centred subject and generous margin so the crop survives
+both the circular shortcut and the wide category hero.
+
+| Category | Asset | Kie task id | Credits | Alt |
+|---|---|---|---:|---|
+| Baby Gear & Nursery | `/generated/taxonomy/category-baby-gear-nursery.webp` | `17bfffb49b4ed6ddd9c6ca4a9db0c841` | 6 | Lightweight baby stroller beside a wooden nursery cot with folded blankets |
+| Books | `/generated/taxonomy/category-books.webp` | `d5fe77395b7ea69f1369e14366120c9a` | 6 | Neat stack of plain hardback books with an open book, bookmark and reading glasses |
+| Car Parts | `/generated/taxonomy/category-car-parts.webp` | `50b7f166bbc53900b971bf6e8fab80e7` | 6 | Car oil filter, pleated air filter, headlight assembly and side wing mirror |
+| Farm Inputs | `/generated/taxonomy/category-farm-inputs.webp` | `3750188fce844513ba2240ad2a1ddcd6` | 6 | Sack of potting soil, compost, watering can, hand trowel and drip irrigation tubing |
+| Fitness & Strength | `/generated/taxonomy/category-fitness-strength.webp` | `9e9c4c340a58cf0ec7f98fd88c562614` | 6 | Hexagonal dumbbells, kettlebell, resistance band and skipping rope |
+| Hand Tools | `/generated/taxonomy/category-hand-tools.webp` | `1996dde89bbe93f5749def53bd9df7fa` | 6 | Claw hammer, combination spanners, socket set, measuring tape and screwdriver |
+| Motorcycle Parts & Gear | `/generated/taxonomy/category-motorcycle-parts.webp` | `bb2446025d58289b26604fc5a84e5c39` | 6 | Motorcycle drive chain, steel sprocket, spark plug, lever and engine side cover |
+| Art & Craft | `/generated/taxonomy/category-art-craft.webp` | `d875f5624ecbd1a03303b420f46c8f32` | 6 | Acrylic paint tubes, paintbrushes, blank canvas, coloured pencils and beads |
+| Building Materials | `/generated/taxonomy/category-building-materials.webp` | `a0d83f739cae85d905454edb7c2dd58a` | 6 | Plain cement bag, concrete blocks, roofing sheets, timber planks and paint bucket |
+| Car Care & Accessories | `/generated/taxonomy/category-car-care-accessories.webp` | `357b40e3e259538f58894ffcb156d782` | 6 | Microfibre cloths, wash bucket, spray bottle, seat cover and windscreen sunshade |
+| Household & Cleaning | `/generated/taxonomy/category-household-cleaning.webp` | `dbe515906d67674d59a4c04c485f7d5a` | 6 | Mop and bucket, broom, unlabelled cleaner spray, cloths, sponge and laundry basket |
+| Oils, Soups & Seasonings | `/generated/taxonomy/category-oils-soups-seasonings.webp` | `33360e5e32caa89c317247ecf3d2188e` | 6 | Palm oil bottle, ground egusi seeds, ground crayfish, dried chillies and stock cubes |
+| Outdoor & Camping | `/generated/taxonomy/category-outdoor-camping.webp` | `4f9075c6588797bcad73353ea8553c7b` | 6 | Dome tent, rolled sleeping bag, camping lantern, cooler box and folding stool |
+| Toys & Play | `/generated/taxonomy/category-toys-play.webp` | `f2ab4ebdc2ee6dc74ec1eca10744b00e` | 6 | Wooden stacking-ring toy, plush teddy bear, building blocks and a toy car |
+| Wholesale & Business Supplies | `/generated/taxonomy/category-wholesale-business-supplies.webp` | `fab2c462613f482826c538a98a759db4` | 6 | Plain cardboard shipping boxes, packing tape, paper bags, grain sacks and shelving |
+| Cycling & Scooters | `/generated/taxonomy/category-cycling-scooters.webp` | `794ed5f816ef25d426f5c03837b48a05` | 6 | City bicycle, plain vented cycling helmet, cycling gloves and water bottle |
+| Workplace Safety | `/generated/taxonomy/category-workplace-safety.webp` | `d11b2bd588d423544f8d5f155d05c71f` | 6 | High-visibility vest, hard hat, work gloves, safety goggles and steel-toe boots |
+| Ball & Racquet Sports | `/generated/taxonomy/category-ball-racquet-sports.webp` | `50cb518c5b0a4ea30b150ec3fa5591a3` | 6 | Football, basketball, tennis racket and ball, badminton racket and shuttlecocks |
+| Grains & Flours | `/generated/taxonomy/category-grains-flours.webp` | `a3e81d34d06ab3162c5d73cf9806e8ef` | 6 | Woven bowls of rice, maize kernels, garri and white flour with a jute grain sack |
+
+All 19 were inspected on three contact sheets and individually at full
+resolution. All passed: correct subject, plausible equipment/ingredients, no
+readable text, logos or brand names, no people or hands, and a safe centre crop.
+No retries were required; no task is left submitted, timed out or uncertain.
+
+### Deliberately skipped — 2 fully regulated categories
+
+These level-1 categories have **no publishable NG leaf**, so no tile or
+generation was made. A neutral tile would still advertise a category that cannot
+be transacted in Nigeria.
+
+| Category | Subtree | Why skipped |
+|---|---|---|
+| Medicines & Treatments | Over-the-Counter Medicines (`NG:false`, NAFDAC) | Entire subtree is regulated/unpublishable |
+| Vitamins & Supplements | Vitamins & Minerals + Herbal & Traditional Remedies (both `NG:false`) | Entire subtree is regulated/unpublishable |
+
+Categories with a mixed subtree (farm-inputs, car-parts, motorcycle-parts,
+baby-gear-nursery, baby-feeding-care, building-materials, medical-devices-aids)
+received neutral tiles or reused art that avoids regulated product families:
+no medicines, pesticides, fertilizers, seeds, infant formula, car seats, brake,
+suspension or tyre parts, motorcycle brakes/tyres/helmets, or fixed electrical
+installation materials are depicted as available.
+
+### Credit accounting
+
+| Batch | Model / size | Images | Credits | Balance evidence |
+|---|---|---:|---:|---|
+| Batch 1 (prior) | `gpt-image-2-5-flare-text-to-image`, 1K | 8 | 48 | preserved |
+| Batch 2 (prior) | `gpt-image-2-5-flare-text-to-image`, 1K | 8 | 48 | preserved |
+| Department banners (prior) | `gpt-image-2-5-flare-text-to-image`, 1K, 16:9 | 6 | 36 | preserved |
+| **Level-1 category tiles (new)** | `gpt-image-2-5-flare-text-to-image`, 1K, 1:1 | **19** | **114** | per-job `creditsConsumed` = 6; account 11,208.8 → 11,094.8 |
+| **Cumulative** | | **41** | **246** | 132 prior + 114 new |
+
+Price was re-verified on 2026-11-13 through the connected Kie MCP
+`prepare_media_generation` (exact quote): 6 credits / USD 0.03 per 1K image,
+rate card version 2026-10-28, `https://kie.ai/pricing`. The model docs at
+`https://docs.kie.ai/market/gpt/gpt-image-2-5-flare-text-to-image` use
+`creditsConsumed: 3` only as an illustrative callback example; the live jobs
+read back 6 per image and the account balance moved by exactly 114. The MCP host
+again declined submit approval, so generation used the project's existing
+permitted Kie REST integration (`/api/v1/jobs/createTask`,
+`/api/v1/jobs/recordInfo`, `/api/v1/chat/credit`). No credits were purchased and
+no other provider was called.
+
+### Controlled application and audit
+
+`scripts/apply-category-images.ts` is REVIEW-guarded (`REVIEW_DATABASE_URL`
+required, `--expect-db` must match the URL and `current_database()`,
+`DatabaseClassification` must contain `REVIEW`, dry run uses a read-only
+transaction). It validates every generated asset (ledger `status=generated`,
+`reviewedAt`, exact path, 1024x1024 WebP), every reused asset (ACTIVE product,
+inside the target subtree, first image, exact URL) and every alt-only source
+(exact approved `imageUrl`; only a NULL/equal `imageAlt` may be written).
+
+- First `--apply`: 26 writes (19 generated + 7 reused) in one transaction,
+  26 `AuditLog` + 26 `SystemEvent` rows with action `taxonomy.category.image`.
+- Second `--apply` on the same 26 targets: **0 writes, 26/26 already applied**
+  (idempotence proven before extending the script).
+- After adding the 6 alt-only targets, `--apply` wrote those 6 missing alt
+  values (6 audit + 6 system-event rows); the 26 prior rows reported
+  "already applied".
+- Final `--apply`: **0 writes, 32/32 already applied**.
+- Fingerprints of every other `Category` row, all `Product` rows and all
+  `ProductImage` rows were identical before and after each transaction;
+  `activeLevelOne = 37`, `totalLevelOne = 37`.
+- Final REVIEW state: **35/37 active level-1 categories have `imageUrl` and
+  `imageAlt`**; the only NULLs are `medicines-treatments` and
+  `vitamins-supplements`; no duplicate category tile URL; no alt over 220 chars.
+- The nine pre-existing `imageUrl` values are unchanged.
+
+### Render verification
+
+- Isolated instance of the **same approved build** `HxT_Uo1kpECYdEQT516tb`
+  (`.next-programme`, `next start -p 3057`) against `naijadeals_review`;
+  verified and stopped afterwards. Port 3047 was **not restarted**.
+- `/api/taxonomy` on the isolated instance returned 11 departments / 37
+  categories, **35 with `imageUrl` and `imageAlt`**.
+- All 35 unique category tile URLs returned HTTP 200 `image/webp` and loaded in
+  Chromium with `naturalWidth > 0` (19 new tiles 1024x1024; the nine existing
+  tiles retain 1024x576 / 682 / 1024 / 1066). Zero broken images, zero missing
+  alt.
+- Rendered category pages `/naijashop/c/books`,
+  `/naijashop/c/workplace-safety`, `/naijashop/c/power-tools` and
+  `/naijashop/c/fabrics-textiles` show the expected hero image and alt; the
+  department page `/naijashop/c/electronics-technology` still shows its banner.
+  No horizontal overflow at 390px or 1440px. Screenshots:
+  `qa-artifacts/category-tiles/books-1440.png`,
+  `workplace-safety-1440.png`, `workplace-safety-390.png`,
+  `power-tools-390.png`.
+- Navigation through the storefront was also checked after scrolling: all
+  lazily loaded product images resolved; no broken tiles.
+- `scripts/taxonomy-coverage-report.ts --expect-db=naijadeals_review` still
+  passes with 11 departments / 37 categories / 113 leaves (161 nodes), 96
+  publishable / 17 regulated, 30/96 populated, 0 problems. Read-only.
+- Canonical 3047 limitation: its API now reports the new `imageUrl` values from
+  the database, but newly added files under `public/` return **404 on 3047**
+  until that process is restarted because Next caches the public file list at
+  boot. New files return 200 on the isolated same-build instance. Until an
+  authorised restart/rebuild, 3047 category pages that reference a new tile
+  will show a broken image while the API reports the URL.
+
+### Evidence and files
+
+- Generator: `scripts/generate-category-images.mjs` (polls, never re-submits an
+  in-flight task, records `submit_uncertain` instead of auto-retrying, reads
+  credits per job and before/after).
+- Apply/audit: `scripts/apply-category-images.ts`.
+- Ledger: `docs/taxonomy/generation-ledger.json` batch
+  `taxonomy-categories` (19 generated entries + 7 reuse assignments; prior
+  batches untouched).
+- Gitignored originals, contact sheets `contact-sheet-a/b/c.png`, apply JSON
+  reports and screenshots: `qa-artifacts/category-tiles/`.
+- Only WebP derivatives are committed. No app code, taxonomy seed, API,
+  admin UI, schema, product, inventory or payment data was changed.
+
