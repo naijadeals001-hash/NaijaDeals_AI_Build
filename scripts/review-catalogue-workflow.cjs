@@ -609,10 +609,10 @@ function parse(response, body) {
   }
 
   /**
-   * The approved batch also backfills the existing Groceries department image
-   * alt text. That is a deliberate shared-record change, so it is recorded in
-   * the baseline after success; the final shared-state guard then verifies the
-   * approved value instead of reverting it to the pre-run null.
+   * The approved batch expects the existing Groceries department image alt.
+   * A shared (non-run-owned) department is verification-only: drift fails the
+   * run instead of being silently PATCHed. Only a run-owned record may be
+   * backfilled, so every workflow write remains a dedicated run fixture.
    */
   async function ensureGroceriesImageAlt() {
     const catalogue = await adminCatalogue();
@@ -625,12 +625,20 @@ function parse(response, body) {
       check("Groceries department image alt matches the approved batch", true, GROCERIES_IMAGE_ALT);
       return;
     }
+    if (!isRunOwned(department)) {
+      check(
+        "Groceries department image alt matches the approved batch",
+        false,
+        `found "${department.imageAlt ?? "none"}"; refusing to PATCH a non-run-owned shared department`
+      );
+      return;
+    }
     const updated = await api("/api/admin/catalogue/departments", {
       method: "PATCH",
       data: { id: department.id, imageAlt: GROCERIES_IMAGE_ALT }
     });
     check(
-      "Groceries department image alt backfilled through the Control Center API",
+      "run-owned Groceries department image alt backfilled through the Control Center API",
       updated.status === 200 && updated.body?.imageAlt === GROCERIES_IMAGE_ALT,
       `status=${updated.status} previous=${department.imageAlt ?? "none"} alt=${updated.body?.imageAlt ?? "none"}`
     );

@@ -154,7 +154,7 @@ These keep their current category; no mapping is proposed.
 - `CategoryRequest` is **4**, not 0: three APPROVED and one REJECTED run-tagged synthetic
   requests created by the taxonomy review flows. Destructive cleanup was not authorised and
   was not performed. CRF names in `Category.name` and `CategoryRequest.suggestedName`: 0.
-- Acceptance fixtures are not active: 2 fixture-like DRAFT rows and 76 fixture-like
+- Acceptance fixtures are not active: 2 fixture-like DRAFT rows and 80 fixture-like
   ARCHIVED rows (including acceptance lifecycle probes) remain excluded. ACTIVE
   fixture-like rows: 0. The archived count grows as the workflow archives its run-owned
   fixtures instead of deleting them; the count above is the final 2026-11-13 check.

@@ -4634,12 +4634,13 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   non-run-owned record fails instead of being silently repaired. Expansion categories
   (Power & Solar, Gaming) are verified as seeded level-1 taxonomy nodes and are never
   created or rewritten by the workflow.
-- **Two-run proof.** Runs A and B each passed **142/142** with zero page errors. Accepted
+- **Two-run proof.** Runs C and D (final code, after making shared-department alt a
+  verification-only check) each passed **142/142** with zero page errors. Accepted
   ACTIVE-product fingerprint before/after both runs:
   `d7dd21d5dc2da24b3b5083adf63c64d6e9975e280dd32b9c70576a6b6917b80d`; independent
   API snapshots of all 57 active products before/after each run are byte-identical and
   cross-run field diffs = 0. All run-owned workflow/acceptance records are archived by
-  cleanup, never left ACTIVE.
+  cleanup, never left ACTIVE; no shared department or product is PATCHed.
 - **Computed coverage** (`scripts/taxonomy-coverage-report.ts`, read-only transaction,
   fingerprint stable): 11 departments / 37 categories / 113 selectable leaves (161
   nodes); 96 publishable / 17 NG-regulated; **30/96 populated, 66 empty publishable**;
@@ -4648,12 +4649,12 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   audit rows and **7 were re-applied after a revert, all on their latest audited leaf**.
 - **Counts.** 57 ACTIVE = 31 accepted baseline + 6 Batch A + 4 Batch B + 8 taxonomy batch
   + 8 Batch 2; Batch 2 appears exactly once. Non-public at the final check: 11 DRAFT
-  (2 fixture-like) and 119 ARCHIVED (76 fixture-like); ACTIVE fixture-like = 0.
+  (2 fixture-like) and 125 ARCHIVED (80 fixture-like); ACTIVE fixture-like = 0.
   `CategoryRequest` is 3 APPROVED / 1 REJECTED; CRF names in `Category.name` and
   `CategoryRequest.suggestedName` = 0. `scripts/taxonomy-reconcile-products.ts` derives
   these from the database and passes. The archived total includes the run-owned fixtures
-  archived by the two verification runs (187 products total, 187 image rows, 179
-  inventory rows); they are non-public audit residue, not accepted catalogue content.
+  archived by the verification runs (193 products total, 193 image rows, 185 inventory
+  rows); they are non-public audit residue, not accepted catalogue content.
 - **Image audit.** 62 URLs (57 active-product images + 5 department banners) all returned
   HEAD 200 and Chromium `naturalWidth > 0` on the canonical 3047 preview. Six departments
   have `imageUrl = NULL` (Health & Wellness; Baby, Kids & Toys; Sports & Outdoors;
@@ -4683,7 +4684,7 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
     `assist=aura` remains unexercised because it needs the configured key plus the
     Valkey rate limiter. Deterministic alias suggestions remain the default.
 - **Residual risks.** The workflow intentionally archives run-owned fixtures rather than
-  deleting them, so REVIEW `Product` totals grow by test residue each run (187 total on
+  deleting them, so REVIEW `Product` totals grow by test residue each run (193 total on
   the final check; 57 ACTIVE). Pre-apply scripts `taxonomy-product-mapping.ts` and
   `taxonomy-mapping-dry-run.ts` still expect `applied=false` and are not post-apply count
   authorities; the coverage report and reconciliation script are. The taxonomy seed's
