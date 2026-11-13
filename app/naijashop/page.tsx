@@ -5,7 +5,7 @@ import { NaijaDealsMarketplace } from "@/components/shop/storefront";
 export const metadata: Metadata = {
   title: "NaijaDeals Marketplace — retail and bulk buying",
   description:
-    "Shop everyday retail listings from verified Nigerian sellers, or start a producer quote for bulk buying and freight through NaijaDeals."
+    "Shop everyday retail listings from sellers across Africa, with demonstration inventory clearly labelled, or start a producer quote for bulk buying and freight through NaijaDeals."
 };
 
 export default function Page() {

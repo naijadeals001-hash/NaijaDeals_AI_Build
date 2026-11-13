@@ -227,8 +227,7 @@ export default async function CatalogueProductPreviewPage({ params }: { params: 
                 <dd className="text-right font-bold">
                   {product.vendor.name}
                   <span className="block text-[10px] font-normal text-[#8B949E]">
-                    {product.vendor.status}
-                    {product.vendor.name.toLowerCase().startsWith("demo") ? " · demonstration seller" : ""}
+                    {product.isDemo ? "Demonstration seller" : product.vendor.status}
                   </span>
                 </dd>
               </div>

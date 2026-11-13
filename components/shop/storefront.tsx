@@ -293,7 +293,7 @@ export function NaijaDealsMarketplace() {
                     Everyday retail, from sellers you can check.
                   </h1>
                   <p className="mt-3 max-w-lg text-[12.5px] leading-6 text-white/80 sm:text-[13.5px]">
-                    Shop electronics, fashion, home, beauty and groceries from verified Nigerian sellers. Checkout with your NaijaDeals
+                    Shop electronics, fashion, home, beauty and groceries from sellers across Africa, with demonstration inventory clearly labelled. Checkout with your NaijaDeals
                     account, protected by escrow until delivery.
                   </p>
                   <div className="mt-5 flex flex-wrap gap-2">

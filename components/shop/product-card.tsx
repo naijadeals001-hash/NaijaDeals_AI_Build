@@ -152,7 +152,8 @@ export function ShopProductCard({
         ) : (
           <span className="font-semibold text-[#067d62]">In stock</span>
         )}
-        {vendorName ? <span className="min-w-0 truncate">Sold by {vendorName}{product.isDemo ? " · demonstration" : ""}</span> : null}
+        {vendorName ? <span className="min-w-0 truncate">Sold by {vendorName}</span> : null}
+        {product.isDemo ? <span className="font-semibold text-[#07351f]">Demonstration seller</span> : null}
       </p>
 
       {contactOnly ? (

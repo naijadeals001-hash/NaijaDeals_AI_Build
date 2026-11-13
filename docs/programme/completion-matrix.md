@@ -596,3 +596,8 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Cleanup isolation | workflow snapshots shared departments, restores exact state, asserts 9/31 baseline and Phones & Tablets active | VERIFIED |
 | Catalogue expansion batch | Groceries +3, Power & Solar 3, Gaming 2 (8 published DEMO products, unique existing assets; no duplicates/spec invention) | VERIFIED |
 | Accepted REVIEW baseline after expansion | 9 active departments / 31 active products / 0 non-DEMO / 0 CRF | VERIFIED |
+| Global footer/seller wording | "sellers across Africa, with demonstration inventory clearly labelled"; no "verified Nigerian sellers" claim | VERIFIED |
+| Admin preview seller status | DEMO preview shows "Demonstration seller"; no VERIFIED seller status | VERIFIED |
+| Narrow-card demonstration label | "Demonstration seller" visible on homepage, category, search and related cards at 390/1440, not truncated | VERIFIED |
+| Country-scoped administrator enforcement | `scripts/review-scoped-admin-setup.ts` (GH) + `scripts/review-catalogue-scope-journey.cjs` 6/6: NG products hidden, unpublish/create outside scope 403, catalogue intact | VERIFIED |
+| Historical order readability after unpublish | `scripts/review-order-snapshot-journey.cjs` 8/8 with dedicated REVIEW order fixture; snapshot readable after product 404; fixture removed | VERIFIED |

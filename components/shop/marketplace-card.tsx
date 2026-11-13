@@ -108,9 +108,12 @@ export function MarketplaceProductCard({
         ) : null}
 
         {product.isDemo ? (
-          <span className="mt-1 inline-flex w-fit rounded-full bg-[#F2D48C] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#07351f]">
-            DEMO — illustrative listing
-          </span>
+          <>
+            <span className="mt-1 inline-flex w-fit rounded-full bg-[#F2D48C] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#07351f]">
+              DEMO — illustrative listing
+            </span>
+            <span className="mt-0.5 block text-[9.5px] font-bold text-[#3d4f43]">Demonstration seller</span>
+          </>
         ) : null}
         <Link href={href} className="mt-1 block rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]">
           <h3 className="line-clamp-2 min-h-[2.5rem] break-words text-[13px] font-bold leading-5 text-[#14241b] group-hover:text-[#0b5c33]">

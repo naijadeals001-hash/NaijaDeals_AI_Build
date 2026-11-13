@@ -54,7 +54,7 @@ export function ShopSiteFooter() {
               <span className="mt-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#b9d5bd]">Marketplace</span>
             </Link>
             <p className="mt-4 max-w-sm text-[12px] leading-6 text-[#b9d5bd]">
-              Retail listings from verified Nigerian sellers, with escrow-protected checkout and tracked delivery through the NaijaDeals
+              Retail listings from sellers across Africa, with demonstration inventory clearly labelled, escrow-protected checkout and tracked delivery through the NaijaDeals
               ecosystem.
             </p>
             <ul className="mt-4 space-y-2 text-[11.5px] text-[#d6e7d7]">

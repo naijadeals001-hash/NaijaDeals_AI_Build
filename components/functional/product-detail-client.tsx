@@ -546,9 +546,12 @@ function RelatedProductCard({ item }: { item: ApiProduct }) {
         </span>
       )}
       {item.isDemo ? (
-        <span className="mt-2 inline-flex w-fit rounded-full bg-[#F2D48C] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#07351f]">
-          DEMO — illustrative
-        </span>
+        <>
+          <span className="mt-2 inline-flex w-fit rounded-full bg-[#F2D48C] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#07351f]">
+            DEMO — illustrative
+          </span>
+          <span className="mt-0.5 block text-[10px] font-bold text-[#3d4f43]">Demonstration seller</span>
+        </>
       ) : null}
       <p className="mt-2 line-clamp-2 text-sm font-bold">{item.name}</p>
       <p className="text-sm font-black text-primary">{koboToNaira(item.priceKobo)}</p>
