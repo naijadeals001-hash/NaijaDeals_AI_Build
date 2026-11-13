@@ -10,6 +10,7 @@ import {
   requireUser
 } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
+import { canPreviewVertical } from "@/lib/services/core/vertical-activation.service";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,8 @@ export async function POST(request: Request) {
         postalCode: optionalString(address.postalCode, 20)
       },
       saveAddress: Boolean(body.saveAddress),
-      visitorKey: cookies().get("nd_visitor")?.value ?? null
+      visitorKey: cookies().get("nd_visitor")?.value ?? null,
+      previewAuthorized: canPreviewVertical(user)
     });
     return NextResponse.json(jsonSafe(result), { status: 201 });
   } catch (error) {

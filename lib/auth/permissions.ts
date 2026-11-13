@@ -48,7 +48,10 @@ export const PERMISSIONS = [
   /// customer purchase path behind this permission.
   "plus:membership:configure",
   /// Reviewing sponsored promotions. House promotions use content publish.
-  "plus:advertiser:approve"
+  "plus:advertiser:approve",
+  /// Central service activation (GLOBAL / COUNTRY / CITY). This changes what
+  /// customers can reach across the ecosystem, so it is super-admin only.
+  "verticals:write"
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -66,6 +69,13 @@ const PLUS_WITHHELD_FROM_ADMIN: readonly Permission[] = [
   "plus:membership:configure",
   "plus:advertiser:approve"
 ] as const;
+
+/**
+ * Service activation is a platform-wide switch. It is deliberately withheld
+ * from the ordinary `admin` role: changing what every customer can reach must
+ * be an attributable super-administrator action.
+ */
+const SUPER_ADMIN_ONLY: readonly Permission[] = ["verticals:write"] as const;
 
 /**
  * Role to permission mapping.
@@ -92,7 +102,10 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
   // Sponsored-promotion review only.
   plus_advertiser_reviewer: ["plus:content:read", "plus:advertiser:approve"],
   admin: PERMISSIONS.filter(
-    (permission) => permission !== "roles:write" && !PLUS_WITHHELD_FROM_ADMIN.includes(permission)
+    (permission) =>
+      permission !== "roles:write" &&
+      !PLUS_WITHHELD_FROM_ADMIN.includes(permission) &&
+      !SUPER_ADMIN_ONLY.includes(permission)
   ),
   ops: [
     "dashboard:read",

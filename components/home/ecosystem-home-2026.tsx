@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -35,6 +35,13 @@ type EcosystemHome2026Props = {
   products?: HomeProduct[];
 };
 
+type ShopAvailability = {
+  status: "LIVE" | "PREVIEW" | "DISABLED";
+  available: boolean;
+  preview?: boolean;
+  message?: string | null;
+};
+
 /**
  * Ecosystem homepage, 2026-11 revision.
  *
@@ -44,14 +51,64 @@ type EcosystemHome2026Props = {
  * where NaijaDeals is based, without overriding the visitor's saved city: local
  * examples follow the city picker in the header, and unknown visitors are asked
  * to choose instead of being silently assigned a city.
+ *
+ * Shop availability is read from the same server resolver that catalogue and
+ * checkout enforce. The card is removed when the effective state is DISABLED
+ * and marked Preview for authorized staff in PREVIEW; it is never advertised
+ * as a working storefront when its routes would refuse.
  */
 export function EcosystemHome2026({ products = [] }: EcosystemHome2026Props) {
+  const [shopAvailability, setShopAvailability] = useState<ShopAvailability | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/products/availability?country=NG", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((value: ShopAvailability | null) => {
+        if (active && value && typeof value.status === "string") setShopAvailability(value);
+      })
+      .catch(() => {
+        /* The directory keeps its verified registry default if the probe fails. */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const services = useMemo(() => {
+    if (!shopAvailability) return publicServices;
+    if (!shopAvailability.available) {
+      return publicServices.filter((service) => service.key !== "shop");
+    }
+    if (shopAvailability.status === "PREVIEW") {
+      return publicServices.map((service) =>
+        service.key === "shop"
+          ? { ...service, status: "preview" as const, action: "Preview Shop" }
+          : service
+      );
+    }
+    return publicServices;
+  }, [shopAvailability]);
+
   return (
-    <div className="bg-white text-ink">
+    <div className="bg-white text-ink" data-shop-availability={shopAvailability?.status ?? "loading"}>
       <Hero />
-      <ServiceDirectory />
+      <ServiceDirectory services={services} />
       <ProducerSection />
-      {products.length ? <AvailableNow products={products} /> : null}
+      {shopAvailability && !shopAvailability.available ? (
+        <section aria-labelledby="shop-unavailable-heading" className="border-t border-border-soft/60 bg-surface-low">
+          <div className="mx-auto max-w-[1240px] px-5 py-6 sm:px-8">
+            <h2 id="shop-unavailable-heading" className="font-display text-base font-extrabold text-ink">
+              Shop is paused
+            </h2>
+            <p role="status" className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-muted">
+              {shopAvailability.message ??
+                "Shop is not available right now. Existing orders, receipts and support remain available."}
+            </p>
+          </div>
+        </section>
+      ) : null}
+      {products.length && (!shopAvailability || shopAvailability.available) ? <AvailableNow products={products} /> : null}
       <PartnerSection />
     </div>
   );
@@ -280,7 +337,7 @@ function RideQuickStart() {
   );
 }
 
-function ServiceDirectory() {
+function ServiceDirectory({ services }: { services: PublicService[] }) {
   return (
     <section id="services" aria-labelledby="services-heading" className="scroll-mt-24 border-t border-border-soft/60 bg-white">
       <div className="mx-auto max-w-[1240px] px-5 py-16 sm:px-8 lg:py-24">
@@ -291,7 +348,7 @@ function ServiceDirectory() {
               id="services-heading"
               className="mt-3 font-display text-[2rem] font-extrabold leading-[1.02] tracking-[-0.045em] sm:text-[2.6rem]"
             >
-              One app. {publicServices.length} ways to use it.
+              One app. {services.length} ways to use it.
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-[15px]">
               Shop, move, eat, send, hire, stay, listen and pay — every service uses the same NaijaDeals account.
@@ -307,7 +364,7 @@ function ServiceDirectory() {
         </div>
 
         <ul className="mt-9 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-          {publicServices.map((service) => (
+          {services.map((service) => (
             <li key={service.key} className="min-w-0">
               <ServiceCard service={service} />
             </li>
@@ -325,6 +382,7 @@ function ServiceDirectory() {
 function ServiceCard({ service }: { service: PublicService }) {
   const Icon = service.icon;
   const live = service.status === "live";
+  const preview = service.status === "preview";
 
   return (
     <Link
@@ -346,8 +404,12 @@ function ServiceCard({ service }: { service: PublicService }) {
           <Icon className="h-4 w-4" aria-hidden="true" />
         </span>
         {live ? null : (
-          <span className="absolute right-3 top-3 rounded-full bg-white/95 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-[#B45309] shadow-sm ring-1 ring-[#B45309]/20">
-            Setup required
+          <span
+            className={`absolute right-3 top-3 rounded-full bg-white/95 px-2 py-1 text-[9px] font-black uppercase tracking-wide shadow-sm ring-1 ${
+              preview ? "text-primary ring-primary/25" : "text-[#B45309] ring-[#B45309]/20"
+            }`}
+          >
+            {preview ? "Preview" : "Setup required"}
           </span>
         )}
       </span>

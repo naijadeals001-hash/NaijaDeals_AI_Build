@@ -146,7 +146,7 @@ export function ShopShell({ children }: { children: ReactNode }) {
 
 function ShopHeader() {
   const pathname = usePathname();
-  const { city, cities, setCity } = useLocale();
+  const { city, cities, setCity, country } = useLocale();
 
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [departmentTree, setDepartmentTree] = useState<ShopDepartment[]>([]);
@@ -161,6 +161,12 @@ function ShopHeader() {
   const [query, setQuery] = useState("");
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [countsStatus, setCountsStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [shopAvailability, setShopAvailability] = useState<{
+    available: boolean;
+    status: "LIVE" | "PREVIEW" | "DISABLED";
+    message?: string | null;
+  } | null>(null);
+  const shopUnavailable = shopAvailability?.available === false;
 
   const allReturnFocusRef = useRef<HTMLElement | null>(null);
   const accountReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -271,6 +277,26 @@ function ShopHeader() {
     window.addEventListener(SHOP_CART_COUNT_EVENT, onCartCount);
     return () => window.removeEventListener(SHOP_CART_COUNT_EVENT, onCartCount);
   }, []);
+
+  // Shop navigation must agree with the catalogue/checkout resolver. A paused
+  // market replaces the marketplace section rail with an explicit notice while
+  // leaving Account, Orders and support routes reachable.
+  useEffect(() => {
+    let active = true;
+    const params = new URLSearchParams({ country });
+    if (city) params.set("city", city);
+    fetch(`/api/products/availability?${params.toString()}`, { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((value: { available: boolean; status: "LIVE" | "PREVIEW" | "DISABLED"; message?: string | null } | null) => {
+        if (active && value && typeof value.available === "boolean") setShopAvailability(value);
+      })
+      .catch(() => {
+        /* Keep the last known state; the page's own catalogue request still refuses. */
+      });
+    return () => {
+      active = false;
+    };
+  }, [country, city]);
 
   // Keep the single search field in step with the applied URL. The header is
   // shared by every Marketplace route, so a category page seeds the department
@@ -561,6 +587,20 @@ function ShopHeader() {
           </div>
         </div>
 
+        {shopUnavailable ? (
+          <div role="status" className="border-t border-[#eef3ec] bg-[#fff8e6] px-2 py-2.5 text-[11.5px] leading-relaxed text-[#5c4300] sm:px-5 lg:px-8">
+            <strong className="font-extrabold">Shop is paused in this market.</strong>{" "}
+            {shopAvailability?.message ??
+              "New orders and listings are unavailable. Existing orders, receipts and support remain available."}{" "}
+            <Link href="/orders" className="font-bold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]">
+              View orders
+            </Link>
+            {" · "}
+            <Link href="/naijashop/help" className="font-bold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]">
+              Get help
+            </Link>
+          </div>
+        ) : (
         <nav aria-label="Marketplace sections" className="border-t border-[#eef3ec] bg-[#f7faf4]">
           <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-0.5 px-2 sm:px-5 lg:px-8">
             <button
@@ -630,6 +670,7 @@ function ShopHeader() {
             </div>
           </div>
         </nav>
+        )}
       </header>
 
       <AllDrawer

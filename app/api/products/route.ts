@@ -12,6 +12,12 @@ import {
 import { jsonSafe } from "@/lib/services/core/serialize";
 import { searchProductIds } from "@/lib/infra/catalogue-index";
 import { isSearchConfigured } from "@/lib/infra/search";
+import { getSessionUser } from "@/lib/auth/session";
+import { jsonError } from "@/lib/auth/guard";
+import {
+  assertVerticalAccess,
+  canPreviewVertical
+} from "@/lib/services/core/vertical-activation.service";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +43,20 @@ export async function GET(request: NextRequest) {
     throw error;
   }
 
+  // Activation is checked before any product row is read. A DISABLED Shop is a
+  // 404 with a stable code (not an empty catalogue that looks like "no stock");
+  // PREVIEW is reachable only by an authenticated Control Center user.
+  const sessionUser = await getSessionUser().catch(() => null);
+  const previewAuthorized = canPreviewVertical(sessionUser);
+  try {
+    await assertVerticalAccess("shop", {
+      countryCode: parsed.query.country ?? "NG",
+      previewAuthorized
+    });
+  } catch (error) {
+    return jsonError(error);
+  }
+
   // Meilisearch answers typo-tolerant queries when it is configured and
   // populated. Anything that makes the index untrustworthy (engine down,
   // empty index) returns null and the substring scan inside the service runs
@@ -47,7 +67,7 @@ export async function GET(request: NextRequest) {
       ? await searchProductIds(parsed.query.q, { limit: 200 })
       : null;
 
-  const result = await queryCatalogProducts(parsed.query, { rankedIds });
+  const result = await queryCatalogProducts(parsed.query, { rankedIds, previewAuthorized });
   const saleModes = await saleModesFor(result.items.map((product) => product.id));
   const items = result.items.map((product) => ({
     ...product,

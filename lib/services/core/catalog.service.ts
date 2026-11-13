@@ -2,7 +2,33 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { COUNTRIES } from "@/lib/config/commerce";
 import { effectivePublishRule, isReachable, sortCategoryRows } from "@/lib/services/taxonomy/shared";
+import { verticalAccess } from "./vertical-activation.service";
 import { listReviews } from "./account.service";
+
+/**
+ * Shop activation gate for reads.
+ *
+ * Every public catalogue read passes through here. A DISABLED Shop returns an
+ * empty result rather than rows; PREVIEW is visible only to an authenticated
+ * Control Center caller that explicitly passes `previewAuthorized`. Internal
+ * admin/seller reads use their own services and are not routed through this
+ * helper.
+ */
+async function shopReadAllowed(options: {
+  countryCode?: string | null;
+  cityCode?: string | null;
+  previewAuthorized?: boolean;
+  fresh?: boolean;
+} = {}): Promise<boolean> {
+  const { accessible } = await verticalAccess("shop", {
+    countryCode: options.countryCode ?? "NG",
+    cityCode: options.cityCode ?? null,
+    previewAuthorized: options.previewAuthorized,
+    fresh: options.fresh
+  });
+  return accessible;
+}
+
 
 const productInclude = {
   category: true,
@@ -24,7 +50,8 @@ export type CatalogProduct = Awaited<ReturnType<typeof listProducts>>[number];
  * row cannot leak into the storefront, search or sitemap by being unflagged in
  * an older code path.
  */
-export async function listProducts() {
+export async function listProducts(options: { previewAuthorized?: boolean } = {}) {
+  if (!(await shopReadAllowed({ previewAuthorized: options.previewAuthorized }))) return [];
   return prisma.product.findMany({
     where: {
       status: "ACTIVE",
@@ -56,8 +83,20 @@ export async function getProduct(idOrSlug: string) {
  * the same images, description, price and stock. Returns `null` for products
  * that are not publicly purchasable rather than leaking a draft/suspended row.
  */
-export async function getPublicProductDetail(idOrSlug: string) {
+export async function getPublicProductDetail(
+  idOrSlug: string,
+  access: { countryCode?: string | null; cityCode?: string | null; previewAuthorized?: boolean; fresh?: boolean } = {}
+) {
   const product = await getProduct(idOrSlug);
+  // Evaluate the module before exposing any product field. A DISABLED Shop
+  // returns `null`, which the page/API renders as 404 without leaking drafts.
+  const allowed = await shopReadAllowed({
+    countryCode: access.countryCode ?? product.countryCode,
+    cityCode: access.cityCode,
+    previewAuthorized: access.previewAuthorized,
+    fresh: access.fresh
+  });
+  if (!allowed) return null;
   if (product.status !== "ACTIVE" || product.vendor.status !== "VERIFIED") return null;
 
   const [reviews, saleMode] = await Promise.all([listReviews(product.id), saleModeFor(product.id)]);
@@ -294,7 +333,8 @@ async function allPublicCategoryIds(countryCode: string): Promise<string[]> {
  * in navigation. Prices, stock and fixture filtering stay in the catalogue
  * query, so this count describes the unfiltered browsing scope the root opens.
  */
-export async function getCategories() {
+export async function getCategories(options: { previewAuthorized?: boolean } = {}) {
+  if (!(await shopReadAllowed({ previewAuthorized: options.previewAuthorized }))) return [];
   const tree = await loadPublicCategoryTree(DEFAULT_PUBLIC_COUNTRY);
   const scopes = tree.roots.map((root) => ({ root, ids: subtreeIds(tree, root) }));
   const ids = [...new Set(scopes.flatMap((scope) => scope.ids))];
@@ -602,8 +642,25 @@ function matchesText(product: CatalogProduct, needle: string) {
  */
 export async function queryCatalogProducts(
   query: CatalogQuery,
-  options: { rankedIds?: string[] | null } = {}
+  options: { rankedIds?: string[] | null; previewAuthorized?: boolean; fresh?: boolean } = {}
 ): Promise<CatalogPage> {
+  if (
+    !(await shopReadAllowed({
+      countryCode: query.country ?? DEFAULT_PUBLIC_COUNTRY,
+      previewAuthorized: options.previewAuthorized,
+      fresh: options.fresh
+    }))
+  ) {
+    return {
+      items: [],
+      total: 0,
+      page: query.page,
+      pageSize: query.pageSize,
+      totalPages: 1,
+      hasMore: false
+    };
+  }
+
   const rows = await prisma.product.findMany({
     where: await buildWhere(query),
     include: productInclude,

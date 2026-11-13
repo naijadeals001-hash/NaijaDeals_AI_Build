@@ -9,6 +9,7 @@ import { lockOrderRow, updateOrderStatus } from "./order.service";
 import { cancelOrderDeliveries } from "./delivery.service";
 import { availablePaymentMethods } from "@/lib/payments/service";
 import { activationFor } from "./country.service";
+import { assertShopAccess } from "./vertical-activation.service";
 import { resolveCheckoutAttribution } from "@/lib/services/affiliate/service";
 
 export type CheckoutAddress = {
@@ -125,6 +126,8 @@ export async function checkout(input: {
   saveAddress?: boolean;
   /** Visitor key issued by middleware; never supplied by the client. */
   visitorKey?: string | null;
+  /** Set by the route from the authenticated session; never accepted from the request body. */
+  previewAuthorized?: boolean;
 }) {
   const country = getCountry(input.address.countryCode);
   // Runtime activation overrides the static catalogue; absent rows fall back to config.
@@ -135,6 +138,17 @@ export async function checkout(input: {
   if (!deliveryEnabled) {
     throw new ApiError(503, "delivery_unconfigured", `Delivery is not configured for ${country.name}. No order was created.`);
   }
+
+  // Shop activation is a new-order gate only. It runs after the pre-existing
+  // country/delivery checks so those contracts keep their error codes, and
+  // before any cart/order write. Existing orders, refunds, disputes and
+  // support are untouched by DISABLED.
+  await assertShopAccess({
+    countryCode: country.code,
+    cityCode: input.address.city,
+    previewAuthorized: input.previewAuthorized,
+    statusCode: 409
+  });
 
   // Resolved server-side before the order exists. The frozen row below is the
   // only thing payment-time commission creation reads.

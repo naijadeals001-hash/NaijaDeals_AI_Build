@@ -11,6 +11,7 @@ import {
 import { refundPayment } from "@/lib/payments/service";
 import { recordAudit } from "./audit.service";
 import { recordSystemEvent } from "./event.service";
+import { assertShopAccess } from "./vertical-activation.service";
 
 export async function getVendorForUser(userId: string) {
   const vendor = await prisma.vendor.findFirst({ where: { ownerId: userId } });
@@ -103,9 +104,21 @@ export async function createSellerProduct(userId: string, input: {
   attributes?: unknown;
   /** The seller API defaults new listings to DRAFT; direct callers keep ACTIVE. */
   status?: "DRAFT" | "ACTIVE";
+  /** Only an authenticated Control Center caller may write during PREVIEW. */
+  previewAuthorized?: boolean;
 }) {
   const vendor = await getVendorForUser(userId);
   if (vendor.status !== "VERIFIED") throw new ApiError(403, "seller_not_verified", "Only verified sellers can publish products.");
+  // New Shop listings are a public-facing commitment: refuse them while the
+  // vertical is DISABLED (and during PREVIEW unless the caller is authorized
+  // staff). Existing listings, orders and payouts remain manageable.
+  await assertShopAccess({
+    countryCode: vendor.countryCode,
+    previewAuthorized: input.previewAuthorized,
+    statusCode: 409,
+    message:
+      "Shop is not accepting new listings in this market yet. Existing listings, orders and payouts remain manageable."
+  });
   if (input.priceKobo <= BigInt(0)) throw new ApiError(400, "validation_error", "Price must be greater than zero.");
   if (!Number.isInteger(input.quantity) || input.quantity < 0) throw new ApiError(400, "validation_error", "Stock must be a non-negative integer.");
   if (!/^(https:\/\/|\/)/.test(input.imageUrl)) throw new ApiError(400, "invalid_image", "Image must be an https URL or a local /path.");
@@ -174,11 +187,25 @@ export async function updateSellerProduct(userId: string, productId: string, inp
   lowStockLevel?: number;
   categoryId?: string;
   attributes?: unknown;
+  /** Only an authenticated Control Center caller may write during PREVIEW. */
+  previewAuthorized?: boolean;
 }) {
   const vendor = await getVendorForUser(userId);
   const product = await prisma.product.findUnique({ where: { id: productId }, include: { stock: true } });
   if (!product) throw new ApiError(404, "product_not_found", "Product not found.");
   if (product.vendorId !== vendor.id) throw new ApiError(403, "forbidden", "This product belongs to another seller.");
+  // Republishing a draft/archived listing is a new public commitment. Editing
+  // an already-ACTIVE listing, drafts, orders, returns and payouts stays
+  // available while Shop is DISABLED.
+  if (input.status === "ACTIVE" && product.status !== "ACTIVE") {
+    await assertShopAccess({
+      countryCode: vendor.countryCode,
+      previewAuthorized: input.previewAuthorized,
+      statusCode: 409,
+      message:
+        "Shop is not accepting new listings in this market yet. Drafts, existing listings, orders and payouts remain manageable."
+    });
+  }
   if (input.priceKobo !== undefined && input.priceKobo <= BigInt(0)) {
     throw new ApiError(400, "validation_error", "Price must be greater than zero.");
   }

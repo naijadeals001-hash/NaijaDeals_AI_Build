@@ -1706,6 +1706,29 @@ model AccountPosting {
 
 
 /// Durable database identity used to gate live financial operations.
+enum VerticalActivationStatus {
+  DISABLED
+  PREVIEW
+  LIVE
+}
+
+/// Central service activation. GLOBAL overrides COUNTRY/CITY; the effective
+/// state is computed by lib/services/core/vertical-activation.service.ts.
+model VerticalActivation {
+  id           String                   @id @default(cuid())
+  verticalKey  String
+  scopeType    String
+  countryCode  String                   @default("")
+  cityCode     String                   @default("")
+  status       VerticalActivationStatus @default(DISABLED)
+  reason       String?
+  updatedById  String?
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  @@unique([verticalKey, scopeType, countryCode, cityCode])
+  @@index([verticalKey])
+}
+
 model DatabaseClassification {
   id             String   @id @default("default")
   classification String   @default("UNKNOWN")
