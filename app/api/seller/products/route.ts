@@ -17,6 +17,13 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     const user = await requireActiveVendor();
     const body = await readJson<Record<string, unknown>>(request);
+    const requestedStatus = body.status;
+    if (requestedStatus !== undefined && requestedStatus !== "DRAFT" && requestedStatus !== "ACTIVE") {
+      return NextResponse.json(
+        { error: 'status must be "DRAFT" or "ACTIVE".', code: "validation_error" },
+        { status: 400 }
+      );
+    }
     const priceKobo = parseMoney(body.priceKobo, "Price");
     const quantity = Number(body.quantity ?? 0);
     if (!Number.isInteger(quantity) || quantity < 0) throw new Error("Stock must be a non-negative integer.");
@@ -31,7 +38,9 @@ export async function POST(request: Request) {
       weightGrams: body.weightGrams ? Number(body.weightGrams) : 500,
       imageUrl: requireString(body.imageUrl, "Image", 500),
       quantity,
-      lowStockLevel: body.lowStockLevel ? Number(body.lowStockLevel) : 3
+      lowStockLevel: body.lowStockLevel ? Number(body.lowStockLevel) : 3,
+      attributes: body.attributes,
+      status: requestedStatus === "ACTIVE" ? "ACTIVE" : "DRAFT"
     });
     await requestProductSync(product.id);
     return NextResponse.json(jsonSafe(product), { status: 201 });

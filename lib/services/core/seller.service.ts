@@ -1,6 +1,7 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
+import { resolveSellerProductCategory } from "@/lib/services/taxonomy/eligibility";
 import {
   assertNoBlockingRefundObligation,
   loadOrderRefundState,
@@ -98,13 +99,15 @@ export async function createSellerProduct(userId: string, input: {
   quantity: number;
   lowStockLevel?: number;
   variants?: Array<{ name: string; sku: string; priceKobo: bigint; stock: number }>;
+  /** Validated against the category's CategoryAttribute rows inside the transaction. */
+  attributes?: unknown;
+  /** The seller API defaults new listings to DRAFT; direct callers keep ACTIVE. */
+  status?: "DRAFT" | "ACTIVE";
 }) {
   const vendor = await getVendorForUser(userId);
   if (vendor.status !== "VERIFIED") throw new ApiError(403, "seller_not_verified", "Only verified sellers can publish products.");
   if (input.priceKobo <= BigInt(0)) throw new ApiError(400, "validation_error", "Price must be greater than zero.");
   if (!Number.isInteger(input.quantity) || input.quantity < 0) throw new ApiError(400, "validation_error", "Stock must be a non-negative integer.");
-  const category = await prisma.category.findUnique({ where: { id: input.categoryId } });
-  if (!category) throw new ApiError(400, "invalid_category", "Choose a valid category.");
   if (!/^(https:\/\/|\/)/.test(input.imageUrl)) throw new ApiError(400, "invalid_image", "Image must be an https URL or a local /path.");
 
   const slugBase = input.name
@@ -115,10 +118,16 @@ export async function createSellerProduct(userId: string, input: {
   const slug = `${slugBase}-${Math.random().toString(36).slice(2, 7)}`;
 
   return prisma.$transaction(async (tx) => {
+    const resolved = await resolveSellerProductCategory({
+      db: tx,
+      categoryId: input.categoryId,
+      countryCode: vendor.countryCode,
+      attributes: input.attributes
+    });
     const product = await tx.product.create({
       data: {
         vendorId: vendor.id,
-        categoryId: category.id,
+        categoryId: resolved.category.id,
         name: input.name,
         slug,
         description: input.description,
@@ -127,7 +136,8 @@ export async function createSellerProduct(userId: string, input: {
         priceKobo: input.priceKobo,
         compareAtKobo: input.compareAtKobo ?? null,
         weightGrams: input.weightGrams ?? 500,
-        status: "ACTIVE",
+        status: input.status ?? "ACTIVE",
+        attributes: resolved.attributes ? (resolved.attributes as Prisma.InputJsonValue) : undefined,
         images: { create: [{ url: input.imageUrl, alt: input.name, sortOrder: 0 }] },
         stock: { create: { quantity: input.quantity, lowStockLevel: input.lowStockLevel ?? 3 } },
         variants: input.variants?.length
@@ -149,7 +159,7 @@ export async function createSellerProduct(userId: string, input: {
       action: "product.created",
       entity: "Product",
       entityId: product.id,
-      metadata: { name: product.name, vendorId: vendor.id }
+      metadata: { name: product.name, vendorId: vendor.id, categoryId: product.categoryId, status: product.status }
     });
     return product;
   });
@@ -162,6 +172,8 @@ export async function updateSellerProduct(userId: string, productId: string, inp
   status?: "DRAFT" | "ACTIVE" | "ARCHIVED";
   quantity?: number;
   lowStockLevel?: number;
+  categoryId?: string;
+  attributes?: unknown;
 }) {
   const vendor = await getVendorForUser(userId);
   const product = await prisma.product.findUnique({ where: { id: productId }, include: { stock: true } });
@@ -170,14 +182,40 @@ export async function updateSellerProduct(userId: string, productId: string, inp
   if (input.priceKobo !== undefined && input.priceKobo <= BigInt(0)) {
     throw new ApiError(400, "validation_error", "Price must be greater than zero.");
   }
+
+  // Republishing is a taxonomy-sensitive action: the destination category must
+  // still be live and publishable for the seller's country, and the stored (or
+  // newly supplied) attributes must satisfy its definitions.
+  const taxonomyTouched =
+    input.categoryId !== undefined || input.attributes !== undefined || input.status === "ACTIVE";
+
   return prisma.$transaction(async (tx) => {
+    let categoryId: string | undefined;
+    let attributesUpdate: Prisma.InputJsonValue | typeof Prisma.DbNull | undefined;
+    if (taxonomyTouched) {
+      const resolved = await resolveSellerProductCategory({
+        db: tx,
+        categoryId: input.categoryId ?? product.categoryId,
+        countryCode: vendor.countryCode,
+        attributes: input.attributes !== undefined ? input.attributes : product.attributes
+      });
+      categoryId = resolved.category.id;
+      if (input.attributes !== undefined) {
+        attributesUpdate = resolved.attributes
+          ? (resolved.attributes as Prisma.InputJsonValue)
+          : Prisma.DbNull;
+      }
+    }
+
     const updated = await tx.product.update({
       where: { id: product.id },
       data: {
         ...(input.name ? { name: input.name } : {}),
         ...(input.description ? { description: input.description } : {}),
         ...(input.priceKobo !== undefined ? { priceKobo: input.priceKobo } : {}),
-        ...(input.status ? { status: input.status } : {})
+        ...(input.status ? { status: input.status } : {}),
+        ...(categoryId !== undefined ? { categoryId } : {}),
+        ...(attributesUpdate !== undefined ? { attributes: attributesUpdate } : {})
       }
     });
     if (input.quantity !== undefined) {

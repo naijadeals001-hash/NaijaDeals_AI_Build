@@ -24,7 +24,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       priceKobo,
       status,
       quantity: body.quantity === undefined ? undefined : Number(body.quantity),
-      lowStockLevel: body.lowStockLevel === undefined ? undefined : Number(body.lowStockLevel)
+      lowStockLevel: body.lowStockLevel === undefined ? undefined : Number(body.lowStockLevel),
+      categoryId: optionalString(body.categoryId, 100) ?? undefined,
+      attributes: body.attributes
     });
     await requestProductSync(product.id);
     return NextResponse.json(jsonSafe(product));
