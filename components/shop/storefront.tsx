@@ -639,34 +639,6 @@ export function NaijaDealsMarketplace() {
           )}
         </section>
 
-        {/* Compact taxonomy rail; the full hierarchy stays in All departments. */}
-        {taxonomyStatus === "ready" ? (
-          <CategoryRail entries={railEntries} countsStatus="ready" summary={listingFact} />
-        ) : null}
-
-        {taxonomyStatus === "loading" ? (
-          <section aria-busy="true" aria-label="Loading shop categories" className="mt-4 min-w-0">
-            <div className="h-6 w-40 animate-pulse rounded-full bg-[#e3ebdf]" />
-            <div className="mt-2 h-3 w-64 animate-pulse rounded-full bg-[#e3ebdf]" />
-            <div className="mt-2.5 flex gap-2 overflow-hidden">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div
-                  key={index}
-                  aria-hidden
-                  className="h-[132px] w-[132px] shrink-0 animate-pulse rounded-2xl border border-[#e1e8de] bg-white sm:w-[150px] lg:w-[164px]"
-                />
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {taxonomyStatus === "error" ? (
-          <p role="status" className="mt-3 rounded-xl border border-[#eadfc6] bg-[#fbf4e4] px-3 py-2 text-[11px] leading-5 text-[#7a4c00]">
-            The published category directory could not be loaded, so the category rail is hidden.
-            {categoriesStatus === "ready" ? " The fallback directory and All departments still work." : " The fallback directory could not be loaded either."}
-          </p>
-        ) : null}
-
         {status === "loading" ? <MarketplaceSkeleton /> : null}
 
         {status === "error" ? (
@@ -713,6 +685,34 @@ export function NaijaDealsMarketplace() {
             addingId={addingId}
             addedId={addedId}
           />
+        ) : null}
+
+        {/* Compact taxonomy rail; the full hierarchy stays in All departments. */}
+        {taxonomyStatus === "ready" ? (
+          <CategoryRail entries={railEntries} countsStatus="ready" summary={listingFact} />
+        ) : null}
+
+        {taxonomyStatus === "loading" ? (
+          <section aria-busy="true" aria-label="Loading shop categories" className="mt-4 min-w-0">
+            <div className="h-6 w-40 animate-pulse rounded-full bg-[#e3ebdf]" />
+            <div className="mt-2 h-3 w-64 animate-pulse rounded-full bg-[#e3ebdf]" />
+            <div className="mt-2.5 flex gap-2 overflow-hidden">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div
+                  key={index}
+                  aria-hidden
+                  className="h-[132px] w-[132px] shrink-0 animate-pulse rounded-2xl border border-[#e1e8de] bg-white sm:w-[150px] lg:w-[164px]"
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {taxonomyStatus === "error" ? (
+          <p role="status" className="mt-3 rounded-xl border border-[#eadfc6] bg-[#fbf4e4] px-3 py-2 text-[11px] leading-5 text-[#7a4c00]">
+            The published category directory could not be loaded, so the category rail is hidden.
+            {categoriesStatus === "ready" ? " The fallback directory and All departments still work." : " The fallback directory could not be loaded either."}
+          </p>
         ) : null}
 
         {status === "ready" && showShelves

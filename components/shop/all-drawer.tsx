@@ -477,7 +477,7 @@ export function AllDrawer({
   const countLabel = (department: ShopDepartment) => {
     const count = countOf(department);
     if (count === null) return "Live stock unavailable";
-    if (count === 0) return "No live stock yet";
+    if (count === 0) return "No demonstration listings yet";
     return `${count} live ${count === 1 ? "listing" : "listings"}`;
   };
 
@@ -491,7 +491,7 @@ export function AllDrawer({
   const taxonomyNodeCount = levels.total;
   const directorateSummary = !countsKnown
     ? `${levels.departments} departments · ${levels.categories} categories · ${levels.subcategories} subcategories · ${levels.total} published nodes · live counts unavailable`
-    : `${levels.departments} departments · ${levels.categories} categories · ${levels.subcategories} subcategories · ${populatedDepartments.length} of ${levels.departments} departments with live stock · ${
+    : `${levels.departments} departments · ${levels.categories} categories · ${levels.subcategories} subcategories · ${populatedDepartments.length} of ${levels.departments} departments with published demonstration listings · ${
         taxonomyAvailable
           ? `${featuredNodeCount} homepage-featured ${featuredNodeCount === 1 ? "node" : "nodes"}`
           : "homepage selection unavailable"
@@ -560,7 +560,7 @@ export function AllDrawer({
               </span>
             </span>
             <span className="flex shrink-0 items-center gap-1.5 text-[10.5px] font-normal text-[#566359]">
-              {count === null ? "Stock unavailable" : count === 0 ? "No live stock yet" : `${count} live`}
+              {count === null ? "Counts unavailable" : count === 0 ? "No demonstration listings yet" : `${count} demo`}
               <ChevronRight className="h-3.5 w-3.5 text-[#7a9c80]" aria-hidden />
             </span>
           </Link>
@@ -568,9 +568,9 @@ export function AllDrawer({
         {empty && countsKnown ? (
           <p className="ml-[2.4rem] pb-2 text-[9.5px] leading-3.5 text-[#7a4c00]">
             {notAvailable
-              ? "Not available in your market yet — no seller can publish live stock here."
+              ? "Not available in your market yet — no demonstration listing can be published here."
               : depth === 0
-                ? `Published department — no seller has live stock here yet.${
+                ? `Published department — no demonstration listings yet.${
                     populatedDepartments.length > 0
                       ? ` Try ${populatedDepartments
                           .slice(0, 2)
@@ -580,7 +580,7 @@ export function AllDrawer({
                   }`
                 : browseOnly
                   ? "Browse-only node: sellers cannot publish listings directly here."
-                  : "Published category — no seller has live stock here yet."}
+                  : "Published category — no demonstration listings yet."}
           </p>
         ) : null}
         {children.length > 0 && isOpen ? (
@@ -631,7 +631,7 @@ export function AllDrawer({
               {view === "departments" ? "Shop by department" : "All"}
             </h2>
             <p className="mt-0.5 line-clamp-2 text-[10.5px] leading-4 text-[#b9d5bd]">
-              {view === "departments" ? "The published hierarchy, including categories with no live stock yet." : "Shop, bulk buying and the NaijaDeals ecosystem."}
+              {view === "departments" ? "The published hierarchy, including categories with no demonstration listings yet." : "Shop, bulk buying and the NaijaDeals ecosystem."}
             </p>
           </div>
 
@@ -752,7 +752,7 @@ export function AllDrawer({
                               {live === null
                                 ? "Live stock unavailable"
                                 : live === 0
-                                  ? "No live stock yet"
+                                  ? "No demonstration listings yet"
                                   : `${live} live`}
                             </span>
                             <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -945,7 +945,7 @@ export function AllDrawer({
 
               {departmentsStatus === "ready" && departments.length > 0 && countsKnown && populatedDepartments.length === 0 ? (
                 <div className="mt-2 rounded-xl border border-dashed border-[#cfdccb] bg-[#f7faf4] p-3 text-[11px] leading-5 text-[#4b5b51]">
-                  <p className="font-extrabold text-[#14241b]">The directory is published; no department has live stock yet.</p>
+                  <p className="font-extrabold text-[#14241b]">The directory is published; no department has demonstration listings yet.</p>
                   <p className="mt-1">
                     Every category below is a real published node. Until a seller publishes stock you can browse the full
                     departments page, check price drops, or open a seller account.
@@ -983,7 +983,7 @@ export function AllDrawer({
                   ? "Counts are server-reported published listings, including subcategories."
                   : "Counts are counted from published listings, including subcategories."
                 : "Live listing counts are unavailable right now."}{" "}
-              Homepage cards use the taxonomy&apos;s homepage flag, not product count. A published node with no live stock
+              Homepage cards use the taxonomy&apos;s homepage flag, not product count. A published node with no demonstration listings
               stays in the directory and says so instead of disappearing.
             </p>
           </div>

@@ -1,0 +1,1 @@
+ALTER TABLE "Category" ADD COLUMN "browsingVisible" BOOLEAN NOT NULL DEFAULT true;

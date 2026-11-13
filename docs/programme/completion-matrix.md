@@ -628,3 +628,8 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Shop vertical activation | Global/country/city states, reason+audit, super-admin only; Shop catalogue/checkout/seller gates; other verticals NOT_WIRED | VERIFIED |
 | Department banners | Six Kie banners applied to taxonomy; public category pages render them; 68/68 images | VERIFIED |
 | Activation UI/mobile fixes | 390 overflow 0; success notice persists; seller Activate removed | VERIFIED |
+| Full category rail | 37 level-1 categories derived from effective taxonomy, counts/images/order, carousel + full directory; no hardcoded subset | VERIFIED |
+| Category tile imagery | 19 generated + 7 reused approved product images; 35/37 have image+alt; 2 all-regulated categories skipped; 114 new credits | VERIFIED |
+| Browsing visibility admin | `Category.browsingVisible` separate from publication/homepage/selectable; admin edit + audit + tests 16/16 | VERIFIED |
+| Mobile product-first order | Explore shelf moved before category rail; first product card 661 px (was 910) | VERIFIED |
+| Demo wording in drawer | "live stock" replaced with demonstration-listing wording | VERIFIED |

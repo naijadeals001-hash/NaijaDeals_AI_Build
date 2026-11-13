@@ -278,6 +278,8 @@ model Category {
   /// Sellers may list directly in this node even when it has no products.
   isSelectable    Boolean   @default(true)
   showOnHomepage  Boolean   @default(false)
+  /// Browsing rail/directory visibility, separate from taxon publication and homepage merchandising.
+  browsingVisible Boolean   @default(true)
   deprecatedAt    DateTime?
   sortOrder       Int       @default(0)
   isActive        Boolean   @default(true)

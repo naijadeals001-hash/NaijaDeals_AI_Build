@@ -4732,3 +4732,17 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 - Kie: six department banners, 6 credits each, 36 new; cumulative 132. No purchase.
 - Other vertical activation remains NOT_WIRED; REVIEW has no orders, so existing-order
   readability while Shop is disabled is BLOCKED.
+
+## Full category rail and tiles (2026-11-13)
+
+- Final build `6nnTsFDfl7U_SjKd1bedm`; HEAD includes 470c616, 3fa566b, 3d15dbf, f3f8ace.
+- "Shop by category" now derives all 37 active level-1 categories (19 populated, 18 empty)
+  from `/api/taxonomy/categories`, with counts/images/order/browsingVisible/canPublish;
+  carousel arrows/swipe/snap/keyboard/reduced-motion; full directory at /naijashop/categories.
+- Admin browsingVisibility separate from publication/homepage/selectable; audited; 16/16 tests.
+- Category imagery: 19 generated Kie tiles (114 credits), 7 reused approved product images,
+  6 alt backfills; 35/37 have art, 2 fully regulated categories skipped; cumulative 246.
+- Explore product shelf moved before the rail, so first product card is 661px on 390 (was 910).
+- Drawer wording now says demonstration listings, not live stock.
+- Product detail, seller/admin parity and Shop activation from the prior increment remain
+  integrated in this build; landing audit/smoke/basket/financial suites rechecked by reviewer.
