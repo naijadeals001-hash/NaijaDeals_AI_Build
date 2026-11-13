@@ -162,7 +162,7 @@ export default async function CatalogueProductPreviewPage({ params }: { params: 
                 loading="eager"
               />
               <p className="border-t border-[#21262D] px-3 py-2 text-xs text-[#8B949E]">
-                Cover image {product.images.length > 1 ? `1 of ${product.images.length}` : ""} ·{" "}
+                Primary cover image {product.images.length > 1 ? `1 of ${product.images.length}` : ""} ·{" "}
                 <span className="break-all">{cover.url}</span>
                 {!cover.alt ? " · alt text missing" : ""}
               </p>
@@ -227,7 +227,17 @@ export default async function CatalogueProductPreviewPage({ params }: { params: 
                 <dd className="text-right font-bold">
                   {product.vendor.name}
                   <span className="block text-[10px] font-normal text-[#8B949E]">
-                    {product.isDemo ? "Demonstration seller" : product.vendor.status}
+                    {product.isDemo ? "Demonstration seller" : product.vendor.status} · {product.vendor.market}
+                  </span>
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-[#8B949E]">Pickup / dispatch</dt>
+                <dd className="max-w-[220px] text-right font-bold">
+                  {product.vendor.pickupAddress}
+                  <span className="block text-[10px] font-normal text-[#8B949E]">
+                    {product.vendor.pickupPhone} · seller record ·{" "}
+                    {product.vendor.commissionBps / 100}% commission
                   </span>
                 </dd>
               </div>
@@ -235,6 +245,12 @@ export default async function CatalogueProductPreviewPage({ params }: { params: 
                 <dt className="text-[#8B949E]">Fulfilment</dt>
                 <dd className="text-right font-bold">
                   {product.countryCode} · {product.currency ?? "currency not configured"}
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-[#8B949E]">Variants</dt>
+                <dd className="text-right font-bold">
+                  {product.variants.length > 0 ? `${product.variants.length} read-only` : "None (single SKU)"}
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
@@ -305,6 +321,72 @@ export default async function CatalogueProductPreviewPage({ params }: { params: 
         </h2>
         <p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#C9D1D9]">{product.description}</p>
       </section>
+
+      <section
+        aria-labelledby="preview-attributes-heading"
+        data-testid="preview-attributes"
+        className="rounded-2xl border border-[#21262D] bg-[#0B0E14] p-4"
+      >
+        <h2 id="preview-attributes-heading" className="text-lg font-extrabold">
+          Category attributes
+        </h2>
+        {product.category.attributes.length === 0 ? (
+          <p className="mt-2 text-sm text-[#8B949E]">
+            This category defines no attributes. That is an explicit taxonomy state, not an omitted section.
+          </p>
+        ) : (
+          <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+            {product.category.attributes.map((definition) => {
+              const value = product.attributes?.[definition.key];
+              const display =
+                value === undefined || value === null || value === ""
+                  ? "Not set"
+                  : typeof value === "boolean"
+                    ? value
+                      ? "Yes"
+                      : "No"
+                    : String(value);
+              return (
+                <div key={definition.key} className="rounded-lg border border-[#21262D] p-2">
+                  <dt className="text-[10px] font-extrabold uppercase tracking-wide text-[#8B949E]">
+                    {definition.label}
+                    {definition.required ? <span className="ml-1 text-[#FFB4AE]">required</span> : null}
+                  </dt>
+                  <dd className={display === "Not set" ? "text-[#8B949E]" : "font-bold"}>{display}</dd>
+                  <dd className="text-[10px] text-[#8B949E]">
+                    {definition.type} · {definition.key}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
+        )}
+      </section>
+
+      {product.variants.length > 0 ? (
+        <section aria-labelledby="preview-variants-heading" className="rounded-2xl border border-[#21262D] bg-[#0B0E14] p-4">
+          <h2 id="preview-variants-heading" className="text-lg font-extrabold">
+            Variants (read-only)
+          </h2>
+          <p className="mt-1 text-xs text-[#8B949E]">
+            The schema supports ProductVariant, but the catalogue editor has no create/edit contract for variants yet.
+          </p>
+          <ul className="mt-2 divide-y divide-[#21262D] text-sm">
+            {product.variants.map((variant) => (
+              <li key={variant.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span>
+                  <span className="font-bold">{variant.name}</span>
+                  <span className="ml-2 text-xs text-[#8B949E]">{variant.sku}</span>
+                </span>
+                <span className="text-xs text-[#8B949E]">
+                  {formatPrice(variant.priceKobo, product.currency)} · stock {variant.stock} · reserved{" "}
+                  {variant.reserved} · {variant.isActive ? "active" : "inactive"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section aria-labelledby="preview-record-heading" className="rounded-2xl border border-[#21262D] bg-[#0B0E14] p-4">
         <h2 id="preview-record-heading" className="text-lg font-extrabold">

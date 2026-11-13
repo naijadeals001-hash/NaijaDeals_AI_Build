@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { resolveSellerProductCategory } from "@/lib/services/taxonomy/eligibility";
+import { validateImage, type CatalogueImageInput } from "./catalogue-admin.service";
 import {
   assertNoBlockingRefundObligation,
   loadOrderRefundState,
@@ -12,6 +13,53 @@ import { refundPayment } from "@/lib/payments/service";
 import { recordAudit } from "./audit.service";
 import { recordSystemEvent } from "./event.service";
 import { assertShopAccess } from "./vertical-activation.service";
+
+const MAX_PRODUCT_IMAGES = 6;
+
+/**
+ * Seller gallery rules are the same as the Control Center product editor:
+ * 1..6 images, project-path or HTTPS URL, accessible alt text on every image,
+ * no duplicate URL, and at most one explicit primary image (stored first).
+ */
+function normaliseSellerImages(
+  images: unknown,
+  imageUrl?: string,
+  imageAlt?: string
+): Array<{ url: string; alt: string }> {
+  const entries: CatalogueImageInput[] = Array.isArray(images)
+    ? images.map((entry) => (entry && typeof entry === "object" ? (entry as CatalogueImageInput) : { url: entry }))
+    : imageUrl !== undefined
+      ? [{ url: imageUrl, alt: imageAlt }]
+      : [];
+  const parsed: Array<{ url: string; alt: string; order: number; primary: boolean; index: number }> = [];
+  const seen = new Set<string>();
+  entries.forEach((entry, index) => {
+    const image = validateImage(entry.url, entry.alt, false);
+    if (!image.imageUrl || !image.imageAlt) return;
+    if (seen.has(image.imageUrl)) throw new ApiError(400, "duplicate_image", "The same image was supplied more than once.");
+    seen.add(image.imageUrl);
+    const rawOrder = entry.sortOrder ?? entry.order;
+    const order = Number.isSafeInteger(Number(rawOrder)) && Number(rawOrder) >= 0 ? Number(rawOrder) : index;
+    parsed.push({ url: image.imageUrl, alt: image.imageAlt, order, primary: entry.primary === true, index });
+  });
+  if (parsed.length === 0) {
+    throw new ApiError(400, "image_required", "Add at least one product image with accessible alt text.");
+  }
+  if (parsed.length > MAX_PRODUCT_IMAGES) {
+    throw new ApiError(400, "too_many_images", `A listing can have at most ${MAX_PRODUCT_IMAGES} images.`);
+  }
+  if (parsed.filter((image) => image.primary).length > 1) {
+    throw new ApiError(400, "multiple_primary_images", "Choose exactly one primary (cover) image.");
+  }
+  return parsed
+    .sort(
+      (left, right) =>
+        Number(right.primary) - Number(left.primary) ||
+        left.order - right.order ||
+        left.index - right.index
+    )
+    .map((image) => ({ url: image.url, alt: image.alt }));
+}
 
 export async function getVendorForUser(userId: string) {
   const vendor = await prisma.vendor.findFirst({ where: { ownerId: userId } });
@@ -96,7 +144,9 @@ export async function createSellerProduct(userId: string, input: {
   brand?: string | null;
   condition?: string;
   weightGrams?: number;
-  imageUrl: string;
+  imageUrl?: string;
+  imageAlt?: string;
+  images?: CatalogueImageInput[];
   quantity: number;
   lowStockLevel?: number;
   variants?: Array<{ name: string; sku: string; priceKobo: bigint; stock: number }>;
@@ -121,7 +171,7 @@ export async function createSellerProduct(userId: string, input: {
   });
   if (input.priceKobo <= BigInt(0)) throw new ApiError(400, "validation_error", "Price must be greater than zero.");
   if (!Number.isInteger(input.quantity) || input.quantity < 0) throw new ApiError(400, "validation_error", "Stock must be a non-negative integer.");
-  if (!/^(https:\/\/|\/)/.test(input.imageUrl)) throw new ApiError(400, "invalid_image", "Image must be an https URL or a local /path.");
+  const images = normaliseSellerImages(input.images, input.imageUrl, input.imageAlt ?? input.name);
 
   const slugBase = input.name
     .toLowerCase()
@@ -151,7 +201,9 @@ export async function createSellerProduct(userId: string, input: {
         weightGrams: input.weightGrams ?? 500,
         status: input.status ?? "ACTIVE",
         attributes: resolved.attributes ? (resolved.attributes as Prisma.InputJsonValue) : undefined,
-        images: { create: [{ url: input.imageUrl, alt: input.name, sortOrder: 0 }] },
+        images: {
+          create: images.map((image, index) => ({ url: image.url, alt: image.alt, sortOrder: index }))
+        },
         stock: { create: { quantity: input.quantity, lowStockLevel: input.lowStockLevel ?? 3 } },
         variants: input.variants?.length
           ? {
@@ -172,7 +224,21 @@ export async function createSellerProduct(userId: string, input: {
       action: "product.created",
       entity: "Product",
       entityId: product.id,
-      metadata: { name: product.name, vendorId: vendor.id, categoryId: product.categoryId, status: product.status }
+      metadata: {
+        name: product.name,
+        vendorId: vendor.id,
+        categoryId: product.categoryId,
+        status: product.status,
+        attributes: resolved.attributes ?? null,
+        images: images.map((image, index) => ({ ...image, sortOrder: index, primary: index === 0 })),
+        before: null,
+        after: {
+          status: product.status,
+          categoryId: product.categoryId,
+          attributes: resolved.attributes ?? null,
+          images: images.map((image, index) => ({ ...image, sortOrder: index, primary: index === 0 }))
+        }
+      }
     });
     return product;
   });
@@ -187,11 +253,20 @@ export async function updateSellerProduct(userId: string, productId: string, inp
   lowStockLevel?: number;
   categoryId?: string;
   attributes?: unknown;
+  imageUrl?: string;
+  imageAlt?: string;
+  images?: CatalogueImageInput[];
   /** Only an authenticated Control Center caller may write during PREVIEW. */
   previewAuthorized?: boolean;
 }) {
   const vendor = await getVendorForUser(userId);
-  const product = await prisma.product.findUnique({ where: { id: productId }, include: { stock: true } });
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    include: {
+      stock: true,
+      images: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] }
+    }
+  });
   if (!product) throw new ApiError(404, "product_not_found", "Product not found.");
   if (product.vendorId !== vendor.id) throw new ApiError(403, "forbidden", "This product belongs to another seller.");
   // Republishing a draft/archived listing is a new public commitment. Editing
@@ -209,6 +284,10 @@ export async function updateSellerProduct(userId: string, productId: string, inp
   if (input.priceKobo !== undefined && input.priceKobo <= BigInt(0)) {
     throw new ApiError(400, "validation_error", "Price must be greater than zero.");
   }
+  const images =
+    input.images !== undefined || input.imageUrl !== undefined || input.imageAlt !== undefined
+      ? normaliseSellerImages(input.images, input.imageUrl, input.imageAlt)
+      : null;
 
   // Republishing is a taxonomy-sensitive action: the destination category must
   // still be live and publishable for the seller's country, and the stored (or
@@ -245,6 +324,12 @@ export async function updateSellerProduct(userId: string, productId: string, inp
         ...(attributesUpdate !== undefined ? { attributes: attributesUpdate } : {})
       }
     });
+    if (images) {
+      await tx.productImage.deleteMany({ where: { productId: product.id } });
+      await tx.productImage.createMany({
+        data: images.map((image, index) => ({ productId: product.id, url: image.url, alt: image.alt, sortOrder: index }))
+      });
+    }
     if (input.quantity !== undefined) {
       if (!Number.isInteger(input.quantity) || input.quantity < 0) {
         throw new ApiError(400, "validation_error", "Stock must be a non-negative integer.");
@@ -260,13 +345,40 @@ export async function updateSellerProduct(userId: string, productId: string, inp
         });
       }
     }
+    const freshImages = await tx.productImage.findMany({
+      where: { productId: product.id },
+      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      select: { url: true, alt: true, sortOrder: true }
+    });
     await recordAudit({
       tx,
       actorId: userId,
       action: "product.updated",
       entity: "Product",
       entityId: product.id,
-      metadata: { vendorId: vendor.id }
+      metadata: {
+        vendorId: vendor.id,
+        before: {
+          categoryId: product.categoryId,
+          attributes: product.attributes ?? null,
+          images: product.images.map((image, index) => ({
+            url: image.url,
+            alt: image.alt,
+            sortOrder: image.sortOrder,
+            primary: index === 0
+          }))
+        },
+        after: {
+          categoryId: updated.categoryId,
+          attributes: updated.attributes ?? null,
+          images: freshImages.map((image, index) => ({
+            url: image.url,
+            alt: image.alt,
+            sortOrder: image.sortOrder,
+            primary: index === 0
+          }))
+        }
+      }
     });
     return updated;
   });

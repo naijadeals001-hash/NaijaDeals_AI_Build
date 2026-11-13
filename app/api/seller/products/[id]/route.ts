@@ -26,7 +26,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       quantity: body.quantity === undefined ? undefined : Number(body.quantity),
       lowStockLevel: body.lowStockLevel === undefined ? undefined : Number(body.lowStockLevel),
       categoryId: optionalString(body.categoryId, 100) ?? undefined,
-      attributes: body.attributes
+      attributes: body.attributes,
+      imageUrl: typeof body.imageUrl === "string" ? body.imageUrl : undefined,
+      imageAlt: typeof body.imageAlt === "string" ? body.imageAlt : undefined,
+      images: Array.isArray(body.images) ? (body.images as Array<Record<string, unknown>>) : undefined
     });
     await requestProductSync(product.id);
     return NextResponse.json(jsonSafe(product));

@@ -22,13 +22,16 @@ const sellerActions: Record<string, Array<{ status: "accepted" | "preparing" | "
 };
 
 const PRODUCT_DRAFT_KEY = "naijashop:seller:product-draft:v1";
+const MAX_PRODUCT_IMAGES = 6;
+
+type ImageDraft = { url: string; alt: string };
 
 type ProductDraft = {
   name: string;
   description: string;
   categoryId: string;
   priceNaira: string;
-  imageUrl: string;
+  images: ImageDraft[];
   quantity: string;
   attributes: Record<string, string>;
 };
@@ -38,23 +41,43 @@ const EMPTY_PRODUCT: ProductDraft = {
   description: "",
   categoryId: "",
   priceNaira: "",
-  imageUrl: "/products/tecno-spark-20.svg",
+  images: [{ url: "/products/tecno-spark-20.svg", alt: "Product image" }],
   quantity: "5",
   attributes: {}
 };
+
+function normaliseSavedImages(value: unknown, fallbackName: string): ImageDraft[] {
+  if (Array.isArray(value)) {
+    const images = value
+      .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
+      .map((entry) => ({
+        url: typeof entry.url === "string" ? entry.url : "",
+        alt: typeof entry.alt === "string" ? entry.alt : ""
+      }))
+      .slice(0, MAX_PRODUCT_IMAGES);
+    if (images.length > 0) return images;
+  }
+  return [{ url: EMPTY_PRODUCT.images[0].url, alt: fallbackName ? `${fallbackName} product image` : "Product image" }];
+}
 
 function readSavedDraft(): ProductDraft | null {
   try {
     const raw = window.localStorage.getItem(PRODUCT_DRAFT_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<ProductDraft>;
+    const parsed = JSON.parse(raw) as Partial<ProductDraft> & { imageUrl?: unknown };
     if (!parsed || typeof parsed !== "object") return null;
+    const name = typeof parsed.name === "string" ? parsed.name : "";
     return {
-      name: typeof parsed.name === "string" ? parsed.name : "",
+      name,
       description: typeof parsed.description === "string" ? parsed.description : "",
       categoryId: typeof parsed.categoryId === "string" ? parsed.categoryId : "",
       priceNaira: typeof parsed.priceNaira === "string" ? parsed.priceNaira : "",
-      imageUrl: typeof parsed.imageUrl === "string" ? parsed.imageUrl : EMPTY_PRODUCT.imageUrl,
+      images:
+        parsed.images !== undefined
+          ? normaliseSavedImages(parsed.images, name)
+          : typeof parsed.imageUrl === "string" && parsed.imageUrl.trim()
+            ? [{ url: parsed.imageUrl, alt: `${name || "Product"} image` }]
+            : normaliseSavedImages(undefined, name),
       quantity: typeof parsed.quantity === "string" ? parsed.quantity : EMPTY_PRODUCT.quantity,
       attributes:
         parsed.attributes && typeof parsed.attributes === "object" && !Array.isArray(parsed.attributes)
@@ -77,8 +100,28 @@ function isMeaningfulDraft(draft: ProductDraft) {
       draft.categoryId ||
       draft.priceNaira.trim() ||
       draft.quantity.trim() !== EMPTY_PRODUCT.quantity ||
+      draft.images.some((image) => image.url !== EMPTY_PRODUCT.images[0].url || image.alt !== EMPTY_PRODUCT.images[0].alt) ||
       Object.values(draft.attributes).some((value) => value.trim())
   );
+}
+
+function exactMinorUnits(value: string): number | null {
+  const cleaned = value.replace(/[^0-9.]/g, "").trim();
+  if (!/^\d+(?:\.\d{0,2})?$/.test(cleaned)) return null;
+  const [whole, fraction = ""] = cleaned.split(".");
+  const minor = Number(whole) * 100 + Number(fraction.padEnd(2, "0").slice(0, 2));
+  return Number.isSafeInteger(minor) && minor > 0 ? minor : null;
+}
+
+function priceKoboToInput(value: number | string | bigint): string {
+  const minor = Number(value);
+  return Number.isFinite(minor) ? (minor / 100).toFixed(2).replace(/\.00$/, "") : "";
+}
+
+function attributeInputValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "boolean") return value ? "true" : "false";
+  return String(value);
 }
 
 export function SellerDashboard() {
@@ -88,6 +131,8 @@ export function SellerDashboard() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState("");
   const [showProductForm, setShowProductForm] = useState(false);
+  const [editingProductId, setEditingProductId] = useState("");
+  const [editingAttributes, setEditingAttributes] = useState<Record<string, unknown> | null>(null);
   const [profile, setProfile] = useState({
     name: "",
     description: "",
@@ -151,7 +196,7 @@ export function SellerDashboard() {
   }, [draftHydrated]);
 
   useEffect(() => {
-    if (!draftHydrated) return;
+    if (!draftHydrated || editingProductId) return;
     try {
       if (isMeaningfulDraft(form)) {
         window.localStorage.setItem(PRODUCT_DRAFT_KEY, JSON.stringify(form));
@@ -161,7 +206,7 @@ export function SellerDashboard() {
     } catch {
       /* storage can be unavailable (private mode, quota); the form still works */
     }
-  }, [form, draftHydrated]);
+  }, [form, draftHydrated, editingProductId]);
 
   function clearDraft() {
     try {
@@ -169,10 +214,12 @@ export function SellerDashboard() {
     } catch {
       /* ignore storage failures */
     }
-    setForm({ ...EMPTY_PRODUCT, attributes: {} });
+    setForm({ ...EMPTY_PRODUCT, attributes: {}, images: [{ ...EMPTY_PRODUCT.images[0] }] });
     setSelectedCategory(null);
     setAttributeErrors({});
     setDraftRestored(false);
+    setEditingProductId("");
+    setEditingAttributes(null);
   }
 
   function openCategoryRequest(seed: string) {
@@ -225,14 +272,33 @@ export function SellerDashboard() {
       setError(selectedCategory.restrictionNote || "That category is not open to sellers in your market.");
       return;
     }
-    const priceKobo = Math.round(Number(form.priceNaira) * 100);
-    if (!Number.isFinite(priceKobo) || !Number.isInteger(priceKobo) || priceKobo <= 0) {
-      setError("Enter a valid price in naira.");
+    const priceKobo = exactMinorUnits(form.priceNaira);
+    if (priceKobo === null) {
+      setError("Enter a valid price with at most two decimal places.");
       return;
     }
     const quantity = Number(form.quantity);
     if (!Number.isInteger(quantity) || quantity < 0) {
       setError("Stock must be a whole number of units.");
+      return;
+    }
+    const images = form.images
+      .map((image) => ({ url: image.url.trim(), alt: image.alt.trim() }))
+      .filter((image) => image.url);
+    if (images.length === 0) {
+      setError("Add at least one product image with accessible alt text.");
+      return;
+    }
+    if (images.length > MAX_PRODUCT_IMAGES) {
+      setError(`A listing can have at most ${MAX_PRODUCT_IMAGES} images.`);
+      return;
+    }
+    if (images.some((image) => !image.alt)) {
+      setError("Every product image needs accessible alt text.");
+      return;
+    }
+    if (!form.name.trim() || !form.description.trim()) {
+      setError("Product name and description are required.");
       return;
     }
     const { errors: attributeIssues, payload: attributePayload } = validateAttributeValues(
@@ -246,19 +312,29 @@ export function SellerDashboard() {
     }
     setBusy("new-product");
     try {
-      await apiClient.sellerCreateProduct({
-        name: form.name,
-        description: form.description,
+      const payload = {
+        name: form.name.trim(),
+        description: form.description.trim(),
         categoryId: form.categoryId,
         priceKobo: String(priceKobo),
-        imageUrl: form.imageUrl,
         quantity,
-        attributes: attributePayload
-      });
-      // The seller API creates DRAFT listings; say so rather than claiming publication.
-      setNotice("Listing saved as a draft. Drafts are not visible in the marketplace until the catalogue is published.");
+        attributes: attributePayload,
+        images: images.map((image, index) => ({ ...image, order: index, primary: index === 0 }))
+      };
+      if (editingProductId) {
+        await apiClient.sellerUpdateProduct(editingProductId, payload);
+        setNotice(
+          "Listing updated. It remains a draft until the Control Center publishes it; warehouse and dispatch details stay on your seller record."
+        );
+      } else {
+        await apiClient.sellerCreateProduct(payload);
+        // The seller API defaults new listings to DRAFT; say so rather than claiming publication.
+        setNotice("Listing saved as a draft. Drafts are not visible in the marketplace until the catalogue is published.");
+      }
       setShowProductForm(false);
-      setForm({ ...EMPTY_PRODUCT, attributes: {} });
+      setEditingProductId("");
+      setEditingAttributes(null);
+      setForm({ ...EMPTY_PRODUCT, attributes: {}, images: [{ ...EMPTY_PRODUCT.images[0] }] });
       setSelectedCategory(null);
       setDraftRestored(false);
       try {
@@ -272,6 +348,77 @@ export function SellerDashboard() {
     } finally {
       setBusy("");
     }
+  }
+
+  function updateImage(index: number, patch: Partial<ImageDraft>) {
+    setForm((current) => ({
+      ...current,
+      images: current.images.map((image, position) => (position === index ? { ...image, ...patch } : image))
+    }));
+  }
+
+  function moveImage(index: number, direction: -1 | 1) {
+    setForm((current) => {
+      const target = index + direction;
+      if (target < 0 || target >= current.images.length) return current;
+      const images = [...current.images];
+      [images[index], images[target]] = [images[target], images[index]];
+      return { ...current, images };
+    });
+  }
+
+  function makePrimaryImage(index: number) {
+    setForm((current) => {
+      if (index <= 0 || index >= current.images.length) return current;
+      const images = [...current.images];
+      const [primary] = images.splice(index, 1);
+      return { ...current, images: [primary, ...images] };
+    });
+  }
+
+  function beginEditProduct(product: SellerOverview["products"][number]) {
+    const editable = product as SellerOverview["products"][number] & {
+      attributes?: Record<string, unknown> | null;
+    };
+    const categoryWithAttributes = product.category as typeof product.category & {
+      attributes?: SellerCategory["attributes"];
+    };
+    const storedAttributes =
+      editable.attributes && typeof editable.attributes === "object" && !Array.isArray(editable.attributes)
+        ? (editable.attributes as Record<string, unknown>)
+        : {};
+    const definitions =
+      categoryWithAttributes.attributes ??
+      (selectedCategory?.id === product.category.id ? selectedCategory.attributes : []);
+    setEditingProductId(product.id);
+    setEditingAttributes(storedAttributes);
+    setForm({
+      name: product.name,
+      description: product.description,
+      categoryId: product.category.id,
+      priceNaira: priceKoboToInput(product.priceKobo),
+      images:
+        product.images.length > 0
+          ? product.images
+              .slice()
+              .sort((left, right) => left.sortOrder - right.sortOrder)
+              .map((image) => ({ url: image.url, alt: image.alt ?? "" }))
+          : [{ url: "", alt: "" }],
+      quantity: String(product.stock?.quantity ?? 0),
+      attributes: Object.fromEntries(
+        definitions.map((definition) => [
+          definition.key,
+          attributeInputValue(editable.attributes?.[definition.key])
+        ])
+      )
+    });
+    setAttributeErrors({});
+    setShowProductForm(true);
+    setNotice("");
+    setError("");
+    window.requestAnimationFrame(() =>
+      document.getElementById("seller-product-form")?.scrollIntoView({ block: "start", behavior: "smooth" })
+    );
   }
 
   async function updateStock(productId: string, quantity: number) {
@@ -542,6 +689,9 @@ export function SellerDashboard() {
             noValidate
             className="mt-3 grid gap-3 rounded-xl bg-surface-low p-3 sm:grid-cols-2"
           >
+            <p className="sm:col-span-2 text-sm font-black">
+              {editingProductId ? "Edit draft listing" : "New draft listing"}
+            </p>
             <label>
               <span className="text-sm font-black">Name</span>
               <input
@@ -572,15 +722,6 @@ export function SellerDashboard() {
               />
             </label>
             <label className="sm:col-span-2">
-              <span className="text-sm font-black">Image URL (https or local /path)</span>
-              <input
-                required
-                value={form.imageUrl}
-                onChange={(event) => setForm((c) => ({ ...c, imageUrl: event.target.value }))}
-                className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-canvas px-3 text-sm"
-              />
-            </label>
-            <label className="sm:col-span-2">
               <span className="text-sm font-black">Description</span>
               <textarea
                 required
@@ -591,23 +732,126 @@ export function SellerDashboard() {
               />
             </label>
 
+            <fieldset className="sm:col-span-2 rounded-xl border border-border-soft p-3">
+              <legend className="px-1 text-sm font-black">Gallery (up to 6 images)</legend>
+              <div className="space-y-3">
+                {form.images.map((image, index) => (
+                  <div key={index} className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                    <label>
+                      <span className="text-xs font-bold">Image {index + 1} URL (https or local /path)</span>
+                      <input
+                        value={image.url}
+                        onChange={(event) => updateImage(index, { url: event.target.value })}
+                        className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-canvas px-3 text-sm"
+                      />
+                    </label>
+                    <label>
+                      <span className="text-xs font-bold">Image {index + 1} alt text</span>
+                      <input
+                        value={image.alt}
+                        onChange={(event) => updateImage(index, { alt: event.target.value })}
+                        className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-canvas px-3 text-sm"
+                      />
+                    </label>
+                    <div className="flex flex-wrap items-end gap-1">
+                      <label className="flex min-h-10 items-center gap-1 rounded-lg border border-border-soft px-2 text-[10px] font-bold">
+                        <input
+                          type="radio"
+                          name="seller-primary-image"
+                          checked={index === 0}
+                          onChange={() => makePrimaryImage(index)}
+                          aria-label={`Make image ${index + 1} primary`}
+                        />
+                        Primary
+                      </label>
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => moveImage(index, -1)}
+                        aria-label={`Move image ${index + 1} up`}
+                        className="min-h-10 rounded-lg border border-border-soft px-2 text-xs font-bold disabled:opacity-40"
+                      >
+                        Up
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === form.images.length - 1}
+                        onClick={() => moveImage(index, 1)}
+                        aria-label={`Move image ${index + 1} down`}
+                        className="min-h-10 rounded-lg border border-border-soft px-2 text-xs font-bold disabled:opacity-40"
+                      >
+                        Down
+                      </button>
+                      <button
+                        type="button"
+                        disabled={form.images.length === 1}
+                        onClick={() =>
+                          setForm((current) => ({
+                            ...current,
+                            images: current.images.filter((_, position) => position !== index)
+                          }))
+                        }
+                        aria-label={`Remove image ${index + 1}`}
+                        className="min-h-10 rounded-lg border border-border-soft px-2 text-xs font-bold disabled:opacity-40"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={form.images.length >= MAX_PRODUCT_IMAGES}
+                  onClick={() =>
+                    setForm((current) => ({ ...current, images: [...current.images, { url: "", alt: "" }] }))
+                  }
+                  className="min-h-10 rounded-lg border border-border-soft px-3 text-xs font-bold disabled:opacity-40"
+                >
+                  Add another image
+                </button>
+                <span className="text-[11px] text-muted">
+                  The first image is the primary cover. Every image needs alt text; the server checks local assets,
+                  duplicate URLs and the 6-image limit.
+                </span>
+              </div>
+            </fieldset>
+
             <div className="sm:col-span-2">
               <CategoryPicker
+                key={editingProductId || "new-product"}
                 value={form.categoryId}
                 onSelect={(category) => {
                   setSelectedCategory(category);
                   setAttributeErrors({});
-                  setForm((current) =>
-                    category
-                      ? {
-                          ...current,
-                          categoryId: category.id,
-                          // Attribute keys belong to one category; switching
-                          // categories starts a clean attribute set.
-                          attributes: current.categoryId === category.id ? current.attributes : {}
-                        }
-                      : { ...current, categoryId: "", attributes: {} }
-                  );
+                  setForm((current) => {
+                    if (!category) return { ...current, categoryId: "", attributes: {} };
+                    const sameCategory = current.categoryId === category.id;
+                    const shouldHydrate =
+                      sameCategory &&
+                      Boolean(editingProductId) &&
+                      editingAttributes &&
+                      Object.keys(current.attributes).length === 0;
+                    return {
+                      ...current,
+                      categoryId: category.id,
+                      // Attribute keys belong to one category; switching
+                      // categories starts a clean attribute set. The stored
+                      // values are rehydrated when the picker resolves the
+                      // category for an existing listing.
+                      attributes: sameCategory
+                        ? shouldHydrate
+                          ? Object.fromEntries(
+                              category.attributes.map((definition) => [
+                                definition.key,
+                                attributeInputValue(editingAttributes?.[definition.key])
+                              ])
+                            )
+                          : current.attributes
+                        : {}
+                    };
+                  });
                 }}
                 onRequestCategory={(query) => openCategoryRequest(query)}
               />
@@ -632,14 +876,46 @@ export function SellerDashboard() {
               </div>
             ) : null}
 
+            <div className="sm:col-span-2 rounded-xl border border-border-soft bg-canvas p-3">
+              <p className="text-xs font-black uppercase tracking-wide text-muted">Dispatch details from your seller record</p>
+              <p className="mt-1 text-sm">
+                {overview.vendor.market} · {overview.vendor.pickupAddress} · {overview.vendor.pickupPhone}
+              </p>
+              <p className="mt-1 text-[11px] text-muted">
+                Read-only: pickup and dispatch come from the seller record. Verification, commission, payout and
+                platform policy cannot be set from this product form; the Control Center publishes listings.
+              </p>
+            </div>
+
             <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
               <button
                 type="submit"
                 disabled={busy === "new-product"}
                 className="min-h-11 rounded-lg bg-primary px-4 text-sm font-bold text-white disabled:opacity-60"
               >
-                {busy === "new-product" ? "Saving draft…" : "Save draft listing"}
+                {busy === "new-product"
+                  ? editingProductId
+                    ? "Saving changes…"
+                    : "Saving draft…"
+                  : editingProductId
+                    ? "Save draft changes"
+                    : "Save draft listing"}
               </button>
+              {editingProductId ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingProductId("");
+                    setEditingAttributes(null);
+                    setForm({ ...EMPTY_PRODUCT, attributes: {}, images: [{ ...EMPTY_PRODUCT.images[0] }] });
+                    setSelectedCategory(null);
+                    setAttributeErrors({});
+                  }}
+                  className="min-h-11 rounded-lg border border-border-soft px-4 text-sm font-bold"
+                >
+                  Cancel edit
+                </button>
+              ) : null}
               <p className="text-[11px] leading-4 text-muted">
                 Saving never publishes. Draft fields stay in this browser until you submit or discard them.
               </p>
@@ -687,12 +963,21 @@ export function SellerDashboard() {
                   </td>
                   <td className="py-2">{statusLabel(product.status)}</td>
                   <td className="py-2">
-                    <button
-                      onClick={() => void toggleProduct(product.id, product.status === "ACTIVE" ? "ARCHIVED" : "ACTIVE")}
-                      className="min-h-9 rounded-lg border border-border-soft px-2 text-xs font-bold"
-                    >
-                      {product.status === "ACTIVE" ? "Archive" : "Activate"}
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => beginEditProduct(product)}
+                        className="min-h-9 rounded-lg border border-border-soft px-2 text-xs font-bold"
+                      >
+                        Edit listing
+                      </button>
+                      <button
+                        onClick={() => void toggleProduct(product.id, product.status === "ACTIVE" ? "ARCHIVED" : "ACTIVE")}
+                        className="min-h-9 rounded-lg border border-border-soft px-2 text-xs font-bold"
+                      >
+                        {product.status === "ACTIVE" ? "Archive" : "Activate"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

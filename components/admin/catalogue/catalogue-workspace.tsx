@@ -3,6 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { COUNTRIES } from "@/lib/config/commerce";
 
+type AttributeDefinition = {
+  key: string;
+  label: string;
+  type: "TEXT" | "NUMBER" | "SELECT" | "BOOLEAN";
+  required: boolean;
+  options: string[] | null;
+};
+
 type Department = {
   id: string;
   name: string;
@@ -10,10 +18,26 @@ type Department = {
   description: string | null;
   imageUrl: string | null;
   imageAlt: string | null;
+  parentId: string | null;
+  level: number;
   sortOrder: number;
   isActive: boolean;
   isDemo: boolean;
+  isSelectable: boolean;
+  attributes: AttributeDefinition[];
   _count?: { products: number };
+};
+
+type SellerRecord = {
+  id?: string;
+  name: string;
+  slug?: string;
+  status: string;
+  market?: string;
+  countryCode?: string;
+  pickupAddress?: string;
+  pickupPhone?: string;
+  commissionBps?: number;
 };
 
 type Product = {
@@ -27,14 +51,21 @@ type Product = {
   status: string;
   isDemo: boolean;
   categoryId: string;
-  category: Department | null;
-  images: Array<{ id?: string; url: string; alt: string | null }>;
+  category: (Department & { attributes?: AttributeDefinition[] }) | null;
+  attributes: Record<string, unknown> | null;
+  images: Array<{ id?: string; url: string; alt: string | null; sortOrder: number; primary?: boolean }>;
+  variants: Array<{ id: string; name: string; sku: string; priceKobo: string; stock: number; reserved: number; isActive: boolean }>;
   stock: { quantity: number; reserved: number; lowStockLevel: number } | null;
-  vendor?: { name: string; status: string } | null;
+  vendor?: SellerRecord | null;
 };
 
-type Catalogue = { departments: Department[]; products: Product[]; demoVendor: { name: string } | null };
+type Catalogue = {
+  departments: Department[];
+  products: Product[];
+  demoVendor: SellerRecord | null;
+};
 type ImageDraft = { url: string; alt: string };
+type AttributeDraft = Record<string, string>;
 type ValidationState = {
   name: string;
   valid: boolean;
@@ -76,8 +107,47 @@ const emptyProduct = {
   quantity: "0",
   lowStockLevel: "3",
   images: [{ url: "", alt: "" }] as ImageDraft[],
+  attributes: {} as AttributeDraft,
+  variants: [] as Product["variants"],
+  vendor: null as SellerRecord | null,
   isDemo: true
 };
+
+/** Exact decimal string to integer minor units; no floating-point money. */
+function majorToMinor(value: string): number | null {
+  const cleaned = value.replace(/[^0-9.]/g, "").trim();
+  if (!/^\d+(?:\.\d{0,2})?$/.test(cleaned)) return null;
+  const [whole, fraction = ""] = cleaned.split(".");
+  const minor = Number(whole) * 100 + Number(fraction.padEnd(2, "0").slice(0, 2));
+  return Number.isSafeInteger(minor) && minor > 0 ? minor : null;
+}
+
+function minorToMajorInput(value: string | number | bigint): string {
+  const minor = Number(value);
+  if (!Number.isFinite(minor)) return "";
+  return (minor / 100).toFixed(2).replace(/\.00$/, "");
+}
+
+function attributeValueToInput(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "boolean") return value ? "true" : "false";
+  return String(value);
+}
+
+function attributePayload(definitions: AttributeDefinition[], values: AttributeDraft): Record<string, string> {
+  const payload: Record<string, string> = {};
+  for (const definition of definitions) {
+    const value = (values[definition.key] ?? "").trim();
+    if (value) payload[definition.key] = value;
+  }
+  return payload;
+}
+
+function missingRequiredAttributes(definitions: AttributeDefinition[], values: AttributeDraft): AttributeDefinition[] {
+  return definitions.filter(
+    (definition) => definition.required && !(values[definition.key] ?? "").trim()
+  );
+}
 
 function formatMoney(priceKobo: string | number | bigint, currency: string | null) {
   const minor = Number(priceKobo);
@@ -131,7 +201,11 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
   }, [canRead, load]);
 
   const departments = catalogue?.departments ?? [];
-  const products = catalogue?.products ?? [];
+  const products = useMemo(() => catalogue?.products ?? [], [catalogue]);
+  const selectedDepartment = departments.find((entry) => entry.id === product.categoryId) ?? null;
+  const attributeDefinitions = selectedDepartment?.attributes ?? [];
+  const selectedVendor =
+    product.vendor ?? (product.isDemo ? catalogue?.demoVendor ?? null : null);
 
   async function send(
     url: string,
@@ -213,9 +287,9 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
       setError("Product name, description, price and department are required.");
       return;
     }
-    const major = Number(product.price.replace(/[^0-9.]/g, ""));
-    if (!Number.isFinite(major) || major <= 0) {
-      setError("Price must be a positive amount.");
+    const priceKobo = majorToMinor(product.price);
+    if (priceKobo === null) {
+      setError("Price must be a positive amount with at most two decimal places.");
       return;
     }
     if (product.quantity === "" || !Number.isInteger(Number(product.quantity)) || Number(product.quantity) < 0) {
@@ -229,18 +303,32 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
     const images = product.images
       .map((image) => ({ url: image.url.trim(), alt: image.alt.trim() }))
       .filter((image) => image.url);
+    if (images.length > 6) {
+      setError("A listing can have at most 6 images.");
+      return;
+    }
+    if (images.some((image) => !image.alt)) {
+      setError("Every gallery image needs accessible alt text.");
+      return;
+    }
+    const missing = missingRequiredAttributes(attributeDefinitions, product.attributes);
+    if (missing.length > 0) {
+      setError(`Complete the required category attributes: ${missing.map((entry) => entry.label).join(", ")}.`);
+      return;
+    }
     const body = {
       id: product.id || undefined,
       name: product.name,
       slug: product.slug.trim() || undefined,
       description: product.description,
-      priceKobo: Math.round(major * 100),
+      priceKobo,
       currency: product.currency,
       countryCode: product.countryCode,
       categoryId: product.categoryId,
+      attributes: attributePayload(attributeDefinitions, product.attributes),
       quantity: Number(product.quantity),
       lowStockLevel: Number(product.lowStockLevel || 3),
-      images,
+      images: images.map((image, index) => ({ ...image, order: index, primary: index === 0 })),
       isDemo: product.isDemo
     };
     const saved = product.id
@@ -308,12 +396,16 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
   }
 
   function editProduct(entry: Product) {
+    const definitions =
+      departments.find((candidate) => candidate.id === entry.categoryId)?.attributes ??
+      entry.category?.attributes ??
+      [];
     setProduct({
       id: entry.id,
       name: entry.name,
       slug: entry.slug,
       description: entry.description,
-      price: String(Number(entry.priceKobo) / 100),
+      price: minorToMajorInput(entry.priceKobo),
       currency: entry.currency ?? COUNTRIES[entry.countryCode]?.currency ?? "NGN",
       countryCode: entry.countryCode,
       categoryId: entry.categoryId,
@@ -323,6 +415,14 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
         entry.images.length > 0
           ? entry.images.map((image) => ({ url: image.url, alt: image.alt ?? "" }))
           : [{ url: "", alt: "" }],
+      attributes: Object.fromEntries(
+        definitions.map((definition) => [
+          definition.key,
+          attributeValueToInput(entry.attributes?.[definition.key])
+        ])
+      ),
+      variants: entry.variants ?? [],
+      vendor: entry.vendor ?? null,
       isDemo: entry.isDemo
     });
     setValidation(null);
@@ -335,6 +435,25 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
       ...current,
       images: current.images.map((image, position) => (position === index ? { ...image, ...patch } : image))
     }));
+  }
+
+  function moveImage(index: number, direction: -1 | 1) {
+    setProduct((current) => {
+      const target = index + direction;
+      if (target < 0 || target >= current.images.length) return current;
+      const images = [...current.images];
+      [images[index], images[target]] = [images[target], images[index]];
+      return { ...current, images };
+    });
+  }
+
+  function makePrimaryImage(index: number) {
+    setProduct((current) => {
+      if (index <= 0 || index >= current.images.length) return current;
+      const images = [...current.images];
+      const [primary] = images.splice(index, 1);
+      return { ...current, images: [primary, ...images] };
+    });
   }
 
   if (!canRead) {
@@ -605,7 +724,7 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
             </select>
           </label>
           <label className="text-xs font-bold">
-            Currency (from country)
+            Currency (explicit, derived from fulfilment country)
             <input
               value={product.currency}
               readOnly
@@ -614,7 +733,7 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
             />
           </label>
           <label className="text-xs font-bold">
-            Price ({product.currency})
+            Price ({product.currency}) — stored as integer minor units
             <input
               value={product.price}
               disabled={!canWrite}
@@ -622,22 +741,38 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
               onChange={(event) => setProduct({ ...product, price: event.target.value })}
               className="mt-1 min-h-10 w-full rounded-lg border border-[#30363D] bg-[#161B22] px-3 text-sm"
             />
+            <span className="mt-1 block text-[10px] font-normal text-[#8B949E]">
+              The server re-validates currency and converts the amount to exact minor units (kobo for NGN).
+            </span>
           </label>
           <label className="text-xs font-bold">
-            Department
+            Department (selectable, publishable taxonomy)
             <select
               value={product.categoryId}
               disabled={!canWrite}
-              onChange={(event) => setProduct({ ...product, categoryId: event.target.value })}
+              onChange={(event) => {
+                const nextCategoryId = event.target.value;
+                setProduct({
+                  ...product,
+                  categoryId: nextCategoryId,
+                  // Attribute keys belong to one category. Switching categories
+                  // starts a clean set instead of carrying another category's keys.
+                  attributes:
+                    nextCategoryId === product.categoryId ? product.attributes : {}
+                });
+              }}
               className="mt-1 min-h-10 w-full rounded-lg border border-[#30363D] bg-[#161B22] px-3 text-sm"
             >
               <option value="">Choose a department</option>
-              {departments.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name}
-                  {entry.isActive ? "" : " (inactive)"}
-                </option>
-              ))}
+              {departments
+                .filter((entry) => entry.isActive && entry.isSelectable)
+                .map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name}
+                    {entry.level > 0 ? ` (level ${entry.level})` : ""}
+                    {entry.attributes.length > 0 ? ` · ${entry.attributes.length} attributes` : ""}
+                  </option>
+                ))}
             </select>
           </label>
           <label className="text-xs font-bold">
@@ -683,7 +818,7 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
 
         <fieldset className="mt-4 rounded-xl border border-[#30363D] p-3">
           <legend className="px-1 text-xs font-extrabold uppercase tracking-wide text-[#8B949E]">
-            Images (first image is the cover)
+            Gallery (up to 6 images)
           </legend>
           <div className="space-y-3">
             {product.images.map((image, index) => (
@@ -706,19 +841,51 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
                     className="mt-1 min-h-10 w-full rounded-lg border border-[#30363D] bg-[#161B22] px-3 text-sm"
                   />
                 </label>
-                <button
-                  type="button"
-                  disabled={!canWrite || product.images.length === 1}
-                  onClick={() =>
-                    setProduct((current) => ({
-                      ...current,
-                      images: current.images.filter((_, position) => position !== index)
-                    }))
-                  }
-                  className="min-h-10 self-end rounded-lg border border-[#30363D] px-3 text-xs font-bold disabled:opacity-40"
-                >
-                  Remove image {index + 1}
-                </button>
+                <div className="flex flex-wrap items-end gap-1">
+                  <label className="flex min-h-10 items-center gap-1 rounded-lg border border-[#30363D] px-2 text-[10px] font-bold">
+                    <input
+                      type="radio"
+                      name="catalogue-primary-image"
+                      checked={index === 0}
+                      disabled={!canWrite}
+                      onChange={() => makePrimaryImage(index)}
+                      aria-label={`Make image ${index + 1} primary`}
+                    />
+                    Primary
+                  </label>
+                  <button
+                    type="button"
+                    disabled={!canWrite || index === 0}
+                    onClick={() => moveImage(index, -1)}
+                    aria-label={`Move image ${index + 1} up`}
+                    className="min-h-10 rounded-lg border border-[#30363D] px-2 text-xs font-bold disabled:opacity-40"
+                  >
+                    Up
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canWrite || index === product.images.length - 1}
+                    onClick={() => moveImage(index, 1)}
+                    aria-label={`Move image ${index + 1} down`}
+                    className="min-h-10 rounded-lg border border-[#30363D] px-2 text-xs font-bold disabled:opacity-40"
+                  >
+                    Down
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canWrite || product.images.length === 1}
+                    onClick={() =>
+                      setProduct((current) => ({
+                        ...current,
+                        images: current.images.filter((_, position) => position !== index)
+                      }))
+                    }
+                    aria-label={`Remove image ${index + 1}`}
+                    className="min-h-10 rounded-lg border border-[#30363D] px-2 text-xs font-bold disabled:opacity-40"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -732,10 +899,152 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
               Add another image
             </button>
             <span className="text-xs text-[#8B949E]">
-              Publishing requires at least one image and alt text on every image.
+              The first image is the primary cover. The server verifies local asset existence, rejects duplicate URLs,
+              stores order as 0..n-1 and requires alt text on every image before publication.
             </span>
           </div>
         </fieldset>
+
+        {attributeDefinitions.length > 0 ? (
+          <fieldset
+            data-testid="catalogue-attributes"
+            className="mt-4 rounded-xl border border-[#30363D] p-3"
+          >
+            <legend className="px-1 text-xs font-extrabold uppercase tracking-wide text-[#8B949E]">
+              Category attributes — {selectedDepartment?.name ?? "selected category"}
+            </legend>
+            <div className="grid gap-3 md:grid-cols-2">
+              {attributeDefinitions.map((definition) => (
+                <label key={definition.key} className="text-xs font-bold">
+                  {definition.label}
+                  {definition.required ? <span className="ml-1 text-[#FFB4AE]">required</span> : null}
+                  {definition.type === "SELECT" ? (
+                    <select
+                      value={product.attributes[definition.key] ?? ""}
+                      disabled={!canWrite}
+                      required={definition.required}
+                      onChange={(event) =>
+                        setProduct((current) => ({
+                          ...current,
+                          attributes: { ...current.attributes, [definition.key]: event.target.value }
+                        }))
+                      }
+                      className="mt-1 min-h-10 w-full rounded-lg border border-[#30363D] bg-[#161B22] px-3 text-sm"
+                    >
+                      <option value="">{definition.required ? "Choose an option" : "Not specified"}</option>
+                      {(definition.options ?? []).map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  ) : definition.type === "BOOLEAN" ? (
+                    <select
+                      value={product.attributes[definition.key] ?? ""}
+                      disabled={!canWrite}
+                      required={definition.required}
+                      onChange={(event) =>
+                        setProduct((current) => ({
+                          ...current,
+                          attributes: { ...current.attributes, [definition.key]: event.target.value }
+                        }))
+                      }
+                      className="mt-1 min-h-10 w-full rounded-lg border border-[#30363D] bg-[#161B22] px-3 text-sm"
+                    >
+                      <option value="">{definition.required ? "Choose a value" : "Not specified"}</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  ) : (
+                    <input
+                      value={product.attributes[definition.key] ?? ""}
+                      disabled={!canWrite}
+                      required={definition.required}
+                      inputMode={definition.type === "NUMBER" ? "decimal" : "text"}
+                      onChange={(event) =>
+                        setProduct((current) => ({
+                          ...current,
+                          attributes: { ...current.attributes, [definition.key]: event.target.value }
+                        }))
+                      }
+                      className="mt-1 min-h-10 w-full rounded-lg border border-[#30363D] bg-[#161B22] px-3 text-sm"
+                    />
+                  )}
+                  <span className="mt-1 block text-[10px] font-normal text-[#8B949E]">
+                    {definition.type} · key {definition.key}
+                    {definition.options?.length ? ` · options: ${definition.options.join(", ")}` : ""}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] text-[#8B949E]">
+              Definitions come from CategoryAttribute. The server rejects unknown keys, missing required values,
+              invalid numbers and SELECT values outside the configured options.
+            </p>
+          </fieldset>
+        ) : product.categoryId ? (
+          <p className="mt-4 rounded-lg border border-[#30363D] bg-[#0D1117] p-2 text-xs text-[#8B949E]">
+            This category has no attribute definitions. That is an explicit taxonomy state, not a skipped editor step.
+          </p>
+        ) : null}
+
+        <section
+          aria-labelledby="catalogue-dispatch-heading"
+          className="mt-4 rounded-xl border border-[#58A6FF]/30 bg-[#101826] p-3"
+        >
+          <h3 id="catalogue-dispatch-heading" className="text-xs font-extrabold uppercase tracking-wide text-[#8B949E]">
+            Seller record and dispatch information
+          </h3>
+          <p className="mt-1 text-[11px] text-[#8B949E]">
+            These values are read-only and derived from the assigned seller record. This editor cannot set seller
+            verification, commission, payout or platform policy.
+          </p>
+          {selectedVendor ? (
+            <dl className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
+              <div>
+                <dt className="text-[#8B949E]">Seller</dt>
+                <dd className="font-bold">{selectedVendor.name}</dd>
+              </div>
+              <div>
+                <dt className="text-[#8B949E]">Seller status</dt>
+                <dd className="font-bold">{selectedVendor.status}</dd>
+              </div>
+              <div>
+                <dt className="text-[#8B949E]">Market / country</dt>
+                <dd className="font-bold">
+                  {selectedVendor.market ?? "—"} · {selectedVendor.countryCode ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[#8B949E]">Commission</dt>
+                <dd className="font-bold">
+                  {typeof selectedVendor.commissionBps === "number"
+                    ? `${selectedVendor.commissionBps / 100}% (seller record)`
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[#8B949E]">Pickup address</dt>
+                <dd className="font-bold">{selectedVendor.pickupAddress ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-[#8B949E]">Pickup phone</dt>
+                <dd className="font-bold">{selectedVendor.pickupPhone ?? "—"}</dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="mt-2 text-xs text-[#8B949E]">
+              A seller is assigned automatically when the draft is created: the demonstration seller for DEMO records,
+              otherwise the first verified seller in the selected country. No dispatch policy record is stored on a
+              product in the current schema.
+            </p>
+          )}
+          <p className="mt-2 text-[10px] text-[#8B949E]">
+            Variants are {product.id ? `${product.variants.length} read-only row(s)` : "created only through an existing product record"}.
+            The schema supports ProductVariant, but this editor has no create/edit contract for variants yet.
+            Related products are selected by department from active listings; no curated bundle rule is stored.
+          </p>
+        </section>
 
         <div className="mt-3 flex flex-wrap gap-2">
           <button
@@ -885,7 +1194,11 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
                   <td className="py-2 pr-3">
                     <span className="font-bold">{entry.name}</span>
                     <span className="ml-2 text-xs text-[#8B949E]">{entry.isDemo ? "DEMO" : "live"}</span>
-                    <span className="mt-0.5 block text-[10px] text-[#8B949E]">/{entry.slug}</span>
+                    <span className="mt-0.5 block text-[10px] text-[#8B949E]">
+                      /{entry.slug} · {entry.images.length} image(s) ·{" "}
+                      {entry.attributes ? Object.keys(entry.attributes).length : 0} attribute(s) · {entry.variants.length}{" "}
+                      variant(s)
+                    </span>
                   </td>
                   <td className="pr-3 text-[#8B949E]">{entry.category?.name ?? "—"}</td>
                   <td className="pr-3">

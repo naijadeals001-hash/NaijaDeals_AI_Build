@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { Prisma, type CategoryAttributeType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError, hasAdminConsoleAccess } from "@/lib/auth/guard";
 import type { SessionUser } from "@/lib/auth/session";
@@ -7,6 +8,11 @@ import { permissionsFor } from "@/lib/auth/permissions";
 import { assertRegion, countryScopeWhere } from "@/lib/auth/scope";
 import { COUNTRIES } from "@/lib/config/commerce";
 import { markForIndex } from "@/lib/infra/search-sync";
+import {
+  assertSellerCategoryEligibility,
+  validateProductAttributes,
+  type AttributeDefinition
+} from "@/lib/services/taxonomy/eligibility";
 import { recordAudit } from "./audit.service";
 
 const DEMO_VENDOR_SLUG = "demo-catalogue-review";
@@ -92,29 +98,161 @@ export function validateImage(imageUrl: unknown, alt: unknown, required: boolean
   return { imageUrl: url, imageAlt: altText };
 }
 
-export type CatalogueImageInput = { url?: unknown; alt?: unknown };
+export type CatalogueImageInput = {
+  url?: unknown;
+  alt?: unknown;
+  /** Display/position hint. The stored sortOrder is always normalised 0..n-1. */
+  order?: unknown;
+  sortOrder?: unknown;
+  /** At most one image may be primary; it is stored first so it becomes the cover. */
+  primary?: unknown;
+};
+
+type AttributeRow = {
+  key: string;
+  label: string;
+  type: CategoryAttributeType;
+  required: boolean;
+  options: Prisma.JsonValue | null;
+};
+
+function normaliseOptions(value: Prisma.JsonValue | null): string[] | null {
+  if (!Array.isArray(value)) return null;
+  const options = value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+  return options.length ? options : null;
+}
+
+export function attributeDefinitionsFromRows(rows: AttributeRow[]): AttributeDefinition[] {
+  return [...rows]
+    .sort((left, right) => left.key.localeCompare(right.key))
+    .map((attribute) => ({
+      key: attribute.key,
+      label: attribute.label,
+      type: attribute.type,
+      required: attribute.required,
+      options: normaliseOptions(attribute.options)
+    }));
+}
+
+function sortOrderHint(value: unknown, fallback: number): number {
+  const parsed = typeof value === "number" ? value : Number(String(value ?? "").trim());
+  return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= 999 ? parsed : fallback;
+}
 
 function readImages(images: unknown, imageUrl: unknown, imageAlt: unknown): Array<{ url: string; alt: string }> {
   const entries: CatalogueImageInput[] = Array.isArray(images)
-    ? images.slice(0, MAX_IMAGES).map((entry) =>
+    ? images.map((entry) =>
         entry && typeof entry === "object" ? (entry as CatalogueImageInput) : { url: entry }
       )
     : imageUrl === undefined && imageAlt === undefined
       ? []
       : [{ url: imageUrl, alt: imageAlt }];
-  if (Array.isArray(images) && images.length > MAX_IMAGES) {
-    throw new ApiError(400, "too_many_images", `A listing can have at most ${MAX_IMAGES} images.`);
-  }
-  const parsed: Array<{ url: string; alt: string }> = [];
+
+  const parsed: Array<{ url: string; alt: string; order: number; primary: boolean; index: number }> = [];
   const seen = new Set<string>();
-  for (const entry of entries) {
+  entries.forEach((entry, index) => {
     const image = validateImage(entry.url, entry.alt, false);
-    if (!image.imageUrl || !image.imageAlt) continue;
+    if (!image.imageUrl || !image.imageAlt) return;
     if (seen.has(image.imageUrl)) throw new ApiError(400, "duplicate_image", "The same image was supplied more than once.");
     seen.add(image.imageUrl);
-    parsed.push({ url: image.imageUrl, alt: image.imageAlt });
+    parsed.push({
+      url: image.imageUrl,
+      alt: image.imageAlt,
+      order: sortOrderHint(entry.sortOrder ?? entry.order, index),
+      primary: entry.primary === true,
+      index
+    });
+  });
+
+  if (parsed.length > MAX_IMAGES) {
+    throw new ApiError(400, "too_many_images", `A listing can have at most ${MAX_IMAGES} images.`);
   }
-  return parsed;
+  if (parsed.filter((image) => image.primary).length > 1) {
+    throw new ApiError(400, "multiple_primary_images", "Choose exactly one primary (cover) image.");
+  }
+
+  return parsed
+    .sort(
+      (left, right) =>
+        Number(right.primary) - Number(left.primary) ||
+        left.order - right.order ||
+        left.index - right.index
+    )
+    .map((image) => ({ url: image.url, alt: image.alt }));
+}
+
+function vendorSnapshot(vendor: {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  market: string;
+  countryCode: string;
+  pickupAddress: string;
+  pickupPhone: string;
+  commissionBps: number;
+}) {
+  return {
+    id: vendor.id,
+    name: vendor.name,
+    slug: vendor.slug,
+    status: vendor.status,
+    market: vendor.market,
+    countryCode: vendor.countryCode,
+    pickupAddress: vendor.pickupAddress,
+    pickupPhone: vendor.pickupPhone,
+    commissionBps: vendor.commissionBps
+  };
+}
+
+type AuditableProduct = {
+  name: string;
+  slug: string;
+  description: string;
+  status: string;
+  isDemo: boolean;
+  isSample: boolean;
+  priceKobo: bigint;
+  countryCode: string;
+  categoryId: string;
+  attributes: Prisma.JsonValue | null;
+  category?: { id: string; name: string; slug: string } | null;
+  vendor?: Parameters<typeof vendorSnapshot>[0] | null;
+  images?: Array<{ url: string; alt: string | null; sortOrder: number }>;
+  stock?: { quantity: number; reserved: number; lowStockLevel: number } | null;
+};
+
+function productAuditSnapshot(product: AuditableProduct) {
+  return {
+    name: product.name,
+    slug: product.slug,
+    description: product.description,
+    status: product.status,
+    isDemo: product.isDemo,
+    isSample: product.isSample,
+    priceKobo: product.priceKobo.toString(),
+    currency: COUNTRIES[product.countryCode]?.currency ?? null,
+    countryCode: product.countryCode,
+    category: product.category
+      ? { id: product.category.id, name: product.category.name, slug: product.category.slug }
+      : { id: product.categoryId },
+    attributes: product.attributes ?? null,
+    images: (product.images ?? []).map((image, index) => ({
+      url: image.url,
+      alt: image.alt,
+      sortOrder: image.sortOrder,
+      primary: index === 0
+    })),
+    stock: product.stock
+      ? {
+          quantity: product.stock.quantity,
+          reserved: product.stock.reserved,
+          lowStockLevel: product.stock.lowStockLevel,
+          available: Math.max(product.stock.quantity - product.stock.reserved, 0)
+        }
+      : null,
+    seller: product.vendor ? vendorSnapshot(product.vendor) : null
+  };
 }
 
 function isUniqueViolation(error: unknown) {
@@ -214,27 +352,79 @@ export async function listCatalogue(actor: SessionUser) {
   const [departments, products, vendor] = await Promise.all([
     prisma.category.findMany({
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      include: { _count: { select: { products: true } } }
+      include: {
+        attributes: {
+          select: { key: true, label: true, type: true, required: true, options: true },
+          orderBy: { key: "asc" }
+        },
+        _count: { select: { products: true } }
+      }
     }),
     prisma.product.findMany({
       where: countryScopeWhere(actor),
       orderBy: { updatedAt: "desc" },
       include: {
-        category: { select: { id: true, name: true, slug: true, isActive: true, isDemo: true } },
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            level: true,
+            isActive: true,
+            isSelectable: true,
+            isDemo: true,
+            attributes: {
+              select: { key: true, label: true, type: true, required: true, options: true },
+              orderBy: { key: "asc" }
+            }
+          }
+        },
         images: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
         stock: true,
-        vendor: { select: { id: true, name: true, slug: true, status: true } }
+        variants: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            priceKobo: true,
+            stock: true,
+            reserved: true,
+            isActive: true
+          },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+        },
+        vendor: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            status: true,
+            market: true,
+            countryCode: true,
+            pickupAddress: true,
+            pickupPhone: true,
+            commissionBps: true
+          }
+        }
       }
     }),
-    prisma.vendor.findFirst({ where: { slug: DEMO_VENDOR_SLUG }, select: { id: true, name: true, slug: true } })
+    prisma.vendor.findFirst({
+      where: { slug: DEMO_VENDOR_SLUG },
+      select: { id: true, name: true, slug: true, status: true, market: true, countryCode: true, pickupAddress: true, pickupPhone: true, commissionBps: true }
+    })
   ]);
   return {
-    departments,
+    departments: departments.map((department) => ({
+      ...department,
+      attributes: attributeDefinitionsFromRows(department.attributes)
+    })),
     products: products.map((product) => ({
       ...product,
       // Currency is derived from the product's fulfilment country. There is no
       // Product.currency column; the country is the authoritative stored key.
-      currency: COUNTRIES[product.countryCode]?.currency ?? null
+      currency: COUNTRIES[product.countryCode]?.currency ?? null,
+      images: product.images.map((image, index) => ({ ...image, primary: index === 0 })),
+      variants: product.variants.map((variant) => ({ ...variant, priceKobo: variant.priceKobo.toString() }))
     })),
     demoVendor: vendor
   };
@@ -265,11 +455,40 @@ export type CatalogueProductPreview = {
   priceKobo: string;
   currency: string | null;
   countryCode: string;
+  attributes: Record<string, unknown> | null;
   createdAt: Date;
   updatedAt: Date;
-  category: { id: string; name: string; slug: string; isActive: boolean; isDemo: boolean };
-  vendor: { name: string; slug: string; status: string };
-  images: Array<{ id: string; url: string; alt: string | null; sortOrder: number }>;
+  category: {
+    id: string;
+    name: string;
+    slug: string;
+    level: number;
+    isActive: boolean;
+    isSelectable: boolean;
+    isDemo: boolean;
+    attributes: AttributeDefinition[];
+  };
+  vendor: {
+    id: string;
+    name: string;
+    slug: string;
+    status: string;
+    market: string;
+    countryCode: string;
+    pickupAddress: string;
+    pickupPhone: string;
+    commissionBps: number;
+  };
+  images: Array<{ id: string; url: string; alt: string | null; sortOrder: number; primary: boolean }>;
+  variants: Array<{
+    id: string;
+    name: string;
+    sku: string;
+    priceKobo: string;
+    stock: number;
+    reserved: number;
+    isActive: boolean;
+  }>;
   stock: { quantity: number; reserved: number; lowStockLevel: number } | null;
   available: number;
   validation: { valid: boolean; issues: ProductValidationIssue[] };
@@ -290,9 +509,39 @@ export async function getCatalogueProductPreview(actor: SessionUser, id: string)
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
-      category: { select: { id: true, name: true, slug: true, isActive: true, isDemo: true } },
-      vendor: { select: { name: true, slug: true, status: true } },
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          level: true,
+          isActive: true,
+          isSelectable: true,
+          isDemo: true,
+          attributes: {
+            select: { key: true, label: true, type: true, required: true, options: true },
+            orderBy: { key: "asc" }
+          }
+        }
+      },
+      vendor: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          market: true,
+          countryCode: true,
+          pickupAddress: true,
+          pickupPhone: true,
+          commissionBps: true
+        }
+      },
       images: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+      variants: {
+        select: { id: true, name: true, sku: true, priceKobo: true, stock: true, reserved: true, isActive: true },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+      },
       stock: { select: { quantity: true, reserved: true, lowStockLevel: true } }
     }
   });
@@ -310,15 +559,33 @@ export async function getCatalogueProductPreview(actor: SessionUser, id: string)
     priceKobo: product.priceKobo.toString(),
     currency: COUNTRIES[product.countryCode]?.currency ?? null,
     countryCode: product.countryCode,
+    attributes:
+      product.attributes && typeof product.attributes === "object" && !Array.isArray(product.attributes)
+        ? (product.attributes as Record<string, unknown>)
+        : null,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
-    category: product.category,
+    category: {
+      id: product.category.id,
+      name: product.category.name,
+      slug: product.category.slug,
+      level: product.category.level,
+      isActive: product.category.isActive,
+      isSelectable: product.category.isSelectable,
+      isDemo: product.category.isDemo,
+      attributes: attributeDefinitionsFromRows(product.category.attributes)
+    },
     vendor: product.vendor,
-    images: product.images.map((image) => ({
+    images: product.images.map((image, index) => ({
       id: image.id,
       url: image.url,
       alt: image.alt,
-      sortOrder: image.sortOrder
+      sortOrder: image.sortOrder,
+      primary: index === 0
+    })),
+    variants: product.variants.map((variant) => ({
+      ...variant,
+      priceKobo: variant.priceKobo.toString()
     })),
     stock: product.stock,
     available: product.stock ? Math.max(product.stock.quantity - product.stock.reserved, 0) : 0,
@@ -457,6 +724,7 @@ export async function createProduct(input: {
   currency?: string;
   countryCode?: string;
   categoryId: string;
+  attributes?: unknown;
   quantity?: unknown;
   lowStockLevel?: unknown;
   images?: CatalogueImageInput[];
@@ -467,10 +735,13 @@ export async function createProduct(input: {
   const name = text(input.name, "Product name", 3, 140);
   const description = text(input.description, "Product description", 10, 2000);
   const priceKobo = money(input.priceKobo);
-  const { countryCode, currency } = resolveCountryAndCurrency(input.actor, input.countryCode, input.currency);
+  const { countryCode } = resolveCountryAndCurrency(input.actor, input.countryCode, input.currency);
   if (!input.categoryId) throw new ApiError(400, "validation_error", "Choose an existing department.");
-  const category = await prisma.category.findUnique({ where: { id: input.categoryId } });
-  if (!category) throw new ApiError(400, "department_not_found", "Choose an existing department.");
+  // Reuse the single taxonomy gate: the category must be active, selectable,
+  // reachable and publishable for the fulfilment country, and the attributes
+  // must satisfy its definitions (required keys, types and SELECT options).
+  const eligible = await assertSellerCategoryEligibility({ categoryId: input.categoryId, countryCode });
+  const attributes = validateProductAttributes(input.attributes, eligible.attributeDefinitions);
   const images = readImages(input.images, input.imageUrl, input.imageAlt);
   const quantity = input.quantity === undefined ? 0 : integer(input.quantity, "Inventory quantity", 0, 1_000_000);
   const lowStockLevel =
@@ -487,7 +758,7 @@ export async function createProduct(input: {
       const created = await tx.product.create({
         data: {
           vendorId: vendor.id,
-          categoryId: category.id,
+          categoryId: eligible.category.id,
           name,
           slug,
           description,
@@ -495,11 +766,30 @@ export async function createProduct(input: {
           countryCode,
           status: "DRAFT",
           isDemo,
+          attributes: attributes ? (attributes as Prisma.InputJsonValue) : undefined,
           moderationNote: isDemo ? "DEMO — demonstration inventory, not live supply" : null,
           images: images.length
             ? { create: images.map((image, index) => ({ url: image.url, alt: image.alt, sortOrder: index })) }
             : undefined,
           stock: { create: { quantity, lowStockLevel } }
+        },
+        include: {
+          category: { select: { id: true, name: true, slug: true } },
+          vendor: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              status: true,
+              market: true,
+              countryCode: true,
+              pickupAddress: true,
+              pickupPhone: true,
+              commissionBps: true
+            }
+          },
+          images: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+          stock: true
         }
       });
       await recordAudit({
@@ -509,14 +799,13 @@ export async function createProduct(input: {
         entity: "Product",
         entityId: created.id,
         metadata: {
-          name,
-          slug,
-          department: category.name,
-          priceKobo: priceKobo.toString(),
-          currency,
-          countryCode,
-          quantity,
+          before: null,
+          after: productAuditSnapshot(created),
+          seller: vendorSnapshot(vendor),
+          department: eligible.category.name,
+          attributes: attributes ?? null,
           imageCount: images.length,
+          quantity,
           isDemo
         }
       });
@@ -553,6 +842,7 @@ export async function updateProduct(input: {
   currency?: string;
   countryCode?: string;
   categoryId?: string;
+  attributes?: unknown;
   quantity?: unknown;
   lowStockLevel?: unknown;
   images?: CatalogueImageInput[];
@@ -563,7 +853,24 @@ export async function updateProduct(input: {
   if (!input.id) throw new ApiError(400, "validation_error", "Product id is required.");
   const existing = await prisma.product.findUnique({
     where: { id: input.id },
-    include: { images: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] }, stock: true }
+    include: {
+      images: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+      stock: true,
+      category: { select: { id: true, name: true, slug: true } },
+      vendor: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          market: true,
+          countryCode: true,
+          pickupAddress: true,
+          pickupPhone: true,
+          commissionBps: true
+        }
+      }
+    }
   });
   if (!existing) throw new ApiError(404, "product_not_found", "Product not found.");
   assertRegion(input.actor, { countryCode: existing.countryCode });
@@ -592,10 +899,25 @@ export async function updateProduct(input: {
   const slug = input.slug === undefined ? existing.slug : readSlug(input.slug, "Product slug");
   const isDemo = typeof input.isDemo === "boolean" ? input.isDemo : existing.isDemo;
   const nextCategoryId = input.categoryId?.trim() ? input.categoryId : existing.categoryId;
-  if (nextCategoryId !== existing.categoryId) {
-    const category = await prisma.category.findUnique({ where: { id: nextCategoryId } });
-    if (!category) throw new ApiError(400, "department_not_found", "Choose an existing department.");
+
+  // Every save re-checks the effective category. A category that has been
+  // deprecated, made non-selectable or restricted for the fulfilment country
+  // cannot be saved as a publishable listing.
+  const eligible = await assertSellerCategoryEligibility({
+    categoryId: nextCategoryId,
+    countryCode: existing.countryCode
+  });
+  let attributesUpdate: Prisma.InputJsonValue | typeof Prisma.DbNull | undefined;
+  if (input.attributes !== undefined) {
+    attributesUpdate =
+      validateProductAttributes(input.attributes, eligible.attributeDefinitions) ?? Prisma.DbNull;
+  } else if (nextCategoryId !== existing.categoryId) {
+    // A category change makes the stored attribute keys ambiguous. Re-validate
+    // them against the destination definitions instead of carrying stale keys.
+    attributesUpdate =
+      validateProductAttributes(existing.attributes, eligible.attributeDefinitions) ?? Prisma.DbNull;
   }
+
   const imagesProvided = Array.isArray(input.images) || input.imageUrl !== undefined || input.imageAlt !== undefined;
   const images = imagesProvided
     ? readImages(input.images, input.imageUrl, input.imageAlt)
@@ -617,7 +939,8 @@ export async function updateProduct(input: {
           priceKobo,
           slug,
           categoryId: nextCategoryId,
-          isDemo
+          isDemo,
+          ...(attributesUpdate !== undefined ? { attributes: attributesUpdate } : {})
         }
       });
       if (images) {
@@ -658,6 +981,27 @@ export async function updateProduct(input: {
           }
         });
       }
+      const fresh = await tx.product.findUniqueOrThrow({
+        where: { id: existing.id },
+        include: {
+          category: { select: { id: true, name: true, slug: true } },
+          vendor: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              status: true,
+              market: true,
+              countryCode: true,
+              pickupAddress: true,
+              pickupPhone: true,
+              commissionBps: true
+            }
+          },
+          images: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+          stock: true
+        }
+      });
       await recordAudit({
         tx,
         actorId: input.actor.id,
@@ -665,20 +1009,12 @@ export async function updateProduct(input: {
         entity: "Product",
         entityId: updated.id,
         metadata: {
-          name: updated.name,
-          slug: updated.slug,
-          priceKobo: priceKobo.toString(),
-          currency: COUNTRIES[existing.countryCode]?.currency ?? null,
-          quantity: quantity ?? existing.stock?.quantity ?? null,
-          imageCount: images ? images.length : existing.images.length,
-          isDemo: updated.isDemo,
-          previous: {
-            name: existing.name,
-            slug: existing.slug,
-            priceKobo: existing.priceKobo.toString(),
-            categoryId: existing.categoryId,
-            isDemo: existing.isDemo
-          }
+          before: productAuditSnapshot(existing),
+          after: productAuditSnapshot(fresh),
+          department: eligible.category.name,
+          imageCount: fresh.images.length,
+          quantity: fresh.stock?.quantity ?? null,
+          isDemo: fresh.isDemo
         }
       });
       return updated;
@@ -736,6 +1072,28 @@ export async function validateProduct(actor: SessionUser, id: string) {
   }
   if (!product.category.isActive) {
     issues.push({ field: "categoryId", message: "Activate the department before publishing its products." });
+  }
+  try {
+    const eligible = await assertSellerCategoryEligibility({
+      categoryId: product.categoryId,
+      countryCode: product.countryCode
+    });
+    try {
+      validateProductAttributes(product.attributes, eligible.attributeDefinitions);
+    } catch (failure) {
+      if (failure instanceof ApiError) {
+        const detail = failure.details as { attribute?: unknown } | undefined;
+        const attributeKey = typeof detail?.attribute === "string" ? detail.attribute : null;
+        issues.push({
+          field: attributeKey ? `attributes.${attributeKey}` : "attributes",
+          message: failure.message
+        });
+      }
+    }
+  } catch (failure) {
+    if (failure instanceof ApiError) {
+      issues.push({ field: "categoryId", message: failure.message });
+    }
   }
   if (product.vendor.status !== "VERIFIED") {
     issues.push({
@@ -815,7 +1173,13 @@ export async function publishProduct(input: { actor: SessionUser; id: string }) 
     action: "catalogue.product.published",
     entity: "Product",
     entityId: updated.id,
-    metadata: { name: updated.name, slug: updated.slug, currency: COUNTRIES[updated.countryCode]?.currency ?? null }
+    metadata: {
+      name: updated.name,
+      slug: updated.slug,
+      currency: COUNTRIES[updated.countryCode]?.currency ?? null,
+      before: { status: existing.status },
+      after: { status: updated.status }
+    }
   });
   await markProductForSearchSync(updated.id);
   return updated;
@@ -843,7 +1207,12 @@ export async function unpublishProduct(input: { actor: SessionUser; id: string }
     action: "catalogue.product.unpublished",
     entity: "Product",
     entityId: updated.id,
-    metadata: { name: updated.name, slug: updated.slug }
+    metadata: {
+      name: updated.name,
+      slug: updated.slug,
+      before: { status: existing.status },
+      after: { status: updated.status }
+    }
   });
   await markProductForSearchSync(updated.id);
   return updated;
@@ -871,7 +1240,12 @@ export async function archiveProduct(input: { actor: SessionUser; id: string }) 
     action: "catalogue.product.archived",
     entity: "Product",
     entityId: updated.id,
-    metadata: { name: updated.name, slug: updated.slug, previousStatus: existing.status }
+    metadata: {
+      name: updated.name,
+      slug: updated.slug,
+      before: { status: existing.status },
+      after: { status: updated.status }
+    }
   });
   await markProductForSearchSync(updated.id);
   return updated;
