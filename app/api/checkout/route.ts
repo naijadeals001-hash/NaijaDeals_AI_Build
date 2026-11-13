@@ -10,7 +10,7 @@ import {
   requireUser
 } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
-import { canPreviewVertical } from "@/lib/services/core/vertical-activation.service";
+import { previewAuthorizationForRequest } from "@/lib/services/core/vertical-activation.service";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     const user = await requireUser();
     const body = await readJson<Record<string, unknown>>(request);
+    const { previewAuthorized } = await previewAuthorizationForRequest();
     const address = (body.address ?? {}) as Record<string, unknown>;
     const result = await checkout({
       userId: user.id,
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
       },
       saveAddress: Boolean(body.saveAddress),
       visitorKey: cookies().get("nd_visitor")?.value ?? null,
-      previewAuthorized: canPreviewVertical(user)
+      previewAuthorized
     });
     return NextResponse.json(jsonSafe(result), { status: 201 });
   } catch (error) {

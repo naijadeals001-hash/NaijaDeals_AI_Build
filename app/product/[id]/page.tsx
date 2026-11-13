@@ -1,14 +1,22 @@
 import type { Metadata } from "next";
+import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
 import { ProductDetailClient } from "@/components/functional/product-detail-client";
 import type { ProductAttributeDefinition } from "@/components/product-detail/types";
 import { getPublicProductDetail, listRelatedProducts } from "@/lib/services/core/catalog.service";
 import { jsonSafe } from "@/lib/services/core/serialize";
-import { getSessionUser } from "@/lib/auth/session";
+import { previewAuthorizationForRequest } from "@/lib/services/core/vertical-activation.service";
 import { prisma } from "@/lib/prisma";
 import type { ApiProduct } from "@/lib/api-client";
 
+/**
+ * Preview/disabled authorization and price/stock reads are per-request state.
+ * `force-dynamic` plus `noStore()` makes Next emit a private, non-cacheable
+ * response; the acceptance suite verifies the actual header.
+ */
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 /**
  * The detail page renders the publishable product on the server, so the image,
@@ -18,8 +26,10 @@ export const dynamic = "force-dynamic";
  * session request can no longer blank the whole page.
  */
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  noStore();
   try {
-    const product = await getPublicProductDetail(params.id);
+    const { previewAuthorized } = await previewAuthorizationForRequest();
+    const product = await getPublicProductDetail(params.id, { previewAuthorized });
     if (!product) return { title: "Product unavailable" };
     return {
       title: product.name,
@@ -72,20 +82,26 @@ async function isReviewEnvironment(): Promise<boolean> {
 }
 
 export default async function ProductDetail({ params }: { params: { id: string } }) {
+  noStore();
   let initialProduct: ApiProduct | null = null;
   let initialRelated: ApiProduct[] = [];
   let initialRelatedUnavailable = false;
   let initialError = "";
   let attributeDefinitions: ProductAttributeDefinition[] = [];
 
+  // Authorization is resolved with the same helper as /api/products/[id].
+  // PREVIEW is visible to an authorized Control Center user; everyone else
+  // gets a 404 before any product field or related rail is rendered.
+  const { user: sessionUser, previewAuthorized } = await previewAuthorizationForRequest();
+
   try {
-    const product = await getPublicProductDetail(params.id);
+    const product = await getPublicProductDetail(params.id, { previewAuthorized });
     if (!product) notFound();
     initialProduct = jsonSafe(product) as unknown as ApiProduct;
     attributeDefinitions = await loadAttributeDefinitions(product.categoryId);
     try {
       initialRelated = jsonSafe(
-        await listRelatedProducts(product.category.slug, product.id)
+        await listRelatedProducts(product.category.slug, product.id, 4, { previewAuthorized })
       ) as unknown as ApiProduct[];
     } catch {
       // The related rail is optional. Record the failure so the client can retry
@@ -98,10 +114,7 @@ export default async function ProductDetail({ params }: { params: { id: string }
     initialError = "Product not found.";
   }
 
-  const [sessionUser, reviewEnvironment] = await Promise.all([
-    getSessionUser().catch(() => null),
-    isReviewEnvironment()
-  ]);
+  const reviewEnvironment = await isReviewEnvironment();
 
   return (
     <ProductDetailClient

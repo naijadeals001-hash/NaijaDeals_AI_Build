@@ -33,6 +33,13 @@ export type HomeProduct = {
 
 type EcosystemHome2026Props = {
   products?: HomeProduct[];
+  /**
+   * Optional server-resolved state. When the server page can resolve activation
+   * before rendering, passing it avoids an "available" first paint that the
+   * hydration probe would then correct. The probe still runs so a change made
+   * after the page was rendered is picked up.
+   */
+  initialShopAvailability?: ShopAvailability | null;
 };
 
 type ShopAvailability = {
@@ -57,8 +64,8 @@ type ShopAvailability = {
  * and marked Preview for authorized staff in PREVIEW; it is never advertised
  * as a working storefront when its routes would refuse.
  */
-export function EcosystemHome2026({ products = [] }: EcosystemHome2026Props) {
-  const [shopAvailability, setShopAvailability] = useState<ShopAvailability | null>(null);
+export function EcosystemHome2026({ products = [], initialShopAvailability = null }: EcosystemHome2026Props) {
+  const [shopAvailability, setShopAvailability] = useState<ShopAvailability | null>(initialShopAvailability);
 
   useEffect(() => {
     let active = true;
@@ -95,6 +102,19 @@ export function EcosystemHome2026({ products = [] }: EcosystemHome2026Props) {
       <Hero />
       <ServiceDirectory services={services} />
       <ProducerSection />
+      {shopAvailability?.status === "PREVIEW" && shopAvailability.available ? (
+        <section aria-labelledby="shop-preview-heading" className="border-t border-border-soft/60 bg-[#f2f7ef]">
+          <div className="mx-auto max-w-[1240px] px-5 py-5 sm:px-8">
+            <h2 id="shop-preview-heading" className="font-display text-base font-extrabold text-ink">
+              Shop preview
+            </h2>
+            <p role="status" className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-muted">
+              Shop is visible to authorized Control Center accounts only. Public customers still receive an
+              unavailable response until the service is set to LIVE.
+            </p>
+          </div>
+        </section>
+      ) : null}
       {shopAvailability && !shopAvailability.available ? (
         <section aria-labelledby="shop-unavailable-heading" className="border-t border-border-soft/60 bg-surface-low">
           <div className="mx-auto max-w-[1240px] px-5 py-6 sm:px-8">

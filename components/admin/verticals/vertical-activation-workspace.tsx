@@ -32,6 +32,15 @@ type Effective = {
   rowId: string | null;
   globalOverrideActive: boolean;
   localOverrideIgnored: boolean;
+  rules: Array<{
+    id: string | null;
+    scopeType: ScopeType;
+    scopeLabel: string;
+    status: ActivationStatus;
+    reason: string | null;
+    responsible: boolean;
+    ignored: boolean;
+  }>;
 };
 
 type ActivationRow = {
@@ -317,8 +326,9 @@ export function VerticalActivationWorkspace({ canWrite }: { canWrite: boolean })
         <div role="note" className="flex items-start gap-3 rounded-2xl border border-[#1F6F43] bg-[#0D2818] p-4 text-sm text-[#9BE9BC]">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#00E676]" aria-hidden="true" />
           <p>
-            A GLOBAL rule overrides every country and city rule. Reason and before/after state are audited for every
-            change. Only services marked <strong>Enforced</strong> actually consult this setting today.
+            The most restrictive applicable rule decides. A GLOBAL or country rule can restrict every location below
+            it; a city rule can restrict further but can never loosen a stricter parent. Reason and before/after state
+            are audited for every change. Only services marked <strong>Enforced</strong> accept activation rules today.
           </p>
         </div>
       )}
@@ -423,9 +433,48 @@ export function VerticalActivationWorkspace({ canWrite }: { canWrite: boolean })
 
               <p className="mt-3 rounded-xl border border-[#21262D] bg-[#0B0E14] p-3 text-[11.5px] leading-relaxed text-[#8B949E]">
                 <span className="font-bold text-[#F0F6FC]">Registry default:</span> {selected.registryStatus}.{" "}
+                <span className="font-bold text-[#F0F6FC]">Responsible rule:</span>{" "}
+                {sourceLabel(currentEffective ?? selected.effective)} ·{" "}
+                {currentEffective?.scopeLabel ?? selected.effective.scopeLabel}.{" "}
                 <span className="font-bold text-[#F0F6FC]">Reason:</span>{" "}
                 {currentEffective?.reason || "No reason recorded."}
               </p>
+
+              {currentEffective && currentEffective.rules.length > 0 ? (
+                <div className="mt-3 rounded-xl border border-[#21262D] bg-[#0B0E14] p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#8B949E]">
+                    Applicable rules (most restrictive decides)
+                  </p>
+                  <ul className="mt-2 space-y-1.5" role="list">
+                    {currentEffective.rules.map((rule) => (
+                      <li
+                        key={`${rule.scopeType}:${rule.id ?? rule.scopeLabel}`}
+                        className="flex flex-wrap items-center justify-between gap-2 text-[11.5px] text-[#8B949E]"
+                      >
+                        <span className="min-w-0">
+                          <span className="font-bold text-[#F0F6FC]">{rule.scopeLabel}</span>
+                          <span className="ml-1 text-[10px] uppercase tracking-wide">{rule.scopeType}</span>
+                          {rule.responsible ? (
+                            <span className="ml-1.5 rounded-full bg-[#00E676]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#00E676]">
+                              Decides
+                            </span>
+                          ) : null}
+                          {rule.ignored ? (
+                            <span className="ml-1.5 rounded-full bg-[#E3B341]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#E3B341]">
+                              Cannot loosen parent
+                            </span>
+                          ) : null}
+                        </span>
+                        <StatusBadge status={rule.status} small />
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-[10.5px] leading-relaxed text-[#8B949E]">
+                    A local LIVE row is shown as ignored while a stricter GLOBAL or country rule applies; it becomes
+                    effective only after the stricter parent is cleared.
+                  </p>
+                </div>
+              ) : null}
 
               <div className="mt-3">
                 <span
@@ -451,6 +500,7 @@ export function VerticalActivationWorkspace({ canWrite }: { canWrite: boolean })
               </div>
             </div>
 
+            {selected.enforcement.wired ? (
             <form
               className="rounded-2xl border border-[#21262D] bg-[#161B22] p-4 sm:p-5"
               onSubmit={(event) => {
@@ -585,11 +635,11 @@ export function VerticalActivationWorkspace({ canWrite }: { canWrite: boolean })
                     <span aria-hidden="true">→</span> <StatusBadge status={status} small />{" "}
                     <span className="ml-1">for {currentEffective.scopeLabel}</span>
                   </p>
-                  {selected.rows.some((row) => row.scopeType === "GLOBAL") && scopeType !== "GLOBAL" ? (
+                  {currentEffective.rules.some((rule) => rule.ignored) ? (
                     <p className="mt-2 flex gap-1.5 text-[#E3B341]">
                       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                      A GLOBAL rule currently overrides this country/city rule. You can still save it for when the
-                      GLOBAL rule is cleared.
+                      A stricter parent rule currently caps this scope. This local rule can restrict further but cannot
+                      make the parent more permissive; it applies only after the stricter rule is cleared.
                     </p>
                   ) : null}
                 </div>
@@ -619,11 +669,38 @@ export function VerticalActivationWorkspace({ canWrite }: { canWrite: boolean })
                 </p>
               ) : null}
             </form>
+            ) : (
+              <section
+                aria-labelledby="activation-not-wired-heading"
+                className="rounded-2xl border border-[#5A4A1E] bg-[#211D10] p-4 sm:p-5"
+              >
+                <h3 id="activation-not-wired-heading" className="flex items-center gap-2 font-display text-base font-extrabold text-[#F0F6FC]">
+                  <AlertTriangle className="h-4 w-4 text-[#E3B341]" aria-hidden="true" />
+                  Configuration only — controls unavailable
+                </h3>
+                <p className="mt-2 text-[12px] leading-relaxed text-[#D8C48A]">
+                  {selected.publicLabel} does not consult service activation on any route or service yet. A saved rule
+                  would have no runtime effect, so the server refuses new rules and this page does not present an
+                  operational toggle. The effective state and enforcement badge above are informational.
+                </p>
+                <p className="mt-2 text-[11px] leading-relaxed text-[#8B949E]">
+                  To make activation operational here, the vertical&apos;s catalogue, navigation and transactional
+                  entry points must first be wired to the shared resolver and verified in a separate slice.
+                </p>
+                {selected.rows.length > 0 ? (
+                  <p className="mt-2 text-[11px] leading-relaxed text-[#D8C48A]">
+                    {selected.rows.length} stored row(s) exist for this service. They are not consulted; an
+                    administrator can remove stale rows through the audited clear endpoint.
+                  </p>
+                ) : null}
+              </section>
+            )}
 
             <div className="rounded-2xl border border-[#21262D] bg-[#161B22] p-4 sm:p-5">
               <h3 className="font-display text-base font-extrabold text-[#F0F6FC]">Scope matrix</h3>
               <p className="mt-1 text-[11.5px] text-[#8B949E]">
-                Effective result after applying GLOBAL → country → city → registry. Ignored local rules are marked.
+                Effective result: the most restrictive of the GLOBAL, country and city rules, otherwise the registry
+                default. Local rules that would loosen a stricter parent are marked ignored.
               </p>
               <div className="mt-3 w-full max-w-full overflow-x-auto">
                 <table className="w-full min-w-[32rem] border-collapse text-left text-[11.5px]">

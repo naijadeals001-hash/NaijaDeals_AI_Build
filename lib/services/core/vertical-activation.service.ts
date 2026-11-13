@@ -11,13 +11,25 @@ import { recordAudit } from "./audit.service";
  * Central service activation.
  *
  * One `VerticalActivation` row per (vertical, scope) controls whether a module
- * is reachable. The precedence is deliberately simple and auditable:
+ * is reachable. Precedence is "most restrictive applicable rule wins":
  *
- *   1. a GLOBAL row wins everywhere, regardless of country/city rows;
- *   2. otherwise a CITY row applies inside that city;
- *   3. otherwise a COUNTRY row applies inside that country;
- *   4. otherwise the module's verified registry status is used
+ *   1. a GLOBAL DISABLED row blocks every country and city;
+ *   2. a GLOBAL PREVIEW row limits every location to authorized preview users;
+ *   3. an applicable COUNTRY rule can restrict (or, when the parent permits
+ *      public access, open) that country;
+ *   4. an applicable CITY rule can restrict that city further;
+ *   5. a local rule can never make a stricter parent more permissive: a
+ *      country/city LIVE cannot upgrade a GLOBAL DISABLED/PREVIEW parent, and
+ *      a city LIVE cannot upgrade a country DISABLED/PREVIEW parent;
+ *   6. when no rule applies, the module's verified registry status is used
  *      (live -> LIVE, preview -> PREVIEW, setup/coming -> DISABLED).
+ *
+ * The effective status is the least permissive status among the GLOBAL rule,
+ * the matching COUNTRY rule and the matching CITY rule. Ties are reported
+ * against the most specific matching rule (CITY > COUNTRY > GLOBAL), so the
+ * UI names the local rule an operator most directly configured. `rules`
+ * exposes every contributing rule, including local rules that were ignored
+ * because they would have loosened a stricter parent.
  *
  * A DISABLED module has no public storefront. PREVIEW is reachable only by an
  * authenticated Control Center user. LIVE is the normal public state. The
@@ -27,7 +39,8 @@ import { recordAudit } from "./audit.service";
  *
  * Enforcement is intentionally explicit. Only the verticals listed in
  * `VERTICAL_ENFORCEMENT` consult this service on their routes; the admin UI
- * states that a stored row for any other module is not yet effective.
+ * states that a stored row for any other module is not yet effective and its
+ * write controls are disabled.
  */
 
 export const VERTICAL_SCOPE_TYPES = ["GLOBAL", "COUNTRY", "CITY"] as const;
@@ -50,6 +63,25 @@ export type ActivationRowView = {
 
 export type EffectiveActivationSource = "database" | "registry";
 
+/**
+ * One rule that participated in the effective-state calculation.
+ *
+ * `ignored` means the rule is more permissive than the winning rule and
+ * therefore cannot take effect while the stricter parent remains. It is kept
+ * visible so an operator can see why a local LIVE did not open the scope.
+ */
+export type AppliedVerticalRule = {
+  id: string | null;
+  scopeType: VerticalScopeType;
+  scopeLabel: string;
+  status: VerticalActivationStatusName;
+  reason: string | null;
+  /** The rule that produced the effective status (ties resolve to the most specific scope). */
+  responsible: boolean;
+  /** This rule would loosen the effective state and is therefore not applied. */
+  ignored: boolean;
+};
+
 export type EffectiveVerticalActivation = {
   verticalKey: string;
   status: VerticalActivationStatusName;
@@ -62,10 +94,12 @@ export type EffectiveVerticalActivation = {
   source: EffectiveActivationSource;
   rowId: string | null;
   registryStatus: VerticalStatus;
-  /** A GLOBAL row is deciding for this country/city target. */
+  /** A GLOBAL row exists and its status matches the effective status. */
   globalOverrideActive: boolean;
-  /** A matching local row exists but is overridden by GLOBAL. */
+  /** A matching local row exists but is more permissive than the winning rule. */
   localOverrideIgnored: boolean;
+  /** Every applicable GLOBAL/COUNTRY/CITY rule, including ignored ones. */
+  rules: AppliedVerticalRule[];
 };
 
 export type VerticalEnforcement = {
@@ -142,12 +176,13 @@ export const VERTICAL_ENFORCEMENT: Record<string, VerticalEnforcement> = {
   shop: {
     wired: true,
     state: "ENFORCED",
-    summary: "Catalogue, checkout, product routes and new seller listings consult activation.",
+    summary: "Catalogue, product pages, new cart additions, checkout and new seller listings consult activation.",
     points: [
-      "GET /api/products and GET /api/products/[id]",
+      "GET /api/products, GET /api/products/[id] and /product/[id]",
+      "POST /api/cart/items (new additions only; the cart, orders and existing items stay readable)",
       "POST /api/checkout (new orders only; existing orders stay readable)",
       "POST/PATCH /api/seller/products (new or republished listings)",
-      "/api/products/availability (public homepage + Shop navigation signal)",
+      "/api/products/availability (homepage + Shop navigation signal)",
       "/naijashop storefront product API"
     ]
   },
@@ -261,7 +296,7 @@ function scopeLabel(input: {
   countryCode: string | null;
   cityCode: string | null;
 }): string {
-  if (input.scope === "GLOBAL") return "All locations (GLOBAL override)";
+  if (input.scope === "GLOBAL") return "All locations (GLOBAL rule)";
   if (input.scope === "REGISTRY") return "Registry default";
   if (input.scope === "COUNTRY" && input.countryCode) {
     return COUNTRIES[input.countryCode]?.name ?? input.countryCode;
@@ -286,8 +321,50 @@ function isStatus(value: string): value is VerticalActivationStatusName {
 }
 
 /**
+ * Openness ranking: the smallest value is the most restrictive state.
+ * A parent rule can only be loosened by a child when the parent is already
+ * LIVE; the resolver always takes the minimum, so no local rule can bypass a
+ * stricter GLOBAL or COUNTRY rule.
+ */
+const STATUS_RANK: Record<VerticalActivationStatusName, number> = {
+  DISABLED: 0,
+  PREVIEW: 1,
+  LIVE: 2
+};
+
+/**
+ * Tie-break specificity: when several applicable rules carry the effective
+ * status, report the most specific one. This makes a city/country rule the
+ * visible reason for a local pause while a stricter ancestor remains the
+ * reason when it is the only rule at that status.
+ */
+const SCOPE_SPECIFICITY: Record<VerticalScopeType, number> = {
+  CITY: 0,
+  COUNTRY: 1,
+  GLOBAL: 2
+};
+
+type ApplicableRule = {
+  row: RowLike;
+  scopeType: VerticalScopeType;
+  scopeLabel: string;
+  status: VerticalActivationStatusName;
+  rank: number;
+  specificity: number;
+};
+
+function normaliseRowStatus(row: RowLike): VerticalActivationStatusName | null {
+  const value = String(row.status ?? "").trim().toUpperCase();
+  return isStatus(value) ? value : null;
+}
+
+/**
  * Pure effective-state resolver. Exported so the acceptance script can prove
  * precedence without depending on database state.
+ *
+ * Contract: effective = the least permissive status among the GLOBAL rule, the
+ * matching COUNTRY rule and the matching CITY rule (when a country/city target
+ * is supplied). With no applicable rule, the registry status is the default.
  */
 export function evaluateVerticalActivation(input: {
   verticalKey: string;
@@ -298,7 +375,7 @@ export function evaluateVerticalActivation(input: {
 }): EffectiveVerticalActivation {
   const countryCode = normaliseCountryCode(input.countryCode) || null;
   const cityCode = normaliseCityCode(input.cityCode) || null;
-  const rows = input.rows.filter((row) => isStatus(row.status));
+  const rows = input.rows.filter((row) => normaliseRowStatus(row) !== null);
   const registryStatus = input.registryStatus;
 
   const base = {
@@ -308,86 +385,95 @@ export function evaluateVerticalActivation(input: {
     cityCode
   };
 
-  const global = rows.find((row) => row.scopeType === "GLOBAL");
-  if (global) {
-    const local = rows.find((row) => {
-      if (row.scopeType === "COUNTRY") {
-        return Boolean(countryCode) && normaliseCountryCode(row.countryCode) === countryCode;
-      }
-      if (row.scopeType === "CITY") {
-        return (
-          Boolean(countryCode) &&
-          Boolean(cityCode) &&
-          normaliseCountryCode(row.countryCode) === countryCode &&
-          normaliseCityCode(row.cityCode) === cityCode
-        );
-      }
-      return false;
+  const applicable: ApplicableRule[] = [];
+  const add = (row: RowLike, scopeType: VerticalScopeType) => {
+    const status = normaliseRowStatus(row);
+    if (!status) return;
+    applicable.push({
+      row,
+      scopeType,
+      scopeLabel: scopeLabel({ scope: scopeType, countryCode, cityCode }),
+      status,
+      rank: STATUS_RANK[status],
+      specificity: SCOPE_SPECIFICITY[scopeType]
     });
+  };
+
+  for (const row of rows) {
+    if (row.scopeType === "GLOBAL") {
+      add(row, "GLOBAL");
+      continue;
+    }
+    if (!countryCode) continue;
+    if (row.scopeType === "COUNTRY" && normaliseCountryCode(row.countryCode) === countryCode) {
+      add(row, "COUNTRY");
+      continue;
+    }
+    if (
+      row.scopeType === "CITY" &&
+      Boolean(cityCode) &&
+      normaliseCountryCode(row.countryCode) === countryCode &&
+      normaliseCityCode(row.cityCode) === cityCode
+    ) {
+      add(row, "CITY");
+    }
+  }
+
+  if (applicable.length === 0) {
     return {
       ...base,
-      status: global.status as VerticalActivationStatusName,
-      scope: "GLOBAL",
-      scopeLabel: scopeLabel({ scope: "GLOBAL", countryCode, cityCode }),
-      reason: global.reason,
-      source: "database",
-      rowId: global.id,
-      globalOverrideActive: Boolean(countryCode || cityCode),
-      localOverrideIgnored: Boolean(local)
+      status: registryStatusToActivation(registryStatus),
+      scope: "REGISTRY",
+      scopeLabel: scopeLabel({ scope: "REGISTRY", countryCode, cityCode }),
+      reason: `Registry status is ${registryStatus}; no activation rule applies.`,
+      source: "registry",
+      rowId: null,
+      globalOverrideActive: false,
+      localOverrideIgnored: false,
+      rules: []
     };
   }
 
-  if (countryCode) {
-    if (cityCode) {
-      const city = rows.find(
-        (row) =>
-          row.scopeType === "CITY" &&
-          normaliseCountryCode(row.countryCode) === countryCode &&
-          normaliseCityCode(row.cityCode) === cityCode
-      );
-      if (city) {
-        return {
-          ...base,
-          status: city.status as VerticalActivationStatusName,
-          scope: "CITY",
-          scopeLabel: scopeLabel({ scope: "CITY", countryCode, cityCode }),
-          reason: city.reason,
-          source: "database",
-          rowId: city.id,
-          globalOverrideActive: false,
-          localOverrideIgnored: false
-        };
-      }
-    }
+  // Most restrictive first; ties go to the most specific scope (CITY before
+  // COUNTRY before GLOBAL) and then to a stable row id for bad duplicate data.
+  const ordered = [...applicable].sort(
+    (a, b) =>
+      a.rank - b.rank ||
+      a.specificity - b.specificity ||
+      String(a.row.id ?? "").localeCompare(String(b.row.id ?? ""))
+  );
+  const winner = ordered[0];
+  const effectiveRank = winner.rank;
+  const global = applicable.find((entry) => entry.scopeType === "GLOBAL") ?? null;
 
-    const country = rows.find(
-      (row) => row.scopeType === "COUNTRY" && normaliseCountryCode(row.countryCode) === countryCode
-    );
-    if (country) {
-      return {
-        ...base,
-        status: country.status as VerticalActivationStatusName,
-        scope: "COUNTRY",
-        scopeLabel: scopeLabel({ scope: "COUNTRY", countryCode, cityCode }),
-        reason: country.reason,
-        source: "database",
-        rowId: country.id,
-        globalOverrideActive: false,
-        localOverrideIgnored: false
-      };
-    }
-  }
+  const rules = [...applicable]
+    .sort((a, b) => SCOPE_SPECIFICITY[b.scopeType] - SCOPE_SPECIFICITY[a.scopeType] || a.rank - b.rank)
+    .map<AppliedVerticalRule>((entry) => ({
+      id: entry.row.id,
+      scopeType: entry.scopeType,
+      scopeLabel: entry.scopeLabel,
+      status: entry.status,
+      reason: entry.row.reason,
+      responsible: entry === winner,
+      // Only a country/city rule can be "ignored" for trying to loosen a
+      // stricter parent. A GLOBAL row that is less restrictive than a local
+      // rule still sets the permission floor and is never labelled ignored.
+      ignored: entry.scopeType !== "GLOBAL" && entry.rank > effectiveRank
+    }));
 
   return {
     ...base,
-    status: registryStatusToActivation(registryStatus),
-    scope: "REGISTRY",
-    scopeLabel: scopeLabel({ scope: "REGISTRY", countryCode, cityCode }),
-    reason: `Registry status is ${registryStatus}; no activation rule applies.`,
-    source: "registry",
-    rowId: null,
-    globalOverrideActive: false,
-    localOverrideIgnored: false
+    status: winner.status,
+    scope: winner.scopeType,
+    scopeLabel: winner.scopeLabel,
+    reason: winner.row.reason,
+    source: "database",
+    rowId: winner.row.id,
+    globalOverrideActive: Boolean(global && global.status === winner.status),
+    localOverrideIgnored: applicable.some(
+      (entry) => entry.scopeType !== "GLOBAL" && entry.rank > effectiveRank
+    ),
+    rules
   };
 }
 
@@ -406,6 +492,24 @@ export function canPreviewVertical(user: SessionUser | null | undefined): boolea
   if (!user) return false;
   if (roleNames(user).includes("super_admin")) return true;
   return hasAdminConsoleAccess(user);
+}
+
+/**
+ * One shared preview-authorization decision for server pages, route handlers
+ * and navigation consumers.
+ *
+ * The session read is dynamic so importing the pure resolver in a script does
+ * not pull `next/headers` into module initialisation. Every caller that needs
+ * to know whether PREVIEW applies to this request must use this helper instead
+ * of re-deriving the role check.
+ */
+export async function previewAuthorizationForRequest(): Promise<{
+  user: SessionUser | null;
+  previewAuthorized: boolean;
+}> {
+  const { getSessionUser } = await import("@/lib/auth/session");
+  const user = await getSessionUser().catch(() => null);
+  return { user, previewAuthorized: canPreviewVertical(user) };
 }
 
 const CACHE_TTL_MS = 5_000;
@@ -763,8 +867,12 @@ function scopeMetadata(scope: NormalisedScope) {
 }
 
 /**
- * Upsert one activation rule. A GLOBAL row is accepted here but, by contract,
- * overrides country/city rows until it is cleared.
+ * Upsert one activation rule.
+ *
+ * Only an ENFORCED vertical may store a new status. Writing a row for a
+ * NOT_WIRED module would look operational in the Control Center while no
+ * route consulted it, so the server refuses it with a stable 409. Clearing a
+ * stale inert row remains available for cleanup.
  */
 export async function updateVerticalActivation(input: {
   actor: SessionUser;
@@ -777,6 +885,14 @@ export async function updateVerticalActivation(input: {
   reason: unknown;
 }): Promise<VerticalControl> {
   const definition = verticalDefinition(input.verticalKey);
+  const enforcement = VERTICAL_ENFORCEMENT[definition.key];
+  if (!enforcement?.wired) {
+    throw new ApiError(
+      409,
+      "vertical_not_enforced",
+      `${definition.publicLabel} does not consult service activation yet. No activation rule is accepted for a service whose routes would ignore it.`
+    );
+  }
   const scope = normaliseScopeInput(input);
   const status = String(input.status ?? "").trim().toUpperCase();
   if (!(VERTICAL_ACTIVATION_STATUSES as readonly string[]).includes(status)) {
@@ -882,8 +998,10 @@ export async function updateVerticalActivation(input: {
 }
 
 /**
- * Remove one rule so the scope inherits its next source (GLOBAL -> country ->
- * registry). The deletion is audited with the same before/after contract.
+ * Remove one rule so the scope inherits its next source (the least permissive
+ * of GLOBAL/country, then registry). The deletion is audited with the same
+ * before/after contract. Clearing is also allowed for a NOT_WIRED module so a
+ * stale inert row can be removed without implying runtime control.
  */
 export async function clearVerticalActivation(input: {
   actor: SessionUser;

@@ -167,6 +167,7 @@ function ShopHeader() {
     message?: string | null;
   } | null>(null);
   const shopUnavailable = shopAvailability?.available === false;
+  const shopPreview = shopAvailability?.status === "PREVIEW" && shopAvailability.available;
 
   const allReturnFocusRef = useRef<HTMLElement | null>(null);
   const accountReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -403,6 +404,7 @@ function ShopHeader() {
     <>
       <header
         data-shop-header
+        data-shop-availability={shopAvailability?.status ?? "loading"}
         className="relative z-40 border-b border-[#dce6d8] bg-white lg:sticky lg:top-0 lg:shadow-[0_10px_28px_rgba(7,53,31,0.06)]"
       >
         <div className="mx-auto max-w-[1440px] px-2.5 sm:px-6 lg:px-8">
@@ -586,6 +588,13 @@ function ShopHeader() {
             </button>
           </div>
         </div>
+
+        {shopPreview ? (
+          <div role="status" className="border-t border-[#eef3ec] bg-[#f2f7ef] px-2 py-2 text-[11.5px] font-semibold leading-relaxed text-[#0b5c33] sm:px-5 lg:px-8">
+            Preview mode: Shop is visible to authorized Control Center accounts only. Public catalogue, cart
+            additions and checkout remain refused until the service is set to LIVE.
+          </div>
+        ) : null}
 
         {shopUnavailable ? (
           <div role="status" className="border-t border-[#eef3ec] bg-[#fff8e6] px-2 py-2.5 text-[11.5px] leading-relaxed text-[#5c4300] sm:px-5 lg:px-8">

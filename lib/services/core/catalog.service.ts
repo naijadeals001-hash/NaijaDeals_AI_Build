@@ -115,19 +115,27 @@ export async function getPublicProductDetail(
  * Discovery visibility rules and the trust ordering are shared with the
  * catalogue endpoint; the current product is always excluded.
  */
-export async function listRelatedProducts(categorySlug: string, excludeId: string, limit = 4) {
-  const page = await queryCatalogProducts({
-    q: null,
-    category: categorySlug,
-    market: null,
-    country: null,
-    vendor: null,
-    price: null,
-    maxPriceKobo: null,
-    sort: "trust",
-    page: 1,
-    pageSize: null
-  });
+export async function listRelatedProducts(
+  categorySlug: string,
+  excludeId: string,
+  limit = 4,
+  access: { previewAuthorized?: boolean } = {}
+) {
+  const page = await queryCatalogProducts(
+    {
+      q: null,
+      category: categorySlug,
+      market: null,
+      country: null,
+      vendor: null,
+      price: null,
+      maxPriceKobo: null,
+      sort: "trust",
+      page: 1,
+      pageSize: null
+    },
+    { previewAuthorized: access.previewAuthorized }
+  );
   return page.items.filter((product) => product.id !== excludeId).slice(0, limit);
 }
 

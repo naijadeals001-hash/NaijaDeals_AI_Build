@@ -12,11 +12,10 @@ import {
 import { jsonSafe } from "@/lib/services/core/serialize";
 import { searchProductIds } from "@/lib/infra/catalogue-index";
 import { isSearchConfigured } from "@/lib/infra/search";
-import { getSessionUser } from "@/lib/auth/session";
 import { jsonError } from "@/lib/auth/guard";
 import {
   assertVerticalAccess,
-  canPreviewVertical
+  previewAuthorizationForRequest
 } from "@/lib/services/core/vertical-activation.service";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +37,10 @@ export async function GET(request: NextRequest) {
     parsed = parseCatalogQuery(searchParams);
   } catch (error) {
     if (error instanceof CatalogQueryError) {
-      return NextResponse.json({ error: error.message, code: error.code, field: error.field }, { status: 400 });
+      return NextResponse.json(
+        { error: error.message, code: error.code, field: error.field },
+        { status: 400, headers: { "Cache-Control": "no-store" } }
+      );
     }
     throw error;
   }
@@ -46,15 +48,18 @@ export async function GET(request: NextRequest) {
   // Activation is checked before any product row is read. A DISABLED Shop is a
   // 404 with a stable code (not an empty catalogue that looks like "no stock");
   // PREVIEW is reachable only by an authenticated Control Center user.
-  const sessionUser = await getSessionUser().catch(() => null);
-  const previewAuthorized = canPreviewVertical(sessionUser);
+  const { previewAuthorized } = await previewAuthorizationForRequest();
   try {
     await assertVerticalAccess("shop", {
       countryCode: parsed.query.country ?? "NG",
       previewAuthorized
     });
   } catch (error) {
-    return jsonError(error);
+    // A refusal must not be cached as a public catalogue response. The success
+    // path already sets no-store.
+    const response = jsonError(error);
+    response.headers.set("Cache-Control", "no-store");
+    return response;
   }
 
   // Meilisearch answers typo-tolerant queries when it is configured and

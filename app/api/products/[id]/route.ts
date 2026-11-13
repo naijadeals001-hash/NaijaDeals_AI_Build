@@ -2,11 +2,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getProduct, getPublicProductDetail } from "@/lib/services/core/catalog.service";
 import { jsonSafe } from "@/lib/services/core/serialize";
-import { getSessionUser } from "@/lib/auth/session";
 import { jsonError } from "@/lib/auth/guard";
 import {
   assertVerticalAccess,
-  canPreviewVertical
+  previewAuthorizationForRequest
 } from "@/lib/services/core/vertical-activation.service";
 
 export const dynamic = "force-dynamic";
@@ -18,18 +17,22 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // the Shop gate and the existing public-visibility checks both pass.
     product = await getProduct(params.id);
   } catch {
-    return NextResponse.json({ error: "Product not found.", code: "not_found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Product not found.", code: "not_found" },
+      { status: 404, headers: { "Cache-Control": "no-store" } }
+    );
   }
 
-  const sessionUser = await getSessionUser().catch(() => null);
-  const previewAuthorized = canPreviewVertical(sessionUser);
+  const { previewAuthorized } = await previewAuthorizationForRequest();
   try {
     await assertVerticalAccess("shop", {
       countryCode: product.countryCode,
       previewAuthorized
     });
   } catch (error) {
-    return jsonError(error);
+    const response = jsonError(error);
+    response.headers.set("Cache-Control", "no-store");
+    return response;
   }
 
   try {
@@ -48,6 +51,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       }
     });
   } catch {
-    return NextResponse.json({ error: "Product not found.", code: "not_found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Product not found.", code: "not_found" },
+      { status: 404, headers: { "Cache-Control": "no-store" } }
+    );
   }
 }

@@ -2,19 +2,26 @@
  * Service activation acceptance — Shop vertical.
  *
  * Covers:
- *   - effective-state precedence (GLOBAL > country > city > registry);
+ *   - the precedence matrix (most restrictive applicable rule wins; a local
+ *     LIVE cannot loosen a stricter GLOBAL/PREVIEW/COUNTRY parent);
  *   - DB writes through the service with before/after audit;
  *   - super-admin-only `verticals:write` (regular admin receives 403);
- *   - direct catalogue/detail API refusal while Shop is DISABLED;
- *   - existing orders still readable and seller/checkout writes refused;
- *   - public homepage + Shop navigation reflecting the effective state;
- *   - Control Center page rendering and audit visibility.
+ *   - NOT_WIRED verticals refuse new rules (configuration-only);
+ *   - direct catalogue/detail/page refusal while Shop is DISABLED;
+ *   - PREVIEW authorization from the shared server helper for pages, APIs and
+ *     navigation, including public/API/page cache headers;
+ *   - cart-add refusal while DISABLED/PREVIEW while cart viewing and existing
+ *     items stay usable;
+ *   - a run-owned unpaid order created through the real checkout API while
+ *     LIVE, read/cancelled while Shop is DISABLED, then removed;
+ *   - Control Center page rendering, audit visibility and NOT_WIRED controls.
  *
  * Safety:
  *   - refuses production names and requires a TEST or REVIEW database marker;
- *   - never writes financial rows, never creates or deletes orders;
+ *   - no payment, wallet, ledger or escrow row is created;
+ *   - the run-owned order is created by `checkout()` and removed in cleanup;
  *   - fixtures are run-tagged and Shop activation rows are restored exactly;
- *   - the dev server uses an isolated `.next-*` build directory.
+ *   - the dev server uses an isolated `.next-*` build directory and free port.
  *
  * Usage:
  *   TEST_BASE_URL=http://localhost:3059 npx tsx scripts/vertical-activation-tests.ts
@@ -199,7 +206,7 @@ async function http(
   path: string,
   cookie = "",
   body?: unknown
-): Promise<{ status: number; body: Json | null }> {
+): Promise<{ status: number; body: Json | null; headers: Headers; text: string }> {
   const response = await fetch(`${base}${path}`, {
     method,
     headers: {
@@ -217,7 +224,22 @@ async function http(
   } catch {
     parsed = { raw: text.slice(0, 300) };
   }
-  return { status: response.status, body: parsed as Json | null };
+  return {
+    status: response.status,
+    body: parsed as Json | null,
+    headers: response.headers,
+    text
+  };
+}
+
+/** HTML GET without the JSON-oriented parsing. */
+async function web(base: string, path: string, cookie = "") {
+  const response = await fetch(`${base}${path}`, {
+    headers: cookie ? { Cookie: cookie } : undefined,
+    redirect: "manual"
+  });
+  const text = await response.text();
+  return { status: response.status, headers: response.headers, text };
 }
 
 async function login(base: string, email: string, password: string) {
@@ -262,23 +284,44 @@ async function main() {
   assert(Number(table[0]?.n) === 1, "VerticalActivation table is missing; apply the migration first.");
   console.log(`Database: ${dbName} (${marker}) — activation/audit fixtures only, no financial writes.`);
 
-  // ---- Pure resolver checks (no database dependency) ---------------------
+  // ---- Pure resolver matrix (no database dependency) ---------------------
   const registry = { verticalKey: "shop", registryStatus: "live" as const };
+  const rule = (
+    id: string,
+    scopeType: "GLOBAL" | "COUNTRY" | "CITY",
+    status: "DISABLED" | "PREVIEW" | "LIVE",
+    countryCode = "",
+    cityCode = ""
+  ) => ({ id, scopeType, countryCode, cityCode, status, reason: `${id} reason` });
 
   await check("1. Registry status is the default when no activation rows exist", async () => {
     const effective = activation.evaluateVerticalActivation({ ...registry, rows: [] });
     assert(effective.status === "LIVE", `got ${effective.status}`);
     assert(effective.scope === "REGISTRY" && effective.source === "registry", `got ${effective.scope}/${effective.source}`);
+    assert(effective.rules.length === 0, "rules should be empty");
     return "Shop defaults to LIVE from the live registry status";
   });
 
-  await check("2. GLOBAL OFF overrides a LIVE country and city rule", async () => {
+  await check("2. GLOBAL LIVE + country DISABLED -> country restriction wins", async () => {
+    const effective = activation.evaluateVerticalActivation({
+      ...registry,
+      rows: [rule("g", "GLOBAL", "LIVE"), rule("c", "COUNTRY", "DISABLED", "NG")],
+      countryCode: "NG"
+    });
+    assert(effective.status === "DISABLED", `got ${effective.status}`);
+    assert(effective.scope === "COUNTRY", `got ${effective.scope}`);
+    assert(effective.rowId === "c", `rowId ${effective.rowId}`);
+    assert(!effective.localOverrideIgnored, "country restriction must not be labelled ignored");
+    return "DISABLED via COUNTRY even though the GLOBAL rule is LIVE";
+  });
+
+  await check("3. GLOBAL DISABLED + country/city LIVE -> GLOBAL blocks everything", async () => {
     const effective = activation.evaluateVerticalActivation({
       ...registry,
       rows: [
-        { id: "g", scopeType: "GLOBAL", countryCode: "", cityCode: "", status: "DISABLED", reason: "global pause" },
-        { id: "c", scopeType: "COUNTRY", countryCode: "NG", cityCode: "", status: "LIVE", reason: "local on" },
-        { id: "t", scopeType: "CITY", countryCode: "NG", cityCode: "lagos", status: "LIVE", reason: "city on" }
+        rule("g", "GLOBAL", "DISABLED"),
+        rule("c", "COUNTRY", "LIVE", "NG"),
+        rule("t", "CITY", "LIVE", "NG", "lagos")
       ],
       countryCode: "NG",
       cityCode: "lagos"
@@ -287,36 +330,81 @@ async function main() {
     assert(effective.scope === "GLOBAL", `got ${effective.scope}`);
     assert(effective.globalOverrideActive, "globalOverrideActive was false");
     assert(effective.localOverrideIgnored, "localOverrideIgnored was false");
-    return "DISABLED via GLOBAL; both local rows reported as overridden";
+    assert(effective.rules.filter((entry) => entry.ignored).length === 2, "both local rules should be ignored");
+    return "DISABLED via GLOBAL; country and city LIVE reported ignored";
   });
 
-  await check("3. One country DISABLED while another stays LIVE", async () => {
-    const rows = [
-      { id: "ng", scopeType: "COUNTRY", countryCode: "NG", cityCode: "", status: "DISABLED", reason: "NG pause" },
-      { id: "gh", scopeType: "COUNTRY", countryCode: "GH", cityCode: "", status: "LIVE", reason: "GH open" }
-    ];
-    const ng = activation.evaluateVerticalActivation({ ...registry, rows, countryCode: "NG" });
-    const gh = activation.evaluateVerticalActivation({ ...registry, rows, countryCode: "GH" });
-    const ke = activation.evaluateVerticalActivation({ ...registry, rows, countryCode: "KE" });
-    assert(ng.status === "DISABLED" && ng.scope === "COUNTRY", `NG ${ng.status}/${ng.scope}`);
-    assert(gh.status === "LIVE" && gh.scope === "COUNTRY", `GH ${gh.status}/${gh.scope}`);
-    assert(ke.status === "LIVE" && ke.scope === "REGISTRY", `KE ${ke.status}/${ke.scope}`);
-    return "NG DISABLED, GH LIVE, KE inherits registry LIVE";
+  await check("4. Country DISABLED + city LIVE -> city cannot bypass the country", async () => {
+    const effective = activation.evaluateVerticalActivation({
+      ...registry,
+      rows: [rule("c", "COUNTRY", "DISABLED", "NG"), rule("t", "CITY", "LIVE", "NG", "lagos")],
+      countryCode: "NG",
+      cityCode: "lagos"
+    });
+    assert(effective.status === "DISABLED", `got ${effective.status}`);
+    assert(effective.scope === "COUNTRY", `got ${effective.scope}`);
+    assert(effective.rules.find((entry) => entry.id === "t")?.ignored, "city LIVE should be ignored");
+    return "Lagos stays DISABLED via the country rule; the city LIVE row is ignored";
   });
 
-  await check("4. A CITY rule applies inside that city only", async () => {
-    const rows = [
-      { id: "ng", scopeType: "COUNTRY", countryCode: "NG", cityCode: "", status: "LIVE", reason: "NG open" },
-      { id: "lag", scopeType: "CITY", countryCode: "NG", cityCode: "lagos", status: "DISABLED", reason: "Lagos pause" }
-    ];
+  await check("5. GLOBAL PREVIEW + country LIVE -> public stays in preview", async () => {
+    const effective = activation.evaluateVerticalActivation({
+      ...registry,
+      rows: [rule("g", "GLOBAL", "PREVIEW"), rule("c", "COUNTRY", "LIVE", "NG")],
+      countryCode: "NG"
+    });
+    assert(effective.status === "PREVIEW", `got ${effective.status}`);
+    assert(effective.scope === "GLOBAL", `got ${effective.scope}`);
+    assert(effective.rules.find((entry) => entry.id === "c")?.ignored, "country LIVE should be ignored");
+    return "NG remains PREVIEW; country LIVE cannot upgrade a GLOBAL PREVIEW";
+  });
+
+  await check("6. GLOBAL PREVIEW + country DISABLED -> country restriction wins", async () => {
+    const effective = activation.evaluateVerticalActivation({
+      ...registry,
+      rows: [rule("g", "GLOBAL", "PREVIEW"), rule("c", "COUNTRY", "DISABLED", "NG")],
+      countryCode: "NG"
+    });
+    assert(effective.status === "DISABLED", `got ${effective.status}`);
+    assert(effective.scope === "COUNTRY", `got ${effective.scope}`);
+    assert(!effective.globalOverrideActive, "GLOBAL PREVIEW is not the deciding rule");
+    return "DISABLED via COUNTRY under a GLOBAL PREVIEW parent";
+  });
+
+  await check("7. GLOBAL DISABLED + city LIVE (no country row) -> GLOBAL blocks", async () => {
+    const effective = activation.evaluateVerticalActivation({
+      ...registry,
+      rows: [rule("g", "GLOBAL", "DISABLED"), rule("t", "CITY", "LIVE", "NG", "lagos")],
+      countryCode: "NG",
+      cityCode: "lagos"
+    });
+    assert(effective.status === "DISABLED", `got ${effective.status}`);
+    assert(effective.scope === "GLOBAL", `got ${effective.scope}`);
+    assert(effective.rules.find((entry) => entry.id === "t")?.ignored, "city LIVE should be ignored");
+    return "DISABLED via GLOBAL; the city LIVE row cannot reopen Lagos";
+  });
+
+  await check("8. GLOBAL LIVE + city DISABLED -> local pause applies in that city", async () => {
+    const rows = [rule("g", "GLOBAL", "LIVE"), rule("t", "CITY", "DISABLED", "NG", "lagos")];
     const lagos = activation.evaluateVerticalActivation({ ...registry, rows, countryCode: "NG", cityCode: "lagos" });
     const abuja = activation.evaluateVerticalActivation({ ...registry, rows, countryCode: "NG", cityCode: "abuja" });
     assert(lagos.status === "DISABLED" && lagos.scope === "CITY", `Lagos ${lagos.status}/${lagos.scope}`);
-    assert(abuja.status === "LIVE" && abuja.scope === "COUNTRY", `Abuja ${abuja.status}/${abuja.scope}`);
-    return "Lagos DISABLED by city; Abuja stays LIVE via country";
+    assert(abuja.status === "LIVE" && abuja.scope === "GLOBAL", `Abuja ${abuja.status}/${abuja.scope}`);
+    return "Lagos DISABLED by CITY; Abuja stays LIVE via GLOBAL";
   });
 
-  await check("5. PREVIEW is closed to the public and open to preview users", async () => {
+  await check("9. Registry preview is preserved when no rule applies", async () => {
+    const effective = activation.evaluateVerticalActivation({
+      verticalKey: "shop",
+      registryStatus: "preview",
+      rows: [],
+      countryCode: "NG"
+    });
+    assert(effective.status === "PREVIEW" && effective.source === "registry", `got ${effective.status}/${effective.source}`);
+    return "Registry preview -> PREVIEW";
+  });
+
+  await check("10. Access semantics: DISABLED never, PREVIEW only for preview users, LIVE public", async () => {
     assert(!activation.activationAllowsAccess("PREVIEW", { previewAuthorized: false }), "public PREVIEW allowed");
     assert(activation.activationAllowsAccess("PREVIEW", { previewAuthorized: true }), "preview user refused");
     assert(activation.activationAllowsAccess("LIVE", {}), "LIVE refused");
@@ -348,8 +436,10 @@ async function main() {
 
   const snapshot = await prisma.verticalActivation.findMany({ where: { verticalKey: "shop" } });
   const createdProductIds: string[] = [];
-  let cartId = "";
   let fixtureOrderId = "";
+  let fixtureOrderNumber = "";
+  let fixtureProductId = "";
+  let fixtureInitialReserved = 0;
   let server: RunningServer | null = null;
   const reasonFor = (label: string) => `[run:${runId}] ${label}`;
 
@@ -386,7 +476,7 @@ async function main() {
     // remove it before the precedence checks that need a clean slate.
     await resetShopRows();
 
-    await check("6. Service update persists a GLOBAL rule and writes before/after audit", async () => {
+    await check("11. Service update persists a GLOBAL rule and writes before/after audit", async () => {
       const control = await setRule({ scopeType: "GLOBAL", status: "DISABLED", label: "global pause" });
       assert(control.effective.status === "DISABLED", `effective ${control.effective.status}`);
       const row = await prisma.verticalActivation.findFirst({ where: { verticalKey: "shop", scopeType: "GLOBAL" } });
@@ -402,48 +492,51 @@ async function main() {
       return "row DISABLED; audit holds LIVE → DISABLED and the reason";
     });
 
-    await check("7. Database GLOBAL OFF overrides a stored country LIVE row", async () => {
+    await check("12. Database GLOBAL DISABLED overrides a stored country LIVE row", async () => {
       await setRule({ scopeType: "COUNTRY", status: "LIVE", countryCode: "NG", label: "NG live under global" });
       const ng = await effective({ countryCode: "NG" });
       assert(ng.status === "DISABLED" && ng.scope === "GLOBAL", `got ${ng.status}/${ng.scope}`);
       assert(ng.localOverrideIgnored, "country row not reported ignored");
       const rows = await prisma.verticalActivation.count({ where: { verticalKey: "shop" } });
       assert(rows === 2, `expected 2 rows, got ${rows}`);
-      return "GLOBAL DISABLED wins; the NG LIVE row is stored but inactive";
+      return "GLOBAL DISABLED wins; the NG LIVE row is stored but ignored";
     });
 
-    await check("8. Clearing GLOBAL falls through to the country row", async () => {
-      await activation.clearVerticalActivation({
+    await check("13. Clearing GLOBAL falls through to the country rule", async () => {
+      const cleared = await activation.clearVerticalActivation({
         actor: superActor,
         verticalKey: "shop",
         scopeType: "GLOBAL",
         reason: reasonFor("clear global for country test")
       });
+      assert(cleared.effective.status === "LIVE", `control ${cleared.effective.status}`);
       const ng = await effective({ countryCode: "NG" });
       assert(ng.status === "LIVE" && ng.scope === "COUNTRY", `got ${ng.status}/${ng.scope}`);
-      return "NG inherits LIVE from its COUNTRY row";
+      return "NG inherits LIVE from its COUNTRY row after the audited clear";
     });
 
-    await check("9. Country-scope isolation writes and reads independently", async () => {
+    await check("14. Country-scope isolation writes and reads independently", async () => {
       await setRule({ scopeType: "COUNTRY", status: "DISABLED", countryCode: "NG", label: "NG pause" });
       await setRule({ scopeType: "COUNTRY", status: "LIVE", countryCode: "GH", label: "GH open" });
       const ng = await effective({ countryCode: "NG" });
       const gh = await effective({ countryCode: "GH" });
+      const ke = await effective({ countryCode: "KE" });
       assert(ng.status === "DISABLED" && ng.scope === "COUNTRY", `NG ${ng.status}/${ng.scope}`);
       assert(gh.status === "LIVE" && gh.scope === "COUNTRY", `GH ${gh.status}/${gh.scope}`);
-      return "NG DISABLED; GH LIVE; both from COUNTRY rows";
+      assert(ke.status === "LIVE" && ke.scope === "REGISTRY", `KE ${ke.status}/${ke.scope}`);
+      return "NG DISABLED, GH LIVE, KE inherits registry LIVE";
     });
 
-    await check("10. City scope overrides its country inside that city only", async () => {
-      await setRule({ scopeType: "CITY", status: "DISABLED", countryCode: "NG", cityCode: "lagos", label: "Lagos pause" });
+    await check("15. City LIVE cannot bypass a DISABLED country", async () => {
+      await setRule({ scopeType: "CITY", status: "LIVE", countryCode: "NG", cityCode: "lagos", label: "Lagos live attempt" });
       const lagos = await effective({ countryCode: "NG", cityCode: "lagos" });
-      const abuja = await effective({ countryCode: "NG", cityCode: "abuja" });
-      assert(lagos.status === "DISABLED" && lagos.scope === "CITY", `Lagos ${lagos.status}/${lagos.scope}`);
-      assert(abuja.status === "DISABLED" && abuja.scope === "COUNTRY", `Abuja ${abuja.status}/${abuja.scope}`);
-      return "Lagos DISABLED via CITY; Abuja still DISABLED via the NG country rule";
+      const cityRule = lagos.rules.find((entry) => entry.scopeType === "CITY");
+      assert(lagos.status === "DISABLED" && lagos.scope === "COUNTRY", `got ${lagos.status}/${lagos.scope}`);
+      assert(cityRule?.ignored === true, "city LIVE row not marked ignored");
+      return "Lagos DISABLED via the NG country rule; city LIVE is ignored";
     });
 
-    await check("11. A change without a reason is rejected and writes nothing", async () => {
+    await check("16. A change without a reason is rejected and writes nothing", async () => {
       await resetShopRows();
       let error: unknown = null;
       try {
@@ -463,12 +556,64 @@ async function main() {
       return "400 reason_required; no row written";
     });
 
+    await check("17. A NOT_WIRED vertical refuses a new activation rule", async () => {
+      let error: unknown = null;
+      try {
+        await activation.updateVerticalActivation({
+          actor: superActor,
+          verticalKey: "eats",
+          scopeType: "GLOBAL",
+          status: "DISABLED",
+          reason: reasonFor("eats must stay configuration-only")
+        });
+      } catch (caught) {
+        error = caught;
+      }
+      assert(error instanceof ApiError, "a rule was accepted for a NOT_WIRED vertical");
+      assert(error.code === "vertical_not_enforced" && error.status === 409, `got ${error.code}/${error.status}`);
+      const rows = await prisma.verticalActivation.count({ where: { verticalKey: "eats" } });
+      assert(rows === 0, `NOT_WIRED row written (${rows})`);
+      return "409 vertical_not_enforced; no row written";
+    });
+
     server = await ensureServer();
     const base = server.base;
     const superSession = await login(base, superUser.email, password);
     const adminSession = await login(base, adminUser.email, password);
+    const customerSession = await login(base, customer.email, password);
 
-    await check("12. A regular administrator cannot change activation (403)", async () => {
+    async function controlSnapshot() {
+      const response = await http(base, "GET", "/api/admin/verticals", superSession.header);
+      assert(response.status === 200, `GET /api/admin/verticals -> ${response.status}`);
+      const shop = (response.body?.verticals ?? []).find((entry: Json) => entry.key === "shop");
+      assert(shop, "Shop control missing from snapshot");
+      return { snapshot: response.body as Json, shop: shop as Json };
+    }
+
+    async function apiPatch(body: Json) {
+      const response = await http(base, "PATCH", "/api/admin/verticals/shop", superSession.header, body);
+      assert(response.status === 200, `PATCH ${JSON.stringify(body)} -> ${response.status} ${JSON.stringify(response.body)}`);
+      return response;
+    }
+
+    async function apiClear(body: Json) {
+      const response = await http(base, "DELETE", "/api/admin/verticals/shop", superSession.header, body);
+      assert(response.status === 200, `DELETE ${JSON.stringify(body)} -> ${response.status} ${JSON.stringify(response.body)}`);
+      return response;
+    }
+
+    async function availability(query = "", cookie = "") {
+      const response = await http(base, "GET", `/api/products/availability${query}`, cookie);
+      assert(response.status === 200, `availability -> ${response.status}`);
+      return response.body as Json;
+    }
+
+    async function addCart(cookie: string, quantity = 1) {
+      return http(base, "POST", "/api/cart/items", cookie, { productId: fixtureProductId, quantity });
+    }
+
+    await check("18. A regular administrator cannot change activation (403)", async () => {
+      await resetShopRows();
       const response = await http(base, "PATCH", "/api/admin/verticals/shop", adminSession.header, {
         scopeType: "GLOBAL",
         status: "DISABLED",
@@ -483,234 +628,337 @@ async function main() {
       return "PATCH 403 permission_denied; no row; read-only GET 200";
     });
 
-    await check("13. Super administrator can set and audit a GLOBAL rule over the API", async () => {
-      const response = await http(base, "PATCH", "/api/admin/verticals/shop", superSession.header, {
-        scopeType: "GLOBAL",
-        status: "DISABLED",
-        reason: reasonFor("API global pause")
-      });
-      assert(response.status === 200, `got ${response.status} ${JSON.stringify(response.body)}`);
-      assert(response.body?.effective?.status === "DISABLED", `effective ${response.body?.effective?.status}`);
-      const get = await http(base, "GET", "/api/admin/verticals", superSession.header);
-      assert(get.status === 200, `GET ${get.status}`);
-      const shop = (get.body?.verticals ?? []).find((entry: Json) => entry.key === "shop");
-      assert(shop?.effective?.status === "DISABLED", `GET effective ${shop?.effective?.status}`);
-      assert(
-        (get.body?.audit ?? []).some((entry: Json) => String(entry.metadata?.verticalKey ?? "") === "shop"),
-        "audit entry missing"
-      );
-      return "PATCH 200; GET reports DISABLED and includes the change audit";
-    });
-
-    await check("14. Catalogue and detail APIs refuse while Shop is DISABLED", async () => {
-      const list = await http(base, "GET", "/api/products?pageSize=2");
-      assert(list.status === 404, `list got ${list.status} ${JSON.stringify(list.body)}`);
-      assert(list.body?.code === "vertical_unavailable", `list code ${list.body?.code}`);
-      const detailProduct = await prisma.product.findFirst({
-        where: { status: "ACTIVE", isSample: false, vendor: { status: "VERIFIED" } },
-        select: { id: true, slug: true, name: true }
-      });
-      assert(detailProduct, "no public product fixture found");
-      const detail = await http(base, "GET", `/api/products/${encodeURIComponent(detailProduct.id)}`);
-      assert(detail.status === 404, `detail got ${detail.status}`);
-      assert(detail.body?.code === "vertical_unavailable", `detail code ${detail.body?.code}`);
-      assert(!JSON.stringify(detail.body ?? {}).includes(detailProduct.name), "detail leaked the product name");
-      return "list 404 vertical_unavailable; detail 404 with no product fields";
-    });
-
-    await check("15. Existing orders remain readable while Shop is DISABLED", async () => {
-      let order = await prisma.order.findFirst({
-        where: { status: { notIn: ["cancelled", "refunded"] } },
-        orderBy: { createdAt: "desc" },
-        select: { id: true, orderNumber: true }
-      });
-      if (!order) {
-        // REVIEW has no orders. Create a run-owned, unpaid fixture order (no
-        // payment, wallet or escrow rows) so the read path is exercised on a
-        // real row; cleanup removes exactly this ID and never existing orders.
-        const product = await prisma.product.findFirst({
-          where: { status: "ACTIVE", vendor: { status: "VERIFIED" } },
-          select: { id: true, vendorId: true, name: true, priceKobo: true }
-        });
-        assert(product, "no product fixture found for the order-read check");
-        const fixture = await prisma.order.create({
-          data: {
-            orderNumber: `ACT-${runId.toUpperCase()}`,
-            customerId: customer.id,
-            vendorId: product.vendorId,
-            status: "created",
-            paymentStatus: "pending",
-            subtotalKobo: product.priceKobo,
-            totalKobo: product.priceKobo,
-            currency: "NGN",
-            countryCode: "NG",
-            deliveryAddress: `Activation acceptance ${runId}`,
-            deliveryZone: "lagos-mainland",
-            contactName: "Activation acceptance",
-            contactPhone: "08030000000",
-            items: {
-              create: {
-                productId: product.id,
-                quantity: 1,
-                unitKobo: product.priceKobo,
-                totalKobo: product.priceKobo,
-                productName: `[run:${runId}] ${product.name}`
-              }
-            },
-            statusEvents: {
-              create: { from: null, to: "created", note: `[run:${runId}] activation readability fixture` }
-            }
-          },
-          select: { id: true, orderNumber: true }
-        });
-        fixtureOrderId = fixture.id;
-        order = fixture;
-      }
-      const readable = await getOrder(order.id);
-      assert(readable?.id === order.id, "order could not be read");
-      return `order ${order.orderNumber} readable; no activation check on order history`;
-    });
-
-    await check("16. New seller listings are refused while Shop is DISABLED", async () => {
-      const vendor = await prisma.vendor.findFirst({
-        where: { status: "VERIFIED" },
-        select: { ownerId: true, id: true }
-      });
-      assert(vendor?.ownerId, "no verified seller owner fixture found");
-      let error: unknown = null;
-      try {
-        const product = await createSellerProduct(vendor.ownerId, {
-          name: `Activation seller fixture ${runId}`,
-          description: "Must not be created while Shop is disabled.",
-          categoryId: "fixture-category",
-          priceKobo: BigInt(100),
-          quantity: 1,
-          imageUrl: "/products/fixture.png"
-        });
-        createdProductIds.push(product.id);
-      } catch (caught) {
-        error = caught;
-      }
-      assert(error instanceof ApiError, "seller listing was not refused");
-      assert(error.code === "vertical_unavailable" && error.status === 409, `got ${error.code}/${error.status}`);
-      return "409 vertical_unavailable before any category or product write";
-    });
-
-    await check("17. Checkout is refused and creates no order while Shop is DISABLED", async () => {
+    await check("19. LIVE checkout creates the run-owned unpaid order and a second active cart", async () => {
       const product = await prisma.product.findFirst({
         where: {
           status: "ACTIVE",
           isSample: false,
           saleMode: "escrow",
           variants: { none: {} },
-          vendor: { status: "VERIFIED" }
+          vendor: { status: "VERIFIED" },
+          stock: { quantity: { gte: 3 } }
         },
-        select: { id: true, vendorId: true }
+        select: {
+          id: true,
+          name: true,
+          countryCode: true,
+          priceKobo: true,
+          stock: { select: { reserved: true } }
+        }
       });
-      assert(product, "no simple product fixture found for the cart");
-      const cart = await prisma.cart.create({ data: { userId: customer.id, status: "ACTIVE" } });
-      cartId = cart.id;
-      await prisma.cartItem.create({
-        data: { cartId: cart.id, productId: product.id, quantity: 1 }
+      assert(product, "no suitable REVIEW product fixture found");
+      fixtureProductId = product.id;
+      fixtureInitialReserved = product.stock?.reserved ?? 0;
+
+      const cart = await addCart(customerSession.header, 1);
+      assert(cart.status === 201, `cart add -> ${cart.status} ${JSON.stringify(cart.body)}`);
+
+      const placed = await http(base, "POST", "/api/checkout", customerSession.header, {
+        address: {
+          contactName: "Activation acceptance",
+          contactPhone: "08030000000",
+          countryCode: "NG",
+          state: "Lagos",
+          city: "Lagos",
+          line1: `Activation fixture ${runId}`
+        }
       });
-      let error: unknown = null;
-      try {
-        await checkout({
-          userId: customer.id,
-          address: {
-            contactName: "Activation acceptance",
-            contactPhone: "08030000000",
-            countryCode: "NG",
-            state: "Lagos",
-            city: "Lagos",
-            line1: `Activation fixture ${runId}`
-          }
-        });
-      } catch (caught) {
-        error = caught;
-      }
-      assert(error instanceof ApiError, "checkout was not refused");
-      assert(error.code === "vertical_unavailable" && error.status === 409, `got ${error.code}/${error.status}`);
-      const orders = await prisma.order.count({ where: { cartId: cart.id } });
-      assert(orders === 0, `checkout created ${orders} order(s)`);
-      const current = await prisma.cart.findUnique({ where: { id: cart.id }, select: { status: true } });
-      assert(current?.status === "ACTIVE", `cart was mutated to ${current?.status}`);
-      return "409 vertical_unavailable; no order, cart still ACTIVE";
+      assert(placed.status === 201, `checkout -> ${placed.status} ${JSON.stringify(placed.body)}`);
+      const order = (placed.body?.orders ?? [])[0];
+      assert(order?.orderId, "checkout did not return an order");
+      fixtureOrderId = order.orderId;
+      fixtureOrderNumber = order.orderNumber;
+
+      const readable = await getOrder(fixtureOrderId);
+      assert(readable.customerId === customer.id, "fixture order belongs to another customer");
+      assert(readable.paymentStatus === "pending", `unexpected payment status ${readable.paymentStatus}`);
+      assert(readable.payments.length === 0, "unpaid fixture unexpectedly has a payment row");
+
+      // A second ACTIVE cart gives the disabled-state read/update checks a real
+      // cart to view. It is not checked out and holds no reservation.
+      const second = await addCart(customerSession.header, 1);
+      assert(second.status === 201, `second cart add -> ${second.status} ${JSON.stringify(second.body)}`);
+      return `order ${fixtureOrderNumber} created by checkout (payment pending, no payment rows)`;
     });
 
-    await check("18. Public availability signal follows the effective state", async () => {
-      const disabled = await http(base, "GET", "/api/products/availability?country=NG");
-      assert(disabled.status === 200, `disabled probe ${disabled.status}`);
-      assert(disabled.body?.available === false && disabled.body?.status === "DISABLED", JSON.stringify(disabled.body));
-      const cleared = await http(base, "DELETE", "/api/admin/verticals/shop", superSession.header, {
-        scopeType: "GLOBAL",
-        reason: reasonFor("clear global before nav test")
-      });
-      assert(cleared.status === 200, `clear ${cleared.status} ${JSON.stringify(cleared.body)}`);
-      activation.clearVerticalActivationCache();
-      const live = await http(base, "GET", "/api/products/availability?country=NG");
-      assert(live.status === 200, `live probe ${live.status}`);
-      assert(live.body?.available === true && live.body?.status === "LIVE", JSON.stringify(live.body));
-      return "availability false (DISABLED) → true (registry LIVE) after the audited clear";
+    await check("20. Super administrator can set and audit a GLOBAL DISABLED rule over the API", async () => {
+      const response = await apiPatch({ scopeType: "GLOBAL", status: "DISABLED", reason: reasonFor("API global pause") });
+      assert(response.body?.effective?.status === "DISABLED", `effective ${response.body?.effective?.status}`);
+      const { snapshot, shop } = await controlSnapshot();
+      assert(shop.effective.status === "DISABLED", `GET effective ${shop.effective.status}`);
+      assert(shop.effective.scope === "GLOBAL", `GET scope ${shop.effective.scope}`);
+      const audit = (snapshot.audit ?? []).find(
+        (entry: Json) => String(entry.metadata?.verticalKey ?? "") === "shop" && String(entry.metadata?.after?.status) === "DISABLED"
+      );
+      assert(audit, "audit entry missing");
+      assert(String(audit.metadata?.after?.reason ?? "").includes(runId), "audit reason missing");
+      return "PATCH 200; GET reports DISABLED/GLOBAL and the before/after audit";
     });
 
-    await check("19. Homepage and Shop navigation reflect activation", async () => {
+    await check("21. Catalogue, detail API and product page refuse while DISABLED without leaking", async () => {
+      const list = await http(base, "GET", "/api/products?pageSize=2");
+      assert(list.status === 404, `list got ${list.status} ${JSON.stringify(list.body)}`);
+      assert(list.body?.code === "vertical_unavailable", `list code ${list.body?.code}`);
+      assert((list.headers.get("cache-control") ?? "").includes("no-store"), "list cache header missing no-store");
+
+      const detail = await http(base, "GET", `/api/products/${encodeURIComponent(fixtureProductId)}`);
+      assert(detail.status === 404, `detail got ${detail.status}`);
+      assert(detail.body?.code === "vertical_unavailable", `detail code ${detail.body?.code}`);
+      assert((detail.headers.get("cache-control") ?? "").includes("no-store"), "detail cache header missing no-store");
+      assert(!JSON.stringify(detail.body ?? {}).includes(fixtureOrderNumber), "detail leaked order data");
+
+      const productRow = await prisma.product.findUniqueOrThrow({ where: { id: fixtureProductId }, select: { name: true } });
+      const page = await web(base, `/product/${encodeURIComponent(fixtureProductId)}`);
+      assert(page.status === 404, `page got ${page.status}`);
+      assert(!page.text.includes(productRow.name), "page leaked the product name");
+      const cache = page.headers.get("cache-control") ?? "";
+      assert(/no-store|private/.test(cache), `page cache-control ${cache}`);
+      return "list/detail 404 vertical_unavailable; page 404 without product content and a private/no-store header";
+    });
+
+    await check("22. Existing order, order history and support stay available while DISABLED", async () => {
+      const list = await http(base, "GET", "/api/orders", customerSession.header);
+      assert(list.status === 200, `orders list ${list.status}`);
+      assert(JSON.stringify(list.body ?? {}).includes(fixtureOrderId), "fixture order missing from history");
+
+      const detail = await http(base, "GET", `/api/orders/${fixtureOrderId}`, customerSession.header);
+      assert(detail.status === 200, `order detail ${detail.status}`);
+      assert(detail.body?.id === fixtureOrderId, "wrong order returned");
+      assert(detail.body?.status === "payment_pending", `status ${detail.body?.status}`);
+
+      const historyPage = await web(base, "/orders", customerSession.header);
+      assert(historyPage.status === 200, `orders page ${historyPage.status}`);
+
+      const orderPage = await web(base, `/orders/${fixtureOrderId}`, customerSession.header);
+      assert(orderPage.status === 200, `order page ${orderPage.status}`);
+      assert(orderPage.text.includes("Order details"), "order page title missing");
+
+      const help = await web(base, "/naijashop/help");
+      assert(help.status === 200, "support page unavailable");
+      assert(help.text.includes("Help &amp; customer service") || help.text.includes("Help & customer service"), "support content missing");
+
+      const cancelled = await http(base, "POST", `/api/orders/${fixtureOrderId}/cancel`, customerSession.header, {
+        reason: `[run:${runId}] cancel while Shop is disabled`
+      });
+      assert(cancelled.status === 200, `cancel ${cancelled.status} ${JSON.stringify(cancelled.body)}`);
+      assert(cancelled.body?.cancelled === true, "cancel response missing cancelled=true");
+      const afterCancel = await http(base, "GET", `/api/orders/${fixtureOrderId}`, customerSession.header);
+      assert(afterCancel.body?.status === "cancelled", `post-cancel status ${afterCancel.body?.status}`);
+      return "order history, detail, order page, support and unpaid cancellation all work while DISABLED";
+    });
+
+    await check("23. Cart viewing/update stays available but new additions are refused while DISABLED", async () => {
+      const cart = await http(base, "GET", "/api/cart", customerSession.header);
+      assert(cart.status === 200, `cart GET ${cart.status}`);
+      const items = (cart.body?.items ?? []) as Json[];
+      assert(items.length === 1, `expected 1 active cart item, got ${items.length}`);
+      const itemId = String(items[0].id);
+
+      const changed = await http(base, "PATCH", `/api/cart/items/${itemId}`, customerSession.header, { quantity: 2 });
+      assert(changed.status === 200, `cart PATCH ${changed.status} ${JSON.stringify(changed.body)}`);
+      assert(changed.body?.items?.[0]?.quantity === 2, "quantity update not applied");
+
+      const blocked = await addCart(customerSession.header, 1);
+      assert(blocked.status === 409, `cart add while disabled -> ${blocked.status} ${JSON.stringify(blocked.body)}`);
+      assert(blocked.body?.code === "vertical_unavailable", `cart add code ${blocked.body?.code}`);
+
+      const after = await http(base, "GET", "/api/cart", customerSession.header);
+      const afterItems = (after.body?.items ?? []) as Json[];
+      assert(afterItems.length === 1 && afterItems[0].quantity === 2, "blocked add changed the cart");
+      return "existing item readable/updatable; new addition 409; cart contents unchanged";
+    });
+
+    await check("24. PREVIEW closes public APIs/page and opens them for a Control Center user", async () => {
+      await apiPatch({ scopeType: "GLOBAL", status: "PREVIEW", reason: reasonFor("global preview") });
+
+      const publicList = await http(base, "GET", "/api/products?pageSize=2");
+      assert(publicList.status === 404 && publicList.body?.code === "vertical_unavailable", `public list ${publicList.status}`);
+      const publicDetail = await http(base, "GET", `/api/products/${fixtureProductId}`);
+      assert(publicDetail.status === 404 && publicDetail.body?.code === "vertical_unavailable", `public detail ${publicDetail.status}`);
+
+      const adminList = await http(base, "GET", "/api/products?pageSize=2", superSession.header);
+      assert(adminList.status === 200, `admin list ${adminList.status}`);
+      assert((adminList.headers.get("cache-control") ?? "").includes("no-store"), "admin list cache header missing no-store");
+      const adminDetail = await http(base, "GET", `/api/products/${fixtureProductId}`, superSession.header);
+      assert(adminDetail.status === 200, `admin detail ${adminDetail.status}`);
+      assert((adminDetail.headers.get("cache-control") ?? "").includes("no-store"), "admin detail cache header missing no-store");
+
+      const productRow = await prisma.product.findUniqueOrThrow({ where: { id: fixtureProductId }, select: { name: true } });
+
+      const publicPage = await web(base, `/product/${fixtureProductId}`);
+      assert(publicPage.status === 404, `public page ${publicPage.status}`);
+      assert(!publicPage.text.includes(productRow.name), "public page leaked the product name");
+      const publicCache = publicPage.headers.get("cache-control") ?? "";
+      assert(/no-store|private/.test(publicCache), `public page cache-control ${publicCache}`);
+
+      const adminPage = await web(base, `/product/${fixtureProductId}`, superSession.header);
+      assert(adminPage.status === 200, `admin page ${adminPage.status}`);
+      assert(adminPage.text.includes(productRow.name), "admin page did not render the product");
+      const adminCache = adminPage.headers.get("cache-control") ?? "";
+      assert(/no-store|private/.test(adminCache), `admin page cache-control ${adminCache}`);
+
+      const publicProbe = await availability("?country=NG");
+      assert(publicProbe.status === "PREVIEW" && publicProbe.available === false, `public probe ${JSON.stringify(publicProbe)}`);
+      const adminProbe = await availability("?country=NG", superSession.header);
+      assert(adminProbe.status === "PREVIEW" && adminProbe.available === true && adminProbe.preview === true, `admin probe ${JSON.stringify(adminProbe)}`);
+      return "public 404/no content; authorized Control Center 200 with no-store/private; availability differs by session";
+    });
+
+    await check("25. PREVIEW cart-add: public refused, authorized preview user allowed", async () => {
+      const blocked = await addCart(customerSession.header, 1);
+      assert(blocked.status === 409, `public preview cart add -> ${blocked.status} ${JSON.stringify(blocked.body)}`);
+      assert(blocked.body?.code === "vertical_unavailable", `code ${blocked.body?.code}`);
+
+      const allowed = await addCart(superSession.header, 1);
+      assert(allowed.status === 201, `preview cart add -> ${allowed.status} ${JSON.stringify(allowed.body)}`);
+      assert((allowed.body?.items ?? []).length === 1, "preview cart add did not persist");
+      return "public 409 vertical_unavailable; authorized preview user 201";
+    });
+
+    await check("26. Navigation reflects PREVIEW: public sees paused, authorized sees preview", async () => {
       const { chromium } = await import("playwright");
       const browser = await chromium.launch({ headless: true });
       try {
-        const page = await browser.newPage();
-        // Disabled state first: set GLOBAL again through the real API.
-        const disabled = await http(base, "PATCH", "/api/admin/verticals/shop", superSession.header, {
-          scopeType: "GLOBAL",
-          status: "DISABLED",
-          reason: reasonFor("navigation disabled state")
-        });
-        assert(disabled.status === 200, `set disabled ${disabled.status}`);
+        const publicPage = await browser.newPage();
+        await publicPage.goto(`${base}/`, { waitUntil: "domcontentloaded", timeout: 90_000 });
+        await publicPage.waitForSelector('[data-shop-availability="PREVIEW"]', { timeout: 60_000 });
+        assert((await publicPage.locator('[data-service="shop"]').count()) === 0, "public Shop card still visible in PREVIEW");
+        assert((await publicPage.getByText("Shop is paused", { exact: false }).count()) > 0, "public pause notice missing");
+        await publicPage.goto(`${base}/naijashop`, { waitUntil: "domcontentloaded", timeout: 90_000 });
+        await publicPage.getByText("Shop is paused in this market.", { exact: false }).first().waitFor({ timeout: 60_000 });
+        assert((await publicPage.locator('nav[aria-label="Marketplace sections"]').count()) === 0, "public Shop section nav still visible");
+        assert((await publicPage.locator('a[href="/orders"]').count()) > 0, "public Orders link disappeared");
 
-        await page.goto(`${base}/`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-        await page.waitForSelector('[data-shop-availability="DISABLED"]', { timeout: 45_000 });
-        assert((await page.locator('[data-service="shop"]').count()) === 0, "Shop card still visible when disabled");
-        assert((await page.getByText("Shop is paused", { exact: false }).count()) > 0, "pause notice missing");
-
-        await page.goto(`${base}/naijashop`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-        await page.getByText("Shop is paused in this market.", { exact: false }).first().waitFor({ timeout: 45_000 });
-        assert((await page.locator('nav[aria-label="Marketplace sections"]').count()) === 0, "Shop section nav still visible");
-        assert((await page.locator('a[href="/orders"]').count()) > 0, "Orders link disappeared");
-
-        const cleared = await http(base, "DELETE", "/api/admin/verticals/shop", superSession.header, {
-          scopeType: "GLOBAL",
-          reason: reasonFor("navigation restore")
-        });
-        assert(cleared.status === 200, `clear ${cleared.status}`);
-        await page.goto(`${base}/`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-        await page.waitForSelector('[data-shop-availability="LIVE"]', { timeout: 45_000 });
-        assert((await page.locator('[data-service="shop"]').count()) === 1, "Shop card missing when LIVE");
-        return "card hidden and Shop nav replaced when DISABLED; both restored when LIVE";
+        const context = await browser.newContext();
+        const [name, value] = superSession.session.split("=");
+        if (name && value) await context.addCookies([{ name, value, domain: "localhost", path: "/" }]);
+        const adminPage = await context.newPage();
+        await adminPage.goto(`${base}/`, { waitUntil: "domcontentloaded", timeout: 90_000 });
+        await adminPage.getByText("Preview Shop", { exact: false }).first().waitFor({ timeout: 60_000 });
+        assert((await adminPage.locator('[data-service="shop"]').count()) === 1, "admin Shop card missing in PREVIEW");
+        await adminPage.getByText("Shop preview", { exact: false }).first().waitFor({ timeout: 60_000 });
+        await adminPage.goto(`${base}/naijashop`, { waitUntil: "domcontentloaded", timeout: 90_000 });
+        await adminPage.getByText("Preview mode: Shop is visible", { exact: false }).first().waitFor({ timeout: 60_000 });
+        return "public: card removed + paused notice; admin: preview card + preview banner";
       } finally {
         await browser.close();
       }
     });
 
-    await check("20. Control Center page renders the workspace and audit", async () => {
+    await check("27. Country LIVE cannot loosen GLOBAL PREVIEW; city DISABLED restricts Lagos", async () => {
+      await apiPatch({ scopeType: "COUNTRY", countryCode: "NG", status: "LIVE", reason: reasonFor("NG live under preview") });
+      let { shop } = await controlSnapshot();
+      const ng = (shop.countries as Json[]).find((entry) => entry.countryCode === "NG");
+      assert(ng?.effective?.status === "PREVIEW", `NG ${ng?.effective?.status}`);
+      const ignoredCountry = (ng?.effective?.rules as Json[] | undefined)?.find((entry) => entry.scopeType === "COUNTRY");
+      assert(ignoredCountry?.ignored === true, "NG LIVE row not marked ignored");
+
+      await apiPatch({ scopeType: "CITY", countryCode: "NG", cityCode: "lagos", status: "DISABLED", reason: reasonFor("Lagos pause") });
+      ({ shop } = await controlSnapshot());
+      const lagos = (shop.cities as Json[]).find((entry) => entry.countryCode === "NG" && entry.cityCode === "lagos");
+      const abuja = (shop.cities as Json[]).find((entry) => entry.countryCode === "NG" && entry.cityCode === "abuja");
+      assert(lagos?.effective?.status === "DISABLED" && lagos?.effective?.scope === "CITY", `Lagos ${lagos?.effective?.status}/${lagos?.effective?.scope}`);
+      assert(abuja?.effective?.status === "PREVIEW" && abuja?.effective?.scope === "GLOBAL", `Abuja ${abuja?.effective?.status}/${abuja?.effective?.scope}`);
+
+      const lagosProbe = await availability("?country=NG&city=Lagos", superSession.header);
+      assert(lagosProbe.status === "DISABLED" && lagosProbe.available === false, `Lagos probe ${JSON.stringify(lagosProbe)}`);
+      const abujaProbe = await availability("?country=NG&city=Abuja", superSession.header);
+      assert(abujaProbe.status === "PREVIEW" && abujaProbe.available === true, `Abuja probe ${JSON.stringify(abujaProbe)}`);
+      return "NG stays PREVIEW despite country LIVE; Lagos DISABLED; Abuja PREVIEW";
+    });
+
+    await check("28. Clearing GLOBAL opens the local rules; country DISABLED still caps city LIVE", async () => {
+      await apiClear({ scopeType: "GLOBAL", reason: reasonFor("clear global for local matrix") });
+      let { shop } = await controlSnapshot();
+      assert(shop.effective.status === "LIVE" && shop.effective.scope === "REGISTRY", `control ${shop.effective.status}/${shop.effective.scope}`);
+
+      const abujaLive = await availability("?country=NG&city=Abuja");
+      assert(abujaLive.status === "LIVE" && abujaLive.available === true, `Abuja ${JSON.stringify(abujaLive)}`);
+      const lagosDisabled = await availability("?country=NG&city=Lagos");
+      assert(lagosDisabled.status === "DISABLED" && lagosDisabled.available === false, `Lagos ${JSON.stringify(lagosDisabled)}`);
+
+      await apiPatch({ scopeType: "COUNTRY", countryCode: "NG", status: "DISABLED", reason: reasonFor("NG pause under local matrix") });
+      await apiPatch({ scopeType: "CITY", countryCode: "NG", cityCode: "lagos", status: "LIVE", reason: reasonFor("Lagos live attempt under country pause") });
+      ({ shop } = await controlSnapshot());
+      const lagos = (shop.cities as Json[]).find((entry) => entry.countryCode === "NG" && entry.cityCode === "lagos");
+      assert(lagos?.effective?.status === "DISABLED" && lagos?.effective?.scope === "COUNTRY", `Lagos ${lagos?.effective?.status}/${lagos?.effective?.scope}`);
+      return "global off -> Abuja LIVE/Lagos DISABLED; country DISABLED + city LIVE remains DISABLED";
+    });
+
+    await check("29. Control Center renders enforced and configuration-only states", async () => {
       const { chromium } = await import("playwright");
       const browser = await chromium.launch({ headless: true });
       try {
         const context = await browser.newContext();
         const [name, value] = superSession.session.split("=");
-        if (name && value) {
-          await context.addCookies([{ name, value, domain: "localhost", path: "/" }]);
-        }
+        if (name && value) await context.addCookies([{ name, value, domain: "localhost", path: "/" }]);
         const page = await context.newPage();
-        const response = await page.goto(`${base}/admin/verticals`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+        const response = await page.goto(`${base}/admin/verticals`, { waitUntil: "domcontentloaded", timeout: 90_000 });
         assert(response?.status() === 200, `page status ${response?.status()}`);
-        await page.getByRole("heading", { name: "Service activation", level: 1 }).waitFor({ timeout: 45_000 });
-        await page.getByText("Set an activation rule").waitFor({ timeout: 45_000 });
-        await page.getByText("Enforced").first().waitFor({ timeout: 15_000 });
-        assert((await page.getByText("Read-only").count()) === 0, "super admin was shown the read-only state");
-        return "page 200; workspace, enforced badge and write form rendered";
+        await page.getByRole("heading", { name: "Service activation", level: 1 }).waitFor({ timeout: 60_000 });
+        await page.getByText("Set an activation rule").waitFor({ timeout: 60_000 });
+        await page.getByText("Enforced").first().waitFor({ timeout: 30_000 });
+
+        await page.getByRole("button", { name: /Food/ }).first().click();
+        await page.getByRole("heading", { name: /Configuration only/ }).waitFor({ timeout: 30_000 });
+        assert((await page.getByText("Set an activation rule").count()) === 0, "NOT_WIRED service still renders the rule form");
+        assert(
+          (await page.getByText("does not consult service activation", { exact: false }).count()) > 0,
+          "configuration-only explanation missing"
+        );
+
+        await page.getByRole("button", { name: /Shop/ }).first().click();
+        await page.getByText("Set an activation rule").waitFor({ timeout: 30_000 });
+        return "shop form available; Food shows configuration-only with no rule form";
       } finally {
         await browser.close();
       }
+    });
+
+    await check("30. Restoring the exact previous activation snapshot", async () => {
+      // Clear the local matrix through the audited API first so the server
+      // process invalidates its cache rather than waiting out the 5s TTL.
+      const leftoverCities = await prisma.verticalActivation.findMany({
+        where: { verticalKey: "shop", scopeType: "CITY" },
+        select: { countryCode: true, cityCode: true }
+      });
+      for (const row of leftoverCities) {
+        await apiClear({
+          scopeType: "CITY",
+          countryCode: row.countryCode,
+          cityCode: row.cityCode,
+          reason: reasonFor("restore city rows")
+        });
+      }
+      const leftoverCountries = await prisma.verticalActivation.findMany({
+        where: { verticalKey: "shop", scopeType: "COUNTRY" },
+        select: { countryCode: true }
+      });
+      for (const row of leftoverCountries) {
+        await apiClear({
+          scopeType: "COUNTRY",
+          countryCode: row.countryCode,
+          reason: reasonFor("restore country rows")
+        });
+      }
+      await prisma.verticalActivation.deleteMany({ where: { verticalKey: "shop" } });
+      for (const row of snapshot) {
+        await prisma.verticalActivation.create({ data: row });
+      }
+      activation.clearVerticalActivationCache();
+      const expected = await effective({ countryCode: "NG" });
+      const deadline = Date.now() + 15_000;
+      let live = await availability("?country=NG");
+      while (live.status !== expected.status && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        live = await availability("?country=NG");
+      }
+      assert(live.status === expected.status, `after restore expected ${expected.status}, got ${JSON.stringify(live)}`);
+      assert(
+        live.available === activation.activationAllowsAccess(expected.status, {}),
+        `restored availability ${live.available} does not match ${expected.status}`
+      );
+      return `restored ${snapshot.length} prior row(s); effective ${expected.status}`;
     });
   } finally {
     // ---- Restore exact previous activation state --------------------------
@@ -735,18 +983,67 @@ async function main() {
     }
     activation.clearVerticalActivationCache();
 
-    // Run-owned fixtures and audit evidence only.
-    if (cartId) {
-      await prisma.cartItem.deleteMany({ where: { cartId } }).catch(() => undefined);
-      await prisma.cart.deleteMany({ where: { id: cartId } }).catch(() => undefined);
-    }
+    // Run-owned order fixture. Cancellation normally released the reservation;
+    // if a test failed before cancelling, release exactly this order's units
+    // before deleting the row. No payment/wallet/escrow row was ever created.
     if (fixtureOrderId) {
-      // Exactly the run-owned unpaid order created for the readability check.
-      // No existing order is ever touched.
-      await prisma.orderStatusEvent.deleteMany({ where: { orderId: fixtureOrderId } }).catch(() => undefined);
-      await prisma.orderItem.deleteMany({ where: { orderId: fixtureOrderId } }).catch(() => undefined);
-      await prisma.order.deleteMany({ where: { id: fixtureOrderId } }).catch(() => undefined);
+      const order = await prisma.order
+        .findUnique({
+          where: { id: fixtureOrderId },
+          include: {
+            items: true,
+            payments: true,
+            escrowHolds: true,
+            deliveries: true,
+            disputes: true,
+            refunds: true,
+            returnRequests: true,
+            reviews: true,
+            walletTxs: true
+          }
+        })
+        .catch(() => null);
+      if (order) {
+        const financialRows =
+          order.payments.length + order.escrowHolds.length + order.deliveries.length + order.disputes.length +
+          order.refunds.length + order.returnRequests.length + order.reviews.length + order.walletTxs.length;
+        if (financialRows > 0) {
+          console.error(`WARNING: fixture order ${fixtureOrderId} unexpectedly has financial rows; leaving it for review.`);
+        } else {
+          if (order.status !== "cancelled") {
+            for (const item of order.items) {
+              if (item.variantId) {
+                await prisma.$executeRaw`
+                  UPDATE "ProductVariant" SET reserved = GREATEST(reserved - ${item.quantity}, 0)
+                  WHERE id = ${item.variantId}
+                `.catch(() => undefined);
+              } else {
+                await prisma.$executeRaw`
+                  UPDATE "InventoryStock" SET reserved = GREATEST(reserved - ${item.quantity}, 0)
+                  WHERE "productId" = ${item.productId}
+                `.catch(() => undefined);
+              }
+            }
+          }
+          await prisma.orderStatusEvent.deleteMany({ where: { orderId: fixtureOrderId } }).catch(() => undefined);
+          await prisma.orderItem.deleteMany({ where: { orderId: fixtureOrderId } }).catch(() => undefined);
+          await prisma.orderAttribution.deleteMany({ where: { orderId: fixtureOrderId } }).catch(() => undefined);
+          await prisma.auditLog.deleteMany({ where: { entity: "Order", entityId: fixtureOrderId } }).catch(() => undefined);
+          await prisma.systemEvent.deleteMany({ where: { entity: "Order", entityId: fixtureOrderId } }).catch(() => undefined);
+          await prisma.order.deleteMany({ where: { id: fixtureOrderId } }).catch(() => undefined);
+        }
+      }
     }
+
+    // All run-owned carts (the checked-out cart and the second active cart).
+    const runCarts = await prisma.cart
+      .findMany({ where: { userId: { in: [customer.id, superUser.id, adminUser.id] } }, select: { id: true } })
+      .catch(() => []);
+    for (const cart of runCarts) {
+      await prisma.cartItem.deleteMany({ where: { cartId: cart.id } }).catch(() => undefined);
+      await prisma.cart.deleteMany({ where: { id: cart.id } }).catch(() => undefined);
+    }
+
     if (createdProductIds.length > 0) {
       // A refusal test that unexpectedly succeeded: remove its run-owned rows.
       await prisma.productImage.deleteMany({ where: { productId: { in: createdProductIds } } }).catch(() => undefined);
@@ -770,6 +1067,27 @@ async function main() {
     await prisma.session.deleteMany({ where: { userId: { in: userIds } } }).catch(() => undefined);
     await prisma.userRole.deleteMany({ where: { userId: { in: userIds } } }).catch(() => undefined);
     await prisma.user.deleteMany({ where: { id: { in: userIds } } }).catch(() => undefined);
+
+    // Verify the fixture did not leave stock or order residue behind.
+    if (fixtureProductId) {
+      const stock = await prisma.inventoryStock
+        .findUnique({ where: { productId: fixtureProductId }, select: { reserved: true } })
+        .catch(() => null);
+      if (stock && stock.reserved !== fixtureInitialReserved) {
+        console.error(
+          `WARNING: reserved stock for ${fixtureProductId} is ${stock.reserved}, expected ${fixtureInitialReserved}.`
+        );
+      }
+    }
+    const runOrderCount = await prisma.order
+      .count({ where: { customerId: customer.id } })
+      .catch(() => 0);
+    const runEatsRows = await prisma.verticalActivation
+      .count({ where: { verticalKey: "eats" } })
+      .catch(() => 0);
+    if (runOrderCount > 0) console.error(`WARNING: ${runOrderCount} run-owned order(s) remain.`);
+    if (runEatsRows > 0) console.error(`WARNING: ${runEatsRows} NOT_WIRED activation row(s) remain.`);
+
     stopServer(server);
     await prisma.$disconnect().catch(() => undefined);
   }

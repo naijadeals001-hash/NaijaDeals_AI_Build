@@ -36,9 +36,11 @@ export default async function VerticalsAdminPage() {
           Service activation
         </h1>
         <p className="max-w-3xl text-sm leading-6 text-[#8B949E]">
-          One effective state for every NaijaDeals service. Choose a service, set a GLOBAL, country or city rule, and
-          record why. A GLOBAL rule overrides local rules; a service with no rules keeps its verified registry status.
-          Only services marked <strong className="text-[#F0F6FC]">Enforced</strong> consult this setting today.
+          One effective state for every NaijaDeals service. The most restrictive applicable rule decides: a GLOBAL or
+          country rule can restrict every location below it, and a local rule can restrict further but never loosen a
+          stricter parent. A service with no rules keeps its verified registry status. Only services marked{" "}
+          <strong className="text-[#F0F6FC]">Enforced</strong> accept activation rules today; other services are shown
+          as configuration-only with no operational controls.
         </p>
         <nav aria-label="Breadcrumb">
           <Link
