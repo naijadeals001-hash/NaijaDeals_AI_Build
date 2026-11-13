@@ -619,3 +619,7 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Batch 2 Kie coverage | 8 new DEMO products, 8 images, 48 new credits; 30/96 publishable leaves populated; 66 documented gaps | VERIFIED |
 | Leaf-move integrity | 34 audited moves retained after workflow fix; 30 populated leaves / 50 active products on leaves; workflow no longer recategorises existing products | VERIFIED |
 | Aura category assistance | opt-in `assist=aura`, eligible-ID validation, fail-closed/mock tests; deterministic default; live model call not exercised | PARTIAL |
+| Retail-first Shop landing | Full-width compact hero, 8 category shortcuts, 8 populated shelves (29 unique products) before wholesale; 95/95 landing audit | VERIFIED |
+| Landing visual acceptance | Independent 390/768/1440 review: 8 shelves before wholesale, no placeholder department cards, 0 broken images, 0 overflow, 0 unexpected console errors | VERIFIED |
+| Workflow baseline preservation | Two runs 142/142; accepted-product field fingerprint identical (id/slug/category/status/DEMO/images/stock/price) both runs | VERIFIED |
+| Computed coverage | 30/96 populated, 66 gaps, 57 ACTIVE / 50 leaf / 7 ambiguous; Batch 2 counted once | VERIFIED |

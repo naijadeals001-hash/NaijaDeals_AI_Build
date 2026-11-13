@@ -4690,3 +4690,19 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   authorities; the coverage report and reconciliation script are. The taxonomy seed's
   REVIEW expectations were re-baselined to 57/49 subtree counts but the seed was not
   re-run in this slice. No commit was pushed.
+
+## Retail-first landing and baseline guard (2026-11-13)
+
+- HEAD `bb77c19`; served build `bN9MEU4h0U3jKJqIGr6zn`.
+- Root cause: wholesale panel was the hero's right column and department discovery filled the
+  next screen; first product shelf began at 1726px. Now compact full-width hero, eight
+  category shortcuts, eight populated shelves (29 unique products) with wholesale at 6848px.
+- Independent acceptance 390/768/1440: 8 shelves before wholesale, 0 placeholder cards, 0
+  broken images, 0 overflow, basket add/remove, parent 21 unique, empty leaf honest, Batch 2
+  once, archived 404, financial guard 46/46.
+- Workflow now verification-only; two runs 142/142 with identical accepted-product
+  fingerprint d7dd21d5…; coverage computed from DB (30/96, 66 gaps).
+- Still unstarted from the broader request: product-detail redesign and super-admin vertical
+  activation. Recorded P3s: gari alias relevance, category attributes absent from public
+  detail, wholesale taxonomy wording, Aura blocked by Valkey, six departments without banner
+  art, REVIEW residue.
