@@ -4753,3 +4753,11 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 - Landing audit updated for the full rail: `BASE_URL=http://localhost:3047 node
   scripts/storefront-landing-audit.cjs` → 95/95 on build `-BwL8p1pF7e-oZb21kNf5`.
   Empty category/drawer wording verified; rail audit 145/145.
+
+### Final activation/detail build
+- HEAD pending commit; served build `nju0nddge-JEb8Q_WQoOZ`.
+- Activation precedence least-permissive; PREVIEW SSR now authorized for staff (verified admin SSR preview banner,
+  anonymous paused, restore LIVE).
+- Product detail gap suite 97/97, activation 30/30, category rail 145/145, landing 95/95,
+  workflow 142/142, basket 10/10, financial 46/46; 57 active unchanged.
+- Variant management remains NOT IMPLEMENTED; related-failure retry branch not dynamically triggered.

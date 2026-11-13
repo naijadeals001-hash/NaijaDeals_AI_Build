@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { EcosystemHome2026, type HomeProduct } from "@/components/home/ecosystem-home-2026";
+import { previewAuthorizationForRequest, verticalAccess } from "@/lib/services/core/vertical-activation.service";
 
 export const dynamic = "force-dynamic";
 
@@ -70,5 +71,10 @@ export default async function HomePage() {
       image: product.images[0]?.url ?? null
     }));
 
-  return <EcosystemHome2026 products={products} />;
+  const { previewAuthorized } = await previewAuthorizationForRequest();
+  const shop = await verticalAccess("shop", { countryCode: "NG", previewAuthorized }).catch(() => null);
+  const initialShopAvailability = shop
+    ? { available: shop.accessible, status: shop.effective.status }
+    : null;
+  return <EcosystemHome2026 products={products} initialShopAvailability={initialShopAvailability} />;
 }

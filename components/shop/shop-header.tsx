@@ -122,7 +122,7 @@ function collectSearchScopes(departments: ShopDepartment[]): SearchScope[] {
  * share ShopPanelFrame, so Escape, backdrop close, focus return, focus trapping
  * and scroll lock behave the same everywhere.
  */
-export function ShopShell({ children }: { children: ReactNode }) {
+export function ShopShell({ children, initialShopAvailability = null }: { children: ReactNode; initialShopAvailability?: { available: boolean; status: "LIVE" | "PREVIEW" | "DISABLED"; message?: string | null } | null }) {
   return (
     <div
       data-shop-shell
@@ -135,7 +135,7 @@ export function ShopShell({ children }: { children: ReactNode }) {
       >
         Skip to marketplace content
       </a>
-      <ShopHeader />
+      <ShopHeader initialShopAvailability={initialShopAvailability} />
       <main id="shop-main" tabIndex={-1} className="min-w-0 flex-1 outline-none">
         {children}
       </main>
@@ -144,7 +144,7 @@ export function ShopShell({ children }: { children: ReactNode }) {
   );
 }
 
-function ShopHeader() {
+function ShopHeader({ initialShopAvailability = null }: { initialShopAvailability?: { available: boolean; status: "LIVE" | "PREVIEW" | "DISABLED"; message?: string | null } | null }) {
   const pathname = usePathname();
   const { city, cities, setCity, country } = useLocale();
 
@@ -165,7 +165,7 @@ function ShopHeader() {
     available: boolean;
     status: "LIVE" | "PREVIEW" | "DISABLED";
     message?: string | null;
-  } | null>(null);
+  } | null>(initialShopAvailability);
   const shopUnavailable = shopAvailability?.available === false;
   const shopPreview = shopAvailability?.status === "PREVIEW" && shopAvailability.available;
 

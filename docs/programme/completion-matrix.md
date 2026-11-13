@@ -635,3 +635,8 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Demo wording in drawer | "live stock" replaced with demonstration-listing wording | VERIFIED |
 | Category rail acceptance | 145/145 on canonical: 37 categories, 19 populated/18 empty, 35 images, arrows/swipe/keyboard/snap/reduced motion, directory, no overflow | VERIFIED |
 | Empty-category demo wording | "live stock/live listings" removed from category pages and drawer | VERIFIED |
+| Activation precedence | Least-permissive rule across GLOBAL/COUNTRY/CITY; local cannot loosen parent; responsible rule exposed; 30/30 | VERIFIED |
+| PREVIEW SSR + access | Authorized preview passes into homepage/Shop layout SSR; unauthorized paused; product page shared preview helper; no-store | VERIFIED |
+| Cart-add paused behaviour | Public cart add blocked in DISABLED/PREVIEW, authorized preview allowed; existing cart/orders readable | VERIFIED |
+| Product-detail gaps | Variant price/stock/invalid combos, approved-only reviews, related failure, seller-location wording, admin/seller lifecycle 97/97 | VERIFIED |
+| Variant admin parity | Read/select works; create/edit management absent (schema exists) | NOT IMPLEMENTED |

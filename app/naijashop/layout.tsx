@@ -1,13 +1,19 @@
 import type { ReactNode } from "react";
 import { ShopShell } from "@/components/shop/shop-header";
+import { previewAuthorizationForRequest, verticalAccess } from "@/lib/services/core/vertical-activation.service";
 
 /**
  * Every /naijashop route renders the same header, panels, single main landmark
  * and Marketplace footer. Adding a route below this layout cannot drift into a
  * landing-only header or a second mobile navigation.
  */
-export default function NaijaShopLayout({ children }: { children: ReactNode }) {
+export default async function NaijaShopLayout({ children }: { children: ReactNode }) {
   const reviewCatalogue = process.env.NEXT_PUBLIC_REVIEW_CATALOGUE === "1";
+  const { previewAuthorized } = await previewAuthorizationForRequest();
+  const shop = await verticalAccess("shop", { countryCode: "NG", previewAuthorized }).catch(() => null);
+  const initialShopAvailability = shop
+    ? { available: shop.accessible, status: shop.effective.status }
+    : null;
   return (
     <>
       {reviewCatalogue ? (
@@ -15,7 +21,7 @@ export default function NaijaShopLayout({ children }: { children: ReactNode }) {
           REVIEW CATALOGUE — demonstration departments and products only. Not live supply.
         </div>
       ) : null}
-      <ShopShell>{children}</ShopShell>
+      <ShopShell initialShopAvailability={initialShopAvailability}>{children}</ShopShell>
     </>
   );
 }
