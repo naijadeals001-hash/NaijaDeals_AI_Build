@@ -165,7 +165,7 @@ function money(value) {
       check(scope, "page catalogue snapshot contains the review listings", viewportProducts.length >= 57, `${viewportProducts.length} rows`);
 
       await page.waitForSelector("[data-storefront-shelf]", { timeout: 180000 });
-      await page.waitForSelector("[data-category-shortcut]", { timeout: 60000 });
+      await page.waitForSelector("[data-category-card]", { timeout: 60000 });
       await page.waitForSelector("[data-african-feature]", { timeout: 60000 });
       await page.waitForTimeout(1000);
 
@@ -269,15 +269,18 @@ function money(value) {
           h1: [...document.querySelectorAll("h1")].map((heading) => (heading.textContent || "").trim()),
           bodyText: document.body.innerText,
           hero: hero ? { rect: rectOf(hero), image: imageInfo(hero.querySelector("img")) } : null,
-          shortcuts: [...document.querySelectorAll("[data-category-shortcut]")].map((link) => ({
-            slug: link.getAttribute("data-category-shortcut"),
-            label: (link.textContent || "").trim(),
-            href: link.getAttribute("href"),
-            tag: link.tagName,
-            tabIndex: link.tabIndex,
-            rect: rectOf(link),
-            image: imageInfo(link.querySelector("img"))
-          })),
+          shortcuts: [...document.querySelectorAll("[data-category-card]")].map((card) => {
+            const link = card.querySelector("a");
+            return {
+              slug: card.getAttribute("data-category-slug"),
+              label: (card.textContent || "").trim(),
+              href: link ? link.getAttribute("href") : null,
+              tag: link ? link.tagName : null,
+              tabIndex: link ? link.tabIndex : null,
+              rect: rectOf(card),
+              image: imageInfo(card.querySelector("img"))
+            };
+          }),
           shelves: [...document.querySelectorAll("[data-storefront-shelf]")].map((section, index) => ({
             id: section.getAttribute("data-storefront-shelf"),
             index,
@@ -329,25 +332,25 @@ function money(value) {
       );
 
       const shortcuts = data.shortcuts;
-      check(scope, "eight compact category shortcuts render", shortcuts.length === 8, `${shortcuts.length} shortcuts`);
+      check(scope, "category rail renders the full eligible set", shortcuts.length >= 30 && shortcuts.length <= 80, `${shortcuts.length} shortcuts`);
       check(
         scope,
-        "shortcuts use the expected real labels and taxonomy destinations",
-        shortcuts.map((shortcut) => shortcut.label).join("|") === EXPECTED_SHORTCUTS.join("|") &&
-          shortcuts.every((shortcut) => shortcut.href === `/naijashop/c/${shortcut.slug}` && allTaxonomySlugs.has(shortcut.slug)),
+        "every rail card links to its real taxonomy category",
+        shortcuts.every((shortcut) => shortcut.href === `/naijashop/c/${shortcut.slug}` && allTaxonomySlugs.has(shortcut.slug)),
         shortcuts.map((shortcut) => `${shortcut.label}:${shortcut.href}`).join(", ")
       );
       check(
         scope,
-        "shortcut tiles are touch-sized and keyboard focusable",
-        shortcuts.every((shortcut) => shortcut.tag === "A" && shortcut.tabIndex >= 0 && shortcut.rect.height >= 44 && shortcut.rect.height <= 120),
+        "rail cards are touch-sized and keyboard focusable",
+        shortcuts.every((shortcut) => shortcut.tag === "A" && shortcut.tabIndex >= 0 && shortcut.rect.height >= 44 && shortcut.rect.height <= 200),
         JSON.stringify(shortcuts.map((shortcut) => ({ label: shortcut.label, height: shortcut.rect.height, tabIndex: shortcut.tabIndex })))
       );
       check(
         scope,
-        "shortcut thumbnails load",
-        shortcuts.every((shortcut) => shortcut.image?.complete && shortcut.image?.naturalWidth > 0),
-        JSON.stringify(shortcuts.filter((shortcut) => !(shortcut.image?.complete && shortcut.image?.naturalWidth > 0)).map((shortcut) => shortcut.label))
+        "rail thumbnails load where art exists",
+        shortcuts.filter((shortcut) => shortcut.image).every((shortcut) => shortcut.image?.complete && shortcut.image?.naturalWidth > 0) &&
+          shortcuts.filter((shortcut) => shortcut.image).length >= 30,
+        JSON.stringify(shortcuts.filter((shortcut) => shortcut.image && !(shortcut.image.complete && shortcut.image.naturalWidth > 0)).map((shortcut) => shortcut.label))
       );
       check(scope, "All departments directory link remains available", (await page.locator('a[href="/naijashop/categories"]').count()) >= 2, String(await page.locator('a[href="/naijashop/categories"]').count()));
       check(scope, "large department-card placeholder is gone", data.departmentPlaceholder === false, "found departments-heading");
@@ -469,8 +472,8 @@ function money(value) {
         allSlugs.filter((slug) => !viewportPublishedSlugs.has(slug)).join(", ")
       );
 
-      await page.locator("[data-category-shortcut]").first().focus();
-      const shortcutFocus = await page.evaluate(() => document.activeElement?.getAttribute("data-category-shortcut"));
+      await page.locator("[data-category-card] a").first().focus();
+      const shortcutFocus = await page.evaluate(() => document.activeElement?.closest("[data-category-card]")?.getAttribute("data-category-slug"));
       check(scope, "category shortcut receives keyboard focus", shortcutFocus === shortcuts[0]?.slug, String(shortcutFocus));
       await page.locator("[data-storefront-shelf] button").first().focus();
       const cardFocus = await page.evaluate(() => ({
@@ -568,12 +571,12 @@ function money(value) {
     const journeyErrors = [];
     journeyPage.on("pageerror", (error) => journeyErrors.push(String(error).slice(0, 240)));
     await journeyPage.goto(`${BASE}/naijashop`, { waitUntil: "load", timeout: 180000 });
-    await journeyPage.waitForSelector("[data-category-shortcut]", { timeout: 120000 });
+    await journeyPage.waitForSelector("[data-category-card]", { timeout: 120000 });
 
-    const shortcutHref = await journeyPage.locator("[data-category-shortcut]").first().getAttribute("href");
+    const shortcutHref = await journeyPage.locator("[data-category-card] a").first().getAttribute("href");
     await Promise.all([
       journeyPage.waitForURL((url) => url.pathname === shortcutHref, { timeout: 120000 }),
-      journeyPage.locator("[data-category-shortcut]").first().click()
+      journeyPage.locator("[data-category-card] a").first().click()
     ]);
     const categoryStatus = await journeyPage.evaluate(() => ({
       path: location.pathname,

@@ -4750,3 +4750,6 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   35 images (19 generated + 7 reused + 9 existing), 145/145 rail audit on 3047, first product
   card 661px at 390, product shelves before rail and wholesale. Empty category/drawer wording
   now uses demonstration listings. Kie cumulative 246 credits (prior 132 + 114 new).
+- Landing audit updated for the full rail: `BASE_URL=http://localhost:3047 node
+  scripts/storefront-landing-audit.cjs` → 95/95 on build `-BwL8p1pF7e-oZb21kNf5`.
+  Empty category/drawer wording verified; rail audit 145/145.
