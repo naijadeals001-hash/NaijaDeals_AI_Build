@@ -236,9 +236,15 @@ export function VerticalActivationWorkspace({ canWrite }: { canWrite: boolean })
       if (!response.ok) {
         throw new Error(body?.error || `The change failed (HTTP ${response.status}).`);
       }
+      const scopeLabel =
+        scopeType === "GLOBAL"
+          ? "all locations (GLOBAL override)"
+          : scopeType === "COUNTRY"
+            ? `${countryCode} (country override)`
+            : `${cityCode}, ${countryCode} (city override)`;
       setNotice(
         method === "PATCH"
-          ? `${selected.publicLabel} is now ${status} for ${currentEffective?.scopeLabel ?? "the selected scope"}. The change is audited.`
+          ? `${selected.publicLabel} is now ${status} for ${scopeLabel}. The change is audited.`
           : `The ${scopeType.toLowerCase()} rule for ${selected.publicLabel} was cleared; the scope now inherits its next rule.`
       );
       setReason("");
