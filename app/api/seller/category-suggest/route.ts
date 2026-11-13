@@ -12,8 +12,18 @@ export async function GET(request: NextRequest) {
     const user = await requireVendor();
     const vendor = await getVendorForUser(user.id);
     const query = request.nextUrl.searchParams.get("q") ?? "";
+    // Model assistance is opt-in. Without `assist=aura` this route stays the
+    // deterministic alias/name search documented in the taxonomy contract.
+    const assist = request.nextUrl.searchParams.get("assist") === "aura" ? "aura" : undefined;
     return NextResponse.json(
-      jsonSafe(await suggestSellerCategories({ countryCode: vendor.countryCode, query }))
+      jsonSafe(
+        await suggestSellerCategories({
+          countryCode: vendor.countryCode,
+          query,
+          userId: user.id,
+          ...(assist ? { assist } : {})
+        })
+      )
     );
   } catch (error) {
     return jsonError(error);

@@ -1,6 +1,7 @@
 import type { CategoryAttributeType, Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
+import { assistSellerCategories } from "./assist";
 import {
   MAX_CATEGORY_LEVEL,
   categoryPath,
@@ -40,6 +41,21 @@ export type CategorySuggestion = {
   categoryId: string;
   path: string;
   reason: string;
+};
+
+export type CategorySuggestionResult = {
+  suggestions: CategorySuggestion[];
+  /** Which engine produced the returned list. The default is deterministic. */
+  mode: "deterministic" | "aura";
+  /** Present only when Aura assistance was explicitly requested. */
+  assist?: {
+    requested: boolean;
+    used: boolean;
+    available: boolean;
+    reason: string | null;
+    model: string | null;
+    retryAfterSeconds?: number;
+  };
 };
 
 type CategoryWithAttributes = CategorySummary & {
@@ -149,9 +165,13 @@ function normaliseQuery(value: string): string {
 export async function suggestSellerCategories(input: {
   countryCode: string;
   query: string;
-}): Promise<{ suggestions: CategorySuggestion[] }> {
+  /** Explicit opt-in; absent means the default deterministic search only. */
+  assist?: "aura";
+  /** Authenticated seller id. Required for the shared Aura rate limit. */
+  userId?: string;
+}): Promise<CategorySuggestionResult> {
   const query = normaliseQuery(input.query ?? "");
-  if (query.length < 2) return { suggestions: [] };
+  if (query.length < 2) return { suggestions: [], mode: "deterministic" };
   if (query.length > 80) throw new ApiError(400, "validation_error", "Search text must be 80 characters or fewer.");
 
   const country = input.countryCode.trim().toUpperCase();
@@ -221,15 +241,54 @@ export async function suggestSellerCategories(input: {
       left.row.id.localeCompare(right.row.id)
   );
 
+  const deterministic = matches.slice(0, 3).map((match) => ({
+    categoryId: match.row.id,
+    path: categoryPath(match.row.id, byId),
+    reason:
+      match.source === "alias"
+        ? `Alias "${match.matched}" matches a category name.`
+        : `Category name "${match.matched}" matches your search.`
+  }));
+
+  if (input.assist !== "aura" || !input.userId) {
+    return { suggestions: deterministic, mode: "deterministic" };
+  }
+
+  // A deterministic exact/alias match is already the most defensible answer;
+  // do not spend a model call to re-rank it. Assistance is for queries the
+  // local vocabulary could not resolve.
+  if (deterministic.length > 0) {
+    return {
+      suggestions: deterministic,
+      mode: "deterministic",
+      assist: {
+        requested: true,
+        used: false,
+        available: true,
+        reason: "deterministic_match",
+        model: null
+      }
+    };
+  }
+
+  const assisted = await assistSellerCategories({
+    userId: input.userId,
+    countryCode: country,
+    query
+  });
   return {
-    suggestions: matches.slice(0, 3).map((match) => ({
-      categoryId: match.row.id,
-      path: categoryPath(match.row.id, byId),
-      reason:
-        match.source === "alias"
-          ? `Alias "${match.matched}" matches a category name.`
-          : `Category name "${match.matched}" matches your search.`
-    }))
+    suggestions: assisted.suggestions,
+    mode: assisted.usedModel ? "aura" : "deterministic",
+    assist: {
+      requested: true,
+      used: assisted.usedModel,
+      available: assisted.available,
+      reason: assisted.reason,
+      model: assisted.model,
+      ...(assisted.retryAfterSeconds !== undefined
+        ? { retryAfterSeconds: assisted.retryAfterSeconds }
+        : {})
+    }
   };
 }
 

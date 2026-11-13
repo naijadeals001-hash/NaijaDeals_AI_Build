@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { sortCategoryRows } from "./shared";
+import { isReachable, sortCategoryRows } from "./shared";
+
+/** Acceptance-suite rows are database categories, never public departments. */
+const CATEGORY_FIXTURE = /^(refund cat|test category|fixture category)\b|^ri-cat-/i;
 
 export type PublicTaxonomyNode = {
   id: string;
@@ -24,9 +27,11 @@ type PublicCategoryRow = {
   imageAlt: string | null;
   parentId: string | null;
   level: number;
+  isActive: boolean;
   isSelectable: boolean;
   showOnHomepage: boolean;
   sortOrder: number;
+  deprecatedAt: Date | null;
 };
 
 /**
@@ -51,15 +56,35 @@ export async function getPublicTaxonomy(): Promise<{ departments: PublicTaxonomy
       imageAlt: true,
       parentId: true,
       level: true,
+      isActive: true,
       isSelectable: true,
       showOnHomepage: true,
-      sortOrder: true
+      sortOrder: true,
+      deprecatedAt: true
     }
   });
 
-  const byId = new Map(rows.map((row) => [row.id, row]));
+  // Fixture-named rows are treated as unavailable when walking ancestors so an
+  // active child of an acceptance fixture cannot appear in public navigation.
+  const reachabilityById = new Map(
+    rows.map((row) => [
+      row.id,
+      {
+        ...row,
+        isActive: row.isActive && !CATEGORY_FIXTURE.test(row.name) && !CATEGORY_FIXTURE.test(row.slug)
+      }
+    ])
+  );
+  const visibleRows = rows.filter(
+    (row) =>
+      !CATEGORY_FIXTURE.test(row.name) &&
+      !CATEGORY_FIXTURE.test(row.slug) &&
+      isReachable(row, reachabilityById)
+  );
+
+  const byId = new Map(visibleRows.map((row) => [row.id, row]));
   const childrenByParent = new Map<string, PublicCategoryRow[]>();
-  for (const row of rows) {
+  for (const row of visibleRows) {
     if (!row.parentId || !byId.has(row.parentId)) continue;
     const list = childrenByParent.get(row.parentId) ?? [];
     list.push(row);
@@ -85,6 +110,6 @@ export async function getPublicTaxonomy(): Promise<{ departments: PublicTaxonomy
     };
   };
 
-  const roots = sortCategoryRows(rows.filter((row) => !row.parentId));
+  const roots = sortCategoryRows(visibleRows.filter((row) => !row.parentId));
   return { departments: roots.map((root) => toNode(root, 0)) };
 }

@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { COUNTRIES } from "@/lib/config/commerce";
+import { effectivePublishRule, isReachable, sortCategoryRows } from "@/lib/services/taxonomy/shared";
 import { listReviews } from "./account.service";
 
 const productInclude = {
@@ -25,7 +26,12 @@ export type CatalogProduct = Awaited<ReturnType<typeof listProducts>>[number];
  */
 export async function listProducts() {
   return prisma.product.findMany({
-    where: { status: "ACTIVE", isSample: false, vendor: { status: "VERIFIED" } },
+    where: {
+      status: "ACTIVE",
+      isSample: false,
+      category: { isActive: true, deprecatedAt: null },
+      vendor: { status: "VERIFIED" }
+    },
     include: productInclude,
     orderBy: { createdAt: "desc" }
   });
@@ -89,9 +95,243 @@ export async function listRelatedProducts(categorySlug: string, excludeId: strin
 /** Acceptance-suite categories are database rows, never public departments. */
 const CATEGORY_FIXTURE = /^(refund cat|test category|fixture category)\b|^ri-cat-/i;
 
+/** Public browsing defaults to the catalogue's home market when none is named. */
+const DEFAULT_PUBLIC_COUNTRY = "NG";
+
+type CategoryTreeRow = {
+  id: string;
+  key: string | null;
+  name: string;
+  slug: string;
+  description: string | null;
+  imageUrl: string | null;
+  imageAlt: string | null;
+  parentId: string | null;
+  level: number;
+  isActive: boolean;
+  isSelectable: boolean;
+  showOnHomepage: boolean;
+  sortOrder: number;
+  deprecatedAt: Date | null;
+};
+
+type PublicCategoryTree = {
+  visibleById: Map<string, CategoryTreeRow>;
+  visible: CategoryTreeRow[];
+  childrenByParent: Map<string, CategoryTreeRow[]>;
+  roots: CategoryTreeRow[];
+  /** Nodes publish-restricted for the requested country; their subtree is excluded. */
+  restricted: Set<string>;
+};
+
+/**
+ * Loads the public category tree once so slug resolution, descendant
+ * aggregation and product counts all use exactly the same rows.
+ *
+ * A node is browsable only when it is active, not deprecated, not an
+ * acceptance fixture, and every ancestor is active and not deprecated. Country
+ * publication rules are evaluated along the ancestor chain: a restricted leaf
+ * is hidden together with its subtree, so a stale product row in a
+ * non-publishable leaf cannot leak into a parent listing.
+ */
+async function loadPublicCategoryTree(countryCode: string): Promise<PublicCategoryTree> {
+  const country = countryCode.trim().toUpperCase() || DEFAULT_PUBLIC_COUNTRY;
+  const rows = await prisma.category.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }, { id: "asc" }],
+    select: {
+      id: true,
+      key: true,
+      name: true,
+      slug: true,
+      description: true,
+      imageUrl: true,
+      imageAlt: true,
+      parentId: true,
+      level: true,
+      isActive: true,
+      isSelectable: true,
+      showOnHomepage: true,
+      sortOrder: true,
+      deprecatedAt: true
+    }
+  });
+
+  // Fixture-named rows count as unavailable when walking ancestors, so an
+  // active child of an acceptance-fixture parent cannot leak into navigation.
+  const reachabilityById = new Map(
+    rows.map((row) => [
+      row.id,
+      {
+        ...row,
+        isActive: row.isActive && !CATEGORY_FIXTURE.test(row.name) && !CATEGORY_FIXTURE.test(row.slug)
+      }
+    ])
+  );
+  const visible = rows.filter(
+    (row) =>
+      row.isActive &&
+      !row.deprecatedAt &&
+      !CATEGORY_FIXTURE.test(row.name) &&
+      !CATEGORY_FIXTURE.test(row.slug) &&
+      isReachable(row, reachabilityById)
+  );
+  const visibleById = new Map(visible.map((row) => [row.id, row]));
+
+  const childrenByParent = new Map<string, CategoryTreeRow[]>();
+  for (const row of visible) {
+    if (!row.parentId || !visibleById.has(row.parentId)) continue;
+    const list = childrenByParent.get(row.parentId) ?? [];
+    list.push(row);
+    childrenByParent.set(row.parentId, list);
+  }
+  for (const [parentId, children] of childrenByParent) {
+    childrenByParent.set(parentId, sortCategoryRows(children));
+  }
+
+  const restricted = new Set<string>();
+  const rules = await prisma.categoryCountryRule.findMany({
+    where: { countryCode: country },
+    select: { categoryId: true, countryCode: true, canPublish: true, note: true }
+  });
+  if (rules.length > 0) {
+    const ruleMap = new Map(rules.map((rule) => [`${rule.categoryId}:${country}`, rule]));
+    for (const row of visible) {
+      const effective = effectivePublishRule({
+        categoryId: row.id,
+        byId: visibleById,
+        rules: ruleMap,
+        countryCode: country
+      });
+      if (!effective.canPublish) restricted.add(row.id);
+    }
+  }
+
+  return {
+    visibleById,
+    visible,
+    childrenByParent,
+    roots: sortCategoryRows(visible.filter((row) => !row.parentId)),
+    restricted
+  };
+}
+
+/**
+ * Selectable ids in a node's subtree. Non-selectable parents (departments and
+ * most level-1 categories) contribute their selectable descendants; a
+ * restricted node contributes nothing at all. Each row is visited once, so a
+ * product cannot be counted twice through two branches.
+ */
+function subtreeIds(tree: PublicCategoryTree, root: CategoryTreeRow): string[] {
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  const queue: CategoryTreeRow[] = [root];
+  while (queue.length > 0) {
+    const current = queue.shift() as CategoryTreeRow;
+    if (seen.has(current.id)) continue;
+    seen.add(current.id);
+    if (tree.restricted.has(current.id)) continue;
+    if (current.isSelectable) ids.push(current.id);
+    for (const child of tree.childrenByParent.get(current.id) ?? []) queue.push(child);
+  }
+  return ids;
+}
+
+export type CategoryScope = {
+  matchedId: string | null;
+  matchedSlug: string | null;
+  matchedName: string | null;
+  countryCode: string;
+  categoryIds: string[];
+};
+
+function findPublicCategory(tree: PublicCategoryTree, term: string): CategoryTreeRow | undefined {
+  const needle = term.trim().toLowerCase();
+  if (!needle) return undefined;
+  return (
+    tree.visible.find((row) => row.slug.toLowerCase() === needle) ??
+    tree.visible.find((row) => row.name.toLowerCase() === needle)
+  );
+}
+
+/**
+ * Resolve a category slug (or case-insensitive name) to every selectable
+ * category id whose products belong on that page.
+ *
+ * - A department/root returns products from its whole active subtree.
+ * - A leaf returns only that leaf.
+ * - An unknown slug returns no ids (an honest empty result, not "no filter").
+ */
+export async function resolveCategoryScope(
+  term: string,
+  options: { countryCode?: string | null } = {}
+): Promise<CategoryScope> {
+  const countryCode = (options.countryCode ?? DEFAULT_PUBLIC_COUNTRY).toUpperCase();
+  const tree = await loadPublicCategoryTree(countryCode);
+  const match = findPublicCategory(tree, term);
+  return {
+    matchedId: match?.id ?? null,
+    matchedSlug: match?.slug ?? null,
+    matchedName: match?.name ?? null,
+    countryCode,
+    categoryIds: match ? subtreeIds(tree, match) : []
+  };
+}
+
+/** Selectable ids across the whole public tree; archived/restricted rows are absent. */
+async function allPublicCategoryIds(countryCode: string): Promise<string[]> {
+  const tree = await loadPublicCategoryTree(countryCode);
+  return tree.visible
+    .filter((row) => row.isSelectable && !tree.restricted.has(row.id))
+    .map((row) => row.id);
+}
+
+/**
+ * Browsing roots for the Shop shell and the public directory.
+ *
+ * The contract requires the same active roots that `/api/taxonomy` returns.
+ * `productCount` is the number of distinct publicly eligible products in the
+ * root's subtree; a product is counted once even when nested categories overlap
+ * in navigation. Prices, stock and fixture filtering stay in the catalogue
+ * query, so this count describes the unfiltered browsing scope the root opens.
+ */
 export async function getCategories() {
-  const categories = await prisma.category.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } });
-  return categories.filter((category) => !CATEGORY_FIXTURE.test(category.name) && !CATEGORY_FIXTURE.test(category.slug));
+  const tree = await loadPublicCategoryTree(DEFAULT_PUBLIC_COUNTRY);
+  const scopes = tree.roots.map((root) => ({ root, ids: subtreeIds(tree, root) }));
+  const ids = [...new Set(scopes.flatMap((scope) => scope.ids))];
+
+  const rows =
+    ids.length > 0
+      ? await prisma.product.findMany({
+          where: {
+            status: "ACTIVE",
+            isSample: false,
+            categoryId: { in: ids },
+            vendor: { status: "VERIFIED" }
+          },
+          select: { id: true, name: true, slug: true, categoryId: true }
+        })
+      : [];
+  const visibleProducts = rows.filter((row) => !STORE_FIXTURE.test(row.name) && !STORE_FIXTURE.test(row.slug));
+
+  return scopes.map(({ root, ids: scopeIds }) => {
+    const wanted = new Set(scopeIds);
+    const distinct = new Set(
+      visibleProducts.filter((product) => wanted.has(product.categoryId)).map((product) => product.id)
+    );
+    return {
+      id: root.id,
+      key: root.key,
+      name: root.name,
+      slug: root.slug,
+      description: root.description,
+      imageUrl: root.imageUrl,
+      imageAlt: root.imageAlt,
+      level: root.level,
+      isSelectable: root.isSelectable,
+      showOnHomepage: root.showOnHomepage,
+      productCount: distinct.size
+    };
+  });
 }
 
 /**
@@ -289,11 +529,18 @@ export function parseCatalogQuery(params: URLSearchParams): { query: CatalogQuer
   };
 }
 
-function buildWhere(query: CatalogQuery): Prisma.ProductWhereInput {
+async function buildWhere(query: CatalogQuery): Promise<Prisma.ProductWhereInput> {
+  // Category pages aggregate the selected node's whole active subtree. The
+  // browser never receives a product whose category is inactive, deprecated,
+  // a test fixture, publish-restricted or detached from a live ancestor.
+  const categoryIds = query.category
+    ? (await resolveCategoryScope(query.category, { countryCode: query.country })).categoryIds
+    : await allPublicCategoryIds(query.country ?? DEFAULT_PUBLIC_COUNTRY);
+
   const where: Prisma.ProductWhereInput = {
     status: "ACTIVE",
     isSample: false,
-    category: { isActive: true },
+    category: { id: { in: categoryIds } },
     vendor: {
       status: "VERIFIED",
       ...(query.market ? { market: { contains: query.market, mode: "insensitive" as const } } : {}),
@@ -301,15 +548,6 @@ function buildWhere(query: CatalogQuery): Prisma.ProductWhereInput {
     }
   };
 
-  if (query.category) {
-    where.category = {
-      isActive: true,
-      OR: [
-        { slug: query.category },
-        { name: { equals: query.category, mode: "insensitive" } }
-      ]
-    };
-  }
   if (query.country) where.countryCode = query.country;
 
   const priceConditions: Prisma.ProductWhereInput[] = [];
@@ -367,7 +605,7 @@ export async function queryCatalogProducts(
   options: { rankedIds?: string[] | null } = {}
 ): Promise<CatalogPage> {
   const rows = await prisma.product.findMany({
-    where: buildWhere(query),
+    where: await buildWhere(query),
     include: productInclude,
     orderBy: orderByFor(query.sort)
   });
