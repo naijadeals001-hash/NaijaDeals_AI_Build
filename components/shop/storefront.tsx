@@ -11,8 +11,7 @@ import {
   Leaf,
   ShieldCheck,
   Store,
-  Truck,
-  Wallet
+  Truck
 } from "lucide-react";
 import { apiClient, type ApiCategory, type ApiProduct } from "@/lib/api-client";
 import { getPublicTaxonomy, type PublicTaxonomyNode } from "@/lib/taxonomy-api";
@@ -84,9 +83,156 @@ function flattenDepartments(nodes: Department[]): Department[] {
   return rows;
 }
 
-function countNodes(nodes: Department[]): number {
-  return nodes.reduce((total, node) => total + 1 + countNodes(node.children ?? []), 0);
+function departmentSlugs(department: Department): string[] {
+  const slugs = [department.slug];
+  for (const child of department.children ?? []) slugs.push(...departmentSlugs(child));
+  return slugs;
 }
+
+/**
+ * Expand a shelf's taxonomy roots into real published slugs. A root that is not
+ * in the current tree falls back to its own slug so a catalogue with a missing
+ * directory never takes unrelated listings from another department.
+ */
+function subtreeSlugs(departments: Department[], rootSlugs: string[]): string[] {
+  const bySlug = new Map(departments.map((department) => [department.slug, department]));
+  const slugs = new Set<string>();
+  for (const rootSlug of rootSlugs) {
+    const node = bySlug.get(rootSlug);
+    if (node) {
+      for (const slug of departmentSlugs(node)) slugs.add(slug);
+    } else {
+      slugs.add(rootSlug);
+    }
+  }
+  return [...slugs];
+}
+
+function findDepartment(departments: Department[], slug: string): Department | null {
+  return departments.find((department) => department.slug === slug) ?? null;
+}
+
+/** Leaf slug → top-level department slug, used to vary the Explore shelf. */
+function rootSlugMap(departments: Department[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const root of departments) {
+    for (const slug of departmentSlugs(root)) map.set(slug, root.slug);
+  }
+  return map;
+}
+
+type Shortcut = { label: string; slug: string };
+
+/**
+ * Short, fixed entry points into published taxonomy pages. Every tile is only
+ * rendered when its node exists in the taxonomy response, so a shortcut can
+ * never point at a department that is not open.
+ */
+const SHORTCUTS: Shortcut[] = [
+  { label: "Phones", slug: "phones-tablets" },
+  { label: "Computers", slug: "computers" },
+  { label: "Fashion", slug: "fashion-accessories" },
+  { label: "Home", slug: "home-kitchen" },
+  { label: "Groceries", slug: "groceries-household" },
+  { label: "Beauty", slug: "beauty-personal-care" },
+  { label: "Solar", slug: "power-solar" },
+  { label: "Gaming", slug: "gaming" }
+];
+
+type ShelfDefinition = {
+  id: string;
+  title: string;
+  description: string;
+  rootSlugs: string[];
+  href: string;
+  linkLabel: string;
+};
+
+/**
+ * Retail shelves are defined by taxonomy roots and rendered with descendant
+ * aggregation. Titles intentionally match the departments they draw from; a
+ * shelf with no eligible listing is omitted rather than padded with unrelated
+ * products or a placeholder card.
+ */
+const SHELF_GROUPS: ShelfDefinition[] = [
+  {
+    id: "phones-computing",
+    title: "Phones & computing",
+    description: "Phones, tablets, laptops and computer accessories.",
+    rootSlugs: ["phones-tablets", "computers"],
+    href: "/naijashop/c/electronics-technology",
+    linkLabel: "All electronics"
+  },
+  {
+    id: "home-kitchen",
+    title: "Home, kitchen & appliances",
+    description: "Cookware, storage, tableware and small kitchen appliances.",
+    rootSlugs: ["home-kitchen", "small-appliances"],
+    href: "/naijashop/c/home-kitchen",
+    linkLabel: "All home & kitchen"
+  },
+  {
+    id: "fashion-accessories",
+    title: "Fashion & accessories",
+    description: "Clothing, footwear, bags and watches.",
+    rootSlugs: ["fashion-accessories"],
+    href: "/naijashop/c/fashion-accessories",
+    linkLabel: "All fashion"
+  },
+  {
+    id: "groceries",
+    title: "Groceries & everyday essentials",
+    description: "Fresh produce, grains, cassava products, oils and pantry staples.",
+    rootSlugs: ["groceries-household", "grains-flours", "oils-soups-seasonings"],
+    href: "/naijashop/c/food-everyday-essentials",
+    linkLabel: "All food & essentials"
+  },
+  {
+    id: "power-solar",
+    title: "Power & solar",
+    description: "Solar panels, inverters, batteries and backup power.",
+    rootSlugs: ["power-solar"],
+    href: "/naijashop/c/power-solar",
+    linkLabel: "All power & solar"
+  },
+  {
+    id: "beauty-personal-care",
+    title: "Beauty & personal care",
+    description: "Skincare, hair care and fragrance.",
+    rootSlugs: ["beauty-personal-care"],
+    href: "/naijashop/c/beauty-personal-care",
+    linkLabel: "All beauty"
+  },
+  {
+    id: "gaming",
+    title: "Gaming",
+    description: "Controllers and gaming accessories.",
+    rootSlugs: ["gaming"],
+    href: "/naijashop/c/gaming",
+    linkLabel: "All gaming"
+  }
+];
+
+/**
+ * One listing per African discovery category. These are demonstration rows;
+ * the section repeats the seller's own item name and image and never adds an
+ * origin, maker or material claim the listing has not recorded.
+ */
+const AFRICAN_FEATURE_SLUGS = [
+  "african-print-fabrics",
+  "handwoven-dyed-fabrics",
+  "shea-natural-butters",
+  "traditional-cleansers-black-soap"
+];
+
+type ShelfView = {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  linkLabel: string;
+  slugs: string[];
+};
 
 type Notice = { text: string; tone: "success" | "error" } | null;
 
@@ -100,14 +246,15 @@ function availableUnits(product: ApiProduct): number | null {
   return null;
 }
 
-function departmentSlugs(department: Department): string[] {
-  const slugs = [department.slug];
-  for (const child of department.children ?? []) slugs.push(...departmentSlugs(child));
-  return slugs;
+/** Landing shelves only show listings with a real image and available stock. */
+function shelfEligible(product: ApiProduct): boolean {
+  const available = availableUnits(product);
+  if (available !== null && available <= 0) return false;
+  return Boolean(product.images?.[0]?.url);
 }
 
-function departmentListingCount(department: Department, byCategory: Map<string, ApiProduct[]>): number {
-  return departmentSlugs(department).reduce((total, slug) => total + (byCategory.get(slug)?.length ?? 0), 0);
+function productNameKey(product: ApiProduct): string {
+  return product.name.trim().toLowerCase();
 }
 
 function naira(value: number) {
@@ -115,16 +262,58 @@ function naira(value: number) {
 }
 
 /**
+ * Spread the Explore shelf across top-level departments instead of repeating
+ * one category. It runs last, so the named retail shelves keep their first
+ * choice of eligible listings and no product appears twice on the landing.
+ */
+function pickExplore(
+  products: ApiProduct[],
+  claimedIds: Set<string>,
+  claimedNames: Set<string>,
+  departments: Department[],
+  limit: number
+): ApiProduct[] {
+  const remaining = products.filter(
+    (product) => !claimedIds.has(product.id) && !claimedNames.has(productNameKey(product)) && shelfEligible(product)
+  );
+  if (remaining.length <= limit) return remaining;
+
+  const rootOf = rootSlugMap(departments);
+  const buckets = new Map<string, ApiProduct[]>();
+  for (const product of remaining) {
+    const root = rootOf.get(product.category?.slug ?? "") ?? "other";
+    const bucket = buckets.get(root);
+    if (bucket) bucket.push(product);
+    else buckets.set(root, [product]);
+  }
+
+  const roots = departments.map((department) => department.slug);
+  const order = [...roots, ...[...buckets.keys()].filter((slug) => !roots.includes(slug))];
+  const picks: ApiProduct[] = [];
+  let added = true;
+  while (picks.length < limit && added) {
+    added = false;
+    for (const root of order) {
+      if (picks.length >= limit) break;
+      const bucket = buckets.get(root);
+      if (bucket && bucket.length > 0) {
+        picks.push(bucket.shift() as ApiProduct);
+        added = true;
+      }
+    }
+  }
+  return picks;
+}
+
+/**
  * NaijaDeals Marketplace storefront.
  *
- * The page keeps the working catalogue, cart, address and storefront-config
- * fetches from the previous storefront but presents them in the owner-approved
- * NaijaDeals system: a text wordmark, a scoped search, clear retail and
- * wholesale entrances, real departments and seller-fact product cards.
- *
- * Nothing here invents stock, discounts, ratings, delivery times or wholesale
- * pricing. Variant products route to their options, and the bulk section links
- * to the producer-quote and freight workflows that actually exist today.
+ * Retail discovery comes first: a compact hero, real taxonomy shortcuts and
+ * populated product shelves rendered before any wholesale content. The page
+ * reuses the working catalogue, cart, address and storefront-config fetches; it
+ * does not invent stock, discounts, ratings, delivery times or wholesale
+ * pricing. Demonstration listings are labelled on every card, and bulk buying
+ * still starts with a producer quote and independent freight.
  */
 export function NaijaDealsMarketplace() {
   const [products, setProducts] = useState<ApiProduct[]>([]);
@@ -179,9 +368,6 @@ export function NaijaDealsMarketplace() {
         setCategoriesStatus("error");
       });
 
-    // The homepage shows only departments the owner marked `showOnHomepage`.
-    // The legacy list stays as a labelled fallback while that endpoint is
-    // unavailable; the difference is stated in the department section.
     getPublicTaxonomy()
       .then(({ departments: roots }) => {
         if (!active) return;
@@ -207,15 +393,6 @@ export function NaijaDealsMarketplace() {
   const showHero = config.showHero !== false;
   const showShelves = config.showShelves !== false;
   const shelfLimit = Math.min(Math.max(config.shelfLimit && config.shelfLimit > 0 ? config.shelfLimit : 4, 1), 8);
-
-  const byCategory = useMemo(() => {
-    const map = new Map<string, ApiProduct[]>();
-    for (const product of products) {
-      const key = product.category?.slug ?? "other";
-      map.set(key, [...(map.get(key) ?? []), product]);
-    }
-    return map;
-  }, [products]);
 
   // Prefer the published taxonomy; then the canonical department directory; if
   // both fail, derive departments from the live products so navigation still
@@ -247,71 +424,73 @@ export function NaijaDealsMarketplace() {
 
   const allDepartments = useMemo(() => flattenDepartments(departments), [departments]);
 
-  // Homepage shelves and cards follow the owner's `showOnHomepage` selection at
-  // any depth. When the taxonomy is unavailable the selection is unknown, so
-  // no department is presented as featured; the directory link remains.
-  const homepageDepartments = useMemo(
-    () => (taxonomyStatus === "ready" ? allDepartments.filter((department) => department.showOnHomepage) : []),
-    [taxonomyStatus, allDepartments]
-  );
-  const featuredDepartmentCount = useMemo(
-    () => allDepartments.filter((department) => department.showOnHomepage).length,
+  const shortcutNodes = useMemo(
+    () =>
+      SHORTCUTS.map((shortcut) => ({ ...shortcut, node: findDepartment(allDepartments, shortcut.slug) })).filter(
+        (shortcut): shortcut is Shortcut & { node: Department } => Boolean(shortcut.node)
+      ),
     [allDepartments]
   );
-  const populatedDepartmentCount = useMemo(
-    () => departments.filter((department) => departmentListingCount(department, byCategory) > 0).length,
-    [departments, byCategory]
-  );
-  const totalNodeCount = useMemo(() => countNodes(departments), [departments]);
 
-  const sellerCount = useMemo(() => new Set(products.map((product) => product.vendor?.id).filter(Boolean)).size, [products]);
+  const demoCount = useMemo(() => products.filter((product) => product.isDemo).length, [products]);
 
-  const priceDrops = useMemo(() => {
-    const seen = new Set<string>();
-    return products
-      .filter((product) => {
-        if (product.compareAtKobo === null || product.compareAtKobo === undefined) return false;
-        const price = Number(product.priceKobo);
-        const compare = Number(product.compareAtKobo);
-        if (!Number.isFinite(price) || !Number.isFinite(compare) || compare <= price) return false;
-        const available = availableUnits(product);
-        return available === null || available > 0;
-      })
-      .sort((a, b) => {
-        const discount = (product: ApiProduct) =>
-          (Number(product.compareAtKobo) - Number(product.priceKobo)) / Number(product.compareAtKobo);
-        return discount(b) - discount(a);
-      })
-      .filter((product) => {
-        const key = product.name.trim().toLowerCase();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .slice(0, 4);
-  }, [products]);
+  const listingFact =
+    status === "ready"
+      ? demoCount === products.length && products.length > 0
+        ? `${products.length} demonstration ${products.length === 1 ? "listing" : "listings"}. Prices, stock and seller names are illustrative.`
+        : `${products.length} published ${products.length === 1 ? "listing" : "listings"}${
+            demoCount > 0 ? `, including ${demoCount} labelled demonstration ${demoCount === 1 ? "listing" : "listings"}` : ""
+          }.`
+      : status === "loading"
+        ? "Loading the published catalogue…"
+        : "The catalogue is unavailable right now.";
 
-  // A product appears at most once on the homepage: price-drop items are
-  // claimed first, then each featured shelf takes unclaimed products from its
-  // own subtree (so a featured parent can surface a child's listing).
-  const shelves = useMemo(() => {
-    const claimed = new Set(priceDrops.map((product) => product.id));
-    const decorated: Array<Department & { items: ApiProduct[] }> = [];
-    for (const department of homepageDepartments) {
-      const slugs = new Set(departmentSlugs(department));
-      const items: ApiProduct[] = [];
-      for (const product of products) {
-        if (items.length >= shelfLimit) break;
-        const slug = product.category?.slug;
-        if (!slug || !slugs.has(slug)) continue;
-        if (claimed.has(product.id)) continue;
-        claimed.add(product.id);
-        items.push(product);
-      }
-      if (items.length > 0) decorated.push({ ...department, items });
+  /**
+   * Claiming order is explicit: African feature first, then named shelves in
+   * their retail order, then Explore from the remainder. This guarantees no
+   * product repeats across shelves and keeps the first shelf a varied mix.
+   */
+  const discovery = useMemo(() => {
+    const claimedIds = new Set<string>();
+    const claimedNames = new Set<string>();
+    const claim = (product: ApiProduct) => {
+      claimedIds.add(product.id);
+      claimedNames.add(productNameKey(product));
+    };
+    const isClaimed = (product: ApiProduct) =>
+      claimedIds.has(product.id) || claimedNames.has(productNameKey(product));
+
+    const african = AFRICAN_FEATURE_SLUGS.map((slug) =>
+      products.find((product) => product.category?.slug === slug && shelfEligible(product))
+    ).filter((product): product is ApiProduct => Boolean(product));
+    african.forEach(claim);
+
+    const shelves: Array<{ shelf: ShelfView; items: ApiProduct[] }> = [];
+    for (const definition of SHELF_GROUPS) {
+      const slugs = subtreeSlugs(allDepartments, definition.rootSlugs);
+      const allowed = new Set(slugs);
+      const items = products
+        .filter((product) => !isClaimed(product) && shelfEligible(product) && allowed.has(product.category?.slug ?? ""))
+        .slice(0, shelfLimit);
+      if (items.length === 0) continue;
+      items.forEach(claim);
+      shelves.push({
+        shelf: {
+          id: definition.id,
+          title: definition.title,
+          description: definition.description,
+          href: definition.href,
+          linkLabel: definition.linkLabel,
+          slugs
+        },
+        items
+      });
     }
-    return decorated.slice(0, 4);
-  }, [homepageDepartments, products, shelfLimit, priceDrops]);
+
+    const exploreItems = pickExplore(products, claimedIds, claimedNames, departments, shelfLimit);
+
+    return { african, shelves, exploreItems };
+  }, [products, departments, allDepartments, shelfLimit]);
 
   // Listings with enough stock for a business enquiry. The unit price shown on
   // the listing is retail; any wholesale price must come from the seller.
@@ -355,6 +534,15 @@ export function NaijaDealsMarketplace() {
     }
   }
 
+  const exploreShelf: ShelfView = {
+    id: "explore",
+    title: "Explore the marketplace",
+    description: "A cross-department mix of eligible demonstration listings.",
+    href: "/naijashop/categories",
+    linkLabel: "Browse all listings",
+    slugs: []
+  };
+
   return (
     <div className="w-full max-w-full bg-[#f4f7f2] text-[#14241b]">
       <div className="mx-auto w-full max-w-[1440px] px-3 pb-10 pt-1 sm:px-6 lg:px-8">
@@ -381,53 +569,62 @@ export function NaijaDealsMarketplace() {
           </div>
         ) : null}
 
-        {/* Retail entrance (left) and wholesale entrance (right). */}
-        <section aria-labelledby="marketplace-hero-heading" className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        {/* Compact, full-width retail entrance. Wholesale no longer shares this row. */}
+        <section
+          aria-labelledby="marketplace-hero-heading"
+          data-storefront-hero
+          className={`mt-4 overflow-hidden rounded-[24px] ${
+            showHero ? "relative bg-[#07351f]" : "border border-[#e1e8de] bg-white"
+          }`}
+        >
           {showHero ? (
-            <div className="relative overflow-hidden rounded-[26px] bg-[#07351f]">
-              <img
-                src="/generated/shop/hero-desktop.webp"
-                alt=""
-                fetchPriority="high"
-                className="absolute inset-0 h-full w-full object-cover object-[64%_center]"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#041f12] via-[#041f12]/90 to-[#041f12]/15" aria-hidden />
-              <div className="relative flex min-h-[410px] flex-col justify-between p-5 sm:min-h-[440px] sm:p-8 lg:min-h-[460px] lg:p-10">
-                <div>
+            <>
+              {!missingArt["/generated/shop/hero-desktop.webp"] ? (
+                <img
+                  src="/generated/shop/hero-desktop.webp"
+                  alt=""
+                  fetchPriority="high"
+                  onError={() => markMissing("/generated/shop/hero-desktop.webp")}
+                  className="absolute inset-0 h-full w-full object-cover object-[72%_center] sm:object-[66%_center]"
+                />
+              ) : null}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#041f12] via-[#041f12]/90 to-[#041f12]/10" aria-hidden />
+              <div className="relative flex flex-col justify-between gap-5 px-5 py-5 sm:px-8 sm:py-8 lg:px-10 lg:py-9">
+                <div className="max-w-[36rem]">
                   <p className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#f5b52e] ring-1 ring-white/15">
                     <Store className="h-3 w-3" aria-hidden />
                     Retail marketplace
                   </p>
                   <h1
                     id="marketplace-hero-heading"
-                    className="mt-4 max-w-[36rem] font-display text-[29px] font-extrabold leading-[1.08] tracking-[-0.02em] text-white sm:text-[38px] lg:text-[44px]"
+                    className="mt-3 font-display text-[28px] font-extrabold leading-[1.08] tracking-[-0.02em] text-white sm:text-[36px] lg:text-[42px]"
                   >
                     Everyday retail, from sellers you can check.
                   </h1>
-                  <p className="mt-3 max-w-lg text-[12.5px] leading-6 text-white/80 sm:text-[13.5px]">
-                    Shop electronics, fashion, home, beauty and groceries from sellers across Africa, with demonstration inventory clearly labelled. Checkout with your NaijaDeals
-                    account, protected by escrow until delivery.
+                  <p className="mt-2.5 max-w-lg text-[12px] leading-5 text-white/80 sm:text-[13px] sm:leading-6">
+                    Shop phones, fashion, home, groceries and more. Demonstration listings are labelled, and checkout uses your
+                    NaijaDeals account.
                   </p>
-                  <div className="mt-5 flex flex-wrap gap-2">
+                  <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                     <Link
                       href="/naijashop/categories"
-                      className="inline-flex h-11 items-center gap-2 rounded-full bg-[#f5b52e] px-5 text-[12px] font-extrabold text-[#14241b] transition hover:bg-[#ffd15e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#07351f]"
+                      className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-[#f5b52e] px-2 text-[11px] font-extrabold text-[#14241b] transition hover:bg-[#ffd15e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#07351f] sm:gap-2 sm:px-5 sm:text-[12px]"
                     >
                       Browse departments
-                      <ArrowRight className="h-4 w-4" aria-hidden />
+                      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
                     </Link>
                     <Link
                       href="/naijashop/help"
-                      className="inline-flex h-11 items-center rounded-full border border-white/30 bg-white/5 px-5 text-[12px] font-bold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                      className="inline-flex h-11 items-center justify-center rounded-full border border-white/30 bg-white/5 px-2 text-[11px] font-bold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:px-5 sm:text-[12px]"
                     >
                       How buying works
                     </Link>
                   </div>
                 </div>
-                <ul className="mt-7 flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-semibold text-white/85 sm:text-[10.5px]">
+                <ul className="mt-4 hidden flex-wrap gap-x-4 gap-y-2 text-[10px] font-semibold text-white/85 sm:flex sm:text-[10.5px]">
                   <li className="flex items-center gap-1.5">
                     <BadgeCheck className="h-3.5 w-3.5 text-[#8ed14b]" aria-hidden />
-                    Listings from sellers, with demonstration inventory labelled
+                    Demonstration listings labelled
                   </li>
                   <li className="flex items-center gap-1.5">
                     <ShieldCheck className="h-3.5 w-3.5 text-[#8ed14b]" aria-hidden />
@@ -439,226 +636,94 @@ export function NaijaDealsMarketplace() {
                   </li>
                 </ul>
               </div>
-            </div>
+            </>
           ) : (
-            <div className="rounded-[26px] border border-[#e1e8de] bg-white p-6 sm:p-8">
-              <p className="text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">NaijaDeals Marketplace</p>
-              <h1 id="marketplace-hero-heading" className="mt-2 font-display text-[30px] font-extrabold leading-tight tracking-tight text-[#14241b] sm:text-[38px]">
-                Retail and bulk buying in one place.
-              </h1>
-              <p className="mt-2 max-w-xl text-[12.5px] leading-6 text-[#4b5b51]">
-                Browse live seller listings by department, or start a producer quote for a larger order. Every retail checkout uses your
-                NaijaDeals account.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Link href="/naijashop/categories" className="inline-flex h-10 items-center gap-2 rounded-full bg-[#07351f] px-4 text-[12px] font-extrabold text-white">
+            <div className="flex flex-col gap-3 px-5 py-6 sm:px-8 sm:py-8 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">NaijaDeals Marketplace</p>
+                <h1 id="marketplace-hero-heading" className="mt-2 font-display text-[28px] font-extrabold leading-tight tracking-tight text-[#14241b] sm:text-[36px]">
+                  Everyday retail, from sellers you can check.
+                </h1>
+                <p className="mt-2 text-[12.5px] leading-6 text-[#4b5b51]">
+                  Browse published seller listings by department. Demonstration inventory is labelled and checkout uses your
+                  NaijaDeals account.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link href="/naijashop/categories" className="inline-flex h-11 items-center gap-2 rounded-full bg-[#07351f] px-5 text-[12px] font-extrabold text-white">
                   Browse departments <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
-                <Link href="/naijafresh/business" className="inline-flex h-10 items-center rounded-full border border-[#b9cbb4] px-4 text-[12px] font-extrabold text-[#0b5c33]">
-                  Bulk buying
+                <Link href="/naijashop/help" className="inline-flex h-11 items-center rounded-full border border-[#b9cbb4] px-5 text-[12px] font-extrabold text-[#0b5c33]">
+                  How buying works
                 </Link>
               </div>
             </div>
           )}
-
-          <div className="flex min-w-0 flex-col gap-3">
-            <aside className="flex flex-1 flex-col rounded-[26px] border border-[#eadfc6] bg-[#fbf4e4] p-5 sm:p-6">
-              <div className="flex items-start justify-between gap-3">
-                <span className="rounded-full bg-[#07351f] px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.15em] text-[#f5b52e]">
-                  Wholesale &amp; bulk
-                </span>
-                <Boxes className="h-5 w-5 text-[#0b5c33]" aria-hidden />
-              </div>
-              <h2 className="mt-3 font-display text-[21px] font-extrabold leading-tight tracking-tight text-[#14241b] sm:text-[23px]">
-                Buying for a shop, kitchen or project?
-              </h2>
-              <p className="mt-2 text-[11.5px] leading-5 text-[#4b5b51]">
-                A combined wholesale checkout is not live yet. Bulk quantities are quoted directly by producers, and larger loads move through
-                independent Deliveries & Freight transporters.
-              </p>
-              <ul className="mt-3 space-y-1.5 text-[11px] font-semibold text-[#3d4f43]">
-                <li className="flex items-center gap-2">
-                  <Leaf className="h-4 w-4 shrink-0 text-[#0b5c33]" aria-hidden />
-                  Farm and producer bulk quotes
-                </li>
-                <li className="flex items-center gap-2">
-                  <Truck className="h-4 w-4 shrink-0 text-[#0b5c33]" aria-hidden />
-                  Freight and larger-load transport
-                </li>
-              </ul>
-              <div className="mt-4 rounded-xl border border-[#e3d6bb] bg-white/60 p-3">
-                <p className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#0b5c33]">How a bulk order moves</p>
-                <p className="mt-1 text-[10.5px] leading-4 text-[#4b5b51]">
-                  Producer quote, then a Deliveries & Freight quote, then delivery. Quotes are requests; nothing is charged until you book.
-                </p>
-              </div>
-              <div className="mt-auto flex flex-col gap-2 pt-5">
-                <Link
-                  href="/naijafresh/business"
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#0b5c33] px-4 text-[11.5px] font-extrabold text-white transition hover:bg-[#07351f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#07351f] focus-visible:ring-offset-2"
-                >
-                  Request a bulk quote
-                  <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                </Link>
-                <Link
-                  href="/naijasend/quote"
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#0b5c33]/30 px-4 text-[11.5px] font-extrabold text-[#0b5c33] transition hover:bg-[#eef4ea] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
-                >
-                  Get freight quotes
-                </Link>
-                <p className="text-[9.5px] leading-4 text-[#566359]">
-                  Bulk prices come from the producer&apos;s own quote. Retail listing prices are not wholesale prices.
-                </p>
-              </div>
-            </aside>
-
-            <div className="grid grid-cols-3 divide-x divide-[#e1e8de] rounded-2xl border border-[#e1e8de] bg-white px-1 py-3">
-              {[
-                { value: status === "ready" ? products.length.toLocaleString("en-NG") : "—", label: "listings" },
-                { value: status === "ready" ? sellerCount.toLocaleString("en-NG") : "—", label: "sellers" },
-                { value: status === "ready" ? departments.length.toLocaleString("en-NG") : "—", label: "departments" }
-              ].map((stat) => (
-                <div key={stat.label} className="px-2 text-center">
-                  <p className="font-display text-[17px] font-extrabold leading-none text-[#07351f]">{stat.value}</p>
-                  <p className="mt-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#566359]">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </section>
 
-        <section
-          aria-label="Marketplace protections"
-          className="mt-3 grid grid-cols-2 gap-2 rounded-2xl border border-[#e1e8de] bg-white p-3 sm:grid-cols-4 sm:p-4"
-        >
-          {[
-            { icon: BadgeCheck, title: "Reviewed sellers", body: "Seller accounts are reviewed before listings go live." },
-            { icon: ShieldCheck, title: "Escrow checkout", body: "Paid orders are held until delivery is confirmed." },
-            { icon: Truck, title: "Tracked delivery", body: "Delivery events are recorded by Deliveries & Freight." },
-            { icon: Wallet, title: "One account", body: "Cart, orders and addresses across NaijaDeals." }
-          ].map((item) => (
-            <div key={item.title} className="flex items-start gap-2">
-              <item.icon className="mt-0.5 h-4 w-4 shrink-0 text-[#0f7a4a]" aria-hidden />
-              <div className="min-w-0">
-                <p className="text-[11.5px] font-extrabold leading-tight text-[#14241b]">{item.title}</p>
-                <p className="mt-0.5 text-[10px] leading-4 text-[#566359]">{item.body}</p>
+        {/* Compact taxonomy shortcuts; the full hierarchy stays in All departments. */}
+        {taxonomyStatus === "ready" && shortcutNodes.length > 0 ? (
+          <section aria-labelledby="category-shortcuts-heading" className="mt-4">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 id="category-shortcuts-heading" className="font-display text-[19px] font-extrabold tracking-tight text-[#14241b] sm:text-[21px]">
+                  Shop by category
+                </h2>
+                <p className="mt-0.5 text-[10.5px] leading-5 text-[#566359]">{listingFact}</p>
               </div>
-            </div>
-          ))}
-        </section>
-
-        <section aria-labelledby="departments-heading" className="mt-8">
-          <SectionHeading eyebrow="Departments" title="Featured in the marketplace" id="departments-heading" href="/naijashop/categories" linkLabel="All departments" />
-          <p className="mt-1 text-[10.5px] leading-5 text-[#566359]">
-            {taxonomyStatus === "ready"
-              ? `${departments.length} departments · ${totalNodeCount} published nodes · ${populatedDepartmentCount} departments with live stock · ${featuredDepartmentCount} homepage-featured ${
-                  featuredDepartmentCount === 1 ? "node" : "nodes"
-                }.`
-              : taxonomyStatus === "loading"
-                ? "Loading the published department directory…"
-                : `${departments.length} departments are available in the fallback directory. The published homepage selection could not be loaded, so no department is presented as featured here.`}
-          </p>
-          {taxonomyStatus === "ready" && homepageDepartments.length === 0 ? (
-            <div className="mt-3 rounded-2xl border border-dashed border-[#cfdccb] bg-white p-5 text-[12px] leading-6 text-[#4b5b51]">
-              <p className="font-extrabold text-[#14241b]">No department is featured on the homepage right now.</p>
-              <p className="mt-1">
-                The published directory is still available. Homepage nodes are chosen in the Control Center taxonomy with
-                the homepage flag, not by product count.
-              </p>
               <Link
                 href="/naijashop/categories"
-                className="mt-2 inline-flex items-center gap-1 font-extrabold text-[#0b5c33] underline"
+                className="inline-flex items-center gap-1 rounded text-[11px] font-extrabold text-[#0b5c33] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
               >
-                Browse all departments <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                All departments
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden />
               </Link>
             </div>
-          ) : null}
-          {taxonomyStatus === "error" ? (
-            <div role="status" className="mt-3 rounded-2xl border border-[#eadfc6] bg-[#fbf4e4] p-4 text-[11.5px] leading-5 text-[#7a4c00]">
-              <p className="font-extrabold">The homepage department selection is unavailable right now.</p>
-              <p className="mt-1">
-                No published department is being presented as featured, because that flag comes from the taxonomy API. The
-                rest of the marketplace and the full directory still work.
-              </p>
-              <Link
-                href="/naijashop/categories"
-                className="mt-2 inline-flex items-center gap-1 font-extrabold underline"
-              >
-                Browse all departments <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-              </Link>
-            </div>
-          ) : null}
-          {homepageDepartments.length > 0 ? (
-            <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4">
-              {homepageDepartments.map((department) => {
-                const count = departmentListingCount(department, byCategory);
-                const serverCount =
-                  typeof department.subtreeProductCount === "number"
-                    ? department.subtreeProductCount
-                    : typeof department.productCount === "number" && (department.children?.length ?? 0) === 0
-                      ? department.productCount
-                      : null;
-                const url = department.imageUrl || `/generated/shop/category-${department.slug}.webp`;
+            <ul className="mt-2.5 grid grid-cols-4 gap-2 sm:grid-cols-8">
+              {shortcutNodes.map((shortcut) => {
+                const image = shortcut.node.imageUrl;
                 return (
-                  <li key={department.id}>
+                  <li key={shortcut.slug} className="min-w-0">
                     <Link
-                      href={`/naijashop/c/${department.slug}`}
-                      className="group block overflow-hidden rounded-2xl border border-[#e1e8de] bg-white transition duration-300 hover:-translate-y-0.5 hover:border-[#c7d7c2] hover:shadow-[0_14px_30px_rgba(7,53,31,0.09)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
+                      href={`/naijashop/c/${shortcut.slug}`}
+                      data-category-shortcut={shortcut.slug}
+                      className="group flex h-full min-w-0 flex-col items-center justify-center gap-1 rounded-xl border border-[#e1e8de] bg-white px-1 py-1.5 text-center transition hover:-translate-y-0.5 hover:border-[#c7d7c2] hover:shadow-[0_10px_22px_rgba(7,53,31,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2 sm:gap-1.5 sm:py-2"
                     >
-                      <div className="aspect-[16/10] w-full overflow-hidden bg-[#eef4ea]">
-                        {!missingArt[url] ? (
+                      <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-[#eef4ea] sm:h-12 sm:w-12">
+                        {image && !missingArt[image] ? (
                           <img
-                            src={url}
+                            src={image}
                             alt=""
                             loading="lazy"
-                            onError={() => markMissing(url)}
-                            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.05]"
+                            onError={() => markMissing(image)}
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                           />
                         ) : (
-                          <span className="grid h-full w-full place-items-center bg-[#eef4ea]">
-                            <Store className="h-6 w-6 text-[#7a9c80]" aria-hidden />
-                          </span>
+                          <Store className="h-5 w-5 text-[#7a9c80]" aria-hidden />
                         )}
-                      </div>
-                      <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-                        <span className="min-w-0">
-                          <span className="block truncate text-[12px] font-extrabold text-[#14241b] sm:text-[13px]">{department.name}</span>
-                          <span className="mt-0.5 block text-[10px] font-semibold text-[#566359]">
-                            {status === "ready"
-                              ? count > 0
-                                ? `${count} ${count === 1 ? "listing" : "listings"}`
-                                : department.canPublish === false
-                                  ? "Not available in your market"
-                                  : department.isSelectable === false && (department.children?.length ?? 0) === 0
-                                    ? "Browse-only node"
-                                    : "Published — no live stock yet"
-                              : status === "loading"
-                                ? "Loading stock…"
-                                : serverCount !== null && serverCount > 0
-                                  ? `${serverCount} ${serverCount === 1 ? "listing" : "listings"} (server count)`
-                                  : "Stock unavailable"}
-                          </span>
-                        </span>
-                        <ArrowUpRight className="h-4 w-4 shrink-0 text-[#0f7a4a]" aria-hidden />
-                      </div>
+                      </span>
+                      <span className="min-w-0 break-words text-[10px] font-extrabold leading-tight text-[#14241b] sm:text-[11px]">
+                        {shortcut.label}
+                      </span>
                     </Link>
                   </li>
                 );
               })}
             </ul>
-          ) : null}
-          {categoriesStatus === "error" && taxonomyStatus !== "ready" ? (
-            <p className="mt-2 text-[11px] text-[#8a4a10]">
-              The department directory could not be refreshed. The All menu and the departments page remain available;
-              homepage cards stay hidden rather than presenting an unverified selection.
-            </p>
-          ) : null}
-        </section>
+          </section>
+        ) : null}
+
+        {taxonomyStatus === "error" ? (
+          <p role="status" className="mt-3 rounded-xl border border-[#eadfc6] bg-[#fbf4e4] px-3 py-2 text-[11px] leading-5 text-[#7a4c00]">
+            The published department directory could not be loaded, so category shortcuts are hidden.
+            {categoriesStatus === "ready" ? " The fallback directory and All departments still work." : " The fallback directory could not be loaded either."}
+          </p>
+        ) : null}
 
         {status === "loading" ? <MarketplaceSkeleton /> : null}
 
         {status === "error" ? (
-          <div role="alert" className="mt-8 rounded-3xl border border-[#f0c8c2] bg-[#fdf2f0] p-6">
+          <div role="alert" className="mt-6 rounded-3xl border border-[#f0c8c2] bg-[#fdf2f0] p-6">
             <AlertCircle className="h-6 w-6 text-[#b42318]" aria-hidden />
             <h2 className="mt-2 font-display text-[20px] font-extrabold text-[#7a1c12]">We couldn&apos;t load the listings</h2>
             <p className="mt-1 max-w-2xl text-[12px] leading-6 text-[#8a1c14]">
@@ -675,12 +740,12 @@ export function NaijaDealsMarketplace() {
         ) : null}
 
         {status === "ready" && products.length === 0 ? (
-          <div className="mt-8 rounded-3xl border border-[#dfe8dc] bg-white px-5 py-10 text-center">
+          <div className="mt-6 rounded-3xl border border-[#dfe8dc] bg-white px-5 py-10 text-center">
             <Store className="mx-auto h-8 w-8 text-[#7a9c80]" aria-hidden />
-            <h2 className="mt-3 font-display text-[22px] font-extrabold text-[#14241b]">No live seller listings yet</h2>
+            <h2 className="mt-3 font-display text-[22px] font-extrabold text-[#14241b]">No published seller listings yet</h2>
             <p className="mx-auto mt-1 max-w-xl text-[12px] leading-6 text-[#4b5b51]">
-              The marketplace shows only published listings from reviewed sellers; demonstration inventory is labelled. Sample and test rows are hidden until a real seller
-              publishes stock.
+              The marketplace shows only published listings from reviewed sellers; demonstration inventory is labelled. Sample and test rows are
+              hidden until a seller publishes stock.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <Link href="/sell" className="inline-flex h-10 items-center gap-2 rounded-full bg-[#07351f] px-4 text-[11.5px] font-extrabold text-white">
@@ -693,108 +758,42 @@ export function NaijaDealsMarketplace() {
           </div>
         ) : null}
 
-        {status === "ready" && showShelves && priceDrops.length > 0 ? (
-          <section aria-labelledby="price-drops-heading" className="mt-8">
-            <SectionHeading eyebrow="Real reductions" title="Seller price drops" id="price-drops-heading" href="/naijashop/deals" linkLabel="More low prices" />
-            <p className="mt-1 text-[10.5px] leading-5 text-[#566359]">
-              Reductions appear only where a seller recorded a higher compare-at price.
-            </p>
-            <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 lg:grid-cols-4">
-              {priceDrops.map((product) => (
-                <li key={product.id} className="min-w-0">
-                  <MarketplaceProductCard
-                    product={product}
-                    onAdd={addToCart}
-                    adding={addingId === product.id}
-                    added={addedId === product.id}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
+        {status === "ready" && showShelves && discovery.exploreItems.length > 0 ? (
+          <ProductShelf
+            shelf={exploreShelf}
+            items={discovery.exploreItems}
+            onAdd={addToCart}
+            addingId={addingId}
+            addedId={addedId}
+          />
         ) : null}
 
         {status === "ready" && showShelves
-          ? shelves.map((department) => (
-              <section key={department.id} aria-labelledby={`shelf-${department.slug}`} className="mt-8">
-                <div className="flex flex-wrap items-end justify-between gap-2">
-                  <div>
-                    <p className="text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">Live listings</p>
-                    <h2 id={`shelf-${department.slug}`} className="mt-1 font-display text-[21px] font-extrabold tracking-tight text-[#14241b] sm:text-[24px]">
-                      {department.name}
-                    </h2>
-                  </div>
-                  <Link
-                    href={`/naijashop/c/${department.slug}`}
-                    className="inline-flex items-center gap-1 rounded text-[11px] font-extrabold text-[#0b5c33] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
-                  >
-                    View all {department.name}
-                    <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                  </Link>
-                </div>
-                <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 lg:grid-cols-4">
-                  {department.items.map((product) => (
-                    <li key={product.id} className="min-w-0">
-                      <MarketplaceProductCard
-                        product={product}
-                        onAdd={addToCart}
-                        adding={addingId === product.id}
-                        added={addedId === product.id}
-                      />
-                    </li>
-                  ))}
-                  {department.items.length < shelfLimit ? (
-                    <li className="min-w-0">
-                      <Link
-                        href={`/naijashop/c/${department.slug}`}
-                        className="group relative flex h-full min-h-[18rem] overflow-hidden rounded-2xl bg-[#07351f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
-                      >
-                        {!missingArt[department.imageUrl || `/generated/shop/category-${department.slug}.webp`] ? (
-                          <img
-                            src={department.imageUrl || `/generated/shop/category-${department.slug}.webp`}
-                            alt=""
-                            loading="lazy"
-                            onError={() => markMissing(department.imageUrl || `/generated/shop/category-${department.slug}.webp`)}
-                            className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-                          />
-                        ) : null}
-                        <span className="absolute inset-0 bg-gradient-to-t from-[#041f12]/95 via-[#041f12]/55 to-[#041f12]/10" aria-hidden />
-                        <span className="relative mt-auto p-4 text-white">
-                          <span className="block text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#8ed14b]">More in</span>
-                          <span className="mt-1 block font-display text-[20px] font-extrabold leading-tight">{department.name}</span>
-                          <span className="mt-1 block text-[10.5px] leading-4 text-white/80">
-                            See every live listing in this department.
-                          </span>
-                          <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-extrabold text-[#f5b52e]">
-                            View all
-                            <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                          </span>
-                        </span>
-                      </Link>
-                    </li>
-                  ) : null}
-                </ul>
-              </section>
+          ? discovery.shelves.map(({ shelf, items }) => (
+              <ProductShelf key={shelf.id} shelf={shelf} items={items} onAdd={addToCart} addingId={addingId} addedId={addedId} />
             ))
           : null}
 
+        {status === "ready" && discovery.african.length > 0 ? (
+          <AfricanDiscovery items={discovery.african} />
+        ) : null}
+
         {status !== "loading" ? (
-          <section aria-labelledby="bulk-heading" className="mt-10 overflow-hidden rounded-[28px] bg-[#07351f] text-white">
+          <section data-storefront-wholesale aria-labelledby="bulk-heading" className="mt-8 overflow-hidden rounded-[28px] bg-[#07351f] text-white">
             <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-7 p-5 sm:p-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-10 lg:p-10">
               <div className="min-w-0">
-                <p className="break-words text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-[#f5b52e]">Producer and wholesale connections</p>
+                <p className="break-words text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-[#f5b52e]">Wholesale &amp; bulk</p>
                 <h2 id="bulk-heading" className="mt-2 break-words font-display text-[25px] font-extrabold leading-tight tracking-tight sm:text-[30px]">
-                  Source in bulk. Move it with Deliveries & Freight.
+                  Source in bulk. Move it with Deliveries &amp; Freight.
                 </h2>
                 <p className="mt-2 max-w-xl text-[11.5px] leading-6 text-[#c3d9c7] sm:text-[12.5px]">
                   NaijaDeals does not run a combined wholesale checkout with tiered pricing yet. Today, bulk buying starts with a producer
-                  quote and ends with independent freight — both are live in the ecosystem.
+                  quote and ends with independent freight — both are available in the ecosystem.
                 </p>
-                <ol className="mt-5 grid gap-2 sm:grid-cols-3">
+                <ol className="mt-5 grid gap-2 sm:grid-cols-2">
                   {[
                     { icon: Leaf, title: "Ask a producer", body: "Request the quantity from a NaijaFresh farm; the farm sets its own quote.", href: "/naijafresh/business", cta: "Bulk produce" },
-                    { icon: Truck, title: "Book freight", body: "Independent Deliveries & Freight transporters quote larger loads.", href: "/naijasend/quote", cta: "Freight quote" },
-                    { icon: Store, title: "Sell onward", body: "Apply for a seller account if you are buying to resell.", href: "/sell", cta: "Start selling" }
+                    { icon: Truck, title: "Book freight", body: "Independent Deliveries & Freight transporters quote larger loads.", href: "/naijasend/quote", cta: "Freight quote" }
                   ].map((step, index) => (
                     <li key={step.title} className="rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">
                       <div className="flex items-center gap-2">
@@ -871,7 +870,7 @@ export function NaijaDealsMarketplace() {
                   )
                 ) : (
                   <p className="mt-3 rounded-xl bg-white/[0.05] p-3 text-[10.5px] leading-5 text-[#c3d9c7]">
-                    Live availability could not be loaded. The producer and freight links still work.
+                    Availability could not be loaded. The producer and freight links still work.
                   </p>
                 )}
                 <p className="mt-3 text-[9.5px] leading-4 text-[#9fc3a9]">
@@ -881,48 +880,159 @@ export function NaijaDealsMarketplace() {
             </div>
           </section>
         ) : null}
+
+        {/* Seller invitation is deliberately subordinate to retail discovery. */}
+        <section data-seller-invite aria-labelledby="seller-invite-heading" className="mt-4 rounded-2xl border border-[#e1e8de] bg-white px-4 py-4 sm:px-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">For sellers</p>
+              <h2 id="seller-invite-heading" className="mt-1 font-display text-[18px] font-extrabold tracking-tight text-[#14241b]">
+                Have stock to sell?
+              </h2>
+              <p className="mt-1 max-w-2xl text-[11px] leading-5 text-[#566359]">
+                Apply for a seller account to publish eligible stock on the marketplace.
+              </p>
+            </div>
+            <Link
+              href="/sell"
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[#b9cbb4] px-4 text-[11.5px] font-extrabold text-[#0b5c33] transition hover:bg-[#eef5eb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
+            >
+              Open a seller account
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+          </div>
+        </section>
       </div>
     </div>
   );
 }
 
-function SectionHeading({
-  eyebrow,
-  title,
-  id,
-  href,
-  linkLabel
+/** A retail shelf: real heading link, real cards, no filler or promo placeholder. */
+function ProductShelf({
+  shelf,
+  items,
+  onAdd,
+  addingId,
+  addedId
 }: {
-  eyebrow: string;
-  title: string;
-  id: string;
-  href?: string;
-  linkLabel?: string;
+  shelf: ShelfView;
+  items: ApiProduct[];
+  onAdd: (product: ApiProduct) => void;
+  addingId: string;
+  addedId: string;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-2">
-      <div>
-        <p className="text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">{eyebrow}</p>
-        <h2 id={id} className="mt-1 font-display text-[22px] font-extrabold tracking-tight text-[#14241b] sm:text-[26px]">
-          {title}
-        </h2>
-      </div>
-      {href && linkLabel ? (
+    <section
+      aria-labelledby={`shelf-${shelf.id}`}
+      data-storefront-shelf={shelf.id}
+      data-shelf-slugs={shelf.slugs.length > 0 ? shelf.slugs.join(" ") : "*"}
+      className="mt-7"
+    >
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">Demonstration catalogue</p>
+          <h2 id={`shelf-${shelf.id}`} className="mt-1 break-words font-display text-[20px] font-extrabold tracking-tight text-[#14241b] sm:text-[24px]">
+            {shelf.title}
+          </h2>
+          <p className="mt-1 max-w-2xl text-[10.5px] leading-5 text-[#566359]">{shelf.description}</p>
+        </div>
         <Link
-          href={href}
+          href={shelf.href}
           className="inline-flex items-center gap-1 rounded text-[11px] font-extrabold text-[#0b5c33] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
         >
-          {linkLabel}
+          {shelf.linkLabel}
           <ArrowRight className="h-3.5 w-3.5" aria-hidden />
         </Link>
-      ) : null}
-    </div>
+      </div>
+      <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 lg:grid-cols-4">
+        {items.map((product) => (
+          <li key={product.id} className="min-w-0">
+            <MarketplaceProductCard
+              product={product}
+              onAdd={onAdd}
+              adding={addingId === product.id}
+              added={addedId === product.id}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * Editorial African discovery band. It reuses approved demonstration listing
+ * images and the seller's own item names, and explicitly avoids adding an
+ * origin or maker claim.
+ */
+function AfricanDiscovery({ items }: { items: ApiProduct[] }) {
+  return (
+    <section
+      aria-labelledby="african-discovery-heading"
+      data-african-feature
+      className="mt-8 overflow-hidden rounded-[26px] bg-[#07351f] text-white"
+    >
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="min-w-0 p-5 sm:p-8">
+          <p className="text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-[#f5b52e]">African discovery</p>
+          <h2 id="african-discovery-heading" className="mt-2 break-words font-display text-[24px] font-extrabold leading-tight tracking-tight sm:text-[28px]">
+            African print, handwoven cloth and natural care.
+          </h2>
+          <p className="mt-2 max-w-lg text-[11.5px] leading-6 text-[#c3d9c7] sm:text-[12.5px]">
+            Explore demonstration listings for African-print fabric, handwoven cloth, shea butter and black soap. Item names and
+            imagery come from the listing; no maker or origin is claimed where the seller has not recorded one.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {[
+              { label: "African-print fabrics", href: "/naijashop/c/african-print-fabrics" },
+              { label: "Handwoven & dyed", href: "/naijashop/c/handwoven-dyed-fabrics" },
+              { label: "Shea & natural butters", href: "/naijashop/c/shea-natural-butters" }
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="inline-flex h-9 items-center rounded-full border border-white/25 px-3 text-[10.5px] font-extrabold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+        <ul className="grid min-w-0 grid-cols-2 gap-2 p-3 sm:gap-3 sm:p-6">
+          {items.map((product) => (
+            <li key={product.id} data-african-item={product.slug} className="min-w-0">
+              <Link
+                href={`/product/${product.slug}`}
+                className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl bg-white text-[#14241b] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5b52e] focus-visible:ring-offset-2 focus-visible:ring-offset-[#07351f]"
+              >
+                <span className="relative block aspect-[4/3] overflow-hidden bg-[#f6f8f4]">
+                  <img
+                    src={product.images?.[0]?.url}
+                    alt={product.images?.[0]?.alt || product.name}
+                    loading="lazy"
+                    className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]"
+                  />
+                  <span className="absolute left-1.5 top-1.5 rounded-full bg-[#F2D48C] px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase tracking-wide text-[#07351f]">
+                    DEMO
+                  </span>
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col p-2.5">
+                  <span className="line-clamp-2 break-words text-[11px] font-bold leading-4">{product.name}</span>
+                  <span className="mt-1 text-[12px] font-extrabold tracking-tight">{naira(Number(product.priceKobo))}</span>
+                  <span className="mt-0.5 text-[9px] font-semibold text-[#566359]">Illustrative demonstration listing</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }
 
 function MarketplaceSkeleton() {
   return (
-    <section aria-busy="true" aria-label="Loading marketplace listings" className="mt-8">
+    <section aria-busy="true" aria-label="Loading marketplace listings" className="mt-6">
       <p className="sr-only">Loading marketplace listings…</p>
       <div className="h-4 w-40 animate-pulse rounded-full bg-[#e3ebdf]" />
       <div className="mt-2 h-6 w-64 animate-pulse rounded-full bg-[#e3ebdf]" />

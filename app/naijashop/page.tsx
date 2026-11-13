@@ -3,9 +3,9 @@ import { Suspense } from "react";
 import { NaijaDealsMarketplace } from "@/components/shop/storefront";
 
 export const metadata: Metadata = {
-  title: "NaijaDeals Marketplace — retail and bulk buying",
+  title: "NaijaDeals Marketplace — shop everyday retail",
   description:
-    "Shop everyday retail listings from sellers across Africa, with demonstration inventory clearly labelled, or start a producer quote for bulk buying and freight through NaijaDeals."
+    "Browse retail shelves for phones, computing, home, fashion, groceries, power, beauty and gaming from sellers across Africa. Demonstration listings are labelled; bulk buying and freight stay available through NaijaDeals."
 };
 
 export default function Page() {
