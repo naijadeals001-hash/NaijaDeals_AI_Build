@@ -633,3 +633,5 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Browsing visibility admin | `Category.browsingVisible` separate from publication/homepage/selectable; admin edit + audit + tests 16/16 | VERIFIED |
 | Mobile product-first order | Explore shelf moved before category rail; first product card 661 px (was 910) | VERIFIED |
 | Demo wording in drawer | "live stock" replaced with demonstration-listing wording | VERIFIED |
+| Category rail acceptance | 145/145 on canonical: 37 categories, 19 populated/18 empty, 35 images, arrows/swipe/keyboard/snap/reduced motion, directory, no overflow | VERIFIED |
+| Empty-category demo wording | "live stock/live listings" removed from category pages and drawer | VERIFIED |

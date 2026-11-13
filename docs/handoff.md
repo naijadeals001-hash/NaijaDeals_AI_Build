@@ -4746,3 +4746,7 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 - Drawer wording now says demonstration listings, not live stock.
 - Product detail, seller/admin parity and Shop activation from the prior increment remain
   integrated in this build; landing audit/smoke/basket/financial suites rechecked by reviewer.
+- Final category-rail build `-BwL8p1pF7e-oZb21kNf5`: 37 level-1 categories, 19 populated,
+  35 images (19 generated + 7 reused + 9 existing), 145/145 rail audit on 3047, first product
+  card 661px at 390, product shelves before rail and wholesale. Empty category/drawer wording
+  now uses demonstration listings. Kie cumulative 246 credits (prior 132 + 114 new).

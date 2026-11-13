@@ -160,7 +160,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                   {total === null
                     ? "The catalogue count could not be checked. The grid below loads the listings, or its own error state."
                     : total === 0
-                      ? "No live listings were returned for this branch as a whole yet. Its published subcategories may still have live stock."
+                      ? "No demonstration listings were returned for this branch as a whole yet. Its published subcategories may still contain demonstration listings."
                       : "Listings for this branch are returned by the catalogue and shown once in the grid below."}{" "}
                   Each listing appears once; nothing is repeated from the subcategories.
                 </p>
@@ -184,10 +184,10 @@ export default async function CategoryPage({ params }: { params: { slug: string 
             ) : total === 0 ? (
               <div className="mt-2 rounded-lg border border-dashed border-[#cfdccb] bg-white p-3">
                 <p className="break-words text-[12px] font-extrabold text-[#0f1111]">
-                  No live listings in {match.node.name} yet.
+                  No demonstration listings in {match.node.name} yet.
                 </p>
                 <p className="mt-1 text-[11.5px] leading-5 text-[#565959]">
-                  The category is published and open for listings, but no seller has live stock here. Nothing is hidden and
+                  The category is published and open for listings, but no seller has published a demonstration listing here. Nothing is hidden and
                   no listing is invented.
                 </p>
                 {alternatives.length > 0 ? (

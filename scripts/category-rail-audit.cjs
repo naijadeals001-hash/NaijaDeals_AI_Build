@@ -327,7 +327,7 @@ async function compareCards(snapshot, eligible, scope) {
 
 async function runViewport(browser, viewport, fallbackEligible) {
   const scope = viewport.name;
-  const context = await browser.newContext({
+  const context = await browser.newContext({ serviceWorkers: "block",
     viewport: { width: viewport.width, height: viewport.height },
     isMobile: viewport.touch,
     hasTouch: viewport.touch,
@@ -376,7 +376,7 @@ async function runViewport(browser, viewport, fallbackEligible) {
       railBeforeWholesale: follows(rail, wholesale)
     };
   });
-  check(`${scope}: product shelves keep their early position`, order.shelfCount >= 4 && order.railBeforeFirstShelf, `${order.shelfCount} shelves, rail before first: ${order.railBeforeFirstShelf}`);
+  check(`${scope}: product discovery precedes the category rail`, order.shelfCount >= 4 && !order.railBeforeFirstShelf && order.railBeforeWholesale, `${order.shelfCount} shelves, rail before first: ${order.railBeforeFirstShelf}`);
   check(`${scope}: every shelf precedes wholesale`, order.allShelvesBeforeWholesale && order.railBeforeWholesale, `rail<wholesale ${order.railBeforeWholesale}`);
 
   // Boundary state at the start: focused control stays focused and inert.
@@ -527,7 +527,7 @@ async function warmDirectory(page) {
 
 async function runDirectory(browser, viewport, fallbackEligible) {
   const scope = `directory ${viewport.name}`;
-  const context = await browser.newContext({
+  const context = await browser.newContext({ serviceWorkers: "block",
     viewport: { width: viewport.width, height: viewport.height },
     isMobile: viewport.touch,
     hasTouch: viewport.touch,
@@ -613,7 +613,7 @@ async function runDirectory(browser, viewport, fallbackEligible) {
 }
 
 async function checkAllCategoryLinks(browser, hrefs) {
-  const context = await browser.newContext();
+  const context = await browser.newContext({ serviceWorkers: "block" });
   const request = context.request;
   const queue = [...new Set(hrefs)];
   const results = [];
@@ -640,7 +640,7 @@ async function checkAllCategoryLinks(browser, hrefs) {
 }
 
 async function runReducedMotion(browser, eligible) {
-  const context = await browser.newContext({
+  const context = await browser.newContext({ serviceWorkers: "block",
     viewport: { width: 390, height: 844 },
     isMobile: true,
     hasTouch: true,
@@ -676,7 +676,7 @@ async function runReducedMotion(browser, eligible) {
 async function runStateInterception(browser, eligible, taxonomy) {
   // Storefront: taxonomy unavailable hides the rail and says so.
   {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
     await page.route("**/api/taxonomy", (route) => route.abort());
     await page.goto(`${BASE}/naijashop`, { waitUntil: "load", timeout: 180000 });
@@ -696,7 +696,7 @@ async function runStateInterception(browser, eligible, taxonomy) {
 
   // Storefront: empty taxonomy renders the honest empty rail, not fixed tiles.
   {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
     await page.route("**/api/taxonomy", (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ departments: [] }) })
@@ -711,7 +711,7 @@ async function runStateInterception(browser, eligible, taxonomy) {
 
   // Directory: taxonomy unavailable is an explicit error with retry, no cards.
   {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
     await page.route("**/api/taxonomy", (route) => route.abort());
     await page.goto(`${BASE}/naijashop/categories`, { waitUntil: "load", timeout: 180000 });
@@ -728,7 +728,7 @@ async function runStateInterception(browser, eligible, taxonomy) {
 
   // Directory: empty taxonomy renders the empty directory state.
   {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
     await page.route("**/api/taxonomy", (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ departments: [] }) })
@@ -749,7 +749,7 @@ async function runStateInterception(browser, eligible, taxonomy) {
   // that predates the committed artwork), every card falls back to the icon
   // instead of showing a broken image.
   {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
     await page.route("**/generated/**", (route) => route.fulfill({ status: 404, contentType: "text/plain", body: "missing" }));
     await page.goto(`${BASE}/naijashop`, { waitUntil: "load", timeout: 180000 });
@@ -758,6 +758,8 @@ async function runStateInterception(browser, eligible, taxonomy) {
     await page.$$eval("[data-category-card] img", (images) => {
       for (const image of images) image.loading = "eager";
     });
+    await page.locator("[data-category-rail]").evaluate((element) => element.scrollTo({ left: element.scrollWidth }));
+    await page.waitForTimeout(1200);
     await page
       .waitForFunction(
         () => {
@@ -791,7 +793,7 @@ async function runStateInterception(browser, eligible, taxonomy) {
   // Storefront: browsingVisible=false and canPublish=false nodes stay out of
   // the rail, exactly as the effective taxonomy states.
   if (taxonomy && eligible.length >= 3) {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
     const hiddenBrowsing = eligible[0].slug;
     const hiddenCountry = eligible[1].slug;
@@ -823,7 +825,7 @@ async function runStateInterception(browser, eligible, taxonomy) {
 
   // Directory: a taxonomy without counts says so instead of inventing zero.
   {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
     const noCounts = structuredClone(taxonomy);
     let removed = false;
