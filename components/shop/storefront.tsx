@@ -15,15 +15,9 @@ import {
 } from "lucide-react";
 import { apiClient, type ApiCategory, type ApiProduct } from "@/lib/api-client";
 import { getPublicTaxonomy, type PublicTaxonomyNode } from "@/lib/taxonomy-api";
+import { CategoryRail, deriveCategoryRail, isStorefrontListing } from "./category-rail";
 import { MarketplaceProductCard } from "./marketplace-card";
 import { announceShopCartCount } from "./shop-header";
-
-/**
- * Acceptance suites create throwaway listings named "Variant Fixture …",
- * "Test checkout …", "Last unit …" and similar. They are real database rows but
- * never part of the storefront, so they must not appear in any shelf or pick.
- */
-const TEST_LISTING = /^(variant fixture|test |upload test|last unit|product test)\b|-mw[0-9a-z]{8,}$/i;
 
 type StorefrontConfig = {
   showHero?: boolean;
@@ -35,7 +29,11 @@ type PublicTaxonomyNodeWithCounts = PublicTaxonomyNode & {
   productCount?: unknown;
   subtreeProductCount?: unknown;
   descendantProductCount?: unknown;
+  browsingVisible?: unknown;
   canPublish?: unknown;
+  level?: unknown;
+  sortOrder?: unknown;
+  restrictionNote?: unknown;
 };
 
 function finiteCount(value: unknown): number | null {
@@ -50,9 +48,13 @@ type Department = {
   description?: string | null;
   isSelectable?: boolean;
   showOnHomepage?: boolean;
+  level?: number;
+  sortOrder?: number;
+  browsingVisible?: boolean;
   productCount?: number | null;
   subtreeProductCount?: number | null;
   canPublish?: boolean | null;
+  restrictionNote?: string | null;
   children?: Department[];
 };
 
@@ -66,9 +68,13 @@ function toDepartment(node: PublicTaxonomyNode): Department {
     description: node.description ?? null,
     isSelectable: node.isSelectable !== false,
     showOnHomepage: node.showOnHomepage === true,
+    level: typeof extended.level === "number" ? extended.level : undefined,
+    sortOrder: typeof extended.sortOrder === "number" ? extended.sortOrder : undefined,
+    browsingVisible: typeof extended.browsingVisible === "boolean" ? extended.browsingVisible : undefined,
     productCount: finiteCount(extended.productCount),
     subtreeProductCount: finiteCount(extended.subtreeProductCount) ?? finiteCount(extended.descendantProductCount),
     canPublish: typeof extended.canPublish === "boolean" ? extended.canPublish : null,
+    restrictionNote: typeof extended.restrictionNote === "string" ? extended.restrictionNote : null,
     children: (node.children ?? []).map(toDepartment)
   };
 }
@@ -108,10 +114,6 @@ function subtreeSlugs(departments: Department[], rootSlugs: string[]): string[] 
   return [...slugs];
 }
 
-function findDepartment(departments: Department[], slug: string): Department | null {
-  return departments.find((department) => department.slug === slug) ?? null;
-}
-
 /** Leaf slug → top-level department slug, used to vary the Explore shelf. */
 function rootSlugMap(departments: Department[]): Map<string, string> {
   const map = new Map<string, string>();
@@ -120,24 +122,6 @@ function rootSlugMap(departments: Department[]): Map<string, string> {
   }
   return map;
 }
-
-type Shortcut = { label: string; slug: string };
-
-/**
- * Short, fixed entry points into published taxonomy pages. Every tile is only
- * rendered when its node exists in the taxonomy response, so a shortcut can
- * never point at a department that is not open.
- */
-const SHORTCUTS: Shortcut[] = [
-  { label: "Phones", slug: "phones-tablets" },
-  { label: "Computers", slug: "computers" },
-  { label: "Fashion", slug: "fashion-accessories" },
-  { label: "Home", slug: "home-kitchen" },
-  { label: "Groceries", slug: "groceries-household" },
-  { label: "Beauty", slug: "beauty-personal-care" },
-  { label: "Solar", slug: "power-solar" },
-  { label: "Gaming", slug: "gaming" }
-];
 
 type ShelfDefinition = {
   id: string;
@@ -343,10 +327,7 @@ export function NaijaDealsMarketplace() {
         if (!active) return;
         const list = Array.isArray(items) ? items : [];
         setProducts(
-          list.filter(
-            (product) =>
-              !product.isSample && !TEST_LISTING.test(product.name) && !TEST_LISTING.test(product.slug ?? "")
-          )
+          list.filter(isStorefrontListing)
         );
         setStatus("ready");
       })
@@ -424,13 +405,10 @@ export function NaijaDealsMarketplace() {
 
   const allDepartments = useMemo(() => flattenDepartments(departments), [departments]);
 
-  const shortcutNodes = useMemo(
-    () =>
-      SHORTCUTS.map((shortcut) => ({ ...shortcut, node: findDepartment(allDepartments, shortcut.slug) })).filter(
-        (shortcut): shortcut is Shortcut & { node: Department } => Boolean(shortcut.node)
-      ),
-    [allDepartments]
-  );
+  // Only the effective public taxonomy supplies rail entries. Counts, imagery,
+  // order, browsing visibility and country publication state all come from that
+  // response; `null` counts are reported honestly rather than as zero.
+  const railEntries = useMemo(() => deriveCategoryRail(taxonomyTree), [taxonomyTree]);
 
   const demoCount = useMemo(() => products.filter((product) => product.isDemo).length, [products]);
 
@@ -442,7 +420,7 @@ export function NaijaDealsMarketplace() {
             demoCount > 0 ? `, including ${demoCount} labelled demonstration ${demoCount === 1 ? "listing" : "listings"}` : ""
           }.`
       : status === "loading"
-        ? "Loading the published catalogue…"
+        ? "Counting the published catalogue…"
         : "The catalogue is unavailable right now.";
 
   /**
@@ -538,7 +516,7 @@ export function NaijaDealsMarketplace() {
     id: "explore",
     title: "Explore the marketplace",
     description: "A cross-department mix of eligible demonstration listings.",
-    href: "/naijashop/categories",
+    href: "/naijashop/search",
     linkLabel: "Browse all listings",
     slugs: []
   };
@@ -661,61 +639,30 @@ export function NaijaDealsMarketplace() {
           )}
         </section>
 
-        {/* Compact taxonomy shortcuts; the full hierarchy stays in All departments. */}
-        {taxonomyStatus === "ready" && shortcutNodes.length > 0 ? (
-          <section aria-labelledby="category-shortcuts-heading" className="mt-4">
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <h2 id="category-shortcuts-heading" className="font-display text-[19px] font-extrabold tracking-tight text-[#14241b] sm:text-[21px]">
-                  Shop by category
-                </h2>
-                <p className="mt-0.5 text-[10.5px] leading-5 text-[#566359]">{listingFact}</p>
-              </div>
-              <Link
-                href="/naijashop/categories"
-                className="inline-flex items-center gap-1 rounded text-[11px] font-extrabold text-[#0b5c33] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
-              >
-                All departments
-                <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-              </Link>
+        {/* Compact taxonomy rail; the full hierarchy stays in All departments. */}
+        {taxonomyStatus === "ready" ? (
+          <CategoryRail entries={railEntries} countsStatus="ready" summary={listingFact} />
+        ) : null}
+
+        {taxonomyStatus === "loading" ? (
+          <section aria-busy="true" aria-label="Loading shop categories" className="mt-4 min-w-0">
+            <div className="h-6 w-40 animate-pulse rounded-full bg-[#e3ebdf]" />
+            <div className="mt-2 h-3 w-64 animate-pulse rounded-full bg-[#e3ebdf]" />
+            <div className="mt-2.5 flex gap-2 overflow-hidden">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div
+                  key={index}
+                  aria-hidden
+                  className="h-[132px] w-[132px] shrink-0 animate-pulse rounded-2xl border border-[#e1e8de] bg-white sm:w-[150px] lg:w-[164px]"
+                />
+              ))}
             </div>
-            <ul className="mt-2.5 grid grid-cols-4 gap-2 sm:grid-cols-8">
-              {shortcutNodes.map((shortcut) => {
-                const image = shortcut.node.imageUrl;
-                return (
-                  <li key={shortcut.slug} className="min-w-0">
-                    <Link
-                      href={`/naijashop/c/${shortcut.slug}`}
-                      data-category-shortcut={shortcut.slug}
-                      className="group flex h-full min-w-0 flex-col items-center justify-center gap-1 rounded-xl border border-[#e1e8de] bg-white px-1 py-1.5 text-center transition hover:-translate-y-0.5 hover:border-[#c7d7c2] hover:shadow-[0_10px_22px_rgba(7,53,31,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2 sm:gap-1.5 sm:py-2"
-                    >
-                      <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-[#eef4ea] sm:h-12 sm:w-12">
-                        {image && !missingArt[image] ? (
-                          <img
-                            src={image}
-                            alt=""
-                            loading="lazy"
-                            onError={() => markMissing(image)}
-                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                          />
-                        ) : (
-                          <Store className="h-5 w-5 text-[#7a9c80]" aria-hidden />
-                        )}
-                      </span>
-                      <span className="min-w-0 break-words text-[10px] font-extrabold leading-tight text-[#14241b] sm:text-[11px]">
-                        {shortcut.label}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
           </section>
         ) : null}
 
         {taxonomyStatus === "error" ? (
           <p role="status" className="mt-3 rounded-xl border border-[#eadfc6] bg-[#fbf4e4] px-3 py-2 text-[11px] leading-5 text-[#7a4c00]">
-            The published department directory could not be loaded, so category shortcuts are hidden.
+            The published category directory could not be loaded, so the category rail is hidden.
             {categoriesStatus === "ready" ? " The fallback directory and All departments still work." : " The fallback directory could not be loaded either."}
           </p>
         ) : null}
