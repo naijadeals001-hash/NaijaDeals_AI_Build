@@ -461,6 +461,12 @@ export async function updateCategoryNode(
 
   try {
     return await prisma.$transaction(async (tx) => {
+      // Reparenting is a whole-tree invariant. A transaction-scoped advisory
+      // lock serialises concurrent moves so two administrators cannot each
+      // validate against the old tree and jointly create a cycle.
+      if (body.parentId !== undefined) {
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('naijadeals:taxonomy:category-tree'))`;
+      }
       const existing = await tx.category.findUnique({
         where: { id: categoryId },
         include: ADMIN_CATEGORY_INCLUDE
