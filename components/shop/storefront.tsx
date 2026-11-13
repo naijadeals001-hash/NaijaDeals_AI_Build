@@ -15,6 +15,7 @@ import {
   Wallet
 } from "lucide-react";
 import { apiClient, type ApiCategory, type ApiProduct } from "@/lib/api-client";
+import { getPublicTaxonomy, type PublicTaxonomyNode } from "@/lib/taxonomy-api";
 import { MarketplaceProductCard } from "./marketplace-card";
 import { announceShopCartCount } from "./shop-header";
 
@@ -36,7 +37,24 @@ type Department = {
   name: string;
   slug: string;
   imageUrl?: string | null;
+  description?: string | null;
+  isSelectable?: boolean;
+  showOnHomepage?: boolean;
+  children?: Department[];
 };
+
+function toDepartment(node: PublicTaxonomyNode): Department {
+  return {
+    id: node.id,
+    name: node.name,
+    slug: node.slug,
+    imageUrl: node.imageUrl ?? null,
+    description: node.description ?? null,
+    isSelectable: node.isSelectable !== false,
+    showOnHomepage: node.showOnHomepage === true,
+    children: (node.children ?? []).map(toDepartment)
+  };
+}
 
 type Notice = { text: string; tone: "success" | "error" } | null;
 
@@ -48,6 +66,16 @@ function availableUnits(product: ApiProduct): number | null {
   }
   if (product.stock) return Math.max(product.stock.quantity - (product.stock.reserved ?? 0), 0);
   return null;
+}
+
+function departmentSlugs(department: Department): string[] {
+  const slugs = [department.slug];
+  for (const child of department.children ?? []) slugs.push(...departmentSlugs(child));
+  return slugs;
+}
+
+function departmentListingCount(department: Department, byCategory: Map<string, ApiProduct[]>): number {
+  return departmentSlugs(department).reduce((total, slug) => total + (byCategory.get(slug)?.length ?? 0), 0);
 }
 
 function naira(value: number) {
@@ -71,6 +99,8 @@ export function NaijaDealsMarketplace() {
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [categoriesStatus, setCategoriesStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [taxonomyTree, setTaxonomyTree] = useState<Department[]>([]);
+  const [taxonomyStatus, setTaxonomyStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const [addingId, setAddingId] = useState("");
@@ -117,6 +147,19 @@ export function NaijaDealsMarketplace() {
         setCategoriesStatus("error");
       });
 
+    // The homepage shows only departments the owner marked `showOnHomepage`.
+    // The legacy list stays as a labelled fallback while that endpoint is
+    // unavailable; the difference is stated in the department section.
+    getPublicTaxonomy()
+      .then(({ departments: roots }) => {
+        if (!active) return;
+        setTaxonomyTree(roots.map(toDepartment));
+        setTaxonomyStatus("ready");
+      })
+      .catch(() => {
+        if (active) setTaxonomyStatus("error");
+      });
+
     fetch("/api/storefront", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((value) => {
@@ -142,9 +185,11 @@ export function NaijaDealsMarketplace() {
     return map;
   }, [products]);
 
-  // Prefer the published department directory. If it fails, derive departments
-  // from the live products so navigation still works rather than disappearing.
+  // Prefer the published taxonomy; then the canonical department directory; if
+  // both fail, derive departments from the live products so navigation still
+  // works rather than disappearing.
   const departments = useMemo<Department[]>(() => {
+    if (taxonomyTree.length > 0) return taxonomyTree;
     if (categories.length > 0) {
       return categories.map((category) => ({
         id: category.id,
@@ -160,7 +205,19 @@ export function NaijaDealsMarketplace() {
       map.set(category.slug, { id: category.id, name: category.name, slug: category.slug, imageUrl: null });
     }
     return [...map.values()];
-  }, [categories, products]);
+  }, [taxonomyTree, categories, products]);
+
+  // Homepage shelves and cards follow the owner's `showOnHomepage` selection.
+  // While the taxonomy endpoint is unavailable, the published directory is a
+  // labelled fallback instead of an invented featured list.
+  const homepageDepartments = useMemo(
+    () => (taxonomyStatus === "ready" ? departments.filter((department) => department.showOnHomepage) : departments),
+    [taxonomyStatus, departments]
+  );
+  const featuredDepartmentCount = useMemo(
+    () => departments.filter((department) => department.showOnHomepage).length,
+    [departments]
+  );
 
   const sellerCount = useMemo(() => new Set(products.map((product) => product.vendor?.id).filter(Boolean)).size, [products]);
 
@@ -192,14 +249,14 @@ export function NaijaDealsMarketplace() {
   // Prefer shelves whose products are not already shown in the price-drop row,
   // so a visitor does not see the same item twice in consecutive sections.
   const shelves = useMemo(() => {
-    const decorated = departments
+    const decorated = homepageDepartments
       .map((department) => ({ ...department, items: (byCategory.get(department.slug) ?? []).slice(0, shelfLimit) }))
       .filter((department) => department.items.length > 0);
     const dropCategories = new Set(priceDrops.map((product) => product.category?.slug));
     const preferred = decorated.filter((department) => !dropCategories.has(department.slug));
     const fallback = decorated.filter((department) => dropCategories.has(department.slug));
     return [...preferred, ...fallback].slice(0, 4);
-  }, [departments, byCategory, shelfLimit, priceDrops]);
+  }, [homepageDepartments, byCategory, shelfLimit, priceDrops]);
 
   // Listings with enough stock for a business enquiry. The unit price shown on
   // the listing is retail; any wholesale price must come from the seller.
@@ -437,10 +494,32 @@ export function NaijaDealsMarketplace() {
 
         <section aria-labelledby="departments-heading" className="mt-8">
           <SectionHeading eyebrow="Departments" title="Shop by department" id="departments-heading" href="/naijashop/categories" linkLabel="All departments" />
-          {departments.length > 0 ? (
+          <p className="mt-1 text-[10.5px] leading-5 text-[#566359]">
+            {taxonomyStatus === "ready"
+              ? `${departments.length} departments published · ${departments.filter((department) => departmentListingCount(department, byCategory) > 0).length} with live stock · ${featuredDepartmentCount} featured on the homepage.`
+              : taxonomyStatus === "loading"
+                ? "Loading the published department directory…"
+                : `${departments.length} departments published. The homepage selection could not be loaded, so the published directory is shown.`}
+          </p>
+          {taxonomyStatus === "ready" && homepageDepartments.length === 0 ? (
+            <div className="mt-3 rounded-2xl border border-dashed border-[#cfdccb] bg-white p-5 text-[12px] leading-6 text-[#4b5b51]">
+              <p className="font-extrabold text-[#14241b]">No department is featured on the homepage right now.</p>
+              <p className="mt-1">
+                The published directory is still available. Homepage departments are chosen in the Control Center
+                taxonomy, not by product count.
+              </p>
+              <Link
+                href="/naijashop/categories"
+                className="mt-2 inline-flex items-center gap-1 font-extrabold text-[#0b5c33] underline"
+              >
+                Browse all departments <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+            </div>
+          ) : null}
+          {homepageDepartments.length > 0 ? (
             <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4">
-              {departments.map((department) => {
-                const count = byCategory.get(department.slug)?.length ?? 0;
+              {homepageDepartments.map((department) => {
+                const count = departmentListingCount(department, byCategory);
                 const url = department.imageUrl || `/generated/shop/category-${department.slug}.webp`;
                 return (
                   <li key={department.id}>
@@ -470,7 +549,7 @@ export function NaijaDealsMarketplace() {
                             {status === "ready"
                               ? count > 0
                                 ? `${count} ${count === 1 ? "listing" : "listings"}`
-                                : "No live stock yet"
+                                : "Published — no live stock yet"
                               : status === "loading"
                                 ? "Loading stock…"
                                 : "Stock unavailable"}
@@ -484,7 +563,7 @@ export function NaijaDealsMarketplace() {
               })}
             </ul>
           ) : null}
-          {categoriesStatus === "error" ? (
+          {categoriesStatus === "error" && taxonomyStatus !== "ready" ? (
             <p className="mt-2 text-[11px] text-[#8a4a10]">
               The department directory could not be refreshed. Showing departments found in live listings.
             </p>

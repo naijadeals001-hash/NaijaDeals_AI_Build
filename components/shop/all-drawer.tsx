@@ -8,6 +8,7 @@ import {
   BadgeCheck,
   BadgeDollarSign,
   Boxes,
+  ChevronDown,
   ChevronRight,
   CircleHelp,
   Compass,
@@ -33,6 +34,11 @@ export type ShopDepartment = {
   name: string;
   slug: string;
   imageUrl?: string | null;
+  description?: string | null;
+  /** Published taxonomy flags. Absent when the legacy flat category list is used. */
+  isSelectable?: boolean;
+  showOnHomepage?: boolean;
+  children?: ShopDepartment[];
 };
 
 export type DepartmentStatus = "loading" | "ready" | "error";
@@ -205,8 +211,22 @@ export function ShopPanelFrame({
   );
 }
 
-const DISCOVER_LINKS = [
-  { href: "/naijashop/deals", label: "Price drops", description: "Seller-recorded reductions only", icon: Tag },
+/** Every slug in a department subtree — live counts include subcategories. */
+function subtreeSlugs(department: ShopDepartment): string[] {
+  const slugs = [department.slug];
+  for (const child of department.children ?? []) slugs.push(...subtreeSlugs(child));
+  return slugs;
+}
+
+function subtreeCount(department: ShopDepartment, counts: Record<string, number>): number {
+  return subtreeSlugs(department).reduce((total, slug) => total + (counts[slug] ?? 0), 0);
+}
+
+function countTaxonomyNodes(departments: ShopDepartment[]): number {
+  return departments.reduce((total, department) => total + 1 + countTaxonomyNodes(department.children ?? []), 0);
+}
+
+const DISCOVER_LINKS = [  { href: "/naijashop/deals", label: "Price drops", description: "Seller-recorded reductions only", icon: Tag },
   { href: "/naijashop/bestsellers", label: "Bestsellers", description: "Popular listings, ordered by price", icon: TrendingUp },
   { href: "/naijashop/categories", label: "All departments", description: "Browse the full directory", icon: Grid2x2 },
   { href: "/naijashop/sellers", label: "Sell on NaijaDeals", description: "Open a verified seller account", icon: BadgeCheck }
@@ -340,7 +360,9 @@ export function AllDrawer({
   categoryCounts,
   departmentsStatus,
   countsAvailable,
-  signedIn
+  signedIn,
+  taxonomyAvailable = false,
+  directoryNotice = ""
 }: {
   open: boolean;
   onClose: () => void;
@@ -350,8 +372,13 @@ export function AllDrawer({
   departmentsStatus: DepartmentStatus;
   countsAvailable: boolean;
   signedIn: boolean | null;
+  /** True when the tree came from /api/taxonomy (flags are meaningful). */
+  taxonomyAvailable?: boolean;
+  /** Explains a legacy fallback without pretending the hierarchy is complete. */
+  directoryNotice?: string;
 }) {
   const [view, setView] = useState<"main" | "departments">("main");
+  const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(new Set());
   const panelRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const backButtonRef = useRef<HTMLButtonElement>(null);
@@ -361,6 +388,7 @@ export function AllDrawer({
   const close = () => {
     setView("main");
     lastView.current = "main";
+    setExpandedDepartments(new Set());
     onClose();
   };
 
@@ -368,6 +396,7 @@ export function AllDrawer({
     if (!open) {
       setView("main");
       lastView.current = "main";
+      setExpandedDepartments(new Set());
       return;
     }
     if (view === lastView.current) return;
@@ -379,35 +408,107 @@ export function AllDrawer({
     }
   }, [open, view]);
 
-  const countLabel = (slug: string) => {
+  const countLabel = (department: ShopDepartment) => {
     if (!countsAvailable) return "Live stock unavailable";
-    const count = categoryCounts[slug] ?? 0;
+    const count = subtreeCount(department, categoryCounts);
     if (count === 0) return "No live stock yet";
     return `${count} live ${count === 1 ? "listing" : "listings"}`;
   };
 
-  const departmentLinks = (
-    <ul className="mt-2 divide-y divide-[#eef3ec]">
-      {departments.map((department) => {
-        const count = countsAvailable ? categoryCounts[department.slug] ?? 0 : null;
-        return (
-          <li key={department.id}>
-            <Link
-              href={`/naijashop/c/${department.slug}`}
-              onClick={close}
-              aria-label={`${department.name}, ${countLabel(department.slug)}`}
-              className="group flex min-h-12 items-center justify-between gap-3 py-2.5 text-[12.5px] font-semibold text-[#14241b] transition hover:text-[#0b5c33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-inset"
+  const populatedDepartments = countsAvailable
+    ? departments.filter((department) => subtreeCount(department, categoryCounts) > 0)
+    : [];
+  const featuredDepartments = taxonomyAvailable ? departments.filter((department) => department.showOnHomepage) : [];
+  const taxonomyNodeCount = countTaxonomyNodes(departments);
+  const directorateSummary = !countsAvailable
+    ? `${departments.length} ${departments.length === 1 ? "department" : "departments"} · ${taxonomyNodeCount} nodes · live counts unavailable`
+    : `${departments.length} ${departments.length === 1 ? "department" : "departments"} · ${populatedDepartments.length} with live stock · ${
+        taxonomyAvailable ? `${featuredDepartments.length} on the homepage` : "homepage selection unavailable"
+      }`;
+
+  function toggleDepartment(id: string) {
+    setExpandedDepartments((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function renderDepartment(department: ShopDepartment, depth: number): ReactNode {
+    const children = department.children ?? [];
+    const isOpen = expandedDepartments.has(department.id);
+    const count = countsAvailable ? subtreeCount(department, categoryCounts) : null;
+    const empty = count === 0;
+    const listId = `shop-all-dept-${department.id}`;
+
+    return (
+      <li key={department.id}>
+        <div className={`flex items-stretch gap-1 ${depth > 0 ? "border-l border-[#eef3ec] pl-2" : ""}`}>
+          {children.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => toggleDepartment(department.id)}
+              aria-expanded={isOpen}
+              aria-controls={listId}
+              aria-label={`${isOpen ? "Collapse" : "Expand"} ${department.name} subcategories`}
+              className="grid min-h-12 w-9 shrink-0 place-items-center rounded-lg text-[#4b5b51] transition hover:bg-[#eef4ea] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
             >
-              <span className="min-w-0 truncate">{department.name}</span>
-              <span className="flex shrink-0 items-center gap-1.5 text-[10.5px] font-normal text-[#566359]">
-                {count === null ? "Stock unavailable" : count === 0 ? "No live stock" : `${count} live`}
-                <ChevronRight className="h-3.5 w-3.5 text-[#7a9c80]" aria-hidden />
+              {isOpen ? <ChevronDown className="h-4 w-4" aria-hidden /> : <ChevronRight className="h-4 w-4" aria-hidden />}
+            </button>
+          ) : (
+            <span className="w-2 shrink-0" aria-hidden />
+          )}
+          <Link
+            href={`/naijashop/c/${department.slug}`}
+            onClick={close}
+            aria-label={`${department.name}, ${countLabel(department)}`}
+            className="group flex min-w-0 flex-1 items-center justify-between gap-2 py-2.5 text-[12.5px] font-semibold text-[#14241b] transition hover:text-[#0b5c33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-inset"
+          >
+            <span className="min-w-0">
+              <span className="block truncate">{department.name}</span>
+              <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[9.5px] font-normal text-[#566359]">
+                {depth === 0 ? <span className="uppercase tracking-wide">Department</span> : <span>Subcategory</span>}
+                {department.showOnHomepage ? (
+                  <span className="rounded-full bg-[#e8f2df] px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase tracking-wide text-[#0b5c33]">
+                    Homepage
+                  </span>
+                ) : null}
+                {department.isSelectable === false ? (
+                  <span className="rounded-full bg-[#f4efe4] px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase tracking-wide text-[#7a4c00]">
+                    Browse only
+                  </span>
+                ) : null}
               </span>
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
+            </span>
+            <span className="flex shrink-0 items-center gap-1.5 text-[10.5px] font-normal text-[#566359]">
+              {count === null ? "Stock unavailable" : count === 0 ? "No live stock yet" : `${count} live`}
+              <ChevronRight className="h-3.5 w-3.5 text-[#7a9c80]" aria-hidden />
+            </span>
+          </Link>
+        </div>
+        {empty && countsAvailable ? (
+          <p className="ml-[2.4rem] pb-2 text-[9.5px] leading-3.5 text-[#7a4c00]">
+            Published and open for listings — no seller has live stock here yet.
+            {depth === 0 && populatedDepartments.length > 0
+              ? ` Try ${populatedDepartments
+                  .slice(0, 2)
+                  .map((candidate) => candidate.name)
+                  .join(" or ")}.`
+              : ""}
+          </p>
+        ) : null}
+        {children.length > 0 && isOpen ? (
+          <ul id={listId} className="space-y-0.5">
+            {children.map((child) => renderDepartment(child, depth + 1))}
+          </ul>
+        ) : null}
+      </li>
+    );
+  }
+
+  const departmentLinks = (
+    <ul className="mt-2 divide-y divide-[#eef3ec]">{departments.map((department) => renderDepartment(department, 0))}</ul>
   );
 
   return (
@@ -445,7 +546,7 @@ export function AllDrawer({
               {view === "departments" ? "Shop by department" : "All"}
             </h2>
             <p className="mt-0.5 line-clamp-2 text-[10.5px] leading-4 text-[#b9d5bd]">
-              {view === "departments" ? "Every published department, with live listing counts." : "Shop, bulk buying and the NaijaDeals ecosystem."}
+              {view === "departments" ? "The published hierarchy, including categories with no live stock yet." : "Shop, bulk buying and the NaijaDeals ecosystem."}
             </p>
           </div>
 
@@ -498,7 +599,7 @@ export function AllDrawer({
                     ? "Loading the published department directory…"
                     : departmentsStatus === "error"
                       ? "The department directory could not be refreshed."
-                      : `${departments.length} ${departments.length === 1 ? "department" : "departments"} published.`
+                      : directorateSummary
                 }
                 action={
                   departmentsStatus === "ready" && departments.length > 0 ? (
@@ -508,12 +609,18 @@ export function AllDrawer({
                       onClick={() => setView("departments")}
                       className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full px-2.5 text-[10.5px] font-extrabold text-[#0b5c33] transition hover:bg-[#eef4ea] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
                     >
-                      All {departments.length}
+                      All
                       <ChevronRight className="h-3.5 w-3.5" aria-hidden />
                     </button>
                   ) : null
                 }
               />
+
+              {directoryNotice ? (
+                <p className="mt-2 rounded-lg border border-[#eadfc6] bg-[#fbf4e4] px-2.5 py-2 text-[10px] leading-4 text-[#7a4c00]">
+                  {directoryNotice}
+                </p>
+              ) : null}
 
               {departmentsStatus === "loading" ? <DepartmentSkeleton /> : null}
 
@@ -538,18 +645,37 @@ export function AllDrawer({
 
               {departments.length > 0 ? (
                 <ul className="mt-2 grid grid-cols-2 gap-1.5">
-                  {departments.map((department) => (
-                    <li key={department.id}>
-                      <Link
-                        href={`/naijashop/c/${department.slug}`}
-                        onClick={close}
-                        className="flex h-full min-h-11 items-center justify-between gap-2 rounded-xl bg-[#eef4ea] px-3 py-2 text-[11.5px] font-extrabold text-[#0b5c33] transition hover:bg-[#e2eddc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
-                      >
-                        <span className="min-w-0 truncate">{department.name}</span>
-                        <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                      </Link>
-                    </li>
-                  ))}
+                  {departments.map((department) => {
+                    const live = countsAvailable ? subtreeCount(department, categoryCounts) : null;
+                    return (
+                      <li key={department.id}>
+                        <Link
+                          href={`/naijashop/c/${department.slug}`}
+                          onClick={close}
+                          className="flex h-full min-h-11 flex-col justify-center gap-0.5 rounded-xl bg-[#eef4ea] px-3 py-2 text-[11.5px] font-extrabold text-[#0b5c33] transition hover:bg-[#e2eddc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
+                        >
+                          <span className="flex min-w-0 items-center justify-between gap-1.5">
+                            <span className="min-w-0 truncate">{department.name}</span>
+                            {department.showOnHomepage ? (
+                              <span className="shrink-0 rounded-full bg-white/70 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-[#0b5c33]">
+                                Featured
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="flex items-center justify-between gap-1.5 text-[9.5px] font-semibold text-[#4b5b51]">
+                            <span>
+                              {live === null
+                                ? "Live stock unavailable"
+                                : live === 0
+                                  ? "No live stock yet"
+                                  : `${live} live`}
+                            </span>
+                            <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : null}
             </section>
@@ -700,13 +826,23 @@ export function AllDrawer({
                     Published departments
                   </h3>
                   <p className="mt-1 text-[10.5px] leading-4 text-[#566359]">
-                    {countsAvailable ? "Counts are live listings in the marketplace." : "Live listing counts are unavailable right now."}
+                    {countsAvailable
+                      ? `${departments.length} departments · ${populatedDepartments.length} with live stock · ${
+                          taxonomyAvailable ? `${featuredDepartments.length} on the homepage` : "homepage features unavailable"
+                        }. Counts include subcategories.`
+                      : `${departments.length} departments · ${taxonomyNodeCount} nodes · live listing counts are unavailable right now.`}
                   </p>
                 </div>
                 <span className="shrink-0 rounded-full bg-[#eef4ea] px-2.5 py-1 text-[10px] font-extrabold text-[#0b5c33]">
-                  {departments.length}
+                  {taxonomyNodeCount}
                 </span>
               </div>
+
+              {directoryNotice ? (
+                <p className="mt-2 rounded-lg border border-[#eadfc6] bg-[#fbf4e4] px-2.5 py-2 text-[10px] leading-4 text-[#7a4c00]">
+                  {directoryNotice}
+                </p>
+              ) : null}
 
               {departmentsStatus === "loading" ? <DepartmentSkeleton /> : null}
 
@@ -726,6 +862,27 @@ export function AllDrawer({
                 </p>
               ) : null}
 
+              {departmentsStatus === "ready" && departments.length > 0 && countsAvailable && populatedDepartments.length === 0 ? (
+                <div className="mt-2 rounded-xl border border-dashed border-[#cfdccb] bg-[#f7faf4] p-3 text-[11px] leading-5 text-[#4b5b51]">
+                  <p className="font-extrabold text-[#14241b]">The directory is published; no department has live stock yet.</p>
+                  <p className="mt-1">
+                    Every category below is a real published node. Until a seller publishes stock you can browse the full
+                    departments page, check price drops, or open a seller account.
+                  </p>
+                  <span className="mt-2 flex flex-wrap gap-2 font-extrabold">
+                    <Link href="/naijashop/categories" onClick={close} className="text-[#0b5c33] underline">
+                      All departments
+                    </Link>
+                    <Link href="/naijashop/deals" onClick={close} className="text-[#0b5c33] underline">
+                      Price drops
+                    </Link>
+                    <Link href="/sell" onClick={close} className="text-[#0b5c33] underline">
+                      Start selling
+                    </Link>
+                  </span>
+                </div>
+              ) : null}
+
               {departments.length > 0 ? departmentLinks : null}
             </section>
 
@@ -739,8 +896,8 @@ export function AllDrawer({
             </Link>
 
             <p className="text-[9.5px] leading-4 text-[#566359]">
-              Counts are live published listings. Sub-departments appear only when the seller directory publishes them; today it publishes a
-              flat list.
+              Counts are live published listings, including subcategories. A published category with no live stock stays in
+              the directory and says so instead of disappearing.
             </p>
           </div>
         )}

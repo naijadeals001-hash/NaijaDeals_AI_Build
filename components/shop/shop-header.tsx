@@ -23,6 +23,7 @@ import {
   X
 } from "lucide-react";
 import { apiClient, type ApiCategory, type ApiProduct, type SessionUser } from "@/lib/api-client";
+import { getPublicTaxonomy, type PublicTaxonomyNode } from "@/lib/taxonomy-api";
 import { NaijaDealsLogo } from "@/components/brand/naijadeals-logo";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { AllDrawer, ShopPanelFrame, type DepartmentStatus, type ShopDepartment } from "./all-drawer";
@@ -58,6 +59,19 @@ function addressSummary(address: SavedAddress | null) {
   if (!address) return "";
   const area = [address.city, address.state].filter(Boolean).join(", ");
   return area || address.line1?.trim() || "Saved address";
+}
+
+function toShopDepartment(node: PublicTaxonomyNode): ShopDepartment {
+  return {
+    id: node.id,
+    name: node.name,
+    slug: node.slug,
+    imageUrl: node.imageUrl ?? null,
+    description: node.description ?? null,
+    isSelectable: node.isSelectable !== false,
+    showOnHomepage: node.showOnHomepage === true,
+    children: (node.children ?? []).map(toShopDepartment)
+  };
 }
 
 /**
@@ -97,6 +111,9 @@ function ShopHeader() {
   const { city, cities, setCity } = useLocale();
 
   const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [departmentTree, setDepartmentTree] = useState<ShopDepartment[]>([]);
+  const [taxonomyAvailable, setTaxonomyAvailable] = useState(false);
+  const [directoryNotice, setDirectoryNotice] = useState("");
   const [categoriesStatus, setCategoriesStatus] = useState<DepartmentStatus>("loading");
   const [sessionUser, setSessionUser] = useState<SessionUser | null | undefined>(undefined);
   const [cartCount, setCartCount] = useState(0);
@@ -115,15 +132,49 @@ function ShopHeader() {
 
   useEffect(() => {
     let active = true;
-    apiClient
-      .getCategories()
-      .then((items) => {
+    setCategoriesStatus("loading");
+    // The published taxonomy is the navigation source of truth. While that
+    // endpoint is unavailable the header still works from the canonical
+    // /api/categories list, and says so in the All drawer rather than
+    // presenting a flat list as the complete hierarchy.
+    getPublicTaxonomy()
+      .then(({ departments }) => {
         if (!active) return;
-        setCategories(Array.isArray(items) ? items : []);
+        const tree = departments.map(toShopDepartment);
+        setDepartmentTree(tree);
+        setCategories(
+          tree.map((department) => ({ id: department.id, name: department.name, slug: department.slug }))
+        );
+        setTaxonomyAvailable(true);
+        setDirectoryNotice("");
         setCategoriesStatus("ready");
       })
       .catch(() => {
-        if (active) setCategoriesStatus("error");
+        if (!active) return;
+        apiClient
+          .getCategories()
+          .then((items) => {
+            if (!active) return;
+            const list = Array.isArray(items) ? items : [];
+            setCategories(list);
+            setDepartmentTree(
+              list.map((category) => ({
+                id: category.id,
+                name: category.name,
+                slug: category.slug,
+                imageUrl: (category as ApiCategory & { imageUrl?: string | null }).imageUrl ?? null,
+                children: []
+              }))
+            );
+            setTaxonomyAvailable(false);
+            setDirectoryNotice(
+              "The full published hierarchy could not be loaded. These are the published departments only; subcategories and homepage flags are unavailable."
+            );
+            setCategoriesStatus("ready");
+          })
+          .catch(() => {
+            if (active) setCategoriesStatus("error");
+          });
       });
     return () => {
       active = false;
@@ -219,16 +270,7 @@ function ShopHeader() {
     };
   }, [openPanel]);
 
-  const departments = useMemo<ShopDepartment[]>(
-    () =>
-      categories.map((category) => ({
-        id: category.id,
-        name: category.name,
-        slug: category.slug,
-        imageUrl: (category as ApiCategory & { imageUrl?: string | null }).imageUrl ?? null
-      })),
-    [categories]
-  );
+  const departments = departmentTree;
 
   const selectedCategory = categories.find((category) => category.slug === scope);
   const action = scope ? `/naijashop/c/${scope}` : "/naijashop/search";
@@ -519,6 +561,8 @@ function ShopHeader() {
         departmentsStatus={categoriesStatus}
         countsAvailable={countsStatus === "ready"}
         signedIn={sessionUser === undefined ? null : sessionUser !== null}
+        taxonomyAvailable={taxonomyAvailable}
+        directoryNotice={directoryNotice}
       />
 
       <AccountMenu

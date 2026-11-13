@@ -1,17 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, Loader2, PackageCheck, Plus, Store } from "lucide-react";
+import { AlertCircle, Loader2, PackageCheck, Plus, Store, Trash2 } from "lucide-react";
 import {
   ApiRequestError,
   apiClient,
   koboToNaira,
   statusLabel,
-  type ApiCategory,
   type ApiOrder,
   type SellerOverview
 } from "@/lib/api-client";
+import { CategoryAttributeFields, CategoryPicker, validateAttributeValues } from "@/components/seller/category-picker";
+import { CategoryRequestForm } from "@/components/seller/category-request-form";
+import { taxonomyErrorMessage, type SellerCategory } from "@/lib/taxonomy-api";
 
 const sellerActions: Record<string, Array<{ status: "accepted" | "preparing" | "ready_for_pickup"; label: string }>> = {
   vendor_notified: [{ status: "accepted", label: "Accept order" }],
@@ -19,9 +21,68 @@ const sellerActions: Record<string, Array<{ status: "accepted" | "preparing" | "
   preparing: [{ status: "ready_for_pickup", label: "Ready for pickup" }]
 };
 
+const PRODUCT_DRAFT_KEY = "naijashop:seller:product-draft:v1";
+
+type ProductDraft = {
+  name: string;
+  description: string;
+  categoryId: string;
+  priceNaira: string;
+  imageUrl: string;
+  quantity: string;
+  attributes: Record<string, string>;
+};
+
+const EMPTY_PRODUCT: ProductDraft = {
+  name: "",
+  description: "",
+  categoryId: "",
+  priceNaira: "",
+  imageUrl: "/products/tecno-spark-20.svg",
+  quantity: "5",
+  attributes: {}
+};
+
+function readSavedDraft(): ProductDraft | null {
+  try {
+    const raw = window.localStorage.getItem(PRODUCT_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<ProductDraft>;
+    if (!parsed || typeof parsed !== "object") return null;
+    return {
+      name: typeof parsed.name === "string" ? parsed.name : "",
+      description: typeof parsed.description === "string" ? parsed.description : "",
+      categoryId: typeof parsed.categoryId === "string" ? parsed.categoryId : "",
+      priceNaira: typeof parsed.priceNaira === "string" ? parsed.priceNaira : "",
+      imageUrl: typeof parsed.imageUrl === "string" ? parsed.imageUrl : EMPTY_PRODUCT.imageUrl,
+      quantity: typeof parsed.quantity === "string" ? parsed.quantity : EMPTY_PRODUCT.quantity,
+      attributes:
+        parsed.attributes && typeof parsed.attributes === "object" && !Array.isArray(parsed.attributes)
+          ? Object.fromEntries(
+              Object.entries(parsed.attributes as Record<string, unknown>)
+                .filter(([, value]) => typeof value === "string")
+                .map(([key, value]) => [key, value as string])
+            )
+          : {}
+    };
+  } catch {
+    return null;
+  }
+}
+
+function isMeaningfulDraft(draft: ProductDraft) {
+  return Boolean(
+    draft.name.trim() ||
+      draft.description.trim() ||
+      draft.categoryId ||
+      draft.priceNaira.trim() ||
+      draft.quantity.trim() !== EMPTY_PRODUCT.quantity ||
+      Object.values(draft.attributes).some((value) => value.trim())
+  );
+}
+
 export function SellerDashboard() {
   const [overview, setOverview] = useState<SellerOverview | null>(null);
-  const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error" | "not-seller">("loading");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -37,18 +98,18 @@ export function SellerDashboard() {
     payoutAccountNumber: ""
   });
   const [savingProfile, setSavingProfile] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    categoryId: "",
-    priceNaira: "",
-    imageUrl: "/products/tecno-spark-20.svg",
-    quantity: "5"
-  });
+  const [form, setForm] = useState<ProductDraft>({ ...EMPTY_PRODUCT, attributes: {} });
+  const [selectedCategory, setSelectedCategory] = useState<SellerCategory | null>(null);
+  const [attributeErrors, setAttributeErrors] = useState<Record<string, string>>({});
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [requestSeed, setRequestSeed] = useState("");
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const requestPanelRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     try {
-      const [data, cats] = await Promise.all([apiClient.sellerOverview(), apiClient.getCategories()]);
+      const data = await apiClient.sellerOverview();
       setOverview(data);
       setProfile({
         name: data.vendor.name ?? "",
@@ -59,8 +120,6 @@ export function SellerDashboard() {
         payoutAccountName: data.vendor.payoutAccountName ?? "",
         payoutAccountNumber: data.vendor.payoutAccountNumber ?? ""
       });
-      setCategories(cats);
-      setForm((current) => ({ ...current, categoryId: current.categoryId || cats[0]?.id || "" }));
       setStatus("ready");
     } catch (err) {
       if (err instanceof ApiRequestError && err.status === 403) setStatus("not-seller");
@@ -74,6 +133,55 @@ export function SellerDashboard() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Restore an unfinished listing draft once per mount. The saved category id is
+  // resolved against the live seller categories by the picker, so a category
+  // that has since been deprecated simply comes back as "not selected".
+  useEffect(() => {
+    if (draftHydrated) return;
+    const saved = readSavedDraft();
+    if (saved) {
+      setForm(saved);
+      if (isMeaningfulDraft(saved)) {
+        setShowProductForm(true);
+        setDraftRestored(true);
+      }
+    }
+    setDraftHydrated(true);
+  }, [draftHydrated]);
+
+  useEffect(() => {
+    if (!draftHydrated) return;
+    try {
+      if (isMeaningfulDraft(form)) {
+        window.localStorage.setItem(PRODUCT_DRAFT_KEY, JSON.stringify(form));
+      } else {
+        window.localStorage.removeItem(PRODUCT_DRAFT_KEY);
+      }
+    } catch {
+      /* storage can be unavailable (private mode, quota); the form still works */
+    }
+  }, [form, draftHydrated]);
+
+  function clearDraft() {
+    try {
+      window.localStorage.removeItem(PRODUCT_DRAFT_KEY);
+    } catch {
+      /* ignore storage failures */
+    }
+    setForm({ ...EMPTY_PRODUCT, attributes: {} });
+    setSelectedCategory(null);
+    setAttributeErrors({});
+    setDraftRestored(false);
+  }
+
+  function openCategoryRequest(seed: string) {
+    setRequestSeed(seed);
+    setShowRequestForm(true);
+    window.requestAnimationFrame(() =>
+      requestPanelRef.current?.scrollIntoView({ block: "start", behavior: "smooth" })
+    );
+  }
 
   async function saveProfile() {
     setSavingProfile(true);
@@ -107,9 +215,33 @@ export function SellerDashboard() {
   async function createProduct(event: React.FormEvent) {
     event.preventDefault();
     setError("");
+    setNotice("");
+    setAttributeErrors({});
+    if (!form.categoryId || !selectedCategory) {
+      setError("Choose a category from the published hierarchy before saving the draft.");
+      return;
+    }
+    if (!selectedCategory.canPublish) {
+      setError(selectedCategory.restrictionNote || "That category is not open to sellers in your market.");
+      return;
+    }
     const priceKobo = Math.round(Number(form.priceNaira) * 100);
-    if (!Number.isInteger(priceKobo) || priceKobo <= 0) {
+    if (!Number.isFinite(priceKobo) || !Number.isInteger(priceKobo) || priceKobo <= 0) {
       setError("Enter a valid price in naira.");
+      return;
+    }
+    const quantity = Number(form.quantity);
+    if (!Number.isInteger(quantity) || quantity < 0) {
+      setError("Stock must be a whole number of units.");
+      return;
+    }
+    const { errors: attributeIssues, payload: attributePayload } = validateAttributeValues(
+      selectedCategory.attributes,
+      form.attributes
+    );
+    if (Object.keys(attributeIssues).length > 0) {
+      setAttributeErrors(attributeIssues);
+      setError("Complete the required category attributes before saving the draft.");
       return;
     }
     setBusy("new-product");
@@ -120,14 +252,23 @@ export function SellerDashboard() {
         categoryId: form.categoryId,
         priceKobo: String(priceKobo),
         imageUrl: form.imageUrl,
-        quantity: Number(form.quantity)
+        quantity,
+        attributes: attributePayload
       });
-      setNotice("Product published.");
+      // The seller API creates DRAFT listings; say so rather than claiming publication.
+      setNotice("Listing saved as a draft. Drafts are not visible in the marketplace until the catalogue is published.");
       setShowProductForm(false);
-      setForm((current) => ({ ...current, name: "", description: "", priceNaira: "" }));
+      setForm({ ...EMPTY_PRODUCT, attributes: {} });
+      setSelectedCategory(null);
+      setDraftRestored(false);
+      try {
+        window.localStorage.removeItem(PRODUCT_DRAFT_KEY);
+      } catch {
+        /* storage can be unavailable; the saved draft simply stays on this device */
+      }
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not publish product.");
+      setError(taxonomyErrorMessage(err));
     } finally {
       setBusy("");
     }
@@ -358,46 +499,151 @@ export function SellerDashboard() {
 
       <section className="rounded-2xl border border-border-soft bg-canvas p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-xl font-extrabold">Products</h2>
-          <button onClick={() => setShowProductForm((open) => !open)} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-primary px-3 text-sm font-bold text-white">
-            <Plus className="h-4 w-4" /> Add product
-          </button>
+          <div>
+            <h2 className="font-display text-xl font-extrabold">Products</h2>
+            <p className="text-xs text-muted">New listings are saved as drafts; the marketplace only shows published listings.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowProductForm((open) => !open)}
+              aria-expanded={showProductForm}
+              aria-controls="seller-product-form"
+              className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-primary px-3 text-sm font-bold text-white"
+            >
+              <Plus className="h-4 w-4" aria-hidden /> {showProductForm ? "Hide draft form" : "Add product"}
+            </button>
+            {isMeaningfulDraft(form) ? (
+              <button
+                type="button"
+                onClick={clearDraft}
+                className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-border-soft px-3 text-sm font-bold text-muted"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden /> Discard draft
+              </button>
+            ) : null}
+          </div>
         </div>
+
+        {draftRestored ? (
+          <p role="status" className="mt-3 rounded-xl bg-primary-soft p-3 text-[12px] font-semibold text-primary">
+            Restored an unfinished listing draft saved on this device. Categories are re-checked against the live seller
+            hierarchy before the draft can be submitted.
+            <button type="button" onClick={() => setDraftRestored(false)} className="ml-2 underline">
+              Dismiss
+            </button>
+          </p>
+        ) : null}
+
         {showProductForm ? (
-          <form onSubmit={createProduct} className="mt-3 grid gap-2 rounded-xl bg-surface-low p-3 sm:grid-cols-2">
+          <form
+            id="seller-product-form"
+            onSubmit={createProduct}
+            noValidate
+            className="mt-3 grid gap-3 rounded-xl bg-surface-low p-3 sm:grid-cols-2"
+          >
             <label>
               <span className="text-sm font-black">Name</span>
-              <input required value={form.name} onChange={(event) => setForm((c) => ({ ...c, name: event.target.value }))} className="mt-1 min-h-10 w-full rounded-lg border border-border-soft px-3 text-sm" />
+              <input
+                required
+                value={form.name}
+                onChange={(event) => setForm((c) => ({ ...c, name: event.target.value }))}
+                className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-canvas px-3 text-sm"
+              />
             </label>
             <label>
               <span className="text-sm font-black">Price (naira)</span>
-              <input required inputMode="decimal" value={form.priceNaira} onChange={(event) => setForm((c) => ({ ...c, priceNaira: event.target.value }))} className="mt-1 min-h-10 w-full rounded-lg border border-border-soft px-3 text-sm" />
-            </label>
-            <label>
-              <span className="text-sm font-black">Category</span>
-              <select value={form.categoryId} onChange={(event) => setForm((c) => ({ ...c, categoryId: event.target.value }))} className="mt-1 min-h-10 w-full rounded-lg border border-border-soft px-3 text-sm">
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+              <input
+                required
+                inputMode="decimal"
+                value={form.priceNaira}
+                onChange={(event) => setForm((c) => ({ ...c, priceNaira: event.target.value }))}
+                className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-canvas px-3 text-sm"
+              />
             </label>
             <label>
               <span className="text-sm font-black">Stock</span>
-              <input required inputMode="numeric" value={form.quantity} onChange={(event) => setForm((c) => ({ ...c, quantity: event.target.value }))} className="mt-1 min-h-10 w-full rounded-lg border border-border-soft px-3 text-sm" />
+              <input
+                required
+                inputMode="numeric"
+                value={form.quantity}
+                onChange={(event) => setForm((c) => ({ ...c, quantity: event.target.value }))}
+                className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-canvas px-3 text-sm"
+              />
             </label>
             <label className="sm:col-span-2">
               <span className="text-sm font-black">Image URL (https or local /path)</span>
-              <input required value={form.imageUrl} onChange={(event) => setForm((c) => ({ ...c, imageUrl: event.target.value }))} className="mt-1 min-h-10 w-full rounded-lg border border-border-soft px-3 text-sm" />
+              <input
+                required
+                value={form.imageUrl}
+                onChange={(event) => setForm((c) => ({ ...c, imageUrl: event.target.value }))}
+                className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-canvas px-3 text-sm"
+              />
             </label>
             <label className="sm:col-span-2">
               <span className="text-sm font-black">Description</span>
-              <textarea required value={form.description} onChange={(event) => setForm((c) => ({ ...c, description: event.target.value }))} className="mt-1 min-h-20 w-full rounded-lg border border-border-soft px-3 py-2 text-sm" />
+              <textarea
+                required
+                rows={3}
+                value={form.description}
+                onChange={(event) => setForm((c) => ({ ...c, description: event.target.value }))}
+                className="mt-1 w-full rounded-lg border border-border-soft bg-canvas px-3 py-2 text-sm"
+              />
             </label>
-            <button type="submit" disabled={busy === "new-product"} className="min-h-11 rounded-lg bg-primary px-4 text-sm font-bold text-white disabled:opacity-60">
-              {busy === "new-product" ? "Publishing..." : "Publish product"}
-            </button>
+
+            <div className="sm:col-span-2">
+              <CategoryPicker
+                value={form.categoryId}
+                onSelect={(category) => {
+                  setSelectedCategory(category);
+                  setAttributeErrors({});
+                  setForm((current) =>
+                    category
+                      ? {
+                          ...current,
+                          categoryId: category.id,
+                          // Attribute keys belong to one category; switching
+                          // categories starts a clean attribute set.
+                          attributes: current.categoryId === category.id ? current.attributes : {}
+                        }
+                      : { ...current, categoryId: "", attributes: {} }
+                  );
+                }}
+                onRequestCategory={(query) => openCategoryRequest(query)}
+              />
+            </div>
+
+            {selectedCategory && selectedCategory.attributes.length > 0 ? (
+              <div className="sm:col-span-2">
+                <CategoryAttributeFields
+                  attributes={selectedCategory.attributes}
+                  values={form.attributes}
+                  errors={attributeErrors}
+                  onChange={(key, value) => {
+                    setAttributeErrors((current) => {
+                      if (!current[key]) return current;
+                      const next = { ...current };
+                      delete next[key];
+                      return next;
+                    });
+                    setForm((current) => ({ ...current, attributes: { ...current.attributes, [key]: value } }));
+                  }}
+                />
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+              <button
+                type="submit"
+                disabled={busy === "new-product"}
+                className="min-h-11 rounded-lg bg-primary px-4 text-sm font-bold text-white disabled:opacity-60"
+              >
+                {busy === "new-product" ? "Saving draft…" : "Save draft listing"}
+              </button>
+              <p className="text-[11px] leading-4 text-muted">
+                Saving never publishes. Draft fields stay in this browser until you submit or discard them.
+              </p>
+            </div>
           </form>
         ) : null}
         <div className="mt-3 overflow-x-auto">
@@ -454,6 +700,15 @@ export function SellerDashboard() {
           </table>
         </div>
       </section>
+
+      <div ref={requestPanelRef}>
+        <CategoryRequestForm
+          open={showRequestForm}
+          initialName={requestSeed}
+          onClose={() => setShowRequestForm(false)}
+          onSubmitted={() => setNotice("Category request sent for Control Center review.")}
+        />
+      </div>
 
       <section className="rounded-2xl border border-border-soft bg-canvas p-5">
         <h2 className="font-display text-xl font-extrabold">Returns</h2>

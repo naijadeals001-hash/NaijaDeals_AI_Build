@@ -30,6 +30,7 @@ import {
   Link2,
   Star,
   Sparkles,
+  FolderTree,
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { normalizeTab, TAB_LABELS, type AdminTab } from "@/lib/admin/admin-navigation";
@@ -82,6 +83,7 @@ const adminNavItems: NavItem[] = [
       { id: "reviews", label: "Reviews", icon: <Star className="h-4 w-4" />, href: "/admin?module=shop&tab=reviews" },
       { id: "applications", label: "Seller applications", icon: <UserCheck className="h-4 w-4" />, href: "/admin?tab=applications" },
       { id: "catalogue", label: "Catalogue workflow", icon: <Package className="h-4 w-4" />, href: "/admin/catalogue" },
+      { id: "taxonomy", label: "Taxonomy", icon: <FolderTree className="h-4 w-4" />, href: "/admin/taxonomy" },
     ],
   },
   {
@@ -151,10 +153,12 @@ export function AdminShell({
   const isSuperAdminPath = pathname?.startsWith("/super-admin") ?? false;
   const isPlusPath = pathname?.startsWith("/admin/plus") ?? false;
   const isCataloguePath = pathname?.startsWith("/admin/catalogue") ?? false;
+  const isTaxonomyPath = pathname?.startsWith("/admin/taxonomy") ?? false;
   const currentTab = normalizeTab(searchParams.get("tab"));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>(() => {
+    if (isTaxonomyPath || isCataloguePath) return ["catalog"];
     if (currentTab === "products" || currentTab === "reviews" || currentTab === "applications") return ["catalog"];
     if (currentTab === "payments" || currentTab === "payouts") return ["finance"];
     if (["users", "vendors", "couriers", "drivers"].includes(currentTab)) return ["people"];
@@ -199,7 +203,8 @@ export function AdminShell({
     if (isSuperAdminPath) return false;
     if (href === "/admin/plus") return isPlusPath;
     if (href === "/admin/catalogue") return isCataloguePath;
-    if (isPlusPath || isCataloguePath) return false;
+    if (href === "/admin/taxonomy") return isTaxonomyPath;
+    if (isPlusPath || isCataloguePath || isTaxonomyPath) return false;
     const tab: AdminTab = normalizeTab(href.includes("tab=") ? href.split("tab=")[1] : "overview");
     return currentTab === tab;
   };
