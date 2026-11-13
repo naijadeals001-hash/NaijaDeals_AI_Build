@@ -4592,3 +4592,24 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 - Defects fixed after review: advisory-lock `$queryRaw` → `$executeRaw`; GH-scoped admin
   blocked from NG taxonomy mutation; multi-word search tokenized; five department images
   mapped; search-sync enqueue no longer blocks listing creation when Valkey is down.
+
+## Taxonomy breadth, leaf migration and Batch 2 (2026-11-13)
+
+- HEAD after Batch 2 + aggregation/UI integration; served build `jjbV4d6arqXAJKEtQn5w2`.
+- Product reconciliation: 31 accepted baseline + 6 Batch A + 4 Batch B + 8 taxonomy
+  = 49; Batch 2 adds 8 = 57 ACTIVE. 10 DRAFT / 89+ ARCHIVED are non-public; 0 active
+  acceptance fixtures; 0 CRF category names.
+- Taxonomy 11 departments / 37 categories / 113 leaves (161 nodes), 969 aliases,
+  353 attributes, 18 country rules; 17 regulated NG leaves are not publishable.
+- 34 product moves applied with audit (product ids/slugs/images/stock unchanged);
+  8 already on leaves; 7 ambiguous retained on selectable level-1 categories.
+- Descendant aggregation: `/api/categories` 11 roots summing 57; parent pages 21 unique
+  products; leaf-only and empty leaves correct; drafts/fixtures excluded.
+- Batch 2: 8 Kie products (first-aid, baby bottles, football, car-care, drill, exercise
+  books, garri, raffia tote); 8 images × 6 credits = 48 new; cumulative 96 credits.
+  Coverage 30 populated of 96 publishable leaves; 66 gaps documented.
+- Aura: deterministic alias suggestions remain default; opt-in `assist=aura` validates
+  eligible ids and fails closed, tested with injected provider only. Live DeepSeek call
+  not exercised; requires key + Valkey limiter.
+- Fixed after integration: category-browse now resolves leaf names from `/api/taxonomy`
+  (empty leaf no longer says department missing); parent aggregation rendered once.

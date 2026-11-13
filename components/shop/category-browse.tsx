@@ -66,6 +66,8 @@ export function CategoryBrowse({
 
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [categoriesStatus, setCategoriesStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [taxonomyNodes, setTaxonomyNodes] = useState<ApiCategory[]>([]);
+  const [taxonomyStatus, setTaxonomyStatus] = useState<"loading" | "ready" | "error">("loading");
 
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
@@ -108,6 +110,30 @@ export function CategoryBrowse({
         setCategoriesStatus("ready");
       })
       .catch(() => active && setCategoriesStatus("error"));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/taxonomy", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("taxonomy"))))
+      .then((payload: { departments?: Array<Record<string, unknown>> }) => {
+        if (!active) return;
+        const flat: ApiCategory[] = [];
+        const walk = (node: Record<string, unknown>) => {
+          if (node && typeof node.slug === "string" && typeof node.name === "string") {
+            flat.push({ id: String(node.id ?? node.slug), name: node.name, slug: node.slug } as ApiCategory);
+          }
+          const children = Array.isArray(node?.children) ? node.children : [];
+          for (const child of children) walk(child as Record<string, unknown>);
+        };
+        for (const department of payload.departments ?? []) walk(department);
+        setTaxonomyNodes(flat);
+        setTaxonomyStatus("ready");
+      })
+      .catch(() => active && setTaxonomyStatus("error"));
     return () => {
       active = false;
     };
@@ -162,9 +188,13 @@ export function CategoryBrowse({
     };
   }, [q, sort, maxPrice, page, categorySlug, mode, attempt]);
 
-  const knownCategory = categories.find((item) => item.slug === categorySlug);
+  const knownCategory = taxonomyNodes.find((item) => item.slug === categorySlug) ?? categories.find((item) => item.slug === categorySlug);
   const departmentMissing =
-    mode === "category" && Boolean(categorySlug) && categoriesStatus === "ready" && !knownCategory;
+    mode === "category" &&
+    Boolean(categorySlug) &&
+    categoriesStatus === "ready" &&
+    taxonomyStatus === "ready" &&
+    !knownCategory;
 
   const heading =
     mode === "deals"

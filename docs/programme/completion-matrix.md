@@ -612,3 +612,9 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Category image gaps | five department images corrected to existing approved assets | VERIFIED |
 | Multi-word Shop search | token AND matching finds "african print fabric" and "woven baskets" | VERIFIED |
 | Taxonomy DEMO products | 8 Kie-generated products on leaves, 49 active total, 48 credits | VERIFIED |
+| Product-count reconciliation | 49 pre-batch2 = 31 accepted + 10 Batch A/B + 8 taxonomy; 0 active acceptance fixtures; now 57 with Batch 2 | VERIFIED |
+| Marketplace breadth | 11 departments / 37 categories / 113 leaves; Health, Baby, Sports, Automotive, Tools, Books added; 17 regulated NG leaves gated | VERIFIED |
+| Product→leaf migration | 34 reviewed moves applied in 4 audited batches; 8 already correct; 7 ambiguous retained; 0 image/stock/id changes | VERIFIED |
+| Descendant aggregation | parent 21 unique products, leaf-only, 0 duplicates; `/api/categories` 11 roots sum 57; drafts/restricted excluded | VERIFIED |
+| Batch 2 Kie coverage | 8 new DEMO products, 8 images, 48 new credits; 30/96 publishable leaves populated; 66 documented gaps | VERIFIED |
+| Aura category assistance | opt-in `assist=aura`, eligible-ID validation, fail-closed/mock tests; deterministic default; live model call not exercised | PARTIAL |

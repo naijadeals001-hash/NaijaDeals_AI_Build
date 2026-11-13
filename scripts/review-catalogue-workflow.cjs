@@ -41,7 +41,7 @@ const SHOT_DIR = "qa-artifacts/visual/catalogue-workflow";
 const IMAGE_ONE = "/generated/shop/category-home-kitchen.webp";
 const IMAGE_TWO = "/generated/shop/product-retro-kitchen-blender.webp";
 const SEED_BASELINE = { departments: 7, products: 23 };
-const EXPANDED_BASELINE = { departments: 5, products: 49 };
+const EXPANDED_BASELINE = { departments: 11, products: 57 };
 const DEMO_NOTE = "DEMO — demonstration inventory, not live supply";
 const [email, password] = fs.readFileSync(CREDENTIAL_FILE, "utf8").trim().split(/\r?\n/);
 
@@ -1777,7 +1777,7 @@ function parse(response, body) {
       finalCatalogue.products.some((entry) => entry.slug === spec.slug && entry.status === "ACTIVE")
     );
     check(
-      "final catalogue retains the approved 5-department / 49-product taxonomy baseline",
+      "final catalogue retains the approved 11-department / 57-product taxonomy baseline",
       finalCounts.departments === EXPANDED_BASELINE.departments &&
         finalCounts.products === EXPANDED_BASELINE.products &&
         retainedExpansion.length === EXPANSION_PRODUCTS.length,
