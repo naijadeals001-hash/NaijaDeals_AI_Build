@@ -21,3 +21,171 @@ Existing 41 active products keep their IDs/slugs/images/stock and remain on thei
 Populated leaves: 8 of 51 selectable leaves. The remaining 43 selectable leaves are deliberately empty and render an honest empty state; they are selectable by sellers and searchable by alias. Populating them requires further original imagery and is not padded with duplicates. Regulated leaves (`seeds-seedlings`, `fertilizers-crop-nutrition`) are not publishable in NG.
 
 Kie generation: `gpt-image-2-5-flare-text-to-image`, 1K, 1:1, 6 credits/image read back from each job, **48 credits total** for 8 images. Provenance in `generation-ledger.json`; images inspected as a contact sheet before publication.
+
+## Batch 2 — coverage and representative DEMO products (2026-11-13)
+
+Scope: 11 departments / 37 categories / 113 leaves. 17 regulated leaves are excluded from publication (NG `canPublish=false`); 96 leaves are approved publishable. The 34 product moves proposed in `product-leaf-mapping.json` were applied by the backend during this batch; the 7 ambiguous legacy listings remain on their level-1 categories and are not counted against a leaf.
+
+Batch 2 added eight representative DEMO products across eight departments, each with one original Kie image: First-Aid Supplies (Health & Wellness), Bottles/Teats/Sterilisers (Baby, Kids & Toys), Football & Basketball (Sports & Outdoors), Car Care & Cleaning (Automotive & Motorcycle), Drills & Drivers (Tools & Building Materials), Notebooks & Paper (Books & Stationery), Cassava Products (Food & Everyday Essentials) and Bags & Accessories (Fashion & Beauty). No regulated leaf was populated.
+
+### Department summary
+
+| Department | Publishable leaves | Populated leaves | Active products on leaves | Images | Empty publishable leaves | Excluded regulated leaves |
+|---|---:|---:|---:|---:|---:|---:|
+| Electronics & Technology | 12 | 7 | 17 | 17 | 5 | 0 |
+| Home & Living | 9 | 4 | 4 | 4 | 5 | 0 |
+| Fashion & Beauty | 11 | 8 | 11 | 11 | 3 | 0 |
+| Food & Everyday Essentials | 9 | 4 | 11 | 11 | 5 | 0 |
+| Agriculture & Business | 8 | 1 | 1 | 1 | 7 | 3 |
+| Health & Wellness | 1 | 1 | 1 | 1 | 0 | 5 |
+| Baby, Kids & Toys | 9 | 1 | 1 | 1 | 8 | 2 |
+| Sports & Outdoors | 10 | 1 | 1 | 1 | 9 | 0 |
+| Automotive & Motorcycle | 7 | 1 | 1 | 1 | 6 | 6 |
+| Tools & Building Materials | 10 | 1 | 1 | 1 | 9 | 1 |
+| Books & Stationery | 10 | 1 | 1 | 1 | 9 | 0 |
+| **Total** | **96** | **30** | **50** | **50** | **66** | **17** |
+
+The 7 ambiguous legacy products (headphones, two perfumes, gaming mouse, portable power station, DSLR camera, smartwatch) remain on their level-1 categories until a classification rule or leaf is approved; they are not included in the leaf counts above.
+
+### Publishable-leaf manifest
+
+`Existing` is a suitable active listing and its image. `Planned` is the batch-2 DEMO product and image. Every populated row has an image; empty rows have none.
+
+| Department | Leaf (key) | Existing suitable product / image | Planned batch-2 product / image | Status / blocker |
+|---|---|---|---|---|
+| Electronics & Technology | Smartphones (`smartphones`) | Android smartphone, 6-inch display (`/generated/shop/product-blackview-a60-android-smartphone.webp`)<br>Smartphone on desk (`/generated/shop/product-smartphone-on-desk.webp`)<br>Apple iPhone 5s, gold (`/generated/shop/product-apple-iphone-5s.webp`)<br>Apple iPhone 6, silver (`/generated/shop/product-apple-iphone-6-silver.webp`) | — | Populated — moved listing |
+| Electronics & Technology | Phone Accessories (`phone-accessories`) | Portable power bank (`/generated/shop/product-portable-power-bank.webp`) | — | Populated — moved listing |
+| Electronics & Technology | Tablets (`tablets`) | 10-inch Android tablet (`/generated/shop/product-tablet-10-inch.webp`) | — | Populated — moved listing |
+| Electronics & Technology | Laptops (`laptops`) | 14-inch business laptop (`/generated/shop/product-14-inch-business-laptop.webp`)<br>15.6-inch laptop (`/generated/shop/product-15-6-inch-laptop.webp`) | — | Populated — moved listing |
+| Electronics & Technology | Desktop Computers (`desktop-computers`) | — | — | Empty — needs original image |
+| Electronics & Technology | Computer Accessories (`computer-accessories`) | Mechanical keyboard (`/generated/shop/product-mechanical-keyboard.webp`)<br>LED monitor (`/generated/shop/product-led-monitor.webp`)<br>EIZO FORIS FG2421 gaming monitor, 24-inch (`/generated/shop/product-eizo-foris-fg2421-monitor.webp`) | — | Populated — moved listing |
+| Electronics & Technology | Gaming Consoles (`gaming-consoles`) | — | — | Empty — needs original image |
+| Electronics & Technology | Video Games (`video-games`) | — | — | Empty — needs original image |
+| Electronics & Technology | Gaming Accessories (`gaming-accessories`) | Wireless game controllers, black and white pair (`/generated/shop/product-ps4-and-xbox-one-controllers.webp`)<br>Game controller with coloured buttons (`/generated/shop/product-xbox-360-controller.webp`) | — | Populated — moved listing |
+| Electronics & Technology | TVs & Home Audio (`tvs-home-audio`) | — | — | Empty — needs original image |
+| Electronics & Technology | Kitchen Appliances (`kitchen-appliances`) | — | — | Empty — needs original image |
+| Electronics & Technology | Small Appliances (`small-appliances`) | 5.5L air fryer (`/generated/shop/product-air-fryer-5-5l.webp`)<br>2-slice toaster (`/generated/shop/product-2-slice-toaster.webp`)<br>Retro kitchen blender (`/generated/shop/product-retro-kitchen-blender.webp`)<br>Coffee maker (`/generated/shop/product-coffee-maker.webp`) | — | Populated — moved listing |
+| Home & Living | Cookware & Bakeware (`cookware-bakeware`) | Stainless steel cookware set (`/generated/shop/product-stainless-steel-cookware-set.webp`) | — | Populated — moved listing |
+| Home & Living | Tableware & Dining (`tableware-dining`) | — | — | Empty — needs original image |
+| Home & Living | Home Textiles (`home-textiles`) | — | — | Empty — needs original image |
+| Home & Living | Storage & Organisation (`storage-organisation`) | Woven storage baskets, set of three (`/generated/taxonomy/woven-baskets.webp`) | — | Populated — batch 1 |
+| Home & Living | Solar Panels (`solar-panels`) | Rooftop solar panel array with mounting frame (`/generated/shop/product-rooftop-solar-panel-array.webp`) | — | Populated — moved listing |
+| Home & Living | Inverters & Batteries (`inverters-batteries`) | Solar power inverter (`/generated/shop/product-solar-power-inverter.webp`) | — | Populated — moved listing |
+| Home & Living | Generators & Backup Power (`generators-backup-power`) | — | — | Empty — needs original image |
+| Home & Living | Cleaning Supplies (`cleaning-supplies`) | — | — | Empty — needs original image |
+| Home & Living | Laundry & Bathroom (`laundry-bathroom`) | — | — | Empty — needs original image |
+| Fashion & Beauty | Clothing (`clothing`) | — | — | Empty — needs original image |
+| Fashion & Beauty | Footwear (`footwear`) | Running shoes (`/generated/shop/product-asics-gel-cumulus-22-running-shoes.webp`)<br>Red patent leather baby shoes (`/generated/shop/product-red-patent-leather-baby-shoes.webp`) | — | Populated — moved listing |
+| Fashion & Beauty | Bags & Accessories (`bags-accessories`) | Leather handbag (`/generated/shop/product-prada-tooled-leather-handbag.webp`)<br>Automatic wristwatch (`/generated/shop/product-automatic-wristwatch.webp`) | Handwoven raffia tote bag (`/generated/taxonomy/raffia-tote.webp`) | Populated — batch 2 |
+| Fashion & Beauty | African-Print Fabrics (`african-print-fabrics`) | African-print cotton fabric, 6 yards (`/generated/taxonomy/african-print-fabrics.webp`) | — | Populated — batch 1 |
+| Fashion & Beauty | Handwoven & Dyed Fabrics (`handwoven-dyed-fabrics`) | Handwoven kente-style cloth, 2 yards (`/generated/taxonomy/kente-cloth.webp`) | — | Populated — batch 1 |
+| Fashion & Beauty | Lace & Embroidered Fabrics (`lace-embroidered-fabrics`) | — | — | Empty — needs original image |
+| Fashion & Beauty | Skincare (`skincare`) | Moisturiser, 100ml (`/generated/shop/product-moisturiser-jar-100ml.webp`) | — | Populated — moved listing |
+| Fashion & Beauty | Hair Care (`hair-care`) | Shampoo bars (`/generated/shop/product-handmade-shampoo-bars.webp`) | — | Populated — moved listing |
+| Fashion & Beauty | Bath & Body (`bath-body`) | — | — | Empty — needs original image |
+| Fashion & Beauty | Shea & Natural Butters (`shea-natural-butters`) | Raw shea butter, 500g (`/generated/taxonomy/shea-butter.webp`) | — | Populated — batch 1 |
+| Fashion & Beauty | Traditional Cleansers & Black Soap (`traditional-cleansers-black-soap`) | African black soap bar, 300g (`/generated/taxonomy/black-soap.webp`) | — | Populated — batch 1 |
+| Food & Everyday Essentials | Fresh Produce (`fresh-produce`) | Fresh tomatoes, 1kg (`/generated/shop/product-fresh-tomatoes-1kg.webp`)<br>Diced onions, 500g (`/generated/shop/product-diced-onions-500g.webp`)<br>Red bell peppers, 500g (`/generated/shop/product-red-bell-pepper-500g.webp`)<br>Green beans, 500g (`/generated/shop/product-green-beans-500g.webp`)<br>Fresh cabbage, 1 head (`/generated/fresh/prod-cabbage.webp`)<br>Fresh carrots, 1kg (`/generated/fresh/prod-carrots.webp`)<br>Fresh cucumbers, 1kg (`/generated/fresh/prod-cucumber.webp`)<br>Apple mangoes, 1kg (`/generated/fresh/prod-apple-mangoes.webp`) | — | Populated — moved listing |
+| Food & Everyday Essentials | Pantry Staples (`pantry-staples`) | — | — | Empty — needs original image |
+| Food & Everyday Essentials | Household Essentials (`household-essentials`) | — | — | Empty — needs original image |
+| Food & Everyday Essentials | Teff Flour (`teff-flour`) | Teff flour, 1kg (`/generated/taxonomy/teff-flour.webp`) | — | Populated — batch 1 |
+| Food & Everyday Essentials | Maize Meal & Porridge (`maize-meal-porridge`) | Fine white maize meal, 5kg (`/generated/taxonomy/maize-meal.webp`) | — | Populated — batch 1 |
+| Food & Everyday Essentials | Cassava Products (`cassava-products`) | — | Garri (cassava flakes), 1kg (`/generated/taxonomy/garri.webp`) | Populated — batch 2 |
+| Food & Everyday Essentials | Rice & Other Grains (`rice-grains`) | — | — | Empty — needs original image |
+| Food & Everyday Essentials | Palm Oil & Cooking Oils (`palm-cooking-oils`) | — | — | Empty — needs original image |
+| Food & Everyday Essentials | Soup Thickeners & Seasonings (`soup-thickeners-seasonings`) | — | — | Empty — needs original image |
+| Agriculture & Business | Soil, Compost & Growing Media (`soil-compost`) | — | — | Empty — needs original image |
+| Agriculture & Business | Irrigation & Farm Tools (`irrigation-farm-tools`) | — | — | Empty — needs original image |
+| Agriculture & Business | Cassava Processing Equipment (`cassava-processing-equipment`) | Electric cassava grater (`/generated/taxonomy/cassava-grater.webp`) | — | Populated — batch 1 |
+| Agriculture & Business | Grain Milling Equipment (`grain-milling-equipment`) | — | — | Empty — needs original image |
+| Agriculture & Business | Food Processing Equipment (`food-processing-equipment`) | — | — | Empty — needs original image |
+| Agriculture & Business | Bulk Grains & Staples (`bulk-grains-staples`) | — | — | Empty — needs original image |
+| Agriculture & Business | Business Packaging Supplies (`business-packaging-supplies`) | — | — | Empty — needs original image |
+| Agriculture & Business | Store Equipment & Fixtures (`store-equipment-fixtures`) | — | — | Empty — needs original image |
+| Health & Wellness | First-Aid Supplies (`first-aid-supplies`) | — | Compact first-aid kit, 42 pieces (`/generated/taxonomy/first-aid-kit.webp`) | Populated — batch 2 |
+| Baby, Kids & Toys | Strollers & Prams (`strollers-prams`) | — | — | Empty — needs original image |
+| Baby, Kids & Toys | Cots & Nursery Furniture (`cots-nursery-furniture`) | — | — | Empty — needs original image |
+| Baby, Kids & Toys | Bottles, Teats & Sterilisers (`bottles-teats-sterilisers`) | — | Glass baby bottles, 2 × 240ml (`/generated/taxonomy/glass-baby-bottles.webp`) | Populated — batch 2 |
+| Baby, Kids & Toys | Nappies & Baby Wipes (`nappies-wipes`) | — | — | Empty — needs original image |
+| Baby, Kids & Toys | Baby Bathing & Skincare (`baby-bathing-skincare`) | — | — | Empty — needs original image |
+| Baby, Kids & Toys | Baby & Toddler Toys (`baby-toddler-toys`) | — | — | Empty — needs original image |
+| Baby, Kids & Toys | Educational & STEM Toys (`educational-stem-toys`) | — | — | Empty — needs original image |
+| Baby, Kids & Toys | Ride-On Toys (`ride-on-toys`) | — | — | Empty — needs original image |
+| Baby, Kids & Toys | Dolls & Plush Toys (`dolls-plush-toys`) | — | — | Empty — needs original image |
+| Sports & Outdoors | Home Gym & Weights (`home-gym-weights`) | — | — | Empty — needs original image |
+| Sports & Outdoors | Yoga & Fitness Accessories (`yoga-fitness-accessories`) | — | — | Empty — needs original image |
+| Sports & Outdoors | Cardio Machines (`cardio-machines`) | — | — | Empty — needs original image |
+| Sports & Outdoors | Football & Basketball (`football-basketball-equipment`) | — | Size 5 match football (`/generated/taxonomy/match-football.webp`) | Populated — batch 2 |
+| Sports & Outdoors | Racquet Sports (`racquet-sports-equipment`) | — | — | Empty — needs original image |
+| Sports & Outdoors | Tents & Sleeping Gear (`tents-sleeping-bags`) | — | — | Empty — needs original image |
+| Sports & Outdoors | Camping Cooking & Coolers (`camping-cooking-coolers`) | — | — | Empty — needs original image |
+| Sports & Outdoors | Bicycles (`bicycles`) | — | — | Empty — needs original image |
+| Sports & Outdoors | Cycling Helmets & Protection (`cycling-helmets-protection`) | — | — | Empty — review-required standards marking |
+| Sports & Outdoors | Cycling Accessories (`cycling-accessories`) | — | — | Empty — needs original image |
+| Automotive & Motorcycle | Engine Filters & Fluids (`engine-filters-fluids`) | — | — | Empty — needs original image |
+| Automotive & Motorcycle | Auto Electrical & Lighting (`auto-electrical-lighting`) | — | — | Empty — needs original image |
+| Automotive & Motorcycle | Body & Exterior Parts (`body-exterior-parts`) | — | — | Empty — needs original image |
+| Automotive & Motorcycle | Motorcycle Engine & Drive Parts (`motorcycle-engine-drive-parts`) | — | — | Empty — needs original image |
+| Automotive & Motorcycle | Car Care & Cleaning (`car-care-cleaning`) | — | Car wash and microfibre care kit (`/generated/taxonomy/car-care-kit.webp`) | Populated — batch 2 |
+| Automotive & Motorcycle | Car Interior Accessories (`car-interior-accessories`) | — | — | Empty — needs original image |
+| Automotive & Motorcycle | In-Car Electronics (`in-car-electronics`) | — | — | Empty — needs original image |
+| Tools & Building Materials | Drills & Drivers (`drills-drivers`) | — | Cordless drill and bit set, 18V (`/generated/taxonomy/cordless-drill.webp`) | Populated — batch 2 |
+| Tools & Building Materials | Grinders & Cutters (`grinders-cutters`) | — | — | Empty — needs original image |
+| Tools & Building Materials | Saws & Planers (`saws-planers`) | — | — | Empty — needs original image |
+| Tools & Building Materials | Spanners & Socket Sets (`spanners-sockets`) | — | — | Empty — needs original image |
+| Tools & Building Materials | Hammers & Measuring Tools (`hammers-measuring-tools`) | — | — | Empty — needs original image |
+| Tools & Building Materials | Cement, Blocks & Aggregates (`cement-blocks-aggregates`) | — | — | Empty — needs original image |
+| Tools & Building Materials | Roofing, Timber & Boards (`roofing-sheets-timber`) | — | — | Empty — needs original image |
+| Tools & Building Materials | Paints & Coatings (`paints-coatings`) | — | — | Empty — needs original image |
+| Tools & Building Materials | Plumbing & Fittings (`plumbing-fittings`) | — | — | Empty — needs original image |
+| Tools & Building Materials | PPE & Workwear (`ppe-workwear`) | — | — | Empty — needs original image |
+| Books & Stationery | Textbooks & Education (`textbooks-education`) | — | — | Empty — needs original image |
+| Books & Stationery | Fiction & Literature (`fiction-literature`) | — | — | Empty — needs original image |
+| Books & Stationery | Religious & Inspirational Books (`religious-inspirational-books`) | — | — | Empty — needs original image |
+| Books & Stationery | Children's Books (`childrens-books`) | — | — | Empty — needs original image |
+| Books & Stationery | Notebooks & Paper (`notebooks-paper`) | — | A5 exercise books, pack of 10 (`/generated/taxonomy/exercise-books.webp`) | Populated — batch 2 |
+| Books & Stationery | Writing & Drawing Instruments (`writing-drawing-instruments`) | — | — | Empty — needs original image |
+| Books & Stationery | Office & School Supplies (`office-school-supplies`) | — | — | Empty — needs original image |
+| Books & Stationery | Printer Ink & Toner (`printer-ink-toner`) | — | — | Empty — needs original image |
+| Books & Stationery | Art Supplies (`art-supplies`) | — | — | Empty — needs original image |
+| Books & Stationery | Craft Materials (`craft-materials`) | — | — | Empty — needs original image |
+
+### Regulated leaves — excluded from this batch
+
+These leaves remain seeded, selectable and searchable by alias, but `canPublish=false` for NG and `reviewRequired=true`. No product or image was created for them.
+
+| Department | Leaf (key) | Path |
+|---|---|---|
+| Agriculture & Business | `seeds-seedlings` | Agriculture & Business > Farm Inputs > Seeds & Seedlings |
+| Agriculture & Business | `fertilizers-crop-nutrition` | Agriculture & Business > Farm Inputs > Fertilizers & Crop Nutrition |
+| Agriculture & Business | `pesticides-crop-protection` | Agriculture & Business > Farm Inputs > Pesticides & Crop Protection |
+| Health & Wellness | `otc-medicines-treatments` | Health & Wellness > Medicines & Treatments > Over-the-Counter Medicines |
+| Health & Wellness | `vitamins-minerals-supplements` | Health & Wellness > Vitamins & Supplements > Vitamins & Minerals |
+| Health & Wellness | `herbal-traditional-remedies` | Health & Wellness > Vitamins & Supplements > Herbal & Traditional Remedies |
+| Health & Wellness | `health-monitors` | Health & Wellness > Medical Devices & Aids > Health Monitors |
+| Health & Wellness | `mobility-support-aids` | Health & Wellness > Medical Devices & Aids > Mobility & Support Aids |
+| Baby, Kids & Toys | `car-seats-boosters` | Baby, Kids & Toys > Baby Gear & Nursery > Child Car Seats & Boosters |
+| Baby, Kids & Toys | `infant-formula` | Baby, Kids & Toys > Baby Feeding & Care > Infant Formula |
+| Automotive & Motorcycle | `brake-system-parts` | Automotive & Motorcycle > Car Parts > Brake System Parts |
+| Automotive & Motorcycle | `suspension-steering-parts` | Automotive & Motorcycle > Car Parts > Suspension & Steering Parts |
+| Automotive & Motorcycle | `tyres-tubes` | Automotive & Motorcycle > Car Parts > Tyres & Tubes |
+| Automotive & Motorcycle | `motorcycle-brakes-safety` | Automotive & Motorcycle > Motorcycle Parts & Gear > Motorcycle Brakes |
+| Automotive & Motorcycle | `motorcycle-tyres-wheels` | Automotive & Motorcycle > Motorcycle Parts & Gear > Motorcycle Tyres & Wheels |
+| Automotive & Motorcycle | `motorcycle-helmets-protection` | Automotive & Motorcycle > Motorcycle Parts & Gear > Motorcycle Helmets & Riding Gear |
+| Tools & Building Materials | `electrical-installation-materials` | Tools & Building Materials > Building Materials > Electrical Installation Materials |
+
+### Credit accounting
+
+| Batch | Model / size | Images | Credits | Balance evidence |
+|---|---|---:|---:|---|
+| Batch 1 (prior, preserved) | `gpt-image-2-5-flare-text-to-image`, 1K, 1:1 | 8 | 48 | per-job `creditsConsumed` in `generation-ledger.json` |
+| Batch 2 (new) | `gpt-image-2-5-flare-text-to-image`, 1K, 1:1 | 8 | 48 | 6 credits/job; account 11,292.8 → 11,244.8 |
+| **Cumulative** | | **16** | **96** | 48 prior + 48 new |
+
+Kie MCP `prepare_media_generation` quoted 6 credits / $0.03 per 1K image (credit value $0.005; `https://kie.ai/pricing`, verified in the plan on 2026-11-13). The MCP host declined submit approval in this session, so generation used the project's existing permitted Kie REST integration (`/api/v1/jobs/createTask`, `/api/v1/jobs/recordInfo`, `/api/v1/chat/credit`). No credits were purchased. Prior and new credits are separated in `generation-ledger.json` (`creditBatches`).
+
+### Verification and preview note
+
+The eight listings were created as seller DRAFTs, given exact alt text and the DEMO flag by an administrator, passed `action=validate`, and were published with `action=publish`. A 160-check run passed on the production build (`BUILD_ID LlrV3NWSANnH6hr6mbNxN`, same as the existing 3047 preview) served from an isolated temporary port against `naijadeals_review`: direct page, leaf catalogue API, rendered leaf page, search API, rendered search page, DEMO label, alt text, exact leaf, attributes, price and stock. Production screenshots are in `qa-artifacts/taxonomy-batch2/` (direct, leaf and search at 1440px; direct at 390px).
+
+The existing 3047 process was not restarted. Its in-memory public-file index predates this batch, so the new image paths return 404 from 3047 until its next authorised start; the database listings themselves are live. An isolated temporary `next start` on port 3061 used the same build and public directory and served every image with HTTP 200; it was stopped after verification. Port 3057 (an existing development server) was left untouched.
