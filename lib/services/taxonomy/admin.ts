@@ -35,6 +35,8 @@ export type AdminTaxonomyNode = {
   level: number;
   isSelectable: boolean;
   showOnHomepage: boolean;
+  /** Browsing rail/directory visibility, independent of publication and merchandising. */
+  browsingVisible: boolean;
   deprecatedAt: Date | null;
   isActive: boolean;
   isDemo: boolean;
@@ -93,6 +95,7 @@ function toAdminNode(record: AdminCategoryRecord, visibleCountry: string | null)
     level: record.level,
     isSelectable: record.isSelectable,
     showOnHomepage: record.showOnHomepage,
+    browsingVisible: record.browsingVisible,
     deprecatedAt: record.deprecatedAt,
     isActive: record.isActive,
     isDemo: record.isDemo,
@@ -295,7 +298,7 @@ function createBodyFromRequest(input: {
     description: typeof overrides.description === "string" ? overrides.description : input.request.description,
     imageUrl: typeof overrides.imageUrl === "string" ? overrides.imageUrl : input.request.imageUrl
   };
-  for (const field of ["imageAlt", "isSelectable", "showOnHomepage", "isActive", "sortOrder"] as const) {
+  for (const field of ["imageAlt", "isSelectable", "showOnHomepage", "browsingVisible", "isActive", "sortOrder"] as const) {
     if (overrides[field] !== undefined) body[field] = overrides[field];
   }
   return body;

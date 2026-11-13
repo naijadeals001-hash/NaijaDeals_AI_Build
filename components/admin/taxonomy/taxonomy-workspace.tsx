@@ -34,6 +34,17 @@ import { TaxonomyRequestsPanel } from "./taxonomy-requests-panel";
 
 type FlatAdminNode = { node: AdminTaxonomyNode; level: number; path: string; parentId: string | null };
 
+/**
+ * The admin API returns `browsingVisible`; the shared client type predates the
+ * field, so read it through an explicit extension. A missing value means the
+ * server did not report it, not that the node is hidden.
+ */
+type AdminNodeWithBrowsing = AdminTaxonomyNode & { browsingVisible?: boolean };
+
+function browsingVisibleOf(node: AdminTaxonomyNode): boolean {
+  return (node as AdminNodeWithBrowsing).browsingVisible !== false;
+}
+
 function flattenAdmin(nodes: AdminTaxonomyNode[], parentPath = "", parentId: string | null = null): FlatAdminNode[] {
   const rows: FlatAdminNode[] = [];
   for (const node of nodes) {
@@ -70,6 +81,7 @@ function draftFromNode(node: AdminTaxonomyNode, parentId: string | null): NodeDr
     imageAlt: node.imageAlt ?? "",
     isSelectable: node.isSelectable !== false,
     showOnHomepage: node.showOnHomepage === true,
+    browsingVisible: browsingVisibleOf(node),
     isActive: node.isActive !== false,
     sortOrder: typeof node.sortOrder === "number" ? String(node.sortOrder) : "",
     deprecatedAt: node.deprecatedAt ?? null,
@@ -258,6 +270,7 @@ export function TaxonomyWorkspace({
       active: nodes.filter((node) => node.isActive !== false && !node.deprecatedAt).length,
       selectable: nodes.filter((node) => node.isSelectable !== false).length,
       featured: nodes.filter((node) => node.showOnHomepage === true).length,
+      browsingHidden: nodes.filter((node) => (node as AdminNodeWithBrowsing).browsingVisible === false).length,
       deprecated: nodes.filter((node) => Boolean(node.deprecatedAt)).length,
       inScope: scopeCountry ? nodes.filter((node) => nodeInScope(node)).length : nodes.length,
       productRefs: knownCounts.length === flat.length ? knownCounts.reduce((sum, count) => sum + count, 0) : null
@@ -363,6 +376,7 @@ export function TaxonomyWorkspace({
       imageAlt: editing.imageAlt.trim() || null,
       isSelectable: editing.isSelectable,
       showOnHomepage: editing.showOnHomepage,
+      browsingVisible: editing.browsingVisible,
       isActive: editing.isActive,
       sortOrder: editing.sortOrder ? Number(editing.sortOrder) : 0,
       aliases: editing.aliases
@@ -580,8 +594,8 @@ export function TaxonomyWorkspace({
               Published hierarchy
             </h2>
             <p className="mt-1 text-xs text-[#8B949E]">
-              {stats.total} nodes · {stats.active} public · {stats.selectable} listable · {stats.featured} on the homepage ·{" "}
-              {stats.deprecated} deprecated
+              {stats.total} nodes · {stats.active} published · {stats.selectable} listable · {stats.featured} on the homepage ·{" "}
+              {stats.browsingHidden} hidden from browsing rails · {stats.deprecated} deprecated
               {scopeCountry ? ` · ${stats.inScope} writable in ${scopeCountry} scope` : ""}
               {stats.productRefs !== null ? ` · ${stats.productRefs} listed product references` : " · product counts not reported"}
             </p>
@@ -671,7 +685,8 @@ export function TaxonomyWorkspace({
         <p className="mt-3 flex items-start gap-1.5 text-[10px] leading-4 text-[#8B949E]">
           <FolderTree className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
           Empty selectable categories stay in the tree so customers see an honest empty state; they are never hidden by
-          product count.
+          product count. Publication, seller listability, homepage merchandising and browsing-rail visibility are separate
+          flags: hiding a node from rails does not unpublish it or remove its listings.
         </p>
       </section>
 
@@ -806,6 +821,16 @@ function TreeBranch({
         <span className="text-[10px] text-[#8B949E]">
           {productCount === null ? "products unknown" : `${productCount} listed`}
         </span>
+        <span
+          className="text-[10px] text-[#8B949E]"
+          title={
+            browsingVisibleOf(node)
+              ? "Listed in browsing rails (/api/taxonomy/categories)."
+              : "Excluded from browsing rails; still published in /api/taxonomy."
+          }
+        >
+          rail: {browsingVisibleOf(node) ? "shown" : "hidden"}
+        </span>
 
         {node.isSelectable === false ? (
           <span className="rounded bg-[#F2D48C]/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#F2D48C]">
@@ -815,6 +840,14 @@ function TreeBranch({
         {node.showOnHomepage ? (
           <span className="rounded bg-[#00E676]/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00E676]">
             Homepage
+          </span>
+        ) : null}
+        {!browsingVisibleOf(node) ? (
+          <span
+            className="rounded bg-[#58A6FF]/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#9ECBFF]"
+            title="Excluded from /api/taxonomy/categories browsing rails. The node stays published with its listings."
+          >
+            Rail hidden
           </span>
         ) : null}
         {!withinScope ? (

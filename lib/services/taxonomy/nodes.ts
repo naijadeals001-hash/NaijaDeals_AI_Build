@@ -42,6 +42,8 @@ export type CategoryCreateValues = {
   level: number;
   isSelectable: boolean;
   showOnHomepage: boolean;
+  /** Browsing rail/directory visibility, independent of publication. */
+  browsingVisible: boolean;
   isActive: boolean;
   sortOrder: number;
 };
@@ -151,6 +153,7 @@ export async function validateCategoryCreateInput(tx: Db, body: Record<string, u
     level,
     isSelectable: body.isSelectable === undefined ? true : readBoolean(body.isSelectable, "isSelectable"),
     showOnHomepage: body.showOnHomepage === undefined ? false : readBoolean(body.showOnHomepage, "showOnHomepage"),
+    browsingVisible: body.browsingVisible === undefined ? true : readBoolean(body.browsingVisible, "browsingVisible"),
     isActive: body.isActive === undefined ? true : readBoolean(body.isActive, "isActive"),
     sortOrder: body.sortOrder === undefined ? 0 : readInteger(body.sortOrder, "sortOrder", 0, 100_000)
   };
@@ -177,6 +180,7 @@ export async function createCategoryRecord(
       level: values.level,
       isSelectable: values.isSelectable,
       showOnHomepage: values.showOnHomepage,
+      browsingVisible: values.browsingVisible,
       isActive: values.isActive,
       sortOrder: values.sortOrder
     },
@@ -207,6 +211,7 @@ export async function createCategoryNode(actor: SessionUser, body: Record<string
           level: values.level,
           isSelectable: values.isSelectable,
           showOnHomepage: values.showOnHomepage,
+          browsingVisible: values.browsingVisible,
           isActive: values.isActive,
           aliasCount,
           attributeCount,
@@ -559,6 +564,9 @@ export async function updateCategoryNode(
         ...(body.imageAlt !== undefined ? { imageAlt: readNullableText(body.imageAlt, "Image alt text", 220) ?? null } : {}),
         ...(body.isSelectable !== undefined ? { isSelectable: readBoolean(body.isSelectable, "isSelectable") } : {}),
         ...(body.showOnHomepage !== undefined ? { showOnHomepage: readBoolean(body.showOnHomepage, "showOnHomepage") } : {}),
+        ...(body.browsingVisible !== undefined
+          ? { browsingVisible: readBoolean(body.browsingVisible, "browsingVisible") }
+          : {}),
         ...(body.isActive !== undefined ? { isActive: readBoolean(body.isActive, "isActive") } : {}),
         ...(body.sortOrder !== undefined ? { sortOrder: readInteger(body.sortOrder, "sortOrder", 0, 100_000) } : {}),
         ...(body.deprecatedAt !== undefined ? { deprecatedAt: readDate(body.deprecatedAt, "deprecatedAt") ?? null } : {})
@@ -609,6 +617,10 @@ export async function updateCategoryNode(
             isActive: existing.isActive,
             isSelectable: existing.isSelectable,
             showOnHomepage: existing.showOnHomepage,
+            browsingVisible: existing.browsingVisible,
+            sortOrder: existing.sortOrder,
+            imageUrl: existing.imageUrl,
+            imageAlt: existing.imageAlt,
             deprecatedAt: existing.deprecatedAt ? existing.deprecatedAt.toISOString() : null
           },
           after: {
@@ -620,6 +632,10 @@ export async function updateCategoryNode(
             isActive: updated.isActive,
             isSelectable: updated.isSelectable,
             showOnHomepage: updated.showOnHomepage,
+            browsingVisible: updated.browsingVisible,
+            sortOrder: updated.sortOrder,
+            imageUrl: updated.imageUrl,
+            imageAlt: updated.imageAlt,
             deprecatedAt: updated.deprecatedAt ? updated.deprecatedAt.toISOString() : null
           },
           changed: {

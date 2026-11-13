@@ -20,6 +20,12 @@ export type NodeDraft = {
   imageAlt: string;
   isSelectable: boolean;
   showOnHomepage: boolean;
+  /**
+   * Browsing rail/directory visibility. Independent of publication
+   * (`isActive`), homepage merchandising (`showOnHomepage`) and seller
+   * listability (`isSelectable`).
+   */
+  browsingVisible: boolean;
   isActive: boolean;
   sortOrder: string;
   deprecatedAt: string | null;
@@ -44,6 +50,7 @@ export function emptyNodeDraft(parentId = ""): NodeDraft {
     imageAlt: "",
     isSelectable: true,
     showOnHomepage: false,
+    browsingVisible: true,
     isActive: true,
     sortOrder: "",
     deprecatedAt: null,
@@ -337,7 +344,7 @@ export function TaxonomyNodeEditor({
             disabled={disabled}
             onChange={(event) => update({ showOnHomepage: event.target.checked })}
           />
-          Show on homepage
+          Show on homepage (merchandising)
         </label>
         <label className="flex items-center gap-2 text-[11px] font-bold text-[#F0F6FC]">
           <input
@@ -346,9 +353,26 @@ export function TaxonomyNodeEditor({
             disabled={disabled}
             onChange={(event) => update({ isActive: event.target.checked })}
           />
-          Active in the public tree
+          Published (active in the public tree)
+        </label>
+        <label className="flex items-center gap-2 text-[11px] font-bold text-[#F0F6FC]">
+          <input
+            type="checkbox"
+            checked={draft.browsingVisible}
+            disabled={disabled}
+            onChange={(event) => update({ browsingVisible: event.target.checked })}
+          />
+          Visible in browsing rails
         </label>
       </div>
+      <p className="mt-2 text-[10px] leading-4 text-[#8B949E]">
+        These four flags are independent. <span className="font-bold text-[#C9D1D9]">Published</span> controls whether the
+        node appears in the public taxonomy at all. <span className="font-bold text-[#C9D1D9]">Visible in browsing rails</span>{" "}
+        only hides it from category rails and browsing directories such as{" "}
+        <code className="rounded bg-[#161B22] px-1">/api/taxonomy/categories</code>; the node stays published, keeps its
+        listings and still appears in the full department tree. Homepage merchandising and seller listability are separate
+        decisions.
+      </p>
 
       {draft.imageUrl ? (
         <div className="mt-2 flex items-center gap-2">
