@@ -617,4 +617,5 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Product→leaf migration | 34 reviewed moves applied in 4 audited batches; 8 already correct; 7 ambiguous retained; 0 image/stock/id changes | VERIFIED |
 | Descendant aggregation | parent 21 unique products, leaf-only, 0 duplicates; `/api/categories` 11 roots sum 57; drafts/restricted excluded | VERIFIED |
 | Batch 2 Kie coverage | 8 new DEMO products, 8 images, 48 new credits; 30/96 publishable leaves populated; 66 documented gaps | VERIFIED |
+| Leaf-move integrity | 34 audited moves retained after workflow fix; 30 populated leaves / 50 active products on leaves; workflow no longer recategorises existing products | VERIFIED |
 | Aura category assistance | opt-in `assist=aura`, eligible-ID validation, fail-closed/mock tests; deterministic default; live model call not exercised | PARTIAL |

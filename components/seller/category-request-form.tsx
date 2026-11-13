@@ -95,7 +95,7 @@ export function CategoryRequestForm({
     getSellerCategories()
       .then((rows) => {
         if (!active) return;
-        setParentOptions(rows);
+        setParentOptions(rows.filter((row) => row.level < 2));
         setParentStatus("ready");
       })
       .catch(() => {

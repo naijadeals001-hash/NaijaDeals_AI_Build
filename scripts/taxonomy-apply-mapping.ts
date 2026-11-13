@@ -101,8 +101,8 @@ type ValidatedEntry = {
   status: "move" | "keep" | "already" | "ambiguous";
 };
 
-const EXPECTED_ACTIVE_PRODUCTS = 49;
-const EXPECTED_POPULATED_LEAVES_AFTER = 23;
+const EXPECTED_ACTIVE_PRODUCTS = 57;
+const EXPECTED_POPULATED_LEAVES_AFTER = 30;
 
 function fail(message: string): never {
   console.error(`FAIL: ${message}`);
@@ -338,13 +338,13 @@ async function main(): Promise<void> {
     }
 
     if (
-      plan.summary?.total !== 49 ||
-      plan.summary?.mapped !== 42 ||
+      plan.summary?.total !== 57 ||
+      plan.summary?.mapped !== 34 ||
       plan.summary?.ambiguous !== 7 ||
-      plan.summary?.alreadyOnProposedLeaf !== 8 ||
+      (plan.summary as { kept?: number } | undefined)?.kept !== 16 ||
       plan.summary?.proposedMoves !== 34
     ) {
-      problems.push("plan summary counts do not match the reviewed 49/42/34/8/7 plan");
+      problems.push("plan summary counts do not match the reviewed 57/34/16/7 plan");
     }
 
     for (const entry of plan.products) {

@@ -6,11 +6,12 @@
   "applied": false,
   "note": "Read-only plan. No Product.categoryId is written. Ambiguous products keep their current assignment and require classification review.",
   "summary": {
-    "total": 49,
-    "mapped": 42,
+    "total": 57,
+    "mapped": 34,
     "ambiguous": 7,
     "alreadyOnProposedLeaf": 8,
-    "proposedMoves": 34
+    "proposedMoves": 34,
+    "kept": 16
   },
   "products": [
     {
@@ -915,6 +916,166 @@
       "confidence": "high",
       "ambiguous": false,
       "reason": "Storage baskets already on Storage & Organisation."
+    },
+    {
+      "productId": "cmwf6y19400fjv4goi5q39a9g",
+      "name": "DEMO — Cordless drill and bit set, 18V",
+      "currentCategory": {
+        "key": "drills-drivers",
+        "slug": "drills-drivers",
+        "name": "Drills & Drivers",
+        "path": "Tools & Building Materials / Power Tools / Drills & Drivers"
+      },
+      "proposedLeaf": {
+        "key": "drills-drivers",
+        "slug": "drills-drivers",
+        "name": "Drills & Drivers",
+        "path": "Tools & Building Materials / Power Tools / Drills & Drivers"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 2."
+    },
+    {
+      "productId": "cmwf6y0ya00ddv4goh2u87vra",
+      "name": "DEMO — Glass baby bottles, 2 × 240ml",
+      "currentCategory": {
+        "key": "bottles-teats-sterilisers",
+        "slug": "bottles-teats-sterilisers",
+        "name": "Bottles, Teats & Sterilisers",
+        "path": "Baby, Kids & Toys / Baby Feeding & Care / Bottles, Teats & Sterilisers"
+      },
+      "proposedLeaf": {
+        "key": "bottles-teats-sterilisers",
+        "slug": "bottles-teats-sterilisers",
+        "name": "Bottles, Teats & Sterilisers",
+        "path": "Baby, Kids & Toys / Baby Feeding & Care / Bottles, Teats & Sterilisers"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 2."
+    },
+    {
+      "productId": "cmwf6y1c800g9v4go8uicfz2s",
+      "name": "DEMO — A5 exercise books, pack of 10",
+      "currentCategory": {
+        "key": "notebooks-paper",
+        "slug": "notebooks-paper",
+        "name": "Notebooks & Paper",
+        "path": "Books & Stationery / Stationery & Office / Notebooks & Paper"
+      },
+      "proposedLeaf": {
+        "key": "notebooks-paper",
+        "slug": "notebooks-paper",
+        "name": "Notebooks & Paper",
+        "path": "Books & Stationery / Stationery & Office / Notebooks & Paper"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 2."
+    },
+    {
+      "productId": "cmwf6y1kh00hpv4go6mkc8305",
+      "name": "DEMO — Handwoven raffia tote bag",
+      "currentCategory": {
+        "key": "bags-accessories",
+        "slug": "bags-accessories",
+        "name": "Bags & Accessories",
+        "path": "Fashion & Beauty / Fashion & Accessories / Bags & Accessories"
+      },
+      "proposedLeaf": {
+        "key": "bags-accessories",
+        "slug": "bags-accessories",
+        "name": "Bags & Accessories",
+        "path": "Fashion & Beauty / Fashion & Accessories / Bags & Accessories"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 2."
+    },
+    {
+      "productId": "cmwf6y11o00e3v4gomp4cvpln",
+      "name": "DEMO — Size 5 match football",
+      "currentCategory": {
+        "key": "football-basketball-equipment",
+        "slug": "football-basketball-equipment",
+        "name": "Football & Basketball",
+        "path": "Sports & Outdoors / Ball & Racquet Sports / Football & Basketball"
+      },
+      "proposedLeaf": {
+        "key": "football-basketball-equipment",
+        "slug": "football-basketball-equipment",
+        "name": "Football & Basketball",
+        "path": "Sports & Outdoors / Ball & Racquet Sports / Football & Basketball"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 2."
+    },
+    {
+      "productId": "cmwf6y0u000cnv4gobf9kpr3e",
+      "name": "DEMO — Compact first-aid kit, 42 pieces",
+      "currentCategory": {
+        "key": "first-aid-supplies",
+        "slug": "first-aid-supplies",
+        "name": "First-Aid Supplies",
+        "path": "Health & Wellness / Medical Devices & Aids / First-Aid Supplies"
+      },
+      "proposedLeaf": {
+        "key": "first-aid-supplies",
+        "slug": "first-aid-supplies",
+        "name": "First-Aid Supplies",
+        "path": "Health & Wellness / Medical Devices & Aids / First-Aid Supplies"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 2."
+    },
+    {
+      "productId": "cmwf6y1g400gzv4gooqflw9t1",
+      "name": "DEMO — Garri (cassava flakes), 1kg",
+      "currentCategory": {
+        "key": "cassava-products",
+        "slug": "cassava-products",
+        "name": "Cassava Products",
+        "path": "Food & Everyday Essentials / Grains & Flours / Cassava Products"
+      },
+      "proposedLeaf": {
+        "key": "cassava-products",
+        "slug": "cassava-products",
+        "name": "Cassava Products",
+        "path": "Food & Everyday Essentials / Grains & Flours / Cassava Products"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 2."
+    },
+    {
+      "productId": "cmwf6y16500etv4go2cri35gl",
+      "name": "DEMO — Car wash and microfibre care kit",
+      "currentCategory": {
+        "key": "car-care-cleaning",
+        "slug": "car-care-cleaning",
+        "name": "Car Care & Cleaning",
+        "path": "Automotive & Motorcycle / Car Care & Accessories / Car Care & Cleaning"
+      },
+      "proposedLeaf": {
+        "key": "car-care-cleaning",
+        "slug": "car-care-cleaning",
+        "name": "Car Care & Cleaning",
+        "path": "Automotive & Motorcycle / Car Care & Accessories / Car Care & Cleaning"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 2."
     }
   ]
 }

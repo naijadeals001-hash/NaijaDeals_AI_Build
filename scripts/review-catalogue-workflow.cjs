@@ -577,7 +577,6 @@ function parse(response, body) {
         existing.name === spec.name &&
         existing.description === spec.description &&
         existing.priceKobo === String(spec.priceKobo) &&
-        existing.categoryId === departmentId &&
         existing.stock?.quantity === spec.quantity &&
         existing.images.length === 1 &&
         existing.images[0]?.url === spec.imageUrl &&
@@ -593,7 +592,6 @@ function parse(response, body) {
             description: spec.description,
             priceKobo: spec.priceKobo,
             currency: "NGN",
-            categoryId: departmentId,
             quantity: spec.quantity,
             lowStockLevel: spec.lowStockLevel,
             images: [{ url: spec.imageUrl, alt: spec.imageAlt }],

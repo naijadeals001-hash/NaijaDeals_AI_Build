@@ -4613,3 +4613,7 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   not exercised; requires key + Valkey limiter.
 - Fixed after integration: category-browse now resolves leaf names from `/api/taxonomy`
   (empty leaf no longer says department missing); parent aggregation rendered once.
+- Final taxonomy build `dL6LzNxk9ShOa9jWZvzvo`: workflow no longer rewrites existing
+  product categories; the seven reverted leaf moves were re-applied (34 retained),
+  coverage 30/96 leaves, 50 active leaf products. Seller request parent list now
+  excludes leaf nodes. Workflow 143/143, aggregation 34/34, smoke 12/12, basket 10/10.
