@@ -344,11 +344,12 @@ function orderByFor(sort: CatalogSort): Prisma.ProductOrderByWithRelationInput[]
 }
 
 function matchesText(product: CatalogProduct, needle: string) {
-  return [product.name, product.description, product.brand, product.vendor.name, product.vendor.market, product.category.name]
+  const haystack = [product.name, product.description, product.brand, product.vendor.name, product.vendor.market, product.category.name]
     .filter(Boolean)
     .join(" ")
-    .toLowerCase()
-    .includes(needle);
+    .toLowerCase();
+  const tokens = needle.split(/\s+/).filter(Boolean);
+  return tokens.length > 0 && tokens.every((token) => haystack.includes(token));
 }
 
 /**

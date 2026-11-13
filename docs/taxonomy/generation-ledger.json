@@ -15,7 +15,7 @@
       "webpPath": "/generated/taxonomy/teff-flour.webp",
       "alt": "a small wooden bowl of fine ivory teff flour beside a plain woven jute sack and scattered teff grains",
       "generatedAt": "2026-11-13T14:48:32.040Z",
-      "review": "pending visual inspection"
+      "review": "visually inspected 2026-11-13 (contact sheet); subject matches intended product"
     },
     {
       "id": "african-print-fabrics",
@@ -30,7 +30,7 @@
       "webpPath": "/generated/taxonomy/african-print-fabrics.webp",
       "alt": "neatly folded stack of vibrant African wax-print cotton fabrics in indigo, gold and green geometric patterns",
       "generatedAt": "2026-11-13T14:49:46.941Z",
-      "review": "pending visual inspection"
+      "review": "visually inspected 2026-11-13 (contact sheet); subject matches intended product"
     },
     {
       "id": "kente-cloth",
@@ -45,7 +45,7 @@
       "webpPath": "/generated/taxonomy/kente-cloth.webp",
       "alt": "folded handwoven kente cloth with narrow strips in gold, green, red and black geometric patterns",
       "generatedAt": "2026-11-13T14:50:48.193Z",
-      "review": "pending visual inspection"
+      "review": "visually inspected 2026-11-13 (contact sheet); subject matches intended product"
     },
     {
       "id": "shea-butter",
@@ -60,7 +60,7 @@
       "webpPath": "/generated/taxonomy/shea-butter.webp",
       "alt": "raw unrefined ivory shea butter in a shallow carved calabash bowl with a few shea nuts beside it",
       "generatedAt": "2026-11-13T14:52:04.456Z",
-      "review": "pending visual inspection"
+      "review": "visually inspected 2026-11-13 (contact sheet); subject matches intended product"
     },
     {
       "id": "black-soap",
@@ -75,7 +75,7 @@
       "webpPath": "/generated/taxonomy/black-soap.webp",
       "alt": "three rustic dark-brown African black soap bars stacked on a plain wooden tray with a small bowl of shea butter",
       "generatedAt": "2026-11-13T14:53:05.821Z",
-      "review": "pending visual inspection"
+      "review": "visually inspected 2026-11-13 (contact sheet); subject matches intended product"
     },
     {
       "id": "cassava-grater",
@@ -90,7 +90,7 @@
       "webpPath": "/generated/taxonomy/cassava-grater.webp",
       "alt": "small stainless-steel motorised cassava grating machine on a clean workshop floor, industrial but compact, no branding",
       "generatedAt": "2026-11-13T14:54:22.220Z",
-      "review": "pending visual inspection"
+      "review": "visually inspected 2026-11-13 (contact sheet); subject matches intended product"
     },
     {
       "id": "maize-meal",
@@ -105,7 +105,7 @@
       "webpPath": "/generated/taxonomy/maize-meal.webp",
       "alt": "a heap of fine white maize meal in a woven basket with a few dried maize cobs beside it",
       "generatedAt": "2026-11-13T14:55:23.559Z",
-      "review": "pending visual inspection"
+      "review": "visually inspected 2026-11-13 (contact sheet); subject matches intended product"
     },
     {
       "id": "woven-baskets",
@@ -120,7 +120,8 @@
       "webpPath": "/generated/taxonomy/woven-baskets.webp",
       "alt": "set of three nested handwoven storage baskets in natural straw with dark geometric bands",
       "generatedAt": "2026-11-13T14:56:24.961Z",
-      "review": "pending visual inspection"
+      "review": "visually inspected 2026-11-13 (contact sheet); subject matches intended product"
     }
-  ]
+  ],
+  "cumulativeCredits": 48
 }

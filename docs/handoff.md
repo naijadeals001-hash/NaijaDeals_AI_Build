@@ -4577,3 +4577,18 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 - Workflow gate updated to 9/41; 141/141. Order snapshot script now aborts if not REVIEW.
 - Image gaps (cleaning supplies, headset, console) not generated: gpt-image-2-5-flare 1K,
   sample 3 credits/task, 9 credits for 3 images; spending authorization not established.
+
+## Marketplace taxonomy and seller workflow (2026-11-13)
+
+- HEAD after taxonomy fixes; served build `LlrV3NWSANnH6hr6mbNxN`.
+- 3-level taxonomy seeded: 5 departments / 17 categories / 51 subcategories (73 nodes),
+  387 aliases, 150 attributes, 2 NG country restrictions; 9 existing categories
+  reparented with 0 product category changes.
+- Seller: hierarchy/alias picker, attributes, draft persistence, category request.
+  Admin: taxonomy tree/editor/requests under `/admin/taxonomy`, audited, scoped.
+- Eight DEMO products published through seller+Control Center using Kie
+  `gpt-image-2-5-flare-text-to-image` (6 credits each, 48 total). Coverage 8/51 leaves;
+  remaining leaves empty and honest.
+- Defects fixed after review: advisory-lock `$queryRaw` → `$executeRaw`; GH-scoped admin
+  blocked from NG taxonomy mutation; multi-word search tokenized; five department images
+  mapped; search-sync enqueue no longer blocks listing creation when Valkey is down.

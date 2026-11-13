@@ -606,3 +606,9 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Batch B produce additions | 4 DEMO groceries (cabbage, carrots, cucumbers, mangoes), existing approved fresh assets, 41 active | VERIFIED |
 | Residue exclusion | 103 run-tagged non-public records; 0 public in API/search/navigation/shelves; read-only audit 321/321 | VERIFIED |
 | Catalogue baseline | 9 active departments / 41 active products / all isDemo / 0 CRF | VERIFIED |
+| Marketplace taxonomy | 5 departments / 17 categories / 51 subcategories, 387 aliases, 150 attributes, 2 country rules; 51 selectable empty leaves | VERIFIED |
+| Seller category workflow | alias search, breadcrumb, attributes, draft persistence, request→admin resolution, restricted-category 403 | VERIFIED |
+| Admin taxonomy | nested tree, create/edit/aliases/attributes/rules/requests, audit; country scope enforced on mutations | VERIFIED |
+| Category image gaps | five department images corrected to existing approved assets | VERIFIED |
+| Multi-word Shop search | token AND matching finds "african print fabric" and "woven baskets" | VERIFIED |
+| Taxonomy DEMO products | 8 Kie-generated products on leaves, 49 active total, 48 credits | VERIFIED |

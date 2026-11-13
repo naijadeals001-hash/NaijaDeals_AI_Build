@@ -45,6 +45,8 @@ export interface TaxonomyNode {
   name: string;
   slug: string;
   description: string | null;
+  imageUrl?: string | null;
+  imageAlt?: string | null;
   level: TaxonomyLevel;
   isSelectable: boolean;
   showOnHomepage: boolean;
@@ -72,6 +74,8 @@ type TaxonomyNodeSeed = Omit<
   | "countryRules"
   | "notes"
 > & {
+  imageUrl?: string | null;
+  imageAlt?: string | null;
   isExisting?: boolean;
   preserveExistingCategory?: boolean;
   allowedListingTypes?: TaxonomyListingType[];
@@ -180,6 +184,8 @@ export const TAXONOMY_NODES: TaxonomyNode[] = [
     slug: "electronics-technology",
     description:
       "Phones, tablets, computers, gaming and consumer electronics. Excludes farm machinery, industrial processing equipment and business supplies, which sit under Agriculture & Business.",
+    imageUrl: "/generated/shop/banner-electronics.webp",
+    imageAlt: "Electronics, headphones and computing devices",
     level: 0,
     isSelectable: false,
     showOnHomepage: true,
@@ -542,6 +548,8 @@ export const TAXONOMY_NODES: TaxonomyNode[] = [
     slug: "home-living",
     description:
       "Kitchenware, home textiles, household cleaning and home power. Excludes building materials, furniture installation and commercial catering equipment.",
+    imageUrl: "/generated/shop/category-home-kitchen.webp",
+    imageAlt: "Home and kitchen goods",
     level: 0,
     isSelectable: false,
     showOnHomepage: true,
@@ -848,6 +856,8 @@ export const TAXONOMY_NODES: TaxonomyNode[] = [
     slug: "fashion-beauty",
     description:
       "Clothing, footwear, bags, fabrics and personal care. Excludes tailoring services, beauty treatments and fashion rentals.",
+    imageUrl: "/generated/shop/category-fashion.webp",
+    imageAlt: "Fashion and beauty products",
     level: 0,
     isSelectable: false,
     showOnHomepage: true,
@@ -1251,6 +1261,8 @@ export const TAXONOMY_NODES: TaxonomyNode[] = [
     slug: "food-everyday-essentials",
     description:
       "Grains, flours, oils, seasonings, fresh produce and everyday household consumables. Excludes prepared meals, restaurant delivery and farm inputs.",
+    imageUrl: "/generated/shop/category-groceries.webp",
+    imageAlt: "Everyday groceries and household essentials",
     level: 0,
     isSelectable: false,
     showOnHomepage: true,
@@ -1611,6 +1623,8 @@ export const TAXONOMY_NODES: TaxonomyNode[] = [
     slug: "agriculture-business",
     description:
       "Farm inputs, processing equipment and wholesale business supplies for producers and small businesses. Excludes passenger vehicles, financial services and livestock.",
+    imageUrl: "/generated/fresh/cat-grains-beans.webp",
+    imageAlt: "Grains, beans and agricultural produce",
     level: 0,
     isSelectable: false,
     showOnHomepage: true,

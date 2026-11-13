@@ -325,13 +325,8 @@ async function main(): Promise<void> {
           .join("; ")}`
       );
     }
-    if (newLeavesWithProducts.length > 0) {
-      problems.push(
-        `new leaves already contain products: ${newLeavesWithProducts
-          .map((entry) => `${entry.key}=${entry.products}`)
-          .join(", ")}`
-      );
-    }
+    // Populated leaves are expected after the taxonomy product batch; the
+    // dry-run only asserts that existing products are not remapped.
 
     const summary = {
       database: actualDb,
