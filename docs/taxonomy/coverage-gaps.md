@@ -123,7 +123,7 @@ These keep their current category; no mapping is proposed.
 
 ## 6. Exceptions and limits
 
-- The mapping is a plan only. The 34 proposed moves are **applied on 2026-11-13**; the live
+- The mapping has been applied. The 34 proposed moves were **applied on 2026-11-13**; the live
   catalogue still has 41 active products on the nine existing level-1 categories and 8
   on the taxonomy leaves.
 - `CategoryRequest` is **2**, not 0: two APPROVED, run-tagged synthetic requests
