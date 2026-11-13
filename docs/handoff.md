@@ -4723,3 +4723,12 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   public category pages render banners; department image audit 68/68.
 - P1/P2/P3 rework: seller self-publication closed, 390 admin overflow 0, activation success
   notice persists, category-browse resolves leaf headings from taxonomy.
+
+### Final product/activation candidate
+- HEAD `814234c`; served build `HxT_Uo1kpECYdEQT516tb`.
+- Seller self-publication blocked (403 admin_publication_required); Control Center remains the
+  publisher. All 11 department banners render on canonical department pages. Admin activation
+  page has 0 overflow at 390 and durable, correctly-scoped success notices.
+- Kie: six department banners, 6 credits each, 36 new; cumulative 132. No purchase.
+- Other vertical activation remains NOT_WIRED; REVIEW has no orders, so existing-order
+  readability while Shop is disabled is BLOCKED.
