@@ -3,8 +3,8 @@
   "generatedAt": "2026-11-13",
   "database": "naijadeals_review",
   "reviewOnly": true,
-  "applied": false,
-  "note": "Read-only plan. No Product.categoryId is written. Ambiguous products keep their current assignment and require classification review.",
+  "applied": true,
+  "note": "Applied in audited batches by scripts/taxonomy-apply-mapping.ts; 34 products currently in their proposed leaves, 7 ambiguous retained, 16 kept.",
   "summary": {
     "total": 57,
     "mapped": 34,
@@ -16,7 +16,7 @@
   "products": [
     {
       "productId": "cmwdyexl50005v4s0txgo7qfa",
-      "name": "DEMO — 10-inch Android tablet",
+      "name": "DEMO \u2014 10-inch Android tablet",
       "currentCategory": {
         "key": "phones-tablets",
         "slug": "phones-tablets",
@@ -35,7 +35,7 @@
     },
     {
       "productId": "cmwdyexlb000bv4s0ap4xt4ti",
-      "name": "DEMO — Android smartphone, 6-inch display",
+      "name": "DEMO \u2014 Android smartphone, 6-inch display",
       "currentCategory": {
         "key": "phones-tablets",
         "slug": "phones-tablets",
@@ -54,7 +54,7 @@
     },
     {
       "productId": "cmwdyexle000iv4s0hijvnav5",
-      "name": "DEMO — 14-inch business laptop",
+      "name": "DEMO \u2014 14-inch business laptop",
       "currentCategory": {
         "key": "computers",
         "slug": "computers",
@@ -73,7 +73,7 @@
     },
     {
       "productId": "cmwdyexlg000ov4s025pxj9yx",
-      "name": "DEMO — Mechanical keyboard",
+      "name": "DEMO \u2014 Mechanical keyboard",
       "currentCategory": {
         "key": "computers",
         "slug": "computers",
@@ -92,7 +92,7 @@
     },
     {
       "productId": "cmwdyexlj000vv4s0mat8d6kk",
-      "name": "DEMO — 5.5L air fryer",
+      "name": "DEMO \u2014 5.5L air fryer",
       "currentCategory": {
         "key": "home-kitchen",
         "slug": "home-kitchen",
@@ -111,7 +111,7 @@
     },
     {
       "productId": "cmwdyexll0011v4s0civw2edm",
-      "name": "DEMO — Stainless steel cookware set",
+      "name": "DEMO \u2014 Stainless steel cookware set",
       "currentCategory": {
         "key": "home-kitchen",
         "slug": "home-kitchen",
@@ -130,7 +130,7 @@
     },
     {
       "productId": "cmwdynxdd0018v4q00rd1lw3x",
-      "name": "DEMO — Over-ear headphones",
+      "name": "DEMO \u2014 Over-ear headphones",
       "currentCategory": {
         "key": "electronics-appliances",
         "slug": "electronics-appliances",
@@ -145,7 +145,7 @@
     },
     {
       "productId": "cmwdynxdg001ev4q0aay20n41",
-      "name": "DEMO — 2-slice toaster",
+      "name": "DEMO \u2014 2-slice toaster",
       "currentCategory": {
         "key": "electronics-appliances",
         "slug": "electronics-appliances",
@@ -164,7 +164,7 @@
     },
     {
       "productId": "cmwdynxdh001kv4q0zsxxx7r0",
-      "name": "DEMO — Retro kitchen blender",
+      "name": "DEMO \u2014 Retro kitchen blender",
       "currentCategory": {
         "key": "electronics-appliances",
         "slug": "electronics-appliances",
@@ -183,7 +183,7 @@
     },
     {
       "productId": "cmwdynxdj001qv4q0vkrulgmu",
-      "name": "DEMO — LED monitor",
+      "name": "DEMO \u2014 LED monitor",
       "currentCategory": {
         "key": "electronics-appliances",
         "slug": "electronics-appliances",
@@ -202,7 +202,7 @@
     },
     {
       "productId": "cmwdynxdm001xv4q0qeq2r1fb",
-      "name": "DEMO — Running shoes",
+      "name": "DEMO \u2014 Running shoes",
       "currentCategory": {
         "key": "fashion-accessories",
         "slug": "fashion-accessories",
@@ -221,7 +221,7 @@
     },
     {
       "productId": "cmwdynxdo0023v4q0afcz2f2b",
-      "name": "DEMO — Leather handbag",
+      "name": "DEMO \u2014 Leather handbag",
       "currentCategory": {
         "key": "fashion-accessories",
         "slug": "fashion-accessories",
@@ -240,7 +240,7 @@
     },
     {
       "productId": "cmwdynxdq0029v4q0ple4660k",
-      "name": "DEMO — Automatic wristwatch",
+      "name": "DEMO \u2014 Automatic wristwatch",
       "currentCategory": {
         "key": "fashion-accessories",
         "slug": "fashion-accessories",
@@ -259,7 +259,7 @@
     },
     {
       "productId": "cmwdynxds002fv4q0puj39gxq",
-      "name": "DEMO — Eau de parfum, 50ml",
+      "name": "DEMO \u2014 Eau de parfum, 50ml",
       "currentCategory": {
         "key": "beauty-personal-care",
         "slug": "beauty-personal-care",
@@ -274,7 +274,7 @@
     },
     {
       "productId": "cmwdynxdu002mv4q0rx83vc4f",
-      "name": "DEMO — Shampoo bars",
+      "name": "DEMO \u2014 Shampoo bars",
       "currentCategory": {
         "key": "beauty-personal-care",
         "slug": "beauty-personal-care",
@@ -293,7 +293,7 @@
     },
     {
       "productId": "cmwdynxdw002sv4q0jkmbobl6",
-      "name": "DEMO — Moisturiser, 100ml",
+      "name": "DEMO \u2014 Moisturiser, 100ml",
       "currentCategory": {
         "key": "beauty-personal-care",
         "slug": "beauty-personal-care",
@@ -312,7 +312,7 @@
     },
     {
       "productId": "cmwdynxdy002yv4q0n19qj5vm",
-      "name": "DEMO — Perfume gift set",
+      "name": "DEMO \u2014 Perfume gift set",
       "currentCategory": {
         "key": "beauty-personal-care",
         "slug": "beauty-personal-care",
@@ -327,7 +327,7 @@
     },
     {
       "productId": "cmwdynxe2003av4q0dr57u791",
-      "name": "DEMO — Portable power bank",
+      "name": "DEMO \u2014 Portable power bank",
       "currentCategory": {
         "key": "phones-tablets",
         "slug": "phones-tablets",
@@ -346,7 +346,7 @@
     },
     {
       "productId": "cmwdynxe4003gv4q0n2q8f7bs",
-      "name": "DEMO — Smartphone on desk",
+      "name": "DEMO \u2014 Smartphone on desk",
       "currentCategory": {
         "key": "phones-tablets",
         "slug": "phones-tablets",
@@ -365,7 +365,7 @@
     },
     {
       "productId": "cmwdynxe6003mv4q0y9hwt5ha",
-      "name": "DEMO — Wired gaming mouse",
+      "name": "DEMO \u2014 Wired gaming mouse",
       "currentCategory": {
         "key": "computers",
         "slug": "computers",
@@ -380,7 +380,7 @@
     },
     {
       "productId": "cmwdynxe8003sv4q01d98wnuj",
-      "name": "DEMO — 15.6-inch laptop",
+      "name": "DEMO \u2014 15.6-inch laptop",
       "currentCategory": {
         "key": "computers",
         "slug": "computers",
@@ -399,7 +399,7 @@
     },
     {
       "productId": "cmwdynxea003yv4q0q422vs0c",
-      "name": "DEMO — Coffee maker",
+      "name": "DEMO \u2014 Coffee maker",
       "currentCategory": {
         "key": "home-kitchen",
         "slug": "home-kitchen",
@@ -418,7 +418,7 @@
     },
     {
       "productId": "cmwdynxed0044v4q0vylviitf",
-      "name": "DEMO — Fresh tomatoes, 1kg",
+      "name": "DEMO \u2014 Fresh tomatoes, 1kg",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -437,7 +437,7 @@
     },
     {
       "productId": "cmwe3jlwu00hpv4u0v6jb5nox",
-      "name": "DEMO — Diced onions, 500g",
+      "name": "DEMO \u2014 Diced onions, 500g",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -456,7 +456,7 @@
     },
     {
       "productId": "cmwe3jlxp00i3v4u0tk3mmez1",
-      "name": "DEMO — Red bell peppers, 500g",
+      "name": "DEMO \u2014 Red bell peppers, 500g",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -475,7 +475,7 @@
     },
     {
       "productId": "cmwe3jlyi00ihv4u003yfo8g7",
-      "name": "DEMO — Green beans, 500g",
+      "name": "DEMO \u2014 Green beans, 500g",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -494,7 +494,7 @@
     },
     {
       "productId": "cmwe3jlzg00ivv4u0z3ta3mge",
-      "name": "DEMO — Rooftop solar panel array with mounting frame",
+      "name": "DEMO \u2014 Rooftop solar panel array with mounting frame",
       "currentCategory": {
         "key": "power-solar",
         "slug": "power-solar",
@@ -513,7 +513,7 @@
     },
     {
       "productId": "cmwe3jm0b00j9v4u0e5zzgkjw",
-      "name": "DEMO — Portable solar battery charging station",
+      "name": "DEMO \u2014 Portable solar battery charging station",
       "currentCategory": {
         "key": "power-solar",
         "slug": "power-solar",
@@ -528,7 +528,7 @@
     },
     {
       "productId": "cmwe3jm1800jnv4u02w2ungg7",
-      "name": "DEMO — Solar power inverter",
+      "name": "DEMO \u2014 Solar power inverter",
       "currentCategory": {
         "key": "power-solar",
         "slug": "power-solar",
@@ -547,7 +547,7 @@
     },
     {
       "productId": "cmwe3jm2400k1v4u04h9m2lv5",
-      "name": "DEMO — Wireless game controllers, black and white pair",
+      "name": "DEMO \u2014 Wireless game controllers, black and white pair",
       "currentCategory": {
         "key": "gaming",
         "slug": "gaming",
@@ -566,7 +566,7 @@
     },
     {
       "productId": "cmwe3jm2z00kfv4u07pml13ql",
-      "name": "DEMO — Game controller with coloured buttons",
+      "name": "DEMO \u2014 Game controller with coloured buttons",
       "currentCategory": {
         "key": "gaming",
         "slug": "gaming",
@@ -585,7 +585,7 @@
     },
     {
       "productId": "cmwf0qnp3006sv4awq7ihsyt4",
-      "name": "DEMO — Apple iPhone 5s, gold",
+      "name": "DEMO \u2014 Apple iPhone 5s, gold",
       "currentCategory": {
         "key": "phones-tablets",
         "slug": "phones-tablets",
@@ -604,7 +604,7 @@
     },
     {
       "productId": "cmwf0qnqf0076v4awuzap37j6",
-      "name": "DEMO — Apple iPhone 6, silver",
+      "name": "DEMO \u2014 Apple iPhone 6, silver",
       "currentCategory": {
         "key": "phones-tablets",
         "slug": "phones-tablets",
@@ -623,7 +623,7 @@
     },
     {
       "productId": "cmwf0qnro007kv4aw1n6mals8",
-      "name": "DEMO — EIZO FORIS FG2421 gaming monitor, 24-inch",
+      "name": "DEMO \u2014 EIZO FORIS FG2421 gaming monitor, 24-inch",
       "currentCategory": {
         "key": "computers",
         "slug": "computers",
@@ -642,7 +642,7 @@
     },
     {
       "productId": "cmwf0qnsr007yv4aw6ym23yet",
-      "name": "DEMO — Digital SLR camera with zoom lens",
+      "name": "DEMO \u2014 Digital SLR camera with zoom lens",
       "currentCategory": {
         "key": "electronics-appliances",
         "slug": "electronics-appliances",
@@ -657,7 +657,7 @@
     },
     {
       "productId": "cmwf0qnto008cv4awngcofj2x",
-      "name": "DEMO — Smartwatch with black silicone strap",
+      "name": "DEMO \u2014 Smartwatch with black silicone strap",
       "currentCategory": {
         "key": "electronics-appliances",
         "slug": "electronics-appliances",
@@ -672,7 +672,7 @@
     },
     {
       "productId": "cmwf0qnum008qv4awn6sdh85d",
-      "name": "DEMO — Red patent leather baby shoes",
+      "name": "DEMO \u2014 Red patent leather baby shoes",
       "currentCategory": {
         "key": "fashion-accessories",
         "slug": "fashion-accessories",
@@ -691,7 +691,7 @@
     },
     {
       "productId": "cmwf116ps00b8v4awo58tomzh",
-      "name": "DEMO — Fresh cabbage, 1 head",
+      "name": "DEMO \u2014 Fresh cabbage, 1 head",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -710,7 +710,7 @@
     },
     {
       "productId": "cmwf116qw00bmv4awz8f2ijmd",
-      "name": "DEMO — Fresh carrots, 1kg",
+      "name": "DEMO \u2014 Fresh carrots, 1kg",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -729,7 +729,7 @@
     },
     {
       "productId": "cmwf116rz00c0v4awo0l7hfo9",
-      "name": "DEMO — Fresh cucumbers, 1kg",
+      "name": "DEMO \u2014 Fresh cucumbers, 1kg",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -748,7 +748,7 @@
     },
     {
       "productId": "cmwf116sy00cev4awcywzzy68",
-      "name": "DEMO — Apple mangoes, 1kg",
+      "name": "DEMO \u2014 Apple mangoes, 1kg",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -767,7 +767,7 @@
     },
     {
       "productId": "cmwf3oluu000ev4rckkr70d9h",
-      "name": "DEMO — Teff flour, 1kg",
+      "name": "DEMO \u2014 Teff flour, 1kg",
       "currentCategory": {
         "key": "teff-flour",
         "slug": "teff-flour",
@@ -786,7 +786,7 @@
     },
     {
       "productId": "cmwf3sz24000gv40ouine4ame",
-      "name": "DEMO — African-print cotton fabric, 6 yards",
+      "name": "DEMO \u2014 African-print cotton fabric, 6 yards",
       "currentCategory": {
         "key": "african-print-fabrics",
         "slug": "african-print-fabrics",
@@ -805,7 +805,7 @@
     },
     {
       "productId": "cmwf3vzej000kv40wxnreatav",
-      "name": "DEMO — Handwoven kente-style cloth, 2 yards",
+      "name": "DEMO \u2014 Handwoven kente-style cloth, 2 yards",
       "currentCategory": {
         "key": "handwoven-dyed-fabrics",
         "slug": "handwoven-dyed-fabrics",
@@ -824,7 +824,7 @@
     },
     {
       "productId": "cmwf3vzg20013v40w95prnyu6",
-      "name": "DEMO — Raw shea butter, 500g",
+      "name": "DEMO \u2014 Raw shea butter, 500g",
       "currentCategory": {
         "key": "shea-natural-butters",
         "slug": "shea-natural-butters",
@@ -843,7 +843,7 @@
     },
     {
       "productId": "cmwf3vzgw001mv40wqbihwfzr",
-      "name": "DEMO — African black soap bar, 300g",
+      "name": "DEMO \u2014 African black soap bar, 300g",
       "currentCategory": {
         "key": "traditional-cleansers-black-soap",
         "slug": "traditional-cleansers-black-soap",
@@ -862,7 +862,7 @@
     },
     {
       "productId": "cmwf3vzhn0025v40w1qxh63gs",
-      "name": "DEMO — Electric cassava grater",
+      "name": "DEMO \u2014 Electric cassava grater",
       "currentCategory": {
         "key": "cassava-processing-equipment",
         "slug": "cassava-processing-equipment",
@@ -881,7 +881,7 @@
     },
     {
       "productId": "cmwf3vzig002ov40wtbfi9w1d",
-      "name": "DEMO — Fine white maize meal, 5kg",
+      "name": "DEMO \u2014 Fine white maize meal, 5kg",
       "currentCategory": {
         "key": "maize-meal-porridge",
         "slug": "maize-meal-porridge",
@@ -900,7 +900,7 @@
     },
     {
       "productId": "cmwf3vzj80037v40whlmkv6fb",
-      "name": "DEMO — Woven storage baskets, set of three",
+      "name": "DEMO \u2014 Woven storage baskets, set of three",
       "currentCategory": {
         "key": "storage-organisation",
         "slug": "storage-organisation",
@@ -919,7 +919,7 @@
     },
     {
       "productId": "cmwf6y19400fjv4goi5q39a9g",
-      "name": "DEMO — Cordless drill and bit set, 18V",
+      "name": "DEMO \u2014 Cordless drill and bit set, 18V",
       "currentCategory": {
         "key": "drills-drivers",
         "slug": "drills-drivers",
@@ -939,7 +939,7 @@
     },
     {
       "productId": "cmwf6y0ya00ddv4goh2u87vra",
-      "name": "DEMO — Glass baby bottles, 2 × 240ml",
+      "name": "DEMO \u2014 Glass baby bottles, 2 \u00d7 240ml",
       "currentCategory": {
         "key": "bottles-teats-sterilisers",
         "slug": "bottles-teats-sterilisers",
@@ -959,7 +959,7 @@
     },
     {
       "productId": "cmwf6y1c800g9v4go8uicfz2s",
-      "name": "DEMO — A5 exercise books, pack of 10",
+      "name": "DEMO \u2014 A5 exercise books, pack of 10",
       "currentCategory": {
         "key": "notebooks-paper",
         "slug": "notebooks-paper",
@@ -979,7 +979,7 @@
     },
     {
       "productId": "cmwf6y1kh00hpv4go6mkc8305",
-      "name": "DEMO — Handwoven raffia tote bag",
+      "name": "DEMO \u2014 Handwoven raffia tote bag",
       "currentCategory": {
         "key": "bags-accessories",
         "slug": "bags-accessories",
@@ -999,7 +999,7 @@
     },
     {
       "productId": "cmwf6y11o00e3v4gomp4cvpln",
-      "name": "DEMO — Size 5 match football",
+      "name": "DEMO \u2014 Size 5 match football",
       "currentCategory": {
         "key": "football-basketball-equipment",
         "slug": "football-basketball-equipment",
@@ -1019,7 +1019,7 @@
     },
     {
       "productId": "cmwf6y0u000cnv4gobf9kpr3e",
-      "name": "DEMO — Compact first-aid kit, 42 pieces",
+      "name": "DEMO \u2014 Compact first-aid kit, 42 pieces",
       "currentCategory": {
         "key": "first-aid-supplies",
         "slug": "first-aid-supplies",
@@ -1039,7 +1039,7 @@
     },
     {
       "productId": "cmwf6y1g400gzv4gooqflw9t1",
-      "name": "DEMO — Garri (cassava flakes), 1kg",
+      "name": "DEMO \u2014 Garri (cassava flakes), 1kg",
       "currentCategory": {
         "key": "cassava-products",
         "slug": "cassava-products",
@@ -1059,7 +1059,7 @@
     },
     {
       "productId": "cmwf6y16500etv4go2cri35gl",
-      "name": "DEMO — Car wash and microfibre care kit",
+      "name": "DEMO \u2014 Car wash and microfibre care kit",
       "currentCategory": {
         "key": "car-care-cleaning",
         "slug": "car-care-cleaning",
@@ -1077,5 +1077,6 @@
       "ambiguous": false,
       "reason": "Created directly in the correct selectable leaf during Batch 2."
     }
-  ]
+  ],
+  "appliedAt": "2026-11-13"
 }

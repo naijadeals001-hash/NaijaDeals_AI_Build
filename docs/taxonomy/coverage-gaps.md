@@ -66,17 +66,17 @@ must add their own country review before any restricted leaf is enabled there.
 | Active products covered | 49 |
 | Mapped to a most-specific selectable leaf | 42 |
 | — already on the proposed leaf (`keep`) | 8 |
-| — proposed moves (`map`, **not applied**) | 34 |
+| — proposed moves (`map`, **applied on 2026-11-13**) | 34 |
 | Ambiguous, retained on current assignment (`review`) | 7 |
-| Selectable leaves currently populated | 8 of 113 |
-| Selectable leaves after the proposed mapping | 23 of 113 |
+| Selectable leaves currently populated | 30 of 96 publishable |
+| Selectable leaves after the proposed mapping | 30 of 96 publishable |
 | `Product.categoryId` writes | **0** |
 
 Current 8 populated leaves are the taxonomy batch (one product each): Teff Flour; Maize
 Meal & Porridge; African-Print Fabrics; Handwoven & Dyed Fabrics; Shea & Natural Butters;
 Traditional Cleansers & Black Soap; Cassava Processing Equipment; Storage & Organisation.
 
-Proposed populated leaves and counts after mapping (not applied):
+Proposed populated leaves and counts after mapping (applied on 2026-11-13):
 
 | Proposed leaf | Active products |
 |---|---|
@@ -123,7 +123,7 @@ These keep their current category; no mapping is proposed.
 
 ## 6. Exceptions and limits
 
-- The mapping is a plan only. The 34 proposed moves are **not applied**; the live
+- The mapping is a plan only. The 34 proposed moves are **applied on 2026-11-13**; the live
   catalogue still has 41 active products on the nine existing level-1 categories and 8
   on the taxonomy leaves.
 - `CategoryRequest` is **2**, not 0: two APPROVED, run-tagged synthetic requests
