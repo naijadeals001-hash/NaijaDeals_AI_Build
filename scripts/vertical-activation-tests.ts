@@ -909,7 +909,15 @@ async function main() {
 
         await page.getByRole("button", { name: /Shop/ }).first().click();
         await page.getByText("Set an activation rule").waitFor({ timeout: 30_000 });
-        return "shop form available; Food shows configuration-only with no rule form";
+
+        // At this point NG is DISABLED and Lagos is LIVE. Selecting the country
+        // scope must name the responsible COUNTRY rule and mark the ignored
+        // local LIVE attempt.
+        await page.getByRole("radio", { name: /One country/ }).check();
+        await page.getByText("Applicable rules (most restrictive decides)").waitFor({ timeout: 30_000 });
+        await page.getByText("Decides", { exact: true }).first().waitFor({ timeout: 30_000 });
+        await page.getByText("Nigeria", { exact: true }).first().waitFor({ timeout: 30_000 });
+        return "shop form available; Food configuration-only; country rule shown as the responsible Decides rule";
       } finally {
         await browser.close();
       }
