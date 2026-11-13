@@ -1,0 +1,4674 @@
+{
+  "meta": {
+    "version": 1,
+    "generatedAt": "2026-11-13",
+    "scope": "NaijaDeals marketplace taxonomy proposal (REVIEW only)",
+    "totalNodes": 73,
+    "departments": 5,
+    "categories": 17,
+    "subcategories": 51,
+    "existingCategoryKeys": [
+      "phones-tablets",
+      "computers",
+      "home-kitchen",
+      "fashion-accessories",
+      "beauty-personal-care",
+      "groceries-household",
+      "power-solar",
+      "gaming",
+      "electronics-appliances"
+    ],
+    "restrictedCategoryKeys": [
+      "seeds-seedlings",
+      "fertilizers-crop-nutrition"
+    ],
+    "notes": [
+      "Existing categories keep their ids, slugs, names, images, imageAlt, isDemo flag and current demo descriptions. Existing products are never moved.",
+      "Aliases are search vocabulary and localized labels, not synonyms that merge distinct products.",
+      "Mudu, paint bucket, basket and bag are informal market measures with no assumed conversion; listings must state an explicit metric weight or volume.",
+      "canPublish is false for NG on the restricted leaves until reviewer verification is recorded."
+    ]
+  },
+  "nodes": [
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "electronics",
+      "parentKey": null,
+      "name": "Electronics & Technology",
+      "slug": "electronics-technology",
+      "description": "Phones, tablets, computers, gaming and consumer electronics. Excludes farm machinery, industrial processing equipment and business supplies, which sit under Agriculture & Business.",
+      "level": 0,
+      "isSelectable": false,
+      "showOnHomepage": true,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": true,
+      "preserveExistingCategory": true,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [
+        "Existing active category: id, slug, name, image, imageAlt, isDemo and the current demo description are preserved. Existing products stay attached to this category and are never moved by the taxonomy seed."
+      ],
+      "key": "phones-tablets",
+      "parentKey": "electronics",
+      "name": "Phones & Tablets",
+      "slug": "phones-tablets",
+      "description": null,
+      "level": 1,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "mobile phone",
+          "locale": "en"
+        },
+        {
+          "alias": "handset",
+          "locale": "en"
+        },
+        {
+          "alias": "téléphone portable",
+          "locale": "fr"
+        },
+        {
+          "alias": "telemóvel",
+          "locale": "pt"
+        },
+        {
+          "alias": "simu janja",
+          "locale": "sw"
+        },
+        {
+          "alias": "هاتف ذكي",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "storage_gb",
+          "label": "Storage (GB)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "ram_gb",
+          "label": "Memory (GB)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "network",
+          "label": "Mobile network",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "2G",
+            "3G",
+            "4G",
+            "5G"
+          ]
+        },
+        {
+          "key": "screen_inches",
+          "label": "Screen size (inches)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "smartphones",
+      "parentKey": "phones-tablets",
+      "name": "Smartphones",
+      "slug": "smartphones",
+      "description": "Cellular phones with touchscreen or keypad controls, sold new or used. Includes feature phones and smartphones. Excludes tablets, smartwatches, phone accessories and SIM-only airtime.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "phone accessories",
+          "locale": "en"
+        },
+        {
+          "alias": "accessoires de téléphone",
+          "locale": "fr"
+        },
+        {
+          "alias": "acessórios de telemóvel",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifaa vya simu",
+          "locale": "sw"
+        },
+        {
+          "alias": "ملحقات الهاتف",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "accessory_type",
+          "label": "Accessory type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Case",
+            "Charger",
+            "Cable",
+            "Screen protector",
+            "Power bank",
+            "Mount",
+            "Other"
+          ]
+        },
+        {
+          "key": "compatible_brand",
+          "label": "Compatible brand",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "phone-accessories",
+      "parentKey": "phones-tablets",
+      "name": "Phone Accessories",
+      "slug": "phone-accessories",
+      "description": "Cases, chargers, cables, screen protectors, mounts and power banks for phones. Excludes complete phones, tablets and standalone solar power systems.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "tablet computer",
+          "locale": "en"
+        },
+        {
+          "alias": "tablette",
+          "locale": "fr"
+        },
+        {
+          "alias": "tablet",
+          "locale": "pt"
+        },
+        {
+          "alias": "kompyuta kibao",
+          "locale": "sw"
+        },
+        {
+          "alias": "جهاز لوحي",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "storage_gb",
+          "label": "Storage (GB)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "screen_inches",
+          "label": "Screen size (inches)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "connectivity",
+          "label": "Connectivity",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Wi-Fi",
+            "Wi-Fi + Cellular"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "tablets",
+      "parentKey": "phones-tablets",
+      "name": "Tablets",
+      "slug": "tablets",
+      "description": "Tablet computers and e-readers with Wi-Fi or cellular connectivity. Excludes smartphones and convertible laptops.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": true,
+      "preserveExistingCategory": true,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [
+        "Existing active category: id, slug, name, image, imageAlt, isDemo and the current demo description are preserved. Existing products stay attached to this category and are never moved by the taxonomy seed."
+      ],
+      "key": "computers",
+      "parentKey": "electronics",
+      "name": "Computers",
+      "slug": "computers",
+      "description": null,
+      "level": 1,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "notebook",
+          "locale": "en"
+        },
+        {
+          "alias": "notebook computer",
+          "locale": "en"
+        },
+        {
+          "alias": "ordinateur portable",
+          "locale": "fr"
+        },
+        {
+          "alias": "portátil",
+          "locale": "pt"
+        },
+        {
+          "alias": "laptop",
+          "locale": "sw"
+        },
+        {
+          "alias": "حاسوب محمول",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "processor",
+          "label": "Processor",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "ram_gb",
+          "label": "Memory (GB)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "storage_gb",
+          "label": "Storage (GB)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "screen_inches",
+          "label": "Screen size (inches)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "operating_system",
+          "label": "Operating system",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Windows",
+            "macOS",
+            "Linux",
+            "ChromeOS",
+            "Other"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "laptops",
+      "parentKey": "computers",
+      "name": "Laptops",
+      "slug": "laptops",
+      "description": "Portable notebook and 2-in-1 computers. Excludes tablets, desktop computers and standalone monitors.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "desktop",
+          "locale": "en"
+        },
+        {
+          "alias": "desktop pc",
+          "locale": "en"
+        },
+        {
+          "alias": "ordinateur de bureau",
+          "locale": "fr"
+        },
+        {
+          "alias": "computador de mesa",
+          "locale": "pt"
+        },
+        {
+          "alias": "kompyuta ya mezani",
+          "locale": "sw"
+        },
+        {
+          "alias": "حاسوب مكتبي",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "processor",
+          "label": "Processor",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "ram_gb",
+          "label": "Memory (GB)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "storage_gb",
+          "label": "Storage (GB)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "form_factor",
+          "label": "Form factor",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Tower",
+            "All-in-one",
+            "Workstation",
+            "Other"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "desktop-computers",
+      "parentKey": "computers",
+      "name": "Desktop Computers",
+      "slug": "desktop-computers",
+      "description": "Desktop towers, all-in-one computers and workstation bases. Excludes monitors, keyboards and other peripherals.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "computer accessories",
+          "locale": "en"
+        },
+        {
+          "alias": "accessoires informatiques",
+          "locale": "fr"
+        },
+        {
+          "alias": "acessórios de informática",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifaa vya kompyuta",
+          "locale": "sw"
+        },
+        {
+          "alias": "ملحقات الحاسوب",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "accessory_type",
+          "label": "Accessory type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Keyboard",
+            "Mouse",
+            "Monitor",
+            "Dock / hub",
+            "Cable",
+            "Laptop bag",
+            "Other"
+          ]
+        },
+        {
+          "key": "compatible_brand",
+          "label": "Compatible brand",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "computer-accessories",
+      "parentKey": "computers",
+      "name": "Computer Accessories",
+      "slug": "computer-accessories",
+      "description": "Keyboards, mice, monitors, docks, hubs, cables and laptop bags. Excludes complete computers and printers.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": true,
+      "preserveExistingCategory": true,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [
+        "Existing active category: id, slug, name, image, imageAlt, isDemo and the current demo description are preserved. Existing products stay attached to this category and are never moved by the taxonomy seed."
+      ],
+      "key": "gaming",
+      "parentKey": "electronics",
+      "name": "Gaming",
+      "slug": "gaming",
+      "description": null,
+      "level": 1,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "game console",
+          "locale": "en"
+        },
+        {
+          "alias": "console de jeu",
+          "locale": "fr"
+        },
+        {
+          "alias": "consola de jogos",
+          "locale": "pt"
+        },
+        {
+          "alias": "konsoli ya michezo",
+          "locale": "sw"
+        },
+        {
+          "alias": "منصة ألعاب",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "platform",
+          "label": "Platform",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "PlayStation",
+            "Xbox",
+            "Nintendo",
+            "PC handheld",
+            "Other"
+          ]
+        },
+        {
+          "key": "storage_gb",
+          "label": "Storage (GB)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "gaming-consoles",
+      "parentKey": "gaming",
+      "name": "Gaming Consoles",
+      "slug": "gaming-consoles",
+      "description": "Home and handheld game consoles. Excludes games, controllers and gaming PCs.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "video game",
+          "locale": "en"
+        },
+        {
+          "alias": "game disc",
+          "locale": "en"
+        },
+        {
+          "alias": "jeu vidéo",
+          "locale": "fr"
+        },
+        {
+          "alias": "jogo de vídeo",
+          "locale": "pt"
+        },
+        {
+          "alias": "mchezo wa video",
+          "locale": "sw"
+        },
+        {
+          "alias": "لعبة فيديو",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "platform",
+          "label": "Platform",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "PlayStation",
+            "Xbox",
+            "Nintendo",
+            "PC",
+            "Other"
+          ]
+        },
+        {
+          "key": "format",
+          "label": "Format",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Physical disc",
+            "Cartridge",
+            "Digital code"
+          ]
+        },
+        {
+          "key": "age_rating",
+          "label": "Age rating",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "video-games",
+      "parentKey": "gaming",
+      "name": "Video Games",
+      "slug": "video-games",
+      "description": "Physical game discs and cartridges plus digital game codes. Excludes consoles and in-game currency.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "gaming headset",
+          "locale": "en"
+        },
+        {
+          "alias": "controller",
+          "locale": "en"
+        },
+        {
+          "alias": "accessoires de jeu",
+          "locale": "fr"
+        },
+        {
+          "alias": "acessórios de jogos",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifaa vya michezo",
+          "locale": "sw"
+        },
+        {
+          "alias": "ملحقات الألعاب",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "accessory_type",
+          "label": "Accessory type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Controller",
+            "Headset",
+            "Gaming mouse",
+            "Gaming keyboard",
+            "Chair",
+            "Streaming accessory",
+            "Other"
+          ]
+        },
+        {
+          "key": "platform",
+          "label": "Compatible platform",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "gaming-accessories",
+      "parentKey": "gaming",
+      "name": "Gaming Accessories",
+      "slug": "gaming-accessories",
+      "description": "Controllers, headsets, gaming mice and keyboards, chairs and streaming accessories. Excludes consoles and games.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": true,
+      "preserveExistingCategory": true,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [
+        "Existing active category: id, slug, name, image, imageAlt, isDemo and the current demo description are preserved. Existing products stay attached to this category and are never moved by the taxonomy seed."
+      ],
+      "key": "electronics-appliances",
+      "parentKey": "electronics",
+      "name": "Electronics & Appliances",
+      "slug": "electronics-appliances",
+      "description": null,
+      "level": 1,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "television",
+          "locale": "en"
+        },
+        {
+          "alias": "tv",
+          "locale": "en"
+        },
+        {
+          "alias": "soundbar",
+          "locale": "en"
+        },
+        {
+          "alias": "téléviseur",
+          "locale": "fr"
+        },
+        {
+          "alias": "barre de son",
+          "locale": "fr"
+        },
+        {
+          "alias": "televisor",
+          "locale": "pt"
+        },
+        {
+          "alias": "barra de som",
+          "locale": "pt"
+        },
+        {
+          "alias": "televisheni",
+          "locale": "sw"
+        },
+        {
+          "alias": "تلفاز",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Television",
+            "Soundbar",
+            "Speaker",
+            "Home theatre receiver",
+            "Other"
+          ]
+        },
+        {
+          "key": "screen_size_inches",
+          "label": "Screen size (inches)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "power_watts",
+          "label": "Power (W)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "tvs-home-audio",
+      "parentKey": "electronics-appliances",
+      "name": "TVs & Home Audio",
+      "slug": "tvs-home-audio",
+      "description": "Televisions, soundbars, speakers and home theatre receivers. Excludes computer monitors and car audio.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "fridge",
+          "locale": "en"
+        },
+        {
+          "alias": "refrigerator",
+          "locale": "en"
+        },
+        {
+          "alias": "cooker",
+          "locale": "en"
+        },
+        {
+          "alias": "appareils de cuisine",
+          "locale": "fr"
+        },
+        {
+          "alias": "eletrodomésticos de cozinha",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifaa vya jikoni",
+          "locale": "sw"
+        },
+        {
+          "alias": "أجهزة المطبخ",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "appliance_type",
+          "label": "Appliance type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Refrigerator",
+            "Cooker",
+            "Microwave",
+            "Dishwasher",
+            "Freezer",
+            "Built-in oven",
+            "Other"
+          ]
+        },
+        {
+          "key": "power_watts",
+          "label": "Power (W)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "capacity_litres",
+          "label": "Capacity (litres)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "kitchen-appliances",
+      "parentKey": "electronics-appliances",
+      "name": "Kitchen Appliances",
+      "slug": "kitchen-appliances",
+      "description": "Refrigerators, cookers, microwaves, dishwashers and large built-in appliances. Excludes small countertop appliances.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "blender",
+          "locale": "en"
+        },
+        {
+          "alias": "kettle",
+          "locale": "en"
+        },
+        {
+          "alias": "air fryer",
+          "locale": "en"
+        },
+        {
+          "alias": "petits appareils",
+          "locale": "fr"
+        },
+        {
+          "alias": "pequenos eletrodomésticos",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifaa vidogo vya jikoni",
+          "locale": "sw"
+        },
+        {
+          "alias": "أجهزة صغيرة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "appliance_type",
+          "label": "Appliance type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Blender",
+            "Kettle",
+            "Toaster",
+            "Air fryer",
+            "Coffee maker",
+            "Food processor",
+            "Other"
+          ]
+        },
+        {
+          "key": "power_watts",
+          "label": "Power (W)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "small-appliances",
+      "parentKey": "electronics-appliances",
+      "name": "Small Appliances",
+      "slug": "small-appliances",
+      "description": "Blenders, kettles, toasters, air fryers, coffee makers and food processors. Excludes large kitchen appliances and cookware.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "home",
+      "parentKey": null,
+      "name": "Home & Living",
+      "slug": "home-living",
+      "description": "Kitchenware, home textiles, household cleaning and home power. Excludes building materials, furniture installation and commercial catering equipment.",
+      "level": 0,
+      "isSelectable": false,
+      "showOnHomepage": true,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": true,
+      "preserveExistingCategory": true,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [
+        "Existing active category: id, slug, name, image, imageAlt, isDemo and the current demo description are preserved. Existing products stay attached to this category and are never moved by the taxonomy seed."
+      ],
+      "key": "home-kitchen",
+      "parentKey": "home",
+      "name": "Home & Kitchen",
+      "slug": "home-kitchen",
+      "description": null,
+      "level": 1,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "pots and pans",
+          "locale": "en"
+        },
+        {
+          "alias": "bakeware",
+          "locale": "en"
+        },
+        {
+          "alias": "ustensiles de cuisine",
+          "locale": "fr"
+        },
+        {
+          "alias": "panelas e assadeiras",
+          "locale": "pt"
+        },
+        {
+          "alias": "vyombo vya kupikia",
+          "locale": "sw"
+        },
+        {
+          "alias": "أواني الطهي",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Stainless steel",
+            "Aluminium",
+            "Cast iron",
+            "Ceramic",
+            "Glass",
+            "Non-stick",
+            "Other"
+          ]
+        },
+        {
+          "key": "piece_count",
+          "label": "Number of pieces",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "cookware-bakeware",
+      "parentKey": "home-kitchen",
+      "name": "Cookware & Bakeware",
+      "slug": "cookware-bakeware",
+      "description": "Pots, pans, baking trays, casserole dishes and cookware sets. Excludes tableware, cutlery and small appliances.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "plates",
+          "locale": "en"
+        },
+        {
+          "alias": "cutlery",
+          "locale": "en"
+        },
+        {
+          "alias": "dinnerware",
+          "locale": "en"
+        },
+        {
+          "alias": "vaisselle",
+          "locale": "fr"
+        },
+        {
+          "alias": "louça",
+          "locale": "pt"
+        },
+        {
+          "alias": "vyombo vya mezani",
+          "locale": "sw"
+        },
+        {
+          "alias": "أدوات المائدة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Ceramic",
+            "Porcelain",
+            "Glass",
+            "Stainless steel",
+            "Plastic",
+            "Other"
+          ]
+        },
+        {
+          "key": "piece_count",
+          "label": "Number of pieces",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "tableware-dining",
+      "parentKey": "home-kitchen",
+      "name": "Tableware & Dining",
+      "slug": "tableware-dining",
+      "description": "Plates, bowls, cups, cutlery, serving dishes and dining sets. Excludes cookware and furniture.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "bedding",
+          "locale": "en"
+        },
+        {
+          "alias": "towels",
+          "locale": "en"
+        },
+        {
+          "alias": "curtains",
+          "locale": "en"
+        },
+        {
+          "alias": "lingerie de maison",
+          "locale": "fr"
+        },
+        {
+          "alias": "têxteis para o lar",
+          "locale": "pt"
+        },
+        {
+          "alias": "vitambaa vya nyumbani",
+          "locale": "sw"
+        },
+        {
+          "alias": "منسوجات منزلية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "textile_type",
+          "label": "Textile type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Bedding",
+            "Towel",
+            "Curtain",
+            "Rug",
+            "Cushion cover",
+            "Other"
+          ]
+        },
+        {
+          "key": "size",
+          "label": "Size",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "home-textiles",
+      "parentKey": "home-kitchen",
+      "name": "Home Textiles",
+      "slug": "home-textiles",
+      "description": "Bedding, towels, curtains, rugs and cushion covers. Excludes ready-made clothing and upholstered furniture.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "storage boxes",
+          "locale": "en"
+        },
+        {
+          "alias": "organiser",
+          "locale": "en"
+        },
+        {
+          "alias": "rangement",
+          "locale": "fr"
+        },
+        {
+          "alias": "organização",
+          "locale": "pt"
+        },
+        {
+          "alias": "uhifadhi wa nyumbani",
+          "locale": "sw"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "storage_type",
+          "label": "Storage type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Box",
+            "Basket",
+            "Shelving unit",
+            "Wardrobe organiser",
+            "Kitchen organiser",
+            "Other"
+          ]
+        },
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "storage-organisation",
+      "parentKey": "home-kitchen",
+      "name": "Storage & Organisation",
+      "slug": "storage-organisation",
+      "description": "Storage boxes, baskets, shelving units, wardrobe organisers and kitchen storage. Excludes built-in cabinetry and commercial warehouse racking.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": true,
+      "preserveExistingCategory": true,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [
+        "Existing active category: id, slug, name, image, imageAlt, isDemo and the current demo description are preserved. Existing products stay attached to this category and are never moved by the taxonomy seed."
+      ],
+      "key": "power-solar",
+      "parentKey": "home",
+      "name": "Power & Solar",
+      "slug": "power-solar",
+      "description": null,
+      "level": 1,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "pv panel",
+          "locale": "en"
+        },
+        {
+          "alias": "photovoltaic panel",
+          "locale": "en"
+        },
+        {
+          "alias": "panneau solaire",
+          "locale": "fr"
+        },
+        {
+          "alias": "painel solar",
+          "locale": "pt"
+        },
+        {
+          "alias": "panel ya jua",
+          "locale": "sw"
+        },
+        {
+          "alias": "لوح شمسي",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "panel_wattage",
+          "label": "Panel wattage (W)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "panel_type",
+          "label": "Panel type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Monocrystalline",
+            "Polycrystalline",
+            "Thin-film",
+            "Other"
+          ]
+        },
+        {
+          "key": "warranty_years",
+          "label": "Warranty (years)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "solar-panels",
+      "parentKey": "power-solar",
+      "name": "Solar Panels",
+      "slug": "solar-panels",
+      "description": "Photovoltaic panels and mounting kits sold by panel or wattage. Excludes inverters, batteries and complete solar home systems.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "inverter",
+          "locale": "en"
+        },
+        {
+          "alias": "solar battery",
+          "locale": "en"
+        },
+        {
+          "alias": "onduleur",
+          "locale": "fr"
+        },
+        {
+          "alias": "batterie solaire",
+          "locale": "fr"
+        },
+        {
+          "alias": "inversor",
+          "locale": "pt"
+        },
+        {
+          "alias": "bateria solar",
+          "locale": "pt"
+        },
+        {
+          "alias": "betri ya jua",
+          "locale": "sw"
+        },
+        {
+          "alias": "عاكس كهربائي",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Inverter",
+            "Charge controller",
+            "Battery",
+            "Battery enclosure",
+            "Other"
+          ]
+        },
+        {
+          "key": "capacity_va",
+          "label": "Inverter capacity (VA)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "battery_capacity_ah",
+          "label": "Battery capacity (Ah)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "battery_chemistry",
+          "label": "Battery chemistry",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Lead-acid",
+            "Gel",
+            "Tubular",
+            "Lithium-ion",
+            "Other"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "inverters-batteries",
+      "parentKey": "power-solar",
+      "name": "Inverters & Batteries",
+      "slug": "inverters-batteries",
+      "description": "Inverters, charge controllers, solar batteries and battery enclosures. Excludes solar panels and generators.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "generator",
+          "locale": "en"
+        },
+        {
+          "alias": "power station",
+          "locale": "en"
+        },
+        {
+          "alias": "groupe électrogène",
+          "locale": "fr"
+        },
+        {
+          "alias": "gerador",
+          "locale": "pt"
+        },
+        {
+          "alias": "jenereta",
+          "locale": "sw"
+        },
+        {
+          "alias": "مولد كهرباء",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Generator",
+            "Portable power station",
+            "UPS",
+            "Other"
+          ]
+        },
+        {
+          "key": "rated_power_kva",
+          "label": "Rated power (kVA)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "fuel_type",
+          "label": "Fuel type",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Petrol",
+            "Diesel",
+            "Gas",
+            "Battery",
+            "Other"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "generators-backup-power",
+      "parentKey": "power-solar",
+      "name": "Generators & Backup Power",
+      "slug": "generators-backup-power",
+      "description": "Petrol, diesel and gas generators, portable power stations and small backup systems. Excludes solar panels and data-centre UPS installations.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "household-cleaning",
+      "parentKey": "home",
+      "name": "Household & Cleaning",
+      "slug": "household-cleaning",
+      "description": "Cleaning products, laundry care and bathroom consumables for the home. Excludes appliances, cleaning services and industrial chemicals.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "detergent",
+          "locale": "en"
+        },
+        {
+          "alias": "disinfectant",
+          "locale": "en"
+        },
+        {
+          "alias": "produits de nettoyage",
+          "locale": "fr"
+        },
+        {
+          "alias": "produtos de limpeza",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifaa vya kusafisha",
+          "locale": "sw"
+        },
+        {
+          "alias": "منظفات",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Detergent",
+            "Disinfectant",
+            "Surface cleaner",
+            "Mop / broom",
+            "Sponge / cloth",
+            "Other"
+          ]
+        },
+        {
+          "key": "volume_ml",
+          "label": "Volume (ml)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "cleaning-supplies",
+      "parentKey": "household-cleaning",
+      "name": "Cleaning Supplies",
+      "slug": "cleaning-supplies",
+      "description": "Detergents, disinfectants, mops, brooms, sponges and surface cleaners. Excludes washing machines and professional cleaning equipment.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "laundry detergent",
+          "locale": "en"
+        },
+        {
+          "alias": "toilet paper",
+          "locale": "en"
+        },
+        {
+          "alias": "lessive",
+          "locale": "fr"
+        },
+        {
+          "alias": "papier toilette",
+          "locale": "fr"
+        },
+        {
+          "alias": "detergente de roupa",
+          "locale": "pt"
+        },
+        {
+          "alias": "papel higiénico",
+          "locale": "pt"
+        },
+        {
+          "alias": "sabuni ya kufulia",
+          "locale": "sw"
+        },
+        {
+          "alias": "منظفات الحمام",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Laundry detergent",
+            "Fabric softener",
+            "Toilet paper",
+            "Bathroom cleaner",
+            "Toiletry",
+            "Other"
+          ]
+        },
+        {
+          "key": "pack_count",
+          "label": "Pack count",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "laundry-bathroom",
+      "parentKey": "household-cleaning",
+      "name": "Laundry & Bathroom",
+      "slug": "laundry-bathroom",
+      "description": "Laundry detergents, fabric softeners, toilet paper, bathroom cleaners and bathroom toiletries. Excludes bathroom fixtures and installation.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "fashion",
+      "parentKey": null,
+      "name": "Fashion & Beauty",
+      "slug": "fashion-beauty",
+      "description": "Clothing, footwear, bags, fabrics and personal care. Excludes tailoring services, beauty treatments and fashion rentals.",
+      "level": 0,
+      "isSelectable": false,
+      "showOnHomepage": true,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": true,
+      "preserveExistingCategory": true,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [
+        "Existing active category: id, slug, name, image, imageAlt, isDemo and the current demo description are preserved. Existing products stay attached to this category and are never moved by the taxonomy seed."
+      ],
+      "key": "fashion-accessories",
+      "parentKey": "fashion",
+      "name": "Fashion & Accessories",
+      "slug": "fashion-accessories",
+      "description": null,
+      "level": 1,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "clothes",
+          "locale": "en"
+        },
+        {
+          "alias": "apparel",
+          "locale": "en"
+        },
+        {
+          "alias": "vêtements",
+          "locale": "fr"
+        },
+        {
+          "alias": "roupas",
+          "locale": "pt"
+        },
+        {
+          "alias": "nguo",
+          "locale": "sw"
+        },
+        {
+          "alias": "ملابس",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "size",
+          "label": "Size",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "XS",
+            "S",
+            "M",
+            "L",
+            "XL",
+            "XXL",
+            "3XL",
+            "Children",
+            "Other"
+          ]
+        },
+        {
+          "key": "gender",
+          "label": "Fit",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Women",
+            "Men",
+            "Unisex",
+            "Girls",
+            "Boys",
+            "Baby"
+          ]
+        },
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "clothing",
+      "parentKey": "fashion-accessories",
+      "name": "Clothing",
+      "slug": "clothing",
+      "description": "Ready-to-wear clothing for adults and children. Excludes fabric sold by the yard and tailoring services.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "shoes",
+          "locale": "en"
+        },
+        {
+          "alias": "sandals",
+          "locale": "en"
+        },
+        {
+          "alias": "chaussures",
+          "locale": "fr"
+        },
+        {
+          "alias": "calçado",
+          "locale": "pt"
+        },
+        {
+          "alias": "viatu",
+          "locale": "sw"
+        },
+        {
+          "alias": "أحذية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "size",
+          "label": "Size (EU)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "gender",
+          "label": "Fit",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Women",
+            "Men",
+            "Unisex",
+            "Girls",
+            "Boys",
+            "Baby"
+          ]
+        },
+        {
+          "key": "shoe_type",
+          "label": "Shoe type",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Sneaker",
+            "Sandal",
+            "Boot",
+            "Slipper",
+            "Formal",
+            "Other"
+          ]
+        },
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "footwear",
+      "parentKey": "fashion-accessories",
+      "name": "Footwear",
+      "slug": "footwear",
+      "description": "Shoes, sandals, boots and slippers. Excludes socks and shoe-care products.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "handbag",
+          "locale": "en"
+        },
+        {
+          "alias": "backpack",
+          "locale": "en"
+        },
+        {
+          "alias": "jewellery",
+          "locale": "en"
+        },
+        {
+          "alias": "sacs et accessoires",
+          "locale": "fr"
+        },
+        {
+          "alias": "bolsas e acessórios",
+          "locale": "pt"
+        },
+        {
+          "alias": "mikoba na vifaa",
+          "locale": "sw"
+        },
+        {
+          "alias": "حقائب وإكسسوارات",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "item_type",
+          "label": "Item type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Handbag",
+            "Backpack",
+            "Travel bag",
+            "Belt",
+            "Hat",
+            "Scarf",
+            "Watch",
+            "Jewellery",
+            "Other"
+          ]
+        },
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "bags-accessories",
+      "parentKey": "fashion-accessories",
+      "name": "Bags & Accessories",
+      "slug": "bags-accessories",
+      "description": "Handbags, backpacks, belts, hats, scarves, watches, jewellery and travel bags. Excludes footwear and phone cases.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "fabrics-textiles",
+      "parentKey": "fashion",
+      "name": "Fabrics & Textiles",
+      "slug": "fabrics-textiles",
+      "description": "Fabric sold by the piece, yard or metre, including printed, woven and dyed African textiles. Excludes finished clothing, soft furnishings and tailoring services.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "ankara",
+          "locale": "en"
+        },
+        {
+          "alias": "wax print",
+          "locale": "en"
+        },
+        {
+          "alias": "kitenge",
+          "locale": "en"
+        },
+        {
+          "alias": "chitenge",
+          "locale": "en"
+        },
+        {
+          "alias": "shweshwe",
+          "locale": "en"
+        },
+        {
+          "alias": "pagne",
+          "locale": "fr"
+        },
+        {
+          "alias": "tissu wax",
+          "locale": "fr"
+        },
+        {
+          "alias": "capulana",
+          "locale": "pt"
+        },
+        {
+          "alias": "pano africano",
+          "locale": "pt"
+        },
+        {
+          "alias": "قماش أفريقي مطبوع",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "fabric_style",
+          "label": "Fabric style",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Ankara / wax print",
+            "Kitenge / chitenge",
+            "Shweshwe",
+            "Other African print"
+          ]
+        },
+        {
+          "key": "length_yards",
+          "label": "Length (yards)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "width_cm",
+          "label": "Width (cm)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "TEXT",
+          "required": true
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Ankara, kitenge/chitenge and shweshwe are distinct print traditions and products; they are search aliases, not interchangeable synonyms."
+      ],
+      "key": "african-print-fabrics",
+      "parentKey": "fabrics-textiles",
+      "name": "African-Print Fabrics",
+      "slug": "african-print-fabrics",
+      "description": "Printed cotton fabrics such as ankara/wax print, kitenge/chitenge and shweshwe, sold by the piece, yard or metre. Excludes handwoven kente, aso-oke, adire and bogolan, which are listed under Handwoven & Dyed Fabrics.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "kente",
+          "locale": "en"
+        },
+        {
+          "alias": "aso-oke",
+          "locale": "en"
+        },
+        {
+          "alias": "aso oke",
+          "locale": "en"
+        },
+        {
+          "alias": "adire",
+          "locale": "en"
+        },
+        {
+          "alias": "bogolan",
+          "locale": "en"
+        },
+        {
+          "alias": "mud cloth",
+          "locale": "en"
+        },
+        {
+          "alias": "kenté",
+          "locale": "fr"
+        },
+        {
+          "alias": "bogolan",
+          "locale": "fr"
+        },
+        {
+          "alias": "tissu mud",
+          "locale": "fr"
+        },
+        {
+          "alias": "kente",
+          "locale": "pt"
+        },
+        {
+          "alias": "bogolan",
+          "locale": "pt"
+        },
+        {
+          "alias": "pano de lama",
+          "locale": "pt"
+        },
+        {
+          "alias": "قماش منسوج يدويًا",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "technique",
+          "label": "Technique",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Handwoven strip-weave",
+            "Indigo resist-dye",
+            "Mud-resist dye",
+            "Other"
+          ]
+        },
+        {
+          "key": "length_yards",
+          "label": "Length (yards)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "width_cm",
+          "label": "Width (cm)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Kente and aso-oke are handwoven; adire and bogolan are dyed traditions. Each remains a distinct product, not a synonym for printed ankara."
+      ],
+      "key": "handwoven-dyed-fabrics",
+      "parentKey": "fabrics-textiles",
+      "name": "Handwoven & Dyed Fabrics",
+      "slug": "handwoven-dyed-fabrics",
+      "description": "Handwoven or hand-dyed fabrics including kente, aso-oke, adire and bogolan, sold by the piece, yard or metre. Excludes industrially printed ankara, kitenge and shweshwe.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "lace",
+          "locale": "en"
+        },
+        {
+          "alias": "embroidered fabric",
+          "locale": "en"
+        },
+        {
+          "alias": "dentelle",
+          "locale": "fr"
+        },
+        {
+          "alias": "tissu brodé",
+          "locale": "fr"
+        },
+        {
+          "alias": "renda",
+          "locale": "pt"
+        },
+        {
+          "alias": "tecido bordado",
+          "locale": "pt"
+        },
+        {
+          "alias": "دانتيل",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "fabric_type",
+          "label": "Fabric type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Lace",
+            "Embroidered",
+            "Beaded",
+            "Other"
+          ]
+        },
+        {
+          "key": "length_yards",
+          "label": "Length (yards)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "colour",
+          "label": "Colour",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "lace-embroidered-fabrics",
+      "parentKey": "fabrics-textiles",
+      "name": "Lace & Embroidered Fabrics",
+      "slug": "lace-embroidered-fabrics",
+      "description": "Lace, embroidered and beaded fabrics sold by the piece, yard or metre. Excludes printed African fabrics and finished garments.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": true,
+      "preserveExistingCategory": true,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [
+        "Existing active category: id, slug, name, image, imageAlt, isDemo and the current demo description are preserved. Existing products stay attached to this category and are never moved by the taxonomy seed."
+      ],
+      "key": "beauty-personal-care",
+      "parentKey": "fashion",
+      "name": "Beauty & Personal Care",
+      "slug": "beauty-personal-care",
+      "description": null,
+      "level": 1,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "moisturiser",
+          "locale": "en"
+        },
+        {
+          "alias": "moisturizer",
+          "locale": "en"
+        },
+        {
+          "alias": "serum",
+          "locale": "en"
+        },
+        {
+          "alias": "soins de la peau",
+          "locale": "fr"
+        },
+        {
+          "alias": "cuidados com a pele",
+          "locale": "pt"
+        },
+        {
+          "alias": "utunzaji wa ngozi",
+          "locale": "sw"
+        },
+        {
+          "alias": "العناية بالبشرة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "skin_type",
+          "label": "Skin type",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "All",
+            "Dry",
+            "Oily",
+            "Combination",
+            "Sensitive",
+            "Other"
+          ]
+        },
+        {
+          "key": "volume_ml",
+          "label": "Volume (ml)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "spf",
+          "label": "SPF",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "skincare",
+      "parentKey": "beauty-personal-care",
+      "name": "Skincare",
+      "slug": "skincare",
+      "description": "Cleansers, moisturisers, serums, sunscreen and face masks. Excludes medicinal treatments and prescription products.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "shampoo",
+          "locale": "en"
+        },
+        {
+          "alias": "conditioner",
+          "locale": "en"
+        },
+        {
+          "alias": "soins capillaires",
+          "locale": "fr"
+        },
+        {
+          "alias": "cuidados com o cabelo",
+          "locale": "pt"
+        },
+        {
+          "alias": "utunzaji wa nywele",
+          "locale": "sw"
+        },
+        {
+          "alias": "العناية بالشعر",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "hair_type",
+          "label": "Hair type",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "All",
+            "Straight",
+            "Wavy",
+            "Curly",
+            "Coily",
+            "Other"
+          ]
+        },
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Shampoo",
+            "Conditioner",
+            "Oil",
+            "Treatment",
+            "Styling",
+            "Other"
+          ]
+        },
+        {
+          "key": "volume_ml",
+          "label": "Volume (ml)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "hair-care",
+      "parentKey": "beauty-personal-care",
+      "name": "Hair Care",
+      "slug": "hair-care",
+      "description": "Shampoos, conditioners, oils, treatments and styling products. Excludes wigs, hairpieces and salon services.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "body lotion",
+          "locale": "en"
+        },
+        {
+          "alias": "body wash",
+          "locale": "en"
+        },
+        {
+          "alias": "soins du corps",
+          "locale": "fr"
+        },
+        {
+          "alias": "cuidados corporais",
+          "locale": "pt"
+        },
+        {
+          "alias": "utunzaji wa mwili",
+          "locale": "sw"
+        },
+        {
+          "alias": "العناية بالجسم",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Body wash",
+            "Lotion",
+            "Scrub",
+            "Deodorant",
+            "Bar soap",
+            "Other"
+          ]
+        },
+        {
+          "key": "volume_ml",
+          "label": "Volume (ml)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "bath-body",
+      "parentKey": "beauty-personal-care",
+      "name": "Bath & Body",
+      "slug": "bath-body",
+      "description": "Body wash, lotions, scrubs, deodorants and bath accessories. Excludes laundry soap and medicated products.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [
+        "Listings must not claim medical treatment or unverified therapeutic benefits."
+      ],
+      "key": "natural-traditional-beauty",
+      "parentKey": "fashion",
+      "name": "Natural & Traditional Beauty",
+      "slug": "natural-traditional-beauty",
+      "description": "Traditional soaps, shea products and natural body care. Excludes medicines, supplements and products making unverified therapeutic claims.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "shea",
+          "locale": "en"
+        },
+        {
+          "alias": "shea butter",
+          "locale": "en"
+        },
+        {
+          "alias": "karite",
+          "locale": "en"
+        },
+        {
+          "alias": "karité",
+          "locale": "en"
+        },
+        {
+          "alias": "karité",
+          "locale": "fr"
+        },
+        {
+          "alias": "beurre de karité",
+          "locale": "fr"
+        },
+        {
+          "alias": "manteiga de karité",
+          "locale": "pt"
+        },
+        {
+          "alias": "siagi ya shea",
+          "locale": "sw"
+        },
+        {
+          "alias": "زبدة الشيا",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "form",
+          "label": "Form",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Raw",
+            "Refined",
+            "Whipped",
+            "Other"
+          ]
+        },
+        {
+          "key": "net_weight_kg",
+          "label": "Net weight (kg)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "origin_country",
+          "label": "Origin country",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "This leaf covers cosmetic-grade shea. Food-grade shea requires a separate food-safety review before listing."
+      ],
+      "key": "shea-natural-butters",
+      "parentKey": "natural-traditional-beauty",
+      "name": "Shea & Natural Butters",
+      "slug": "shea-natural-butters",
+      "description": "Raw, refined and whipped shea butter and similar natural butters sold by weight. Excludes shea-based finished soaps and cosmetics.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "black soap",
+          "locale": "en"
+        },
+        {
+          "alias": "ose dudu",
+          "locale": "en"
+        },
+        {
+          "alias": "alata samina",
+          "locale": "en"
+        },
+        {
+          "alias": "sabulun salo",
+          "locale": "en"
+        },
+        {
+          "alias": "ncha nkota",
+          "locale": "en"
+        },
+        {
+          "alias": "savon noir",
+          "locale": "fr"
+        },
+        {
+          "alias": "sabão negro",
+          "locale": "pt"
+        },
+        {
+          "alias": "sabuni nyeusi",
+          "locale": "sw"
+        },
+        {
+          "alias": "صابون أسود",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "form",
+          "label": "Form",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Bar",
+            "Liquid",
+            "Powder",
+            "Paste"
+          ]
+        },
+        {
+          "key": "net_weight_g",
+          "label": "Net weight (g)",
+          "type": "NUMBER",
+          "required": true
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Ose dudu, alata samina, sabulun salo and ncha nkota are regional names for related traditional soaps; separate products must not be merged into one listing."
+      ],
+      "key": "traditional-cleansers-black-soap",
+      "parentKey": "natural-traditional-beauty",
+      "name": "Traditional Cleansers & Black Soap",
+      "slug": "traditional-cleansers-black-soap",
+      "description": "African black soap and traditional cleansers sold as bars, powder, paste or liquid. Excludes medicated soaps and laundry soap.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [
+        "The existing Groceries & Household Essentials category is retained under this department so its current products do not move."
+      ],
+      "key": "food",
+      "parentKey": null,
+      "name": "Food & Everyday Essentials",
+      "slug": "food-everyday-essentials",
+      "description": "Grains, flours, oils, seasonings, fresh produce and everyday household consumables. Excludes prepared meals, restaurant delivery and farm inputs.",
+      "level": 0,
+      "isSelectable": false,
+      "showOnHomepage": true,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": true,
+      "preserveExistingCategory": true,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [
+        "Existing active category: id, slug, name, image, imageAlt, isDemo and the current demo description are preserved. Existing products stay attached to this category and are never moved by the taxonomy seed."
+      ],
+      "key": "groceries-household",
+      "parentKey": "food",
+      "name": "Groceries & Household Essentials",
+      "slug": "groceries-household",
+      "description": null,
+      "level": 1,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "vegetables",
+          "locale": "en"
+        },
+        {
+          "alias": "fruit",
+          "locale": "en"
+        },
+        {
+          "alias": "fruits",
+          "locale": "en"
+        },
+        {
+          "alias": "herbs",
+          "locale": "en"
+        },
+        {
+          "alias": "légumes",
+          "locale": "fr"
+        },
+        {
+          "alias": "fruits",
+          "locale": "fr"
+        },
+        {
+          "alias": "legumes",
+          "locale": "pt"
+        },
+        {
+          "alias": "frutas",
+          "locale": "pt"
+        },
+        {
+          "alias": "mboga",
+          "locale": "sw"
+        },
+        {
+          "alias": "matunda",
+          "locale": "sw"
+        },
+        {
+          "alias": "خضروات وفواكه",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "produce_type",
+          "label": "Produce type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Vegetables",
+            "Fruit",
+            "Herbs",
+            "Other"
+          ]
+        },
+        {
+          "key": "net_weight_kg",
+          "label": "Net weight (kg)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "unit",
+          "label": "Sold by",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "kg",
+            "g",
+            "bunch",
+            "piece",
+            "head",
+            "Other"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "fresh-produce",
+      "parentKey": "groceries-household",
+      "name": "Fresh Produce",
+      "slug": "fresh-produce",
+      "description": "Fresh vegetables, fruit and herbs sold by weight or piece. Excludes frozen meals, dried produce and farm seedlings.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "pantry",
+          "locale": "en"
+        },
+        {
+          "alias": "canned goods",
+          "locale": "en"
+        },
+        {
+          "alias": "stock cubes",
+          "locale": "en"
+        },
+        {
+          "alias": "épicerie",
+          "locale": "fr"
+        },
+        {
+          "alias": "despensa",
+          "locale": "pt"
+        },
+        {
+          "alias": "vyakula vya kuhifadhi",
+          "locale": "sw"
+        },
+        {
+          "alias": "معلبات",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Rice",
+            "Pasta",
+            "Canned goods",
+            "Sugar",
+            "Salt",
+            "Stock cubes",
+            "Other"
+          ]
+        },
+        {
+          "key": "net_weight_kg",
+          "label": "Net weight (kg)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "packaging",
+          "label": "Packaging",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Bag",
+            "Sachet",
+            "Tin",
+            "Jar",
+            "Box",
+            "Other"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "pantry-staples",
+      "parentKey": "groceries-household",
+      "name": "Pantry Staples",
+      "slug": "pantry-staples",
+      "description": "Shelf-stable rice, pasta, canned goods, sugar, salt and stock cubes. Excludes flours, cassava products, fresh produce and household cleaning goods.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "household consumables",
+          "locale": "en"
+        },
+        {
+          "alias": "tissue",
+          "locale": "en"
+        },
+        {
+          "alias": "kitchen wrap",
+          "locale": "en"
+        },
+        {
+          "alias": "produits ménagers",
+          "locale": "fr"
+        },
+        {
+          "alias": "produtos domésticos",
+          "locale": "pt"
+        },
+        {
+          "alias": "bidhaa za nyumbani",
+          "locale": "sw"
+        },
+        {
+          "alias": "مستلزمات منزلية",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Tissue",
+            "Kitchen wrap",
+            "Foil",
+            "Matches",
+            "Batteries",
+            "Other"
+          ]
+        },
+        {
+          "key": "pack_count",
+          "label": "Pack count",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "household-essentials",
+      "parentKey": "groceries-household",
+      "name": "Household Essentials",
+      "slug": "household-essentials",
+      "description": "Everyday consumables such as tissue, kitchen wrap, foil, matches and batteries. Excludes cleaning products, appliances and food.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "grains-flours",
+      "parentKey": "food",
+      "name": "Grains & Flours",
+      "slug": "grains-flours",
+      "description": "Grains, flours and starchy staples sold by weight, including teff, maize, cassava and rice products. Excludes bread, prepared meals and animal feed.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "teff",
+          "locale": "en"
+        },
+        {
+          "alias": "tef",
+          "locale": "en"
+        },
+        {
+          "alias": "teff flour",
+          "locale": "en"
+        },
+        {
+          "alias": "teff",
+          "locale": "fr"
+        },
+        {
+          "alias": "mil éthiopien",
+          "locale": "fr"
+        },
+        {
+          "alias": "teff",
+          "locale": "pt"
+        },
+        {
+          "alias": "teff",
+          "locale": "sw"
+        },
+        {
+          "alias": "دقيق التيف",
+          "locale": "ar"
+        },
+        {
+          "alias": "تيف",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "net_weight_kg",
+          "label": "Net weight (kg)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "grind",
+          "label": "Grind",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Fine",
+            "Medium",
+            "Coarse"
+          ]
+        },
+        {
+          "key": "origin_country",
+          "label": "Origin country",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "teff-flour",
+      "parentKey": "grains-flours",
+      "name": "Teff Flour",
+      "slug": "teff-flour",
+      "description": "Flour milled from teff (Eragrostis tef) for injera and gluten-free baking. Excludes whole teff grain, wheat flour and prepared injera.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "ugali",
+          "locale": "en"
+        },
+        {
+          "alias": "ugoli",
+          "locale": "en"
+        },
+        {
+          "alias": "pap",
+          "locale": "en"
+        },
+        {
+          "alias": "ogi",
+          "locale": "en"
+        },
+        {
+          "alias": "akamu",
+          "locale": "en"
+        },
+        {
+          "alias": "koko",
+          "locale": "en"
+        },
+        {
+          "alias": "maize meal",
+          "locale": "en"
+        },
+        {
+          "alias": "corn meal",
+          "locale": "en"
+        },
+        {
+          "alias": "farine de maïs",
+          "locale": "fr"
+        },
+        {
+          "alias": "bouillie de maïs",
+          "locale": "fr"
+        },
+        {
+          "alias": "farinha de milho",
+          "locale": "pt"
+        },
+        {
+          "alias": "xima",
+          "locale": "pt"
+        },
+        {
+          "alias": "sembe",
+          "locale": "sw"
+        },
+        {
+          "alias": "uji",
+          "locale": "sw"
+        },
+        {
+          "alias": "ugali",
+          "locale": "sw"
+        },
+        {
+          "alias": "دقيق الذرة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "net_weight_kg",
+          "label": "Net weight (kg)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "form",
+          "label": "Form",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Fine meal",
+            "Coarse meal",
+            "Fermented wet mash",
+            "Instant porridge"
+          ]
+        },
+        {
+          "key": "grain",
+          "label": "Grain",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "White maize",
+            "Yellow maize",
+            "Other"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Ugali and pap refer to different consistencies and preparations; koko, ogi and akamu are regional names for fermented maize porridge. They remain distinct products."
+      ],
+      "key": "maize-meal-porridge",
+      "parentKey": "grains-flours",
+      "name": "Maize Meal & Porridge",
+      "slug": "maize-meal-porridge",
+      "description": "Maize meal and fermented maize products used for ugali, pap, ogi/akamu and koko. Excludes canned sweetcorn, cornflakes and wheat flour.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "garri",
+          "locale": "en"
+        },
+        {
+          "alias": "gari",
+          "locale": "en"
+        },
+        {
+          "alias": "attiéké",
+          "locale": "en"
+        },
+        {
+          "alias": "attieke",
+          "locale": "en"
+        },
+        {
+          "alias": "fufu",
+          "locale": "en"
+        },
+        {
+          "alias": "cassava flour",
+          "locale": "en"
+        },
+        {
+          "alias": "attiéké",
+          "locale": "fr"
+        },
+        {
+          "alias": "gari",
+          "locale": "fr"
+        },
+        {
+          "alias": "foutou",
+          "locale": "fr"
+        },
+        {
+          "alias": "farine de manioc",
+          "locale": "fr"
+        },
+        {
+          "alias": "farinha de mandioca",
+          "locale": "pt"
+        },
+        {
+          "alias": "gari",
+          "locale": "pt"
+        },
+        {
+          "alias": "mandioca",
+          "locale": "pt"
+        },
+        {
+          "alias": "muhogo",
+          "locale": "sw"
+        },
+        {
+          "alias": "كسافا",
+          "locale": "ar"
+        },
+        {
+          "alias": "غاري",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "net_weight_kg",
+          "label": "Net weight (kg)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "product_form",
+          "label": "Product form",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Garri / gari",
+            "Attiéké",
+            "Cassava flour",
+            "Fufu flour",
+            "Dried chips",
+            "Other"
+          ]
+        },
+        {
+          "key": "fermentation",
+          "label": "Fermentation",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Fermented",
+            "Unfermented",
+            "Not applicable"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Garri is roasted and attiéké is steamed; they are different cassava products and must not be listed as substitutes or synonyms."
+      ],
+      "key": "cassava-products",
+      "parentKey": "grains-flours",
+      "name": "Cassava Products",
+      "slug": "cassava-products",
+      "description": "Fermented and dried cassava foods such as garri/gari, attiéké, fufu flour and cassava flour. Excludes fresh cassava tubers and cassava-processing equipment.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "rice",
+          "locale": "en"
+        },
+        {
+          "alias": "millet",
+          "locale": "en"
+        },
+        {
+          "alias": "sorghum",
+          "locale": "en"
+        },
+        {
+          "alias": "riz",
+          "locale": "fr"
+        },
+        {
+          "alias": "mil",
+          "locale": "fr"
+        },
+        {
+          "alias": "sorgho",
+          "locale": "fr"
+        },
+        {
+          "alias": "arroz",
+          "locale": "pt"
+        },
+        {
+          "alias": "milheto",
+          "locale": "pt"
+        },
+        {
+          "alias": "sorgo",
+          "locale": "pt"
+        },
+        {
+          "alias": "mchele",
+          "locale": "sw"
+        },
+        {
+          "alias": "mtama",
+          "locale": "sw"
+        },
+        {
+          "alias": "mawele",
+          "locale": "sw"
+        },
+        {
+          "alias": "أرز",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "grain_type",
+          "label": "Grain type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Rice",
+            "Millet",
+            "Sorghum",
+            "Other"
+          ]
+        },
+        {
+          "key": "net_weight_kg",
+          "label": "Net weight (kg)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "variety",
+          "label": "Variety",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "rice-grains",
+      "parentKey": "grains-flours",
+      "name": "Rice & Other Grains",
+      "slug": "rice-grains",
+      "description": "Rice, millet, sorghum and other whole grains sold by weight. Excludes flours, maize meal and rice-based prepared meals.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "oils-soups-seasonings",
+      "parentKey": "food",
+      "name": "Oils, Soups & Seasonings",
+      "slug": "oils-soups-seasonings",
+      "description": "Cooking oils, soup thickeners and fermented seasonings. Excludes essential oils, stock cubes (see Pantry Staples) and prepared soups.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "palm oil",
+          "locale": "en"
+        },
+        {
+          "alias": "red oil",
+          "locale": "en"
+        },
+        {
+          "alias": "zomi",
+          "locale": "en"
+        },
+        {
+          "alias": "huile de palme",
+          "locale": "fr"
+        },
+        {
+          "alias": "óleo de palma",
+          "locale": "pt"
+        },
+        {
+          "alias": "azeite de dendê",
+          "locale": "pt"
+        },
+        {
+          "alias": "mafuta ya mawese",
+          "locale": "sw"
+        },
+        {
+          "alias": "زيت النخيل",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "oil_type",
+          "label": "Oil type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Palm",
+            "Vegetable",
+            "Groundnut",
+            "Sunflower",
+            "Coconut",
+            "Olive",
+            "Other"
+          ]
+        },
+        {
+          "key": "volume_litres",
+          "label": "Volume (litres)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "extraction",
+          "label": "Extraction",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Cold-pressed",
+            "Refined",
+            "Unrefined",
+            "Not stated"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "palm-cooking-oils",
+      "parentKey": "oils-soups-seasonings",
+      "name": "Palm Oil & Cooking Oils",
+      "slug": "palm-cooking-oils",
+      "description": "Red palm oil and other cooking oils sold by bottle, jerrycan or litre. Excludes essential oils, motor oil and cosmetics.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "egusi",
+          "locale": "en"
+        },
+        {
+          "alias": "ogbono",
+          "locale": "en"
+        },
+        {
+          "alias": "iru",
+          "locale": "en"
+        },
+        {
+          "alias": "dawadawa",
+          "locale": "en"
+        },
+        {
+          "alias": "daddawa",
+          "locale": "en"
+        },
+        {
+          "alias": "soumbala",
+          "locale": "fr"
+        },
+        {
+          "alias": "néré",
+          "locale": "fr"
+        },
+        {
+          "alias": "soumbala",
+          "locale": "pt"
+        },
+        {
+          "alias": "sumbala",
+          "locale": "sw"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "ingredient_type",
+          "label": "Ingredient type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Egusi",
+            "Ogbono",
+            "Iru / dawadawa",
+            "Other"
+          ]
+        },
+        {
+          "key": "form",
+          "label": "Form",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Whole",
+            "Ground",
+            "Fermented",
+            "Dried",
+            "Paste"
+          ]
+        },
+        {
+          "key": "net_weight_g",
+          "label": "Net weight (g)",
+          "type": "NUMBER",
+          "required": true
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Egusi and ogbono are different thickeners; iru/dawadawa is a fermented seasoning. They must not be merged into one product listing."
+      ],
+      "key": "soup-thickeners-seasonings",
+      "parentKey": "oils-soups-seasonings",
+      "name": "Soup Thickeners & Seasonings",
+      "slug": "soup-thickeners-seasonings",
+      "description": "Egusi (melon seed), ogbono (wild mango seed), iru/dawadawa (fermented locust bean) and similar soup thickeners and seasonings. Excludes stock cubes, fresh vegetables and prepared soup.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "agriculture",
+      "parentKey": null,
+      "name": "Agriculture & Business",
+      "slug": "agriculture-business",
+      "description": "Farm inputs, processing equipment and wholesale business supplies for producers and small businesses. Excludes passenger vehicles, financial services and livestock.",
+      "level": 0,
+      "isSelectable": false,
+      "showOnHomepage": true,
+      "sortOrder": 50
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "farm-inputs",
+      "parentKey": "agriculture",
+      "name": "Farm Inputs",
+      "slug": "farm-inputs",
+      "description": "Seeds, seedlings, growing media, fertilizers and irrigation tools for farms and gardens. Excludes processing machinery, livestock and veterinary products.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "seeds",
+          "locale": "en"
+        },
+        {
+          "alias": "seedlings",
+          "locale": "en"
+        },
+        {
+          "alias": "semences",
+          "locale": "fr"
+        },
+        {
+          "alias": "plants",
+          "locale": "fr"
+        },
+        {
+          "alias": "sementes",
+          "locale": "pt"
+        },
+        {
+          "alias": "mudas",
+          "locale": "pt"
+        },
+        {
+          "alias": "mbegu",
+          "locale": "sw"
+        },
+        {
+          "alias": "miche",
+          "locale": "sw"
+        },
+        {
+          "alias": "بذور",
+          "locale": "ar"
+        },
+        {
+          "alias": "شتلات",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "variety",
+          "label": "Variety",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "seed_class",
+          "label": "Seed class",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Certified",
+            "Foundation",
+            "Breeder",
+            "Unclassified"
+          ]
+        },
+        {
+          "key": "packet_weight_g",
+          "label": "Packet weight (g)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "germination_rate",
+          "label": "Germination rate (%)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Seeds and seedlings are subject to national seed certification and quality-control requirements. Publishing in Nigeria requires verification of registration/certification by the reviewer; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Do not enable until the seller supplies valid certification evidence."
+      ],
+      "key": "seeds-seedlings",
+      "parentKey": "farm-inputs",
+      "name": "Seeds & Seedlings",
+      "slug": "seeds-seedlings",
+      "description": "Vegetable, cereal, tree and ornamental seeds and seedlings. Excludes unregistered or uncertified seed where certification is required, and live plants sold as food.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "compost",
+          "locale": "en"
+        },
+        {
+          "alias": "topsoil",
+          "locale": "en"
+        },
+        {
+          "alias": "potting mix",
+          "locale": "en"
+        },
+        {
+          "alias": "compost",
+          "locale": "fr"
+        },
+        {
+          "alias": "terre végétale",
+          "locale": "fr"
+        },
+        {
+          "alias": "composto",
+          "locale": "pt"
+        },
+        {
+          "alias": "terra vegetal",
+          "locale": "pt"
+        },
+        {
+          "alias": "mboji",
+          "locale": "sw"
+        },
+        {
+          "alias": "سماد عضوي",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "media_type",
+          "label": "Growing media type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Topsoil",
+            "Compost",
+            "Manure",
+            "Potting mix",
+            "Other"
+          ]
+        },
+        {
+          "key": "volume_litres",
+          "label": "Volume (litres)",
+          "type": "NUMBER",
+          "required": true
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "soil-compost",
+      "parentKey": "farm-inputs",
+      "name": "Soil, Compost & Growing Media",
+      "slug": "soil-compost",
+      "description": "Topsoil, compost, manure, potting mixes and growing media sold by volume or bag. Excludes fertilizers sold by nutrient content and pesticides.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": true,
+      "aliases": [
+        {
+          "alias": "fertilizer",
+          "locale": "en"
+        },
+        {
+          "alias": "fertiliser",
+          "locale": "en"
+        },
+        {
+          "alias": "npk",
+          "locale": "en"
+        },
+        {
+          "alias": "engrais",
+          "locale": "fr"
+        },
+        {
+          "alias": "fertilizante",
+          "locale": "pt"
+        },
+        {
+          "alias": "mbolea",
+          "locale": "sw"
+        },
+        {
+          "alias": "سماد",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "product_type",
+          "label": "Product type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Mineral fertilizer",
+            "Organic fertilizer",
+            "Foliar feed",
+            "Soil amendment",
+            "Other"
+          ]
+        },
+        {
+          "key": "net_weight_kg",
+          "label": "Net weight (kg)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "nutrient_analysis",
+          "label": "Nutrient analysis",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "registration_number",
+          "label": "Registration number",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [
+        {
+          "countryCode": "NG",
+          "canPublish": false,
+          "note": "Fertilizer quality-control and registration requirements apply. Publishing in Nigeria requires reviewer verification of the product registration; this leaf is not publishable until that review is recorded."
+        }
+      ],
+      "notes": [
+        "Restricted leaf: canPublish is false for NG. Do not enable until registration evidence is reviewed."
+      ],
+      "key": "fertilizers-crop-nutrition",
+      "parentKey": "farm-inputs",
+      "name": "Fertilizers & Crop Nutrition",
+      "slug": "fertilizers-crop-nutrition",
+      "description": "Mineral and organic fertilizers and crop nutrition products sold by nutrient content or weight. Excludes compost, pesticides and veterinary products.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "irrigation",
+          "locale": "en"
+        },
+        {
+          "alias": "drip irrigation",
+          "locale": "en"
+        },
+        {
+          "alias": "farm tools",
+          "locale": "en"
+        },
+        {
+          "alias": "irrigation",
+          "locale": "fr"
+        },
+        {
+          "alias": "irrigação",
+          "locale": "pt"
+        },
+        {
+          "alias": "umwagiliaji",
+          "locale": "sw"
+        },
+        {
+          "alias": "الري",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "tool_type",
+          "label": "Tool type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Drip kit",
+            "Hose",
+            "Sprinkler",
+            "Pump",
+            "Sprayer",
+            "Hand tool",
+            "Other"
+          ]
+        },
+        {
+          "key": "power_source",
+          "label": "Power source",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Manual",
+            "Electric",
+            "Petrol",
+            "Diesel",
+            "Solar",
+            "Other"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "irrigation-farm-tools",
+      "parentKey": "farm-inputs",
+      "name": "Irrigation & Farm Tools",
+      "slug": "irrigation-farm-tools",
+      "description": "Drip kits, hoses, sprinklers, pumps, sprayers and hand tools. Excludes tractors, processing machinery and construction power tools.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 40
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "processing-equipment",
+      "parentKey": "agriculture",
+      "name": "Processing Equipment",
+      "slug": "processing-equipment",
+      "description": "Machines and tools for processing agricultural produce and food. Excludes vehicles, farm inputs and packaging consumables.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "cassava grater",
+          "locale": "en"
+        },
+        {
+          "alias": "cassava press",
+          "locale": "en"
+        },
+        {
+          "alias": "garri fryer",
+          "locale": "en"
+        },
+        {
+          "alias": "rápeuse de manioc",
+          "locale": "fr"
+        },
+        {
+          "alias": "presse à manioc",
+          "locale": "fr"
+        },
+        {
+          "alias": "ralador de mandioca",
+          "locale": "pt"
+        },
+        {
+          "alias": "prensa de mandioca",
+          "locale": "pt"
+        },
+        {
+          "alias": "kinu cha muhogo",
+          "locale": "sw"
+        },
+        {
+          "alias": "معدات معالجة الكسافا",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "equipment_type",
+          "label": "Equipment type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Grater",
+            "Press",
+            "Sieve",
+            "Fryer",
+            "Mill",
+            "Peeler",
+            "Other"
+          ]
+        },
+        {
+          "key": "capacity_kg_per_hour",
+          "label": "Capacity (kg/hour)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "power_source",
+          "label": "Power source",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Manual",
+            "Electric",
+            "Petrol",
+            "Diesel"
+          ]
+        },
+        {
+          "key": "warranty_months",
+          "label": "Warranty (months)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "cassava-processing-equipment",
+      "parentKey": "processing-equipment",
+      "name": "Cassava Processing Equipment",
+      "slug": "cassava-processing-equipment",
+      "description": "Cassava graters, presses, sieves, fryers, mills and peeling equipment. Excludes fresh cassava, cassava food products and general kitchen appliances.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "grain mill",
+          "locale": "en"
+        },
+        {
+          "alias": "hammer mill",
+          "locale": "en"
+        },
+        {
+          "alias": "moulin à grains",
+          "locale": "fr"
+        },
+        {
+          "alias": "moinho de grãos",
+          "locale": "pt"
+        },
+        {
+          "alias": "kinu cha nafaka",
+          "locale": "sw"
+        },
+        {
+          "alias": "مطحنة حبوب",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "equipment_type",
+          "label": "Equipment type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Mill",
+            "Huller",
+            "Thresher",
+            "Accessory",
+            "Other"
+          ]
+        },
+        {
+          "key": "capacity_kg_per_hour",
+          "label": "Capacity (kg/hour)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "power_source",
+          "label": "Power source",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Manual",
+            "Electric",
+            "Petrol",
+            "Diesel"
+          ]
+        },
+        {
+          "key": "warranty_months",
+          "label": "Warranty (months)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "grain-milling-equipment",
+      "parentKey": "processing-equipment",
+      "name": "Grain Milling Equipment",
+      "slug": "grain-milling-equipment",
+      "description": "Grain mills, hullers, threshers and milling accessories. Excludes hand kitchen blenders and grain food products.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "food processing equipment",
+          "locale": "en"
+        },
+        {
+          "alias": "food dryer",
+          "locale": "en"
+        },
+        {
+          "alias": "mixer machine",
+          "locale": "en"
+        },
+        {
+          "alias": "équipement de transformation alimentaire",
+          "locale": "fr"
+        },
+        {
+          "alias": "equipamento de processamento de alimentos",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifaa vya kusindika chakula",
+          "locale": "sw"
+        },
+        {
+          "alias": "معدات تصنيع الغذاء",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "equipment_type",
+          "label": "Equipment type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Mixer",
+            "Dryer",
+            "Roaster",
+            "Fryer",
+            "Other"
+          ]
+        },
+        {
+          "key": "capacity_kg_per_hour",
+          "label": "Capacity (kg/hour)",
+          "type": "NUMBER",
+          "required": false
+        },
+        {
+          "key": "power_source",
+          "label": "Power source",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Manual",
+            "Electric",
+            "Petrol",
+            "Diesel"
+          ]
+        },
+        {
+          "key": "warranty_months",
+          "label": "Warranty (months)",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "food-processing-equipment",
+      "parentKey": "processing-equipment",
+      "name": "Food Processing Equipment",
+      "slug": "food-processing-equipment",
+      "description": "Mixers, dryers, roasters, fryers and similar food-processing machines for small businesses. Excludes home kitchen appliances and packaging consumables.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow"
+      ],
+      "reviewRequired": false,
+      "aliases": [],
+      "attributes": [],
+      "countryRules": [],
+      "notes": [],
+      "key": "wholesale-business-supplies",
+      "parentKey": "agriculture",
+      "name": "Wholesale & Business Supplies",
+      "slug": "wholesale-business-supplies",
+      "description": "Bulk quantities, packaging and store equipment for businesses. Excludes retail single-unit listings and regulated farm inputs.",
+      "level": 1,
+      "isSelectable": false,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "wholesale grains",
+          "locale": "en"
+        },
+        {
+          "alias": "bulk staples",
+          "locale": "en"
+        },
+        {
+          "alias": "grains en gros",
+          "locale": "fr"
+        },
+        {
+          "alias": "grãos a granel",
+          "locale": "pt"
+        },
+        {
+          "alias": "nafaka kwa jumla",
+          "locale": "sw"
+        },
+        {
+          "alias": "حبوب بالجملة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "grain_type",
+          "label": "Grain type",
+          "type": "TEXT",
+          "required": true
+        },
+        {
+          "key": "net_weight_kg",
+          "label": "Net weight (kg)",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "minimum_order_quantity",
+          "label": "Minimum order quantity",
+          "type": "NUMBER",
+          "required": true
+        },
+        {
+          "key": "minimum_order_unit",
+          "label": "Minimum order unit",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "kg",
+            "sack",
+            "bag",
+            "tonne",
+            "Other"
+          ]
+        },
+        {
+          "key": "packaging",
+          "label": "Packaging",
+          "type": "SELECT",
+          "required": false,
+          "options": [
+            "Sack",
+            "Bag",
+            "Bulk",
+            "Other"
+          ]
+        }
+      ],
+      "countryRules": [],
+      "notes": [
+        "Mudu, paint bucket, basket and bag are informal market measures with no standard cross-region conversion. Listings must state the exact metric weight or volume; do not infer a conversion."
+      ],
+      "key": "bulk-grains-staples",
+      "parentKey": "wholesale-business-supplies",
+      "name": "Bulk Grains & Staples",
+      "slug": "bulk-grains-staples",
+      "description": "Grains, flours and staples sold in bulk with an explicit minimum order quantity. Excludes single retail packs and prepared foods. Traditional measures such as mudu, paint bucket, basket or bag must be converted by the seller to an explicit metric weight or volume; no automatic conversion is assumed.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 10
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "packaging supplies",
+          "locale": "en"
+        },
+        {
+          "alias": "food packaging",
+          "locale": "en"
+        },
+        {
+          "alias": "emballages",
+          "locale": "fr"
+        },
+        {
+          "alias": "embalagens",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifaa vya ufungaji",
+          "locale": "sw"
+        },
+        {
+          "alias": "مستلزمات التعبئة",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "packaging_type",
+          "label": "Packaging type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Food-grade bag",
+            "Container",
+            "Bottle",
+            "Label",
+            "Carton",
+            "Other"
+          ]
+        },
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "TEXT",
+          "required": false
+        },
+        {
+          "key": "pack_count",
+          "label": "Pack count",
+          "type": "NUMBER",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "business-packaging-supplies",
+      "parentKey": "wholesale-business-supplies",
+      "name": "Business Packaging Supplies",
+      "slug": "business-packaging-supplies",
+      "description": "Food-grade bags, containers, bottles, labels and cartons sold in business quantities. Excludes processing machinery and retail gift wrapping.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 20
+    },
+    {
+      "isExisting": false,
+      "preserveExistingCategory": false,
+      "allowedListingTypes": [
+        "escrow",
+        "contact"
+      ],
+      "reviewRequired": false,
+      "aliases": [
+        {
+          "alias": "shop fittings",
+          "locale": "en"
+        },
+        {
+          "alias": "store fixtures",
+          "locale": "en"
+        },
+        {
+          "alias": "équipement de magasin",
+          "locale": "fr"
+        },
+        {
+          "alias": "equipamentos para loja",
+          "locale": "pt"
+        },
+        {
+          "alias": "vifaa vya duka",
+          "locale": "sw"
+        },
+        {
+          "alias": "معدات المتاجر",
+          "locale": "ar"
+        }
+      ],
+      "attributes": [
+        {
+          "key": "equipment_type",
+          "label": "Equipment type",
+          "type": "SELECT",
+          "required": true,
+          "options": [
+            "Shelving",
+            "Display unit",
+            "Scale",
+            "Counter",
+            "Checkout fixture",
+            "Other"
+          ]
+        },
+        {
+          "key": "material",
+          "label": "Material",
+          "type": "TEXT",
+          "required": false
+        }
+      ],
+      "countryRules": [],
+      "notes": [],
+      "key": "store-equipment-fixtures",
+      "parentKey": "wholesale-business-supplies",
+      "name": "Store Equipment & Fixtures",
+      "slug": "store-equipment-fixtures",
+      "description": "Shelving, display units, scales, counters and checkout fixtures for shops. Excludes processing machinery and vehicles.",
+      "level": 2,
+      "isSelectable": true,
+      "showOnHomepage": false,
+      "sortOrder": 30
+    }
+  ]
+}
