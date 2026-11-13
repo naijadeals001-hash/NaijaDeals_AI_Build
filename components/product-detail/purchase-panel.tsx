@@ -248,7 +248,7 @@ function DeliveryFacts({ product, reviewEnvironment }: { product: ShopProduct; r
     return (
       <div className="mt-3 space-y-2 text-sm">
         <p className="flex items-start gap-2 font-bold text-ink">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden /> Seller market: {destination}
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden /> Seller location: {destination}
         </p>
         <p className="text-muted">Inspection, payment and delivery or collection are arranged directly with the seller.</p>
         <p className="text-muted">Marketplace delivery and escrow are not applicable to this contact listing.</p>
@@ -260,7 +260,11 @@ function DeliveryFacts({ product, reviewEnvironment }: { product: ShopProduct; r
     return (
       <div className="mt-3 space-y-2 text-sm">
         <p className="flex items-start gap-2 font-bold text-ink">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden /> Dispatches from {destination}
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden /> Seller location: {destination}
+        </p>
+        <p className="text-muted">
+          This is the seller&apos;s registered market, not a verified dispatch address. No confirmed dispatch address
+          is stored for this listing.
         </p>
         <p className="text-muted">
           Delivery and returns cannot be arranged because payment is disabled in this REVIEW catalogue environment.
@@ -277,7 +281,11 @@ function DeliveryFacts({ product, reviewEnvironment }: { product: ShopProduct; r
     <div className="mt-3 space-y-2.5 text-sm">
       <p className="flex items-start gap-2 font-bold text-ink">
         <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-        Ships from the seller&apos;s recorded market: {destination}
+        Seller location: {destination}
+      </p>
+      <p className="text-muted">
+        This is the seller&apos;s registered market, not a verified dispatch address. No confirmed dispatch address is
+        stored for this listing.
       </p>
       <p className="flex items-start gap-2 text-muted">
         <Truck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
@@ -286,7 +294,7 @@ function DeliveryFacts({ product, reviewEnvironment }: { product: ShopProduct; r
       </p>
       <p className="flex items-start gap-2 text-muted">
         <PackageCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-        Delivery is tracked on your order page after the seller dispatches.
+        Your order page shows the delivery address and any courier tracking updates recorded for the order.
       </p>
       <p className="flex items-start gap-2 text-muted">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />

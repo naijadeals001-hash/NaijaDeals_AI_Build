@@ -246,10 +246,13 @@ export function ProductSellerSection({ product }: { product: ShopProduct }) {
           </p>
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
             <MapPin className="h-4 w-4" aria-hidden />
-            {demo ? "Recorded market: " : "Seller market: "}
+            Seller location:
             <span className="font-semibold text-ink">{product.vendor.market}</span>
             <span aria-hidden>·</span>
             <span>{countryName(product.countryCode)}</span>
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            Registered seller market, not a confirmed dispatch address.
           </p>
           <p className="mt-1 text-sm text-muted">
             {demo

@@ -993,11 +993,12 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
           className="mt-4 rounded-xl border border-[#58A6FF]/30 bg-[#101826] p-3"
         >
           <h3 id="catalogue-dispatch-heading" className="text-xs font-extrabold uppercase tracking-wide text-[#8B949E]">
-            Seller record and dispatch information
+            Seller record and pickup information
           </h3>
           <p className="mt-1 text-[11px] text-[#8B949E]">
-            These values are read-only and derived from the assigned seller record. This editor cannot set seller
-            verification, commission, payout or platform policy.
+            These values are read-only and derived from the assigned seller record. The seller market is the
+            registered market, not a confirmed dispatch address; only the seller&apos;s own pickup address is stored.
+            This editor cannot set seller verification, commission, payout or platform policy.
           </p>
           {selectedVendor ? (
             <dl className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
@@ -1036,7 +1037,8 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
             <p className="mt-2 text-xs text-[#8B949E]">
               A seller is assigned automatically when the draft is created: the demonstration seller for DEMO records,
               otherwise the first verified seller in the selected country. No dispatch policy record is stored on a
-              product in the current schema.
+              product in the current schema; the public page labels this market as the seller location, not a dispatch
+              address.
             </p>
           )}
           <p className="mt-2 text-[10px] text-[#8B949E]">
