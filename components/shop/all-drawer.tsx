@@ -38,6 +38,16 @@ export type ShopDepartment = {
   /** Published taxonomy flags. Absent when the legacy flat category list is used. */
   isSelectable?: boolean;
   showOnHomepage?: boolean;
+  /**
+   * Optional server-reported counts. When every node supplies one the drawer
+   * uses them instead of downloading the catalogue; the source is never mixed
+   * so a parent and its children cannot be counted twice.
+   */
+  productCount?: number | null;
+  subtreeProductCount?: number | null;
+  /** Optional country availability supplied by the taxonomy API. */
+  canPublish?: boolean | null;
+  restrictionNote?: string | null;
   children?: ShopDepartment[];
 };
 
@@ -211,19 +221,68 @@ export function ShopPanelFrame({
   );
 }
 
-/** Every slug in a department subtree — live counts include subcategories. */
+/** Every slug in a department subtree — catalogue counts include subcategories. */
 function subtreeSlugs(department: ShopDepartment): string[] {
   const slugs = [department.slug];
   for (const child of department.children ?? []) slugs.push(...subtreeSlugs(child));
   return slugs;
 }
 
-function subtreeCount(department: ShopDepartment, counts: Record<string, number>): number {
+function flattenDepartments(departments: ShopDepartment[]): ShopDepartment[] {
+  const rows: ShopDepartment[] = [];
+  for (const department of departments) {
+    rows.push(department);
+    rows.push(...flattenDepartments(department.children ?? []));
+  }
+  return rows;
+}
+
+/** A subtree total supplied by the server, or null when the field is absent. */
+function serverSubtreeCount(department: ShopDepartment): number | null {
+  if (typeof department.subtreeProductCount === "number") return department.subtreeProductCount;
+  if (typeof department.productCount !== "number") return null;
+  let total = department.productCount;
+  for (const child of department.children ?? []) {
+    const childCount = serverSubtreeCount(child);
+    if (childCount === null) return null;
+    total += childCount;
+  }
+  return total;
+}
+
+/**
+ * True only when the whole tree reports counts. Mixing server subtree counts
+ * with a locally derived catalogue count could count one listing twice, so the
+ * drawer commits to a single source for every node.
+ */
+function hasCompleteServerCounts(departments: ShopDepartment[]): boolean {
+  return departments.every((department) => serverSubtreeCount(department) !== null);
+}
+
+function subtreeCount(
+  department: ShopDepartment,
+  counts: Record<string, number>,
+  useServerCounts: boolean
+): number | null {
+  if (useServerCounts) return serverSubtreeCount(department);
   return subtreeSlugs(department).reduce((total, slug) => total + (counts[slug] ?? 0), 0);
 }
 
-function countTaxonomyNodes(departments: ShopDepartment[]): number {
-  return departments.reduce((total, department) => total + 1 + countTaxonomyNodes(department.children ?? []), 0);
+/** Level vocabulary used by the directory summary and node labels. */
+function taxonomyLevels(departments: ShopDepartment[]) {
+  let total = 0;
+  let categories = 0;
+  let subcategories = 0;
+  const walk = (nodes: ShopDepartment[], depth: number) => {
+    for (const node of nodes) {
+      total += 1;
+      if (depth === 1) categories += 1;
+      else if (depth >= 2) subcategories += 1;
+      if (node.children?.length) walk(node.children, depth + 1);
+    }
+  };
+  walk(departments, 0);
+  return { departments: departments.length, categories, subcategories, total };
 }
 
 const DISCOVER_LINKS = [  { href: "/naijashop/deals", label: "Price drops", description: "Seller-recorded reductions only", icon: Tag },
@@ -408,22 +467,34 @@ export function AllDrawer({
     }
   }, [open, view]);
 
+  // One count source for the whole tree. Server-reported subtree counts win;
+  // otherwise the catalogue is counted once and summed over subtree slugs.
+  const serverCounts = hasCompleteServerCounts(departments);
+  const countsKnown = countsAvailable || serverCounts;
+  const countOf = (department: ShopDepartment): number | null =>
+    countsKnown ? subtreeCount(department, categoryCounts, serverCounts) : null;
+
   const countLabel = (department: ShopDepartment) => {
-    if (!countsAvailable) return "Live stock unavailable";
-    const count = subtreeCount(department, categoryCounts);
+    const count = countOf(department);
+    if (count === null) return "Live stock unavailable";
     if (count === 0) return "No live stock yet";
     return `${count} live ${count === 1 ? "listing" : "listings"}`;
   };
 
-  const populatedDepartments = countsAvailable
-    ? departments.filter((department) => subtreeCount(department, categoryCounts) > 0)
+  const populatedDepartments = countsKnown
+    ? departments.filter((department) => (countOf(department) ?? 0) > 0)
     : [];
-  const featuredDepartments = taxonomyAvailable ? departments.filter((department) => department.showOnHomepage) : [];
-  const taxonomyNodeCount = countTaxonomyNodes(departments);
-  const directorateSummary = !countsAvailable
-    ? `${departments.length} ${departments.length === 1 ? "department" : "departments"} · ${taxonomyNodeCount} nodes · live counts unavailable`
-    : `${departments.length} ${departments.length === 1 ? "department" : "departments"} · ${populatedDepartments.length} with live stock · ${
-        taxonomyAvailable ? `${featuredDepartments.length} on the homepage` : "homepage selection unavailable"
+  const featuredNodeCount = taxonomyAvailable
+    ? flattenDepartments(departments).filter((department) => department.showOnHomepage).length
+    : 0;
+  const levels = taxonomyLevels(departments);
+  const taxonomyNodeCount = levels.total;
+  const directorateSummary = !countsKnown
+    ? `${levels.departments} departments · ${levels.categories} categories · ${levels.subcategories} subcategories · ${levels.total} published nodes · live counts unavailable`
+    : `${levels.departments} departments · ${levels.categories} categories · ${levels.subcategories} subcategories · ${populatedDepartments.length} of ${levels.departments} departments with live stock · ${
+        taxonomyAvailable
+          ? `${featuredNodeCount} homepage-featured ${featuredNodeCount === 1 ? "node" : "nodes"}`
+          : "homepage selection unavailable"
       }`;
 
   function toggleDepartment(id: string) {
@@ -438,8 +509,10 @@ export function AllDrawer({
   function renderDepartment(department: ShopDepartment, depth: number): ReactNode {
     const children = department.children ?? [];
     const isOpen = expandedDepartments.has(department.id);
-    const count = countsAvailable ? subtreeCount(department, categoryCounts) : null;
+    const count = countOf(department);
     const empty = count === 0;
+    const browseOnly = department.isSelectable === false;
+    const notAvailable = department.canPublish === false;
     const listId = `shop-all-dept-${department.id}`;
 
     return (
@@ -474,9 +547,14 @@ export function AllDrawer({
                     Homepage
                   </span>
                 ) : null}
-                {department.isSelectable === false ? (
+                {browseOnly ? (
                   <span className="rounded-full bg-[#f4efe4] px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase tracking-wide text-[#7a4c00]">
                     Browse only
+                  </span>
+                ) : null}
+                {notAvailable ? (
+                  <span className="rounded-full bg-[#f4efe4] px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase tracking-wide text-[#7a4c00]">
+                    Not available in your market
                   </span>
                 ) : null}
               </span>
@@ -487,15 +565,22 @@ export function AllDrawer({
             </span>
           </Link>
         </div>
-        {empty && countsAvailable ? (
+        {empty && countsKnown ? (
           <p className="ml-[2.4rem] pb-2 text-[9.5px] leading-3.5 text-[#7a4c00]">
-            Published and open for listings — no seller has live stock here yet.
-            {depth === 0 && populatedDepartments.length > 0
-              ? ` Try ${populatedDepartments
-                  .slice(0, 2)
-                  .map((candidate) => candidate.name)
-                  .join(" or ")}.`
-              : ""}
+            {notAvailable
+              ? "Not available in your market yet — no seller can publish live stock here."
+              : depth === 0
+                ? `Published department — no seller has live stock here yet.${
+                    populatedDepartments.length > 0
+                      ? ` Try ${populatedDepartments
+                          .slice(0, 2)
+                          .map((candidate) => candidate.name)
+                          .join(" or ")}.`
+                      : ""
+                  }`
+                : browseOnly
+                  ? "Browse-only node: sellers cannot publish listings directly here."
+                  : "Published category — no seller has live stock here yet."}
           </p>
         ) : null}
         {children.length > 0 && isOpen ? (
@@ -646,7 +731,7 @@ export function AllDrawer({
               {departments.length > 0 ? (
                 <ul className="mt-2 grid grid-cols-2 gap-1.5">
                   {departments.map((department) => {
-                    const live = countsAvailable ? subtreeCount(department, categoryCounts) : null;
+                    const live = countOf(department);
                     return (
                       <li key={department.id}>
                         <Link
@@ -826,11 +911,7 @@ export function AllDrawer({
                     Published departments
                   </h3>
                   <p className="mt-1 text-[10.5px] leading-4 text-[#566359]">
-                    {countsAvailable
-                      ? `${departments.length} departments · ${populatedDepartments.length} with live stock · ${
-                          taxonomyAvailable ? `${featuredDepartments.length} on the homepage` : "homepage features unavailable"
-                        }. Counts include subcategories.`
-                      : `${departments.length} departments · ${taxonomyNodeCount} nodes · live listing counts are unavailable right now.`}
+                    {directorateSummary}. Counts include subcategories.
                   </p>
                 </div>
                 <span className="shrink-0 rounded-full bg-[#eef4ea] px-2.5 py-1 text-[10px] font-extrabold text-[#0b5c33]">
@@ -862,7 +943,7 @@ export function AllDrawer({
                 </p>
               ) : null}
 
-              {departmentsStatus === "ready" && departments.length > 0 && countsAvailable && populatedDepartments.length === 0 ? (
+              {departmentsStatus === "ready" && departments.length > 0 && countsKnown && populatedDepartments.length === 0 ? (
                 <div className="mt-2 rounded-xl border border-dashed border-[#cfdccb] bg-[#f7faf4] p-3 text-[11px] leading-5 text-[#4b5b51]">
                   <p className="font-extrabold text-[#14241b]">The directory is published; no department has live stock yet.</p>
                   <p className="mt-1">
@@ -896,8 +977,14 @@ export function AllDrawer({
             </Link>
 
             <p className="text-[9.5px] leading-4 text-[#566359]">
-              Counts are live published listings, including subcategories. A published category with no live stock stays in
-              the directory and says so instead of disappearing.
+              {levels.departments} departments / {levels.categories} categories / {levels.subcategories} subcategories.{" "}
+              {countsKnown
+                ? serverCounts
+                  ? "Counts are server-reported published listings, including subcategories."
+                  : "Counts are counted from published listings, including subcategories."
+                : "Live listing counts are unavailable right now."}{" "}
+              Homepage cards use the taxonomy&apos;s homepage flag, not product count. A published node with no live stock
+              stays in the directory and says so instead of disappearing.
             </p>
           </div>
         )}

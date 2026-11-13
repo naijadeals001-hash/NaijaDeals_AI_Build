@@ -96,29 +96,40 @@ export default async function CategoryPage({ params }: { params: { slug: string 
   const roots = Array.isArray(taxonomy?.departments) ? taxonomy.departments : [];
   const match = roots.length > 0 ? findTrail(roots, slug) : null;
 
+  // The catalogue applies the category filter (including a parent's published
+  // subtree once aggregation is enabled by the API). The page only reads the
+  // total for honest context; CategoryBrowse renders those products once.
   const page = match ? await fetchInternal<{ total?: number }>(`/api/products?category=${encodeURIComponent(slug)}&page=1&pageSize=1`) : null;
   const total = typeof page?.total === "number" ? page.total : null;
   const alternatives = alternativesFor(roots, match, slug);
+  const children = match?.node.children ?? [];
+  const isBranch = children.length > 0;
 
   return (
     <>
       {roots.length > 0 ? (
         <div className="bg-white px-3 pt-3 sm:px-5">
           <div className="rounded-xl border border-[#e3e6e6] bg-[#fbfcfb] px-3 py-2.5">
-            <nav aria-label="Department hierarchy" className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11.5px] text-[#565959]">
-              <Link href="/naijashop" className="hover:text-[#c45500]">
+            <nav
+              aria-label="Department hierarchy"
+              className="flex max-w-full flex-wrap items-center gap-x-1 gap-y-0.5 text-[11.5px] text-[#565959]"
+            >
+              <Link href="/naijashop" className="shrink-0 hover:text-[#c45500] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]">
                 NaijaShop
               </Link>
               {match
                 ? match.trail.map((entry) => (
-                    <span key={entry.id} className="inline-flex items-center gap-1">
+                    <span key={entry.id} className="inline-flex min-w-0 flex-wrap items-center gap-1">
                       <span aria-hidden>›</span>
                       {entry.slug === slug ? (
-                        <span className="font-bold text-[#0f1111]" aria-current="page">
+                        <span className="min-w-0 break-words font-bold text-[#0f1111]" aria-current="page">
                           {entry.name}
                         </span>
                       ) : (
-                        <Link href={`/naijashop/c/${entry.slug}`} className="hover:text-[#c45500]">
+                        <Link
+                          href={`/naijashop/c/${entry.slug}`}
+                          className="min-w-0 break-words hover:text-[#c45500] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
+                        >
                           {entry.name}
                         </Link>
                       )}
@@ -130,16 +141,49 @@ export default async function CategoryPage({ params }: { params: { slug: string 
             {!match ? (
               <div role="status" className="mt-2 flex flex-wrap items-start gap-2 rounded-lg border border-[#eadfc6] bg-[#fbf4e4] p-2.5 text-[11.5px] leading-5 text-[#7a4c00]">
                 <FolderTree className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                <span>
+                <span className="min-w-0 break-words">
                   This department is not in the published directory. It may have been renamed, merged or deprecated.{" "}
                   <Link href="/naijashop/categories" className="font-bold underline">
                     Browse all departments
                   </Link>
                 </span>
               </div>
+            ) : isBranch ? (
+              <div className="mt-2 rounded-lg border border-[#dbe7d8] bg-white p-3">
+                <p className="break-words text-[12px] font-extrabold text-[#0f1111]">
+                  {match.node.name}
+                  <span className="ml-1.5 rounded-full bg-[#eef4ea] px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide text-[#0b5c33]">
+                    Parent selection
+                  </span>
+                </p>
+                <p className="mt-1 text-[11.5px] leading-5 text-[#565959]">
+                  {total === null
+                    ? "The catalogue count could not be checked. The grid below loads the listings, or its own error state."
+                    : total === 0
+                      ? "No live listings were returned for this branch as a whole yet. Its published subcategories may still have live stock."
+                      : "Listings for this branch are returned by the catalogue and shown once in the grid below."}{" "}
+                  Each listing appears once; nothing is repeated from the subcategories.
+                </p>
+                <p className="mt-2 text-[10.5px] font-bold uppercase tracking-wide text-[#565959]">
+                  Published subcategories
+                </p>
+                <ul className="mt-1 flex flex-wrap gap-1.5">
+                  {children.map((child) => (
+                    <li key={child.id} className="min-w-0">
+                      <Link
+                        href={`/naijashop/c/${child.slug}`}
+                        className="inline-flex max-w-full items-center gap-1 rounded-full border border-[#d5d9d9] bg-white px-2.5 py-1 text-[11px] font-bold text-[#0b5c33] hover:border-[#b9cbb4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
+                      >
+                        <span className="min-w-0 break-words">{child.name}</span>
+                        <ArrowRight className="h-3 w-3 shrink-0" aria-hidden />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ) : total === 0 ? (
               <div className="mt-2 rounded-lg border border-dashed border-[#cfdccb] bg-white p-3">
-                <p className="text-[12px] font-extrabold text-[#0f1111]">
+                <p className="break-words text-[12px] font-extrabold text-[#0f1111]">
                   No live listings in {match.node.name} yet.
                 </p>
                 <p className="mt-1 text-[11.5px] leading-5 text-[#565959]">
@@ -151,13 +195,13 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                     <p className="text-[10.5px] font-bold uppercase tracking-wide text-[#565959]">Try instead</p>
                     <ul className="mt-1 flex flex-wrap gap-1.5">
                       {alternatives.map((entry) => (
-                        <li key={entry.id}>
+                        <li key={entry.id} className="min-w-0">
                           <Link
                             href={`/naijashop/c/${entry.slug}`}
-                            className="inline-flex items-center gap-1 rounded-full border border-[#d5d9d9] bg-white px-2.5 py-1 text-[11px] font-bold text-[#0b5c33] hover:border-[#b9cbb4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
+                            className="inline-flex max-w-full items-center gap-1 rounded-full border border-[#d5d9d9] bg-white px-2.5 py-1 text-[11px] font-bold text-[#0b5c33] hover:border-[#b9cbb4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
                           >
-                            {entry.name}
-                            <ArrowRight className="h-3 w-3" aria-hidden />
+                            <span className="min-w-0 break-words">{entry.name}</span>
+                            <ArrowRight className="h-3 w-3 shrink-0" aria-hidden />
                           </Link>
                         </li>
                       ))}

@@ -30,6 +30,7 @@ export function TaxonomyRequestsPanel({
   onFilterChange,
   nodes,
   canWrite,
+  scopeCountryCode = null,
   busy,
   loading,
   error,
@@ -41,6 +42,8 @@ export function TaxonomyRequestsPanel({
   onFilterChange: (filter: "PENDING" | "ALL") => void;
   nodes: NodeOption[];
   canWrite: boolean;
+  /** Server already limits this list to the administrator's country/city scope. */
+  scopeCountryCode?: string | null;
   busy: boolean;
   loading: boolean;
   error: string;
@@ -68,6 +71,12 @@ export function TaxonomyRequestsPanel({
             {pending.length} pending. Approving maps the request to an existing node or creates a new one — it never
             publishes a seller product.
           </p>
+          {scopeCountryCode ? (
+            <p className="mt-1 text-[10.5px] leading-4 text-[#9ECBFF]">
+              Showing requests from sellers in {scopeCountryCode.toUpperCase()} only. The server applies the same region
+              scope; resolving a request outside it returns 403.
+            </p>
+          ) : null}
         </div>
         <div className="flex gap-1 rounded-lg border border-[#30363D] p-0.5" role="group" aria-label="Request filter">
           {(["PENDING", "ALL"] as const).map((value) => (
@@ -340,7 +349,10 @@ function RequestCard({
       ) : null}
 
       {isPending && !canWrite ? (
-        <p className="mt-2 text-[11px] text-[#F2D48C]">Read-only: `products:moderate` is required to resolve requests.</p>
+        <p className="mt-2 text-[11px] text-[#F2D48C]">
+          Read-only: `products:moderate` is required to resolve requests. The queue and the seller&apos;s evidence stay
+          visible; the server refuses the resolution without the permission.
+        </p>
       ) : null}
     </article>
   );

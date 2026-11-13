@@ -32,6 +32,17 @@ type StorefrontConfig = {
   shelfLimit?: number;
 };
 
+type PublicTaxonomyNodeWithCounts = PublicTaxonomyNode & {
+  productCount?: unknown;
+  subtreeProductCount?: unknown;
+  descendantProductCount?: unknown;
+  canPublish?: unknown;
+};
+
+function finiteCount(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
+}
+
 type Department = {
   id: string;
   name: string;
@@ -40,10 +51,14 @@ type Department = {
   description?: string | null;
   isSelectable?: boolean;
   showOnHomepage?: boolean;
+  productCount?: number | null;
+  subtreeProductCount?: number | null;
+  canPublish?: boolean | null;
   children?: Department[];
 };
 
 function toDepartment(node: PublicTaxonomyNode): Department {
+  const extended = node as PublicTaxonomyNodeWithCounts;
   return {
     id: node.id,
     name: node.name,
@@ -52,8 +67,25 @@ function toDepartment(node: PublicTaxonomyNode): Department {
     description: node.description ?? null,
     isSelectable: node.isSelectable !== false,
     showOnHomepage: node.showOnHomepage === true,
+    productCount: finiteCount(extended.productCount),
+    subtreeProductCount: finiteCount(extended.subtreeProductCount) ?? finiteCount(extended.descendantProductCount),
+    canPublish: typeof extended.canPublish === "boolean" ? extended.canPublish : null,
     children: (node.children ?? []).map(toDepartment)
   };
+}
+
+/** Every node in the published tree, in publication order. */
+function flattenDepartments(nodes: Department[]): Department[] {
+  const rows: Department[] = [];
+  for (const node of nodes) {
+    rows.push(node);
+    rows.push(...flattenDepartments(node.children ?? []));
+  }
+  return rows;
+}
+
+function countNodes(nodes: Department[]): number {
+  return nodes.reduce((total, node) => total + 1 + countNodes(node.children ?? []), 0);
 }
 
 type Notice = { text: string; tone: "success" | "error" } | null;
@@ -191,12 +223,18 @@ export function NaijaDealsMarketplace() {
   const departments = useMemo<Department[]>(() => {
     if (taxonomyTree.length > 0) return taxonomyTree;
     if (categories.length > 0) {
-      return categories.map((category) => ({
-        id: category.id,
-        name: category.name,
-        slug: category.slug,
-        imageUrl: (category as ApiCategory & { imageUrl?: string | null }).imageUrl ?? null
-      }));
+      return categories.map((category) => {
+        const extended = category as ApiCategory & { imageUrl?: string | null; productCount?: unknown };
+        const count = finiteCount(extended.productCount);
+        return {
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          imageUrl: extended.imageUrl ?? null,
+          productCount: count,
+          subtreeProductCount: count
+        };
+      });
     }
     const map = new Map<string, Department>();
     for (const product of products) {
@@ -207,17 +245,24 @@ export function NaijaDealsMarketplace() {
     return [...map.values()];
   }, [taxonomyTree, categories, products]);
 
-  // Homepage shelves and cards follow the owner's `showOnHomepage` selection.
-  // While the taxonomy endpoint is unavailable, the published directory is a
-  // labelled fallback instead of an invented featured list.
+  const allDepartments = useMemo(() => flattenDepartments(departments), [departments]);
+
+  // Homepage shelves and cards follow the owner's `showOnHomepage` selection at
+  // any depth. When the taxonomy is unavailable the selection is unknown, so
+  // no department is presented as featured; the directory link remains.
   const homepageDepartments = useMemo(
-    () => (taxonomyStatus === "ready" ? departments.filter((department) => department.showOnHomepage) : departments),
-    [taxonomyStatus, departments]
+    () => (taxonomyStatus === "ready" ? allDepartments.filter((department) => department.showOnHomepage) : []),
+    [taxonomyStatus, allDepartments]
   );
   const featuredDepartmentCount = useMemo(
-    () => departments.filter((department) => department.showOnHomepage).length,
-    [departments]
+    () => allDepartments.filter((department) => department.showOnHomepage).length,
+    [allDepartments]
   );
+  const populatedDepartmentCount = useMemo(
+    () => departments.filter((department) => departmentListingCount(department, byCategory) > 0).length,
+    [departments, byCategory]
+  );
+  const totalNodeCount = useMemo(() => countNodes(departments), [departments]);
 
   const sellerCount = useMemo(() => new Set(products.map((product) => product.vendor?.id).filter(Boolean)).size, [products]);
 
@@ -246,17 +291,27 @@ export function NaijaDealsMarketplace() {
       .slice(0, 4);
   }, [products]);
 
-  // Prefer shelves whose products are not already shown in the price-drop row,
-  // so a visitor does not see the same item twice in consecutive sections.
+  // A product appears at most once on the homepage: price-drop items are
+  // claimed first, then each featured shelf takes unclaimed products from its
+  // own subtree (so a featured parent can surface a child's listing).
   const shelves = useMemo(() => {
-    const decorated = homepageDepartments
-      .map((department) => ({ ...department, items: (byCategory.get(department.slug) ?? []).slice(0, shelfLimit) }))
-      .filter((department) => department.items.length > 0);
-    const dropCategories = new Set(priceDrops.map((product) => product.category?.slug));
-    const preferred = decorated.filter((department) => !dropCategories.has(department.slug));
-    const fallback = decorated.filter((department) => dropCategories.has(department.slug));
-    return [...preferred, ...fallback].slice(0, 4);
-  }, [homepageDepartments, byCategory, shelfLimit, priceDrops]);
+    const claimed = new Set(priceDrops.map((product) => product.id));
+    const decorated: Array<Department & { items: ApiProduct[] }> = [];
+    for (const department of homepageDepartments) {
+      const slugs = new Set(departmentSlugs(department));
+      const items: ApiProduct[] = [];
+      for (const product of products) {
+        if (items.length >= shelfLimit) break;
+        const slug = product.category?.slug;
+        if (!slug || !slugs.has(slug)) continue;
+        if (claimed.has(product.id)) continue;
+        claimed.add(product.id);
+        items.push(product);
+      }
+      if (items.length > 0) decorated.push({ ...department, items });
+    }
+    return decorated.slice(0, 4);
+  }, [homepageDepartments, products, shelfLimit, priceDrops]);
 
   // Listings with enough stock for a business enquiry. The unit price shown on
   // the listing is retail; any wholesale price must come from the seller.
@@ -493,20 +548,22 @@ export function NaijaDealsMarketplace() {
         </section>
 
         <section aria-labelledby="departments-heading" className="mt-8">
-          <SectionHeading eyebrow="Departments" title="Shop by department" id="departments-heading" href="/naijashop/categories" linkLabel="All departments" />
+          <SectionHeading eyebrow="Departments" title="Featured in the marketplace" id="departments-heading" href="/naijashop/categories" linkLabel="All departments" />
           <p className="mt-1 text-[10.5px] leading-5 text-[#566359]">
             {taxonomyStatus === "ready"
-              ? `${departments.length} departments published · ${departments.filter((department) => departmentListingCount(department, byCategory) > 0).length} with live stock · ${featuredDepartmentCount} featured on the homepage.`
+              ? `${departments.length} departments · ${totalNodeCount} published nodes · ${populatedDepartmentCount} departments with live stock · ${featuredDepartmentCount} homepage-featured ${
+                  featuredDepartmentCount === 1 ? "node" : "nodes"
+                }.`
               : taxonomyStatus === "loading"
                 ? "Loading the published department directory…"
-                : `${departments.length} departments published. The homepage selection could not be loaded, so the published directory is shown.`}
+                : `${departments.length} departments are available in the fallback directory. The published homepage selection could not be loaded, so no department is presented as featured here.`}
           </p>
           {taxonomyStatus === "ready" && homepageDepartments.length === 0 ? (
             <div className="mt-3 rounded-2xl border border-dashed border-[#cfdccb] bg-white p-5 text-[12px] leading-6 text-[#4b5b51]">
               <p className="font-extrabold text-[#14241b]">No department is featured on the homepage right now.</p>
               <p className="mt-1">
-                The published directory is still available. Homepage departments are chosen in the Control Center
-                taxonomy, not by product count.
+                The published directory is still available. Homepage nodes are chosen in the Control Center taxonomy with
+                the homepage flag, not by product count.
               </p>
               <Link
                 href="/naijashop/categories"
@@ -516,10 +573,31 @@ export function NaijaDealsMarketplace() {
               </Link>
             </div>
           ) : null}
+          {taxonomyStatus === "error" ? (
+            <div role="status" className="mt-3 rounded-2xl border border-[#eadfc6] bg-[#fbf4e4] p-4 text-[11.5px] leading-5 text-[#7a4c00]">
+              <p className="font-extrabold">The homepage department selection is unavailable right now.</p>
+              <p className="mt-1">
+                No published department is being presented as featured, because that flag comes from the taxonomy API. The
+                rest of the marketplace and the full directory still work.
+              </p>
+              <Link
+                href="/naijashop/categories"
+                className="mt-2 inline-flex items-center gap-1 font-extrabold underline"
+              >
+                Browse all departments <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+            </div>
+          ) : null}
           {homepageDepartments.length > 0 ? (
             <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4">
               {homepageDepartments.map((department) => {
                 const count = departmentListingCount(department, byCategory);
+                const serverCount =
+                  typeof department.subtreeProductCount === "number"
+                    ? department.subtreeProductCount
+                    : typeof department.productCount === "number" && (department.children?.length ?? 0) === 0
+                      ? department.productCount
+                      : null;
                 const url = department.imageUrl || `/generated/shop/category-${department.slug}.webp`;
                 return (
                   <li key={department.id}>
@@ -549,10 +627,16 @@ export function NaijaDealsMarketplace() {
                             {status === "ready"
                               ? count > 0
                                 ? `${count} ${count === 1 ? "listing" : "listings"}`
-                                : "Published — no live stock yet"
+                                : department.canPublish === false
+                                  ? "Not available in your market"
+                                  : department.isSelectable === false && (department.children?.length ?? 0) === 0
+                                    ? "Browse-only node"
+                                    : "Published — no live stock yet"
                               : status === "loading"
                                 ? "Loading stock…"
-                                : "Stock unavailable"}
+                                : serverCount !== null && serverCount > 0
+                                  ? `${serverCount} ${serverCount === 1 ? "listing" : "listings"} (server count)`
+                                  : "Stock unavailable"}
                           </span>
                         </span>
                         <ArrowUpRight className="h-4 w-4 shrink-0 text-[#0f7a4a]" aria-hidden />
@@ -565,7 +649,8 @@ export function NaijaDealsMarketplace() {
           ) : null}
           {categoriesStatus === "error" && taxonomyStatus !== "ready" ? (
             <p className="mt-2 text-[11px] text-[#8a4a10]">
-              The department directory could not be refreshed. Showing departments found in live listings.
+              The department directory could not be refreshed. The All menu and the departments page remain available;
+              homepage cards stay hidden rather than presenting an unverified selection.
             </p>
           ) : null}
         </section>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Image as ImageIcon, Plus, Save, Trash2, Undo2, X } from "lucide-react";
+import { AlertTriangle, Image as ImageIcon, Lock, Plus, Save, ShieldAlert, Trash2, Undo2, X } from "lucide-react";
 import { COUNTRIES } from "@/lib/config/commerce";
 import { normaliseAttributeType, type TaxonomyAttributeType } from "@/lib/taxonomy-api";
 
@@ -76,6 +76,8 @@ export function TaxonomyNodeEditor({
   blockedParentIds,
   mode,
   disabled,
+  readOnlyReason = null,
+  scopeCountryCode = null,
   busy,
   onSave,
   onCancel,
@@ -87,7 +89,12 @@ export function TaxonomyNodeEditor({
   parentOptions: ParentOption[];
   blockedParentIds: Set<string>;
   mode: "create" | "edit";
+  /** True when the caller lacks the permission or the node is outside its scope. */
   disabled: boolean;
+  /** Why the form is read-only, shown verbatim to the operator. */
+  readOnlyReason?: string | null;
+  /** Signed-in administrator's country scope; null means platform-wide. */
+  scopeCountryCode?: string | null;
   busy: boolean;
   onSave: () => void;
   onCancel: () => void;
@@ -96,6 +103,7 @@ export function TaxonomyNodeEditor({
 }) {
   const [problems, setProblems] = useState<string[]>([]);
   const [moveConfirmed, setMoveConfirmed] = useState(false);
+  const scopedCountry = scopeCountryCode ? scopeCountryCode.trim().toUpperCase() : null;
 
   const parentChanged = mode === "edit" && draft.parentId !== draft.originalParentId;
   const needsMoveConfirmation = parentChanged && (draft.productCount ?? 0) > 0;
@@ -169,6 +177,15 @@ export function TaxonomyNodeEditor({
       if (ruleCodes.has(rule.countryCode)) found.push(`Duplicate country rule for ${rule.countryCode}.`);
       ruleCodes.add(rule.countryCode);
     }
+    if (scopedCountry) {
+      if (!draft.countryRules.some((rule) => rule.countryCode.toUpperCase() === scopedCountry)) {
+        found.push(`Your ${scopedCountry} administrative scope requires a ${scopedCountry} country rule on this node.`);
+      }
+      const outside = draft.countryRules.find((rule) => rule.countryCode && rule.countryCode.toUpperCase() !== scopedCountry);
+      if (outside) {
+        found.push(`Your scope cannot configure ${outside.countryCode} rules; remove that rule.`);
+      }
+    }
     if (needsMoveConfirmation && !moveConfirmed) {
       found.push(
         `This category is referenced by ${draft.productCount} listed ${
@@ -185,7 +202,7 @@ export function TaxonomyNodeEditor({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 id="taxonomy-editor-heading" className="text-base font-extrabold text-[#F0F6FC]">
-            {mode === "create" ? "New taxonomy node" : `Edit ${draft.name || "node"}`}
+            {mode === "create" ? "New taxonomy node" : `${disabled ? "Inspect" : "Edit"} ${draft.name || "node"}`}
           </h2>
           <p className="mt-1 text-xs text-[#8B949E]">
             Level is derived from the parent. Unpublishing or deprecating a node keeps its recorded listings; it only leaves
@@ -196,6 +213,17 @@ export function TaxonomyNodeEditor({
           <X className="h-3.5 w-3.5" aria-hidden /> Close
         </button>
       </div>
+
+      {disabled ? (
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#F2D48C]/40 bg-[#F2D48C]/10 p-3 text-xs leading-5 text-[#F2D48C]">
+          {scopedCountry ? <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> : <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />}
+          <span>
+            <span className="block font-extrabold">Read-only</span>
+            {readOnlyReason ??
+              "This form is read-only in the current session. The server still enforces the permission and scope on every write."}
+          </span>
+        </div>
+      ) : null}
 
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         <label className={labelClass}>
@@ -341,7 +369,12 @@ export function TaxonomyNodeEditor({
             {draft.productCount === 1 ? "product appears" : "products appear"}.
           </p>
           <label className="mt-2 flex items-center gap-2 font-bold">
-            <input type="checkbox" checked={moveConfirmed} onChange={(event) => setMoveConfirmed(event.target.checked)} />
+            <input
+              type="checkbox"
+              checked={moveConfirmed}
+              disabled={disabled}
+              onChange={(event) => setMoveConfirmed(event.target.checked)}
+            />
             I understand {draft.productCount} listed {draft.productCount === 1 ? "product references" : "products reference"} this category.
           </label>
         </div>
@@ -493,64 +526,89 @@ export function TaxonomyNodeEditor({
           Country restrictions ({draft.countryRules.length})
         </legend>
         <p className="text-[10px] text-[#8B949E]">
-          With no rule a category is publishable everywhere; a rule decides whether sellers in that market can use it.
+          {scopedCountry
+            ? `Your administrative scope is ${scopedCountry}. A ${scopedCountry} country rule is required on every node your scope saves, and you cannot configure other countries.`
+            : "With no rule a category is publishable everywhere; a rule decides whether sellers in that market can use it."}
         </p>
         {draft.countryRules.length > 0 ? (
           <div className="mt-2 space-y-1.5">
-            {draft.countryRules.map((rule, index) => (
-              <div key={index} className="grid gap-1.5 sm:grid-cols-[150px_auto_1fr_auto]">
-                <select
-                  aria-label={`Country rule ${index + 1} country`}
-                  value={rule.countryCode}
-                  disabled={disabled}
-                  onChange={(event) => updateRule(index, { countryCode: event.target.value })}
-                  className={smallInputClass}
-                >
-                  <option value="">Choose country…</option>
-                  {Object.values(COUNTRIES).map((country) => (
-                    <option key={country.code} value={country.code}>
-                      {country.name} ({country.code})
-                    </option>
-                  ))}
-                </select>
-                <label className="flex items-center gap-2 text-[10px] font-bold text-[#F0F6FC]">
+            {draft.countryRules.map((rule, index) => {
+              const mutableRule = !disabled && (!scopedCountry || rule.countryCode.toUpperCase() !== scopedCountry);
+              return (
+                <div key={index} className="grid gap-1.5 sm:grid-cols-[150px_auto_1fr_auto]">
+                  <select
+                    aria-label={`Country rule ${index + 1} country`}
+                    value={rule.countryCode}
+                    disabled={disabled || Boolean(scopedCountry)}
+                    onChange={(event) => updateRule(index, { countryCode: event.target.value })}
+                    className={smallInputClass}
+                  >
+                    <option value="">Choose country…</option>
+                    {Object.values(COUNTRIES)
+                      .filter((country) => !scopedCountry || country.code.toUpperCase() === scopedCountry)
+                      .map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.name} ({country.code})
+                        </option>
+                      ))}
+                  </select>
+                  <label className="flex items-center gap-2 text-[10px] font-bold text-[#F0F6FC]">
+                    <input
+                      type="checkbox"
+                      checked={rule.canPublish}
+                      disabled={disabled}
+                      onChange={(event) => updateRule(index, { canPublish: event.target.checked })}
+                    />
+                    Can publish
+                  </label>
                   <input
-                    type="checkbox"
-                    checked={rule.canPublish}
+                    aria-label={`Country rule ${index + 1} note`}
+                    value={rule.note}
                     disabled={disabled}
-                    onChange={(event) => updateRule(index, { canPublish: event.target.checked })}
+                    placeholder="Reason shown to sellers"
+                    onChange={(event) => updateRule(index, { note: event.target.value.slice(0, 200) })}
+                    className={smallInputClass}
                   />
-                  Can publish
-                </label>
-                <input
-                  aria-label={`Country rule ${index + 1} note`}
-                  value={rule.note}
-                  disabled={disabled}
-                  placeholder="Reason shown to sellers"
-                  onChange={(event) => updateRule(index, { note: event.target.value.slice(0, 200) })}
-                  className={smallInputClass}
-                />
-                <button
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => update({ countryRules: draft.countryRules.filter((_, position) => position !== index) })}
-                  className="min-h-9 rounded-lg border border-[#30363D] px-2 text-xs font-bold text-[#FFB4AE] disabled:opacity-40"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+                  <button
+                    type="button"
+                    disabled={!mutableRule}
+                    title={
+                      scopedCountry && !mutableRule
+                        ? `A ${scopedCountry} rule is required by your administrative scope and cannot be removed.`
+                        : undefined
+                    }
+                    onClick={() => update({ countryRules: draft.countryRules.filter((_, position) => position !== index) })}
+                    className="min-h-9 rounded-lg border border-[#30363D] px-2 text-xs font-bold text-[#FFB4AE] disabled:opacity-40"
+                  >
+                    Remove
+                  </button>
+                </div>
+              );
+            })}
           </div>
         ) : (
-          <p className="mt-2 text-xs text-[#8B949E]">No country restrictions.</p>
+          <p className="mt-2 text-xs text-[#8B949E]">
+            {scopedCountry ? `No country rule yet. A ${scopedCountry} rule is required before saving.` : "No country restrictions."}
+          </p>
         )}
         <button
           type="button"
-          disabled={disabled || draft.countryRules.length >= 12}
-          onClick={() => update({ countryRules: [...draft.countryRules, { countryCode: "", canPublish: true, note: "" }] })}
+          disabled={
+            disabled ||
+            draft.countryRules.length >= 12 ||
+            (Boolean(scopedCountry) && draft.countryRules.some((rule) => rule.countryCode.toUpperCase() === scopedCountry))
+          }
+          onClick={() =>
+            update({
+              countryRules: [
+                ...draft.countryRules,
+                { countryCode: scopedCountry ?? "", canPublish: true, note: "" }
+              ]
+            })
+          }
           className="mt-2 inline-flex min-h-9 items-center gap-1 rounded-lg border border-[#30363D] px-2.5 text-xs font-bold text-[#58A6FF] disabled:opacity-40"
         >
-          <Plus className="h-3.5 w-3.5" aria-hidden /> Add country rule
+          <Plus className="h-3.5 w-3.5" aria-hidden /> Add {scopedCountry ?? "country"} rule
         </button>
       </fieldset>
 
@@ -565,25 +623,27 @@ export function TaxonomyNodeEditor({
       ) : null}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          disabled={disabled || busy}
-          onClick={() => {
-            if (validate()) onSave();
-          }}
-          className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-[#00E676] px-4 text-sm font-extrabold text-[#04140B] disabled:opacity-50"
-        >
-          <Save className="h-4 w-4" aria-hidden />
-          {busy ? "Saving…" : mode === "create" ? "Create node" : "Save changes"}
-        </button>
+        {!disabled ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              if (validate()) onSave();
+            }}
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-[#00E676] px-4 text-sm font-extrabold text-[#04140B] disabled:opacity-50"
+          >
+            <Save className="h-4 w-4" aria-hidden />
+            {busy ? "Saving…" : mode === "create" ? "Create node" : "Save changes"}
+          </button>
+        ) : null}
         <button type="button" onClick={onCancel} className="min-h-10 rounded-lg border border-[#30363D] px-4 text-sm font-bold">
-          Cancel
+          {disabled ? "Close" : "Cancel"}
         </button>
-        {mode === "edit" ? (
+        {!disabled && mode === "edit" ? (
           draft.deprecatedAt ? (
             <button
               type="button"
-              disabled={disabled || busy}
+              disabled={busy}
               onClick={onRestore}
               className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-[#00E676]/50 px-3 text-xs font-bold text-[#00E676] disabled:opacity-50"
             >
@@ -592,7 +652,7 @@ export function TaxonomyNodeEditor({
           ) : (
             <button
               type="button"
-              disabled={disabled || busy}
+              disabled={busy}
               onClick={onDeprecate}
               className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-[#F85149]/50 px-3 text-xs font-bold text-[#FFB4AE] disabled:opacity-50"
             >
@@ -600,7 +660,7 @@ export function TaxonomyNodeEditor({
             </button>
           )
         ) : null}
-        {mode === "edit" ? (
+        {!disabled && mode === "edit" ? (
           <span className="text-[10px] leading-4 text-[#8B949E]">
             {draft.deprecatedAt
               ? "Deprecated: hidden from the public tree. Restoring makes it available again."

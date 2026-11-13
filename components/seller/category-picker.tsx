@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { AlertCircle, Check, ChevronRight, Info, Loader2, Plus, Search, ShieldAlert } from "lucide-react";
+import { AlertCircle, Check, ChevronRight, Info, Loader2, Plus, Search, ShieldAlert, Sparkles } from "lucide-react";
 import {
   getSellerCategories,
-  suggestSellerCategories,
   taxonomyErrorMessage,
   type SellerCategory,
   type TaxonomyAttribute
@@ -13,6 +12,69 @@ import {
 export type AttributeValues = Record<string, string>;
 
 type LoadStatus = "loading" | "ready" | "error";
+
+/**
+ * A deterministic suggestion from /api/seller/category-suggest.
+ *
+ * The endpoint matches published names and aliases; it is not an AI guess. An
+ * optional explanation may be attached later by the backend and is rendered
+ * as advisory context only — it never selects a category.
+ */
+type CategorySuggestion = {
+  categoryId: string;
+  path: string;
+  reason: string;
+  explanation: string | null;
+  explanationLabel: string | null;
+};
+
+function optionalString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+/** The API path uses " › "; older fixtures used " / ". Accept both. */
+function pathSegments(path: string): string[] {
+  return path
+    .split(/\s*(?:›|\/)\s*/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
+async function fetchCategorySuggestions(
+  query: string
+): Promise<{ suggestions: CategorySuggestion[]; mode: "deterministic" | "aura" }> {
+  const response = await fetch(`/api/seller/category-suggest?q=${encodeURIComponent(query.slice(0, 80))}`, {
+    cache: "no-store",
+    credentials: "same-origin"
+  });
+  if (!response.ok) throw new Error(`Suggestion request failed (HTTP ${response.status}).`);
+  const body = (await response.json().catch(() => ({}))) as { suggestions?: unknown; mode?: unknown };
+  const rows = Array.isArray(body?.suggestions) ? body.suggestions : [];
+  const suggestions = rows
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
+    .map((entry) => {
+      const explanation =
+        optionalString(entry.explanation) ??
+        optionalString(entry.modelExplanation) ??
+        optionalString(entry.aiExplanation) ??
+        optionalString(entry.assistantExplanation);
+      return {
+        categoryId: String(entry.categoryId ?? ""),
+        path: typeof entry.path === "string" ? entry.path : "",
+        reason: typeof entry.reason === "string" ? entry.reason : "Matched the published name or alias",
+        explanation,
+        explanationLabel: explanation
+          ? optionalString(entry.explanationLabel) ?? "Model-assisted explanation (advisory only)"
+          : null
+      };
+    })
+    .filter((entry) => entry.categoryId && entry.path)
+    .slice(0, 3);
+  // The picker only requests the default deterministic search. If the server
+  // ever returns a model-assisted list, label it honestly instead of calling
+  // it deterministic; it still never selects a category by itself.
+  return { suggestions, mode: body?.mode === "aura" ? "aura" : "deterministic" };
+}
 
 /**
  * Searchable hierarchy picker over `/api/seller/categories`.
@@ -43,11 +105,14 @@ export function CategoryPicker({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [suggestions, setSuggestions] = useState<Array<{ categoryId: string; path: string; reason: string }>>([]);
+  const [suggestions, setSuggestions] = useState<CategorySuggestion[]>([]);
   const [suggestStatus, setSuggestStatus] = useState<"idle" | "loading" | "error" | "ready">("idle");
+  const [suggestEngine, setSuggestEngine] = useState<"deterministic" | "aura" | null>(null);
+  const [pendingSuggestion, setPendingSuggestion] = useState<CategorySuggestion | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const listboxId = useId();
   const descriptionId = useId();
 
@@ -106,7 +171,10 @@ export function CategoryPicker({
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) setOpen(false);
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+        setPendingSuggestion(null);
+      }
     };
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
@@ -124,21 +192,25 @@ export function CategoryPicker({
   }, [categories, trimmedQuery]);
 
   // Alias search lives on the server (`category-suggest`); local matching alone
-  // would miss a category whose alias is not in its display name.
+  // would miss a category whose alias is not in its display name. The request
+  // stays abortable so a fast typist cannot apply an older match.
   useEffect(() => {
     const q = query.trim();
+    setPendingSuggestion(null);
+    setSuggestions([]);
+    setSuggestEngine(null);
     if (q.length < 2) {
-      setSuggestions([]);
       setSuggestStatus("idle");
       return;
     }
     const controller = new AbortController();
     setSuggestStatus("loading");
     const timer = window.setTimeout(() => {
-      suggestSellerCategories(q)
-        .then((rows) => {
+      fetchCategorySuggestions(q)
+        .then((result) => {
           if (controller.signal.aborted) return;
-          setSuggestions(rows);
+          setSuggestions(result.suggestions);
+          setSuggestEngine(result.mode);
           setSuggestStatus("ready");
         })
         .catch(() => {
@@ -153,9 +225,14 @@ export function CategoryPicker({
     };
   }, [query]);
 
-  const suggestionRows = suggestions.filter(
-    (suggestion) => !matches.some((category) => category.id === suggestion.categoryId)
-  );
+  // The confirmation is an explicit keyboard stop, not an automatic choice.
+  useEffect(() => {
+    if (pendingSuggestion) confirmButtonRef.current?.focus();
+  }, [pendingSuggestion]);
+
+  // Show the server's top matches with their reasons even when the same row is
+  // already visible in the plain search list: the reason is the useful part.
+  const suggestionRows = suggestions.slice(0, 3);
 
   function choose(category: SellerCategory) {
     if (!category.canPublish) return;
@@ -164,6 +241,7 @@ export function CategoryPicker({
     setQuery("");
     setOpen(false);
     setActiveIndex(-1);
+    setPendingSuggestion(null);
   }
 
   function clearSelection() {
@@ -171,6 +249,7 @@ export function CategoryPicker({
     onSelect(null);
     setQuery("");
     setActiveIndex(-1);
+    setPendingSuggestion(null);
     setOpen(true);
     window.requestAnimationFrame(() => inputRef.current?.focus());
   }
@@ -265,7 +344,7 @@ export function CategoryPicker({
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">Selected category</p>
               <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-extrabold text-ink">
-                {selected.path.split(" / ").map((segment, index, segments) => (
+                {pathSegments(selected.path).map((segment, index, segments) => (
                   <span key={`${segment}-${index}`} className="inline-flex items-center gap-1">
                     <span className={index === segments.length - 1 ? "text-primary" : ""}>{segment}</span>
                     {index < segments.length - 1 ? (
@@ -382,6 +461,7 @@ export function CategoryPicker({
                 } else if (event.key === "Escape") {
                   setOpen(false);
                   setActiveIndex(-1);
+                  setPendingSuggestion(null);
                 }
               }}
               className="min-h-11 min-w-0 flex-1 bg-transparent px-2.5 text-sm font-semibold text-ink outline-none placeholder:font-normal placeholder:text-muted disabled:opacity-60"
@@ -389,7 +469,7 @@ export function CategoryPicker({
           </div>
 
           {open ? (
-            <div className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded-xl border border-border-soft bg-canvas shadow-[0_18px_40px_rgba(7,53,31,0.14)]">
+            <div className="absolute left-0 right-0 z-20 mt-1 max-h-[70vh] overflow-y-auto overscroll-contain rounded-xl border border-border-soft bg-canvas shadow-[0_18px_40px_rgba(7,53,31,0.14)]">
               <ul
                 id={listboxId}
                 role="listbox"
@@ -412,7 +492,7 @@ export function CategoryPicker({
                   </li>
                 ) : null}
                 {matches.map((category, index) => {
-                  const segments = category.path.split(" / ");
+                  const segments = pathSegments(category.path);
                   const isActive = index === activeIndex;
                   return (
                     <li
@@ -435,7 +515,7 @@ export function CategoryPicker({
                         </span>
                         {segments.length > 1 ? (
                           <span className="mt-0.5 block truncate text-[10.5px] text-muted">
-                            {segments.slice(0, -1).join(" / ")}
+                            {segments.slice(0, -1).join(" › ")}
                           </span>
                         ) : (
                           <span className="mt-0.5 block text-[10.5px] text-muted">Department</span>
@@ -456,37 +536,144 @@ export function CategoryPicker({
                 })}
               </ul>
 
-              {suggestionRows.length > 0 || suggestStatus === "loading" || suggestStatus === "error" ? (
+              {suggestionRows.length > 0 || suggestStatus === "loading" || suggestStatus === "error" || pendingSuggestion ? (
                 <div className="border-t border-border-soft bg-surface-low px-3 py-2">
-                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">Name &amp; alias matches</p>
+                  <div className="flex flex-wrap items-center justify-between gap-1">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+                      {suggestEngine === "aura" ? "Model-assisted matches" : "Deterministic matches"}
+                    </p>
+                    <span className="text-[9.5px] text-muted">
+                      {suggestEngine === "aura"
+                        ? "Advisory model output — confirm before use"
+                        : "Published name & alias only — not AI"}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-[10px] leading-4 text-muted">
+                    {suggestEngine === "aura"
+                      ? "These are advisory matches from the published category list. Nothing is selected until you confirm one."
+                      : "The server matched these existing categories. Nothing is selected until you confirm one below."}
+                  </p>
                   {suggestStatus === "loading" ? (
                     <p role="status" className="mt-1 flex items-center gap-1.5 text-[11px] text-muted">
                       <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
-                      Checking aliases…
+                      Checking published names and aliases…
                     </p>
                   ) : suggestStatus === "error" ? (
-                    <p className="mt-1 text-[11px] text-muted">Alias matching is unavailable. Name matching above still applies.</p>
+                    <p className="mt-1 text-[11px] text-muted">
+                      Alias matching is unavailable. Name matching above still applies, and the request form remains usable.
+                    </p>
                   ) : (
-                    <ul className="mt-1 flex flex-wrap gap-1.5">
+                    <ul className="mt-1.5 space-y-1.5">
                       {suggestionRows.map((suggestion) => {
                         const category = categories.find((row) => row.id === suggestion.categoryId);
+                        const unavailable = !category || !category.canPublish;
                         return (
-                          <li key={`${suggestion.categoryId}-${suggestion.reason}`}>
+                          <li
+                            key={`${suggestion.categoryId}-${suggestion.reason}`}
+                            className="rounded-lg border border-border-soft bg-canvas p-2"
+                          >
+                            <p className="flex items-start gap-1.5 text-[11.5px] font-extrabold text-ink">
+                              <Check className="mt-0.5 h-3 w-3 shrink-0 text-primary" aria-hidden />
+                              <span className="min-w-0 break-words">{suggestion.path || "Suggested category"}</span>
+                            </p>
+                            <p className="mt-0.5 text-[10.5px] leading-4 text-muted">{suggestion.reason}</p>
+                            {suggestion.explanation ? (
+                              <p className="mt-1 rounded border border-[#e7dcc0] bg-[#fbf8ef] p-1.5 text-[10.5px] leading-4 text-[#6b5300]">
+                                <span className="inline-flex items-center gap-1 font-bold">
+                                  <Sparkles className="h-3 w-3" aria-hidden />
+                                  {suggestion.explanationLabel ?? "Model-assisted explanation (advisory only)"}
+                                </span>
+                                <span className="mt-0.5 block">{suggestion.explanation}</span>
+                              </p>
+                            ) : null}
+                            {!category ? (
+                              <p className="mt-1 text-[10.5px] leading-4 text-[#8a4a10]">
+                                This category is no longer open for listing in your market. Use search or request it instead.
+                              </p>
+                            ) : !category.canPublish ? (
+                              <p className="mt-1 text-[10.5px] leading-4 text-[#8a4a10]">
+                                {category.restrictionNote || "Not open to sellers in your market."}
+                              </p>
+                            ) : null}
                             <button
                               type="button"
-                              disabled={!category || disabled}
-                              onClick={() => category && choose(category)}
-                              title={suggestion.reason}
-                              className="inline-flex items-center gap-1 rounded-full bg-canvas px-2 py-1 text-[10.5px] font-bold text-ink ring-1 ring-border-soft disabled:opacity-60"
+                              disabled={unavailable || disabled}
+                              onClick={() => setPendingSuggestion(suggestion)}
+                              className="mt-1.5 inline-flex min-h-9 items-center rounded-lg border border-primary/30 bg-primary-soft px-2.5 text-[10.5px] font-extrabold text-primary disabled:opacity-50"
                             >
-                              <Check className="h-3 w-3 text-primary" aria-hidden />
-                              {suggestion.path || "Suggested category"}
+                              Review this match
                             </button>
                           </li>
                         );
                       })}
                     </ul>
                   )}
+
+                  {pendingSuggestion ? (
+                    <div
+                      role="group"
+                      aria-label="Confirm the suggested category"
+                      className="mt-2 rounded-lg border border-primary/40 bg-canvas p-2.5"
+                    >
+                      {(() => {
+                        const category = categories.find((row) => row.id === pendingSuggestion.categoryId) ?? null;
+                        const blocked = !category || !category.canPublish || disabled;
+                        return (
+                          <>
+                            <p className="text-[11.5px] font-extrabold text-ink">
+                              Use <span className="break-words">{pendingSuggestion.path}</span>?
+                            </p>
+                            <p className="mt-0.5 text-[10.5px] leading-4 text-muted">
+                              Match reason: {pendingSuggestion.reason}
+                            </p>
+                            {pendingSuggestion.explanation ? (
+                              <p className="mt-1 text-[10.5px] leading-4 text-[#6b5300]">
+                                <span className="font-bold">
+                                  {pendingSuggestion.explanationLabel ?? "Model-assisted explanation (advisory only)"}:{" "}
+                                </span>
+                                {pendingSuggestion.explanation}
+                              </p>
+                            ) : null}
+                            {!category ? (
+                              <p className="mt-1 text-[10.5px] leading-4 text-[#8a4a10]">
+                                This match is no longer in your publishable list, so it cannot be selected.
+                              </p>
+                            ) : !category.canPublish ? (
+                              <p className="mt-1 text-[10.5px] leading-4 text-[#8a4a10]">
+                                {category.restrictionNote || "This category is not open to your market."}
+                              </p>
+                            ) : (
+                              <p className="mt-1 text-[10.5px] leading-4 text-muted">
+                                Confirming sets the category on this draft. It does not publish the product.
+                              </p>
+                            )}
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <button
+                                ref={confirmButtonRef}
+                                type="button"
+                                disabled={blocked}
+                                onClick={() => category && choose(category)}
+                                className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-primary px-3 text-[11px] font-extrabold text-white disabled:opacity-50"
+                              >
+                                <Check className="h-3.5 w-3.5" aria-hidden />
+                                Use this category
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPendingSuggestion(null);
+                                  window.requestAnimationFrame(() => inputRef.current?.focus());
+                                }}
+                                className="min-h-9 rounded-lg border border-border-soft px-3 text-[11px] font-bold text-muted"
+                              >
+                                Keep browsing
+                              </button>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>

@@ -6,10 +6,13 @@ import {
   ChevronDown,
   ChevronRight,
   FolderTree,
+  Globe2,
   Loader2,
+  Lock,
   Plus,
   RefreshCw,
-  Search
+  Search,
+  ShieldAlert
 } from "lucide-react";
 import {
   TaxonomyApiError,
@@ -119,7 +122,20 @@ function levelLabel(level: number) {
  * is applied locally and no success message is shown before the server
  * confirms it.
  */
-export function TaxonomyWorkspace({ canWrite, canRead }: { canWrite: boolean; canRead: boolean }) {
+export function TaxonomyWorkspace({
+  canWrite,
+  canRead,
+  scopeCountryCode = null,
+  scopeCityCode = null,
+  roles = []
+}: {
+  canWrite: boolean;
+  canRead: boolean;
+  /** Signed-in administrator's country scope; null means platform-wide. */
+  scopeCountryCode?: string | null;
+  scopeCityCode?: string | null;
+  roles?: string[];
+}) {
   const [departments, setDepartments] = useState<AdminTaxonomyNode[]>([]);
   const [requests, setRequests] = useState<SellerCategoryRequest[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -138,6 +154,25 @@ export function TaxonomyWorkspace({ canWrite, canRead }: { canWrite: boolean; ca
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [requestsError, setRequestsError] = useState("");
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // Matches the server rule for scoped staff: PATCH requires an existing
+  // country rule for the actor's country, and creation must attach one. The
+  // GET response only contains countryRules visible to the actor, so presence
+  // of this rule is the exact writable signal — not a client-side guess.
+  const scopeCountry = scopeCountryCode ? scopeCountryCode.trim().toUpperCase() : null;
+  const scopeLabel = scopeCountry
+    ? `${scopeCountry}${scopeCityCode ? ` / ${scopeCityCode}` : ""}`
+    : "Platform-wide";
+  const nodeInScope = useCallback(
+    (node: Pick<AdminTaxonomyNode, "countryRules"> | null | undefined) => {
+      if (!scopeCountry) return true;
+      if (!node) return false;
+      return (node.countryRules ?? []).some(
+        (rule) => typeof rule.countryCode === "string" && rule.countryCode.toUpperCase() === scopeCountry
+      );
+    },
+    [scopeCountry]
+  );
 
   const load = useCallback(async () => {
     setStatus("loading");
@@ -224,16 +259,24 @@ export function TaxonomyWorkspace({ canWrite, canRead }: { canWrite: boolean; ca
       selectable: nodes.filter((node) => node.isSelectable !== false).length,
       featured: nodes.filter((node) => node.showOnHomepage === true).length,
       deprecated: nodes.filter((node) => Boolean(node.deprecatedAt)).length,
+      inScope: scopeCountry ? nodes.filter((node) => nodeInScope(node)).length : nodes.length,
       productRefs: knownCounts.length === flat.length ? knownCounts.reduce((sum, count) => sum + count, 0) : null
     };
-  }, [flat]);
+  }, [flat, nodeInScope, scopeCountry]);
 
   const visibleTree = useMemo(() => filterTree(departments, search), [departments, search]);
   const searching = search.trim().length > 0;
 
   function beginCreate(parentId = "") {
     setEditorMode("create");
-    setEditing(emptyNodeDraft(parentId));
+    const draft = emptyNodeDraft(parentId);
+    // A scoped administrator can only create a node that carries their own
+    // country rule (the API rejects the write otherwise). Seed it so the form
+    // reflects the real requirement instead of failing on submit.
+    if (scopeCountry) {
+      draft.countryRules = [{ countryCode: scopeCountry, canPublish: true, note: "" }];
+    }
+    setEditing(draft);
     setError("");
     setNotice("");
     setIssues([]);
@@ -418,6 +461,16 @@ export function TaxonomyWorkspace({ canWrite, canRead }: { canWrite: boolean; ca
     return ok;
   }
 
+  const editorNode = editing && editorMode === "edit" ? flat.find((row) => row.node.id === editing.id)?.node ?? null : null;
+  const editorScopeLocked = Boolean(
+    editorNode && !nodeInScope(editorNode)
+  );
+  const editorReadOnlyReason = editorScopeLocked
+    ? `This node has no ${scopeCountry} country rule, so your ${scopeLabel} scope cannot edit, deprecate or restore it. You can still inspect its published fields.`
+    : !canWrite
+      ? "Your role lacks `products:moderate`. The hierarchy and seller requests stay readable; create, edit, deprecate and resolve controls are disabled."
+      : null;
+
   if (!canRead) {
     return (
       <div className="mx-auto max-w-3xl rounded-2xl border border-[#21262D] bg-[#0B0E14] p-6 text-[#F0F6FC]">
@@ -440,14 +493,28 @@ export function TaxonomyWorkspace({ canWrite, canRead }: { canWrite: boolean; ca
             selectable nodes their country allows. Every change is permission-checked, region-scoped and audited.
           </p>
         </div>
-        <button
-          type="button"
-          disabled={!canWrite}
-          onClick={() => beginCreate("")}
-          className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-[#00E676] px-4 text-sm font-extrabold text-[#04140B] disabled:opacity-50"
-        >
-          <Plus className="h-4 w-4" aria-hidden /> New node
-        </button>
+        <div className="flex flex-col items-start gap-1 sm:items-end">
+          <button
+            type="button"
+            disabled={!canWrite}
+            onClick={() => beginCreate("")}
+            title={
+              !canWrite
+                ? "products:moderate is required to create taxonomy nodes."
+                : scopeCountry
+                  ? `The new node will carry a ${scopeCountry} country rule, which your scope requires.`
+                  : undefined
+            }
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-[#00E676] px-4 text-sm font-extrabold text-[#04140B] disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" aria-hidden /> New node
+          </button>
+          {canWrite && scopeCountry ? (
+            <span className="max-w-64 text-right text-[10px] leading-4 text-[#8B949E]">
+              New nodes must include a {scopeCountry} country rule.
+            </span>
+          ) : null}
+        </div>
       </header>
 
       {error ? (
@@ -470,9 +537,39 @@ export function TaxonomyWorkspace({ canWrite, canRead }: { canWrite: boolean; ca
           {notice}
         </div>
       ) : null}
+      <div
+        className={`rounded-xl border p-3 text-xs leading-5 ${
+          scopeCountry
+            ? "border-[#58A6FF]/40 bg-[#58A6FF]/10 text-[#C9E3FF]"
+            : "border-[#30363D] bg-[#161B22] text-[#C9D1D9]"
+        }`}
+      >
+        <p className="flex flex-wrap items-center gap-2 font-extrabold">
+          {scopeCountry ? <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden /> : <Globe2 className="h-4 w-4 shrink-0" aria-hidden />}
+          Regional scope: {scopeLabel}
+          {roles.length > 0 ? (
+            <span className="font-semibold opacity-80">Roles: {roles.join(", ")}</span>
+          ) : null}
+        </p>
+        {scopeCountry ? (
+          <p className="mt-1">
+            You can create nodes that carry a {scopeCountry} country rule and edit, deprecate or restore nodes that already
+            have one. {stats.total - stats.inScope} of {stats.total} nodes are outside your scope and stay read-only; the
+            seller request queue is limited to your region. The server re-checks scope on every write and answers 403 when a
+            control is used outside it, so these labels are guidance rather than the security boundary.
+          </p>
+        ) : (
+          <p className="mt-1">
+            Platform-wide scope: every taxonomy node is within scope, including country rules for any market. Editing still
+            requires `products:moderate` on every write; this session {canWrite ? "has it" : "does not have it"}.
+          </p>
+        )}
+      </div>
+
       {!canWrite ? (
         <div className="rounded-xl border border-[#F2D48C]/40 bg-[#F2D48C]/10 p-3 text-sm text-[#F2D48C]">
-          Read-only: your role lacks `products:moderate`. Browsing and request review stay available; edits are disabled.
+          Read-only: your role lacks `products:moderate`. Browsing and request review stay available; create, edit and
+          deprecate controls are hidden or disabled.
         </div>
       ) : null}
 
@@ -485,6 +582,7 @@ export function TaxonomyWorkspace({ canWrite, canRead }: { canWrite: boolean; ca
             <p className="mt-1 text-xs text-[#8B949E]">
               {stats.total} nodes · {stats.active} public · {stats.selectable} listable · {stats.featured} on the homepage ·{" "}
               {stats.deprecated} deprecated
+              {scopeCountry ? ` · ${stats.inScope} writable in ${scopeCountry} scope` : ""}
               {stats.productRefs !== null ? ` · ${stats.productRefs} listed product references` : " · product counts not reported"}
             </p>
           </div>
@@ -564,6 +662,7 @@ export function TaxonomyWorkspace({ canWrite, canRead }: { canWrite: boolean; ca
                 onEdit={beginEdit}
                 onCreateChild={canWrite ? (parentId: string) => beginCreate(parentId) : undefined}
                 canWrite={canWrite}
+                scopeCountry={scopeCountry}
               />
             ))}
           </ul>
@@ -595,7 +694,9 @@ export function TaxonomyWorkspace({ canWrite, canRead }: { canWrite: boolean; ca
               )
             }
             mode={editorMode}
-            disabled={!canWrite}
+            disabled={!canWrite || editorScopeLocked}
+            readOnlyReason={editorReadOnlyReason}
+            scopeCountryCode={scopeCountry}
             busy={busy}
             onSave={() => void saveDraft()}
             onCancel={() => setEditing(null)}
@@ -611,6 +712,7 @@ export function TaxonomyWorkspace({ canWrite, canRead }: { canWrite: boolean; ca
         onFilterChange={setRequestFilter}
         nodes={parentOptions.map((option) => ({ id: option.id, name: option.name, path: option.path }))}
         canWrite={canWrite}
+        scopeCountryCode={scopeCountry}
         busy={busy}
         loading={requestsLoading}
         error={requestsError}
@@ -639,7 +741,8 @@ function TreeBranch({
   onToggle,
   onEdit,
   onCreateChild,
-  canWrite
+  canWrite,
+  scopeCountry
 }: {
   node: AdminTaxonomyNode;
   level: number;
@@ -651,6 +754,7 @@ function TreeBranch({
   onEdit: (node: AdminTaxonomyNode, parentId: string | null) => void;
   onCreateChild?: (parentId: string) => void;
   canWrite: boolean;
+  scopeCountry: string | null;
 }) {
   const children = node.children ?? [];
   const isOpen = forceOpen || expanded.has(node.id);
@@ -658,6 +762,11 @@ function TreeBranch({
   const productCount = nodeProductCount(node);
   const deprecated = Boolean(node.deprecatedAt);
   const inactive = node.isActive === false;
+  const withinScope =
+    !scopeCountry ||
+    (node.countryRules ?? []).some(
+      (rule) => typeof rule.countryCode === "string" && rule.countryCode.toUpperCase() === scopeCountry
+    );
 
   return (
     <li>
@@ -684,9 +793,11 @@ function TreeBranch({
         <button
           type="button"
           onClick={() => onEdit(node, parentId)}
+          title={withinScope ? "Open the editor" : `Read-only: no ${scopeCountry} country rule`}
           className="min-h-8 truncate rounded px-1 text-left text-[13px] font-bold text-[#F0F6FC] underline decoration-transparent hover:bg-[#21262D] hover:decoration-[#58A6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#58A6FF]"
         >
           {node.name}
+          {!withinScope ? <span className="sr-only"> (outside your administrative scope; opens read-only)</span> : null}
         </button>
 
         <span className="text-[10px] text-[#8B949E]">{levelLabel(level)}</span>
@@ -704,6 +815,15 @@ function TreeBranch({
         {node.showOnHomepage ? (
           <span className="rounded bg-[#00E676]/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00E676]">
             Homepage
+          </span>
+        ) : null}
+        {!withinScope ? (
+          <span
+            className="inline-flex items-center gap-1 rounded bg-[#58A6FF]/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#9ECBFF]"
+            title={`This node has no ${scopeCountry} country rule, so your scope cannot edit or deprecate it.`}
+          >
+            <Lock className="h-2.5 w-2.5" aria-hidden />
+            Outside {scopeCountry} scope
           </span>
         ) : null}
         {inactive ? (
@@ -728,7 +848,7 @@ function TreeBranch({
               Public page
             </a>
           ) : null}
-          {canWrite && onCreateChild ? (
+          {canWrite && withinScope && onCreateChild ? (
             <button
               type="button"
               onClick={() => onCreateChild(node.id)}
@@ -755,6 +875,7 @@ function TreeBranch({
               onEdit={onEdit}
               onCreateChild={onCreateChild}
               canWrite={canWrite}
+              scopeCountry={scopeCountry}
             />
           ))}
         </ul>

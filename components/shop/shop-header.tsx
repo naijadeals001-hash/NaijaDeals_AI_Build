@@ -61,7 +61,25 @@ function addressSummary(address: SavedAddress | null) {
   return area || address.line1?.trim() || "Saved address";
 }
 
+/**
+ * Counts and market availability are optional taxonomy additions. Keep the
+ * original flags authoritative and only forward well-typed values, so a
+ * missing field is never rendered as zero stock.
+ */
+type PublicTaxonomyNodeWithCounts = PublicTaxonomyNode & {
+  productCount?: unknown;
+  subtreeProductCount?: unknown;
+  descendantProductCount?: unknown;
+  canPublish?: unknown;
+  restrictionNote?: unknown;
+};
+
+function finiteCount(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
+}
+
 function toShopDepartment(node: PublicTaxonomyNode): ShopDepartment {
+  const extended = node as PublicTaxonomyNodeWithCounts;
   return {
     id: node.id,
     name: node.name,
@@ -70,8 +88,28 @@ function toShopDepartment(node: PublicTaxonomyNode): ShopDepartment {
     description: node.description ?? null,
     isSelectable: node.isSelectable !== false,
     showOnHomepage: node.showOnHomepage === true,
+    productCount: finiteCount(extended.productCount),
+    subtreeProductCount: finiteCount(extended.subtreeProductCount) ?? finiteCount(extended.descendantProductCount),
+    canPublish: typeof extended.canPublish === "boolean" ? extended.canPublish : null,
+    restrictionNote: typeof extended.restrictionNote === "string" ? extended.restrictionNote : null,
     children: (node.children ?? []).map(toShopDepartment)
   };
+}
+
+type SearchScope = { slug: string; name: string; path: string; rootSlug: string };
+
+function collectSearchScopes(departments: ShopDepartment[]): SearchScope[] {
+  const rows: SearchScope[] = [];
+  const walk = (nodes: ShopDepartment[], trail: string[], rootSlug: string) => {
+    for (const node of nodes) {
+      const path = [...trail, node.name];
+      const root = trail.length === 0 ? node.slug : rootSlug;
+      rows.push({ slug: node.slug, name: node.name, path: path.join(" › "), rootSlug: root });
+      if (node.children?.length) walk(node.children, path, root);
+    }
+  };
+  walk(departments, [], "");
+  return rows;
 }
 
 /**
@@ -158,13 +196,26 @@ function ShopHeader() {
             const list = Array.isArray(items) ? items : [];
             setCategories(list);
             setDepartmentTree(
-              list.map((category) => ({
-                id: category.id,
-                name: category.name,
-                slug: category.slug,
-                imageUrl: (category as ApiCategory & { imageUrl?: string | null }).imageUrl ?? null,
-                children: []
-              }))
+              list.map((category) => {
+                const extended = category as ApiCategory & {
+                  imageUrl?: string | null;
+                  productCount?: unknown;
+                  showOnHomepage?: unknown;
+                  isSelectable?: unknown;
+                };
+                const count = finiteCount(extended.productCount);
+                return {
+                  id: category.id,
+                  name: category.name,
+                  slug: category.slug,
+                  imageUrl: extended.imageUrl ?? null,
+                  productCount: count,
+                  subtreeProductCount: count,
+                  isSelectable: extended.isSelectable !== false,
+                  showOnHomepage: extended.showOnHomepage === true,
+                  children: []
+                };
+              })
             );
             setTaxonomyAvailable(false);
             setDirectoryNotice(
@@ -252,8 +303,11 @@ function ShopHeader() {
         if (!active) return;
         const list: ApiProduct[] = Array.isArray(items) ? items : [];
         const counts: Record<string, number> = {};
+        const seen = new Set<string>();
         for (const product of list) {
           if (product.isSample || FIXTURE_LISTING.test(product.name) || FIXTURE_LISTING.test(product.slug ?? "")) continue;
+          if (product.id && seen.has(product.id)) continue;
+          if (product.id) seen.add(product.id);
           const slug = product.category?.slug;
           if (!slug) continue;
           counts[slug] = (counts[slug] ?? 0) + 1;
@@ -271,8 +325,12 @@ function ShopHeader() {
   }, [openPanel]);
 
   const departments = departmentTree;
-
-  const selectedCategory = categories.find((category) => category.slug === scope);
+  const searchScopes = useMemo(() => collectSearchScopes(departmentTree), [departmentTree]);
+  const activeScope = searchScopes.find((entry) => entry.slug === scope) ?? null;
+  const fallbackCategory = categories.find((category) => category.slug === scope) ?? null;
+  const selectedScopeLabel = activeScope?.name ?? fallbackCategory?.name ?? scope;
+  const activeRootSlug =
+    activeScope?.rootSlug ?? (categories.some((category) => category.slug === scope) ? scope : "");
   const action = scope ? `/naijashop/c/${scope}` : "/naijashop/search";
   const firstName = sessionUser?.name?.split(" ")[0] ?? null;
   const accountGreeting = sessionUser ? `Hello, ${firstName}` : sessionUser === null ? "Hello, sign in" : "Hello";
@@ -410,13 +468,13 @@ function ShopHeader() {
                 className="w-full"
               >
                 <label htmlFor="shop-search-input" className="sr-only">
-                  {selectedCategory ? `Search within ${selectedCategory.name}` : "Search all departments"}
+                  {selectedScopeLabel ? `Search within ${selectedScopeLabel}` : "Search all departments"}
                 </label>
                 <div className="flex h-11 min-w-0 items-stretch overflow-hidden rounded-full border border-[#cfdccb] bg-[#f6f8f4] transition focus-within:border-[#0b5c33] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0b5c33]/15">
-                  {categories.length > 0 ? (
+                  {departments.length > 0 ? (
                     <>
                       <label htmlFor="shop-search-scope" className="sr-only">
-                        Limit search to a department
+                        Limit search to a department, category or subcategory
                       </label>
                       <select
                         id="shop-search-scope"
@@ -424,12 +482,30 @@ function ShopHeader() {
                         onChange={(event) => setScope(event.target.value)}
                         className="h-11 w-[5.25rem] shrink-0 cursor-pointer truncate rounded-l-full border-r border-[#dce6d8] bg-transparent py-0 pl-2.5 pr-1 text-[11px] font-bold text-[#0b4d2e] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0b5c33] sm:w-auto sm:max-w-[10rem] sm:pl-4 sm:pr-2 sm:text-[11.5px]"
                       >
-                        <option value="">All</option>
-                        {categories.map((category) => (
-                          <option key={category.id} value={category.slug}>
-                            {category.name}
+                        <option value="">All departments</option>
+                        {departments.map((department) => (
+                          <option key={department.id} value={department.slug}>
+                            {department.name} — all
                           </option>
                         ))}
+                        {departments.map((department) => {
+                          const descendants = searchScopes.filter(
+                            (entry) => entry.rootSlug === department.slug && entry.slug !== department.slug
+                          );
+                          if (descendants.length === 0) return null;
+                          return (
+                            <optgroup key={`scope-group-${department.id}`} label={department.name}>
+                              {descendants.map((entry) => (
+                                <option key={entry.slug} value={entry.slug}>
+                                  {entry.path}
+                                </option>
+                              ))}
+                            </optgroup>
+                          );
+                        })}
+                        {scope && !searchScopes.some((entry) => entry.slug === scope) ? (
+                          <option value={scope}>{selectedScopeLabel || scope} (current selection)</option>
+                        ) : null}
                       </select>
                     </>
                   ) : null}
@@ -443,12 +519,12 @@ function ShopHeader() {
                     maxLength={120}
                     enterKeyHint="search"
                     autoComplete="off"
-                    placeholder={selectedCategory ? `Search in ${selectedCategory.name}` : "Search products, brands and categories"}
+                    placeholder={selectedScopeLabel ? `Search in ${selectedScopeLabel}` : "Search products, brands and categories"}
                     className="min-w-0 flex-1 bg-transparent px-2.5 text-[12px] text-[#14241b] outline-none placeholder:text-[#566359] sm:px-3 sm:text-[13px]"
                   />
                   <button
                     type="submit"
-                    aria-label={selectedCategory ? `Search in ${selectedCategory.name}` : "Search all departments"}
+                    aria-label={selectedScopeLabel ? `Search in ${selectedScopeLabel}` : "Search all departments"}
                     className="grid w-11 shrink-0 place-items-center bg-[#f26b21] text-white transition hover:bg-[#d95a12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#07351f]"
                   >
                     <Search className="h-4 w-4" aria-hidden />
@@ -490,7 +566,11 @@ function ShopHeader() {
             <button
               type="button"
               onClick={(event) => openAll(event.currentTarget)}
-              aria-label="Open all departments"
+              aria-label={
+                departmentTree.length > 0
+                  ? `Open all departments (${departmentTree.length} departments, ${searchScopes.length} published nodes)`
+                  : "Open all departments"
+              }
               aria-haspopup="dialog"
               aria-expanded={openPanel === "all"}
               aria-controls="shop-all-panel"
@@ -541,7 +621,7 @@ function ShopHeader() {
                 <Link
                   key={category.id}
                   href={`/naijashop/c/${category.slug}`}
-                  aria-current={pathname === `/naijashop/c/${category.slug}` ? "page" : undefined}
+                  aria-current={activeRootSlug === category.slug ? "page" : undefined}
                   className="flex min-h-11 shrink-0 items-center whitespace-nowrap px-2 text-[11.5px] font-semibold text-[#3d4f43] transition hover:text-[#0b5c33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
                 >
                   {category.name}
