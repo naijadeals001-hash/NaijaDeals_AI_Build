@@ -91,8 +91,8 @@ function Hero() {
             <span className="text-primary">one app.</span>
           </h1>
           <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-muted sm:text-base">
-            From Wuse II to Wuse Market, or Maitama to the airport — book a ride, order food, shop verified
-            sellers, send a parcel or find a place to stay from one NaijaDeals account.
+            From Wuse II to Wuse Market, or Maitama to the airport — book a ride, order food, shop sellers
+            across Africa, send a parcel or find a place to stay from one NaijaDeals account.
           </p>
 
           <RideQuickStart />
