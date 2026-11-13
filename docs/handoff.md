@@ -4617,3 +4617,75 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   product categories; the seven reverted leaf moves were re-applied (34 retained),
   coverage 30/96 leaves, 50 active leaf products. Seller request parent list now
   excludes leaf nodes. Workflow 143/143, aggregation 34/34, smoke 12/12, basket 10/10.
+
+## Asset/publication integrity, coverage recompute and workflow baseline guard (2026-11-13)
+
+- Starting branch `naijashop-marketplace`, HEAD `bafcd25`. REVIEW target
+  `naijadeals_review` (`DatabaseClassification` = REVIEW) verified before every query.
+  No storefront/UI, backend API, payment or schema file was changed. Port 3047 was not
+  restarted.
+- **Workflow safety.** The obsolete broad-category correction was removed in `6d1f522`
+  (the workflow no longer compares or PATCHes `Product.categoryId` for existing expansion
+  products). `scripts/review-catalogue-workflow.cjs` now snapshots every accepted ACTIVE
+  product's `id`, `name`, `slug`, `categoryId`, `status`, `isDemo`, `isSample`,
+  `priceKobo`, `currency`, `countryCode`, `images[url/alt/sortOrder]` and
+  `stock[quantity/reserved/lowStockLevel]`, sorts by id and fingerprints the projection.
+  A per-product diff runs after run-record cleanup and at the final state; a changed
+  non-run-owned record fails instead of being silently repaired. Expansion categories
+  (Power & Solar, Gaming) are verified as seeded level-1 taxonomy nodes and are never
+  created or rewritten by the workflow.
+- **Two-run proof.** Runs A and B each passed **142/142** with zero page errors. Accepted
+  ACTIVE-product fingerprint before/after both runs:
+  `d7dd21d5dc2da24b3b5083adf63c64d6e9975e280dd32b9c70576a6b6917b80d`; independent
+  API snapshots of all 57 active products before/after each run are byte-identical and
+  cross-run field diffs = 0. All run-owned workflow/acceptance records are archived by
+  cleanup, never left ACTIVE.
+- **Computed coverage** (`scripts/taxonomy-coverage-report.ts`, read-only transaction,
+  fingerprint stable): 11 departments / 37 categories / 113 selectable leaves (161
+  nodes); 96 publishable / 17 NG-regulated; **30/96 populated, 66 empty publishable**;
+  57 ACTIVE products, **50 on leaves, 7 ambiguous** on selectable level-1 categories;
+  34 audited moves, 16 keep, 7 review; 34 products have `taxonomy.product.reclassified`
+  audit rows and **7 were re-applied after a revert, all on their latest audited leaf**.
+- **Counts.** 57 ACTIVE = 31 accepted baseline + 6 Batch A + 4 Batch B + 8 taxonomy batch
+  + 8 Batch 2; Batch 2 appears exactly once. Non-public at the final check: 11 DRAFT
+  (2 fixture-like) and 119 ARCHIVED (76 fixture-like); ACTIVE fixture-like = 0.
+  `CategoryRequest` is 3 APPROVED / 1 REJECTED; CRF names in `Category.name` and
+  `CategoryRequest.suggestedName` = 0. `scripts/taxonomy-reconcile-products.ts` derives
+  these from the database and passes. The archived total includes the run-owned fixtures
+  archived by the two verification runs (187 products total, 187 image rows, 179
+  inventory rows); they are non-public audit residue, not accepted catalogue content.
+- **Image audit.** 62 URLs (57 active-product images + 5 department banners) all returned
+  HEAD 200 and Chromium `naturalWidth > 0` on the canonical 3047 preview. Six departments
+  have `imageUrl = NULL` (Health & Wellness; Baby, Kids & Toys; Sports & Outdoors;
+  Automotive & Motorcycle; Tools & Building Materials; Books & Stationery). No accurate
+  approved banner asset exists for them; no unrelated image was substituted and none was
+  generated. The neutral fallback remains. Six product images are 404-free and every
+  active image has alt text.
+- **Remaining findings (not fixed here).**
+  - *Gari alias relevance:* `CategoryAlias` has `gari` (en/fr/pt) and `garri` (en) for
+    `cassava-products`, but product search `/api/products?q=gari` returns 0 while
+    `q=garri` returns the garri listing. Category aliases are not applied to product
+    keyword search. `gari` is also Swahili for "car" in several automotive aliases, so a
+    naive global alias match would create false positives; needs a scoped search-owner
+    change.
+  - *Category attributes absent from public detail:* 353 `CategoryAttribute` rows exist
+    (e.g. Teff: grind, net weight, origin; Cassava: product form, fermentation), and the
+    product API returns a free-form `attributes` JSON, but the public product detail has
+    no category-attribute rendering or required/optional guidance. Buyers cannot see the
+    seeded specification vocabulary.
+  - *Wholesale wording:* the source/docs say wholesale is a purchasing mode, but
+    `lib/data/taxonomy.ts` contains a level-1 category named "Wholesale & Business
+    Supplies" (`wholesale-business-supplies`, parent Agriculture & Business) with no
+    attributes and only escrow listings; its child Bulk Grains & Staples does carry MOQ
+    attributes. The naming/placement can read as a wholesale department and needs an
+    owner wording decision.
+  - *Aura blocked by Valkey:* no Valkey listener on 6380 in this session; live
+    `assist=aura` remains unexercised because it needs the configured key plus the
+    Valkey rate limiter. Deterministic alias suggestions remain the default.
+- **Residual risks.** The workflow intentionally archives run-owned fixtures rather than
+  deleting them, so REVIEW `Product` totals grow by test residue each run (187 total on
+  the final check; 57 ACTIVE). Pre-apply scripts `taxonomy-product-mapping.ts` and
+  `taxonomy-mapping-dry-run.ts` still expect `applied=false` and are not post-apply count
+  authorities; the coverage report and reconciliation script are. The taxonomy seed's
+  REVIEW expectations were re-baselined to 57/49 subtree counts but the seed was not
+  re-run in this slice. No commit was pushed.

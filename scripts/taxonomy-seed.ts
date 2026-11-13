@@ -29,9 +29,41 @@ import {
 /**
  * REVIEW acceptance expectations. Update these deliberately when a reviewed
  * catalogue batch changes the accepted totals; the seed fails otherwise.
+ *
+ * Products are counted across each existing category's whole subtree because
+ * the reviewed product->leaf mapping moved listings onto descendant leaves.
+ * Direct-only counts would undercount them and falsely report a changed map.
  */
-const EXPECTED_ACTIVE_PRODUCTS_ON_EXISTING = 41;
-const EXPECTED_ACTIVE_PRODUCTS_TOTAL = 49;
+const EXPECTED_ACTIVE_PRODUCTS_ON_EXISTING = 49;
+const EXPECTED_ACTIVE_PRODUCTS_TOTAL = 57;
+
+/** All ids in the subtree rooted at rootId (including rootId). */
+function subtreeIds(rootId: string, nodes: Array<{ id: string; parentId: string | null }>): Set<string> {
+  const childrenByParent = new Map<string, string[]>();
+  for (const node of nodes) {
+    if (!node.parentId) continue;
+    const children = childrenByParent.get(node.parentId) ?? [];
+    children.push(node.id);
+    childrenByParent.set(node.parentId, children);
+  }
+  const ids = new Set<string>([rootId]);
+  const stack = [rootId];
+  while (stack.length > 0) {
+    const current = stack.pop() as string;
+    for (const child of childrenByParent.get(current) ?? []) {
+      if (ids.has(child)) continue;
+      ids.add(child);
+      stack.push(child);
+    }
+  }
+  return ids;
+}
+
+function countInSubtree(counts: Map<string, number>, ids: Set<string>): number {
+  let total = 0;
+  for (const id of ids) total += counts.get(id) ?? 0;
+  return total;
+}
 
 type ExistingSnapshot = {
   id: string;
@@ -205,18 +237,24 @@ async function main(): Promise<void> {
           );
         }
 
-        const before: ExistingSnapshot[] = existingActive.map((entry) => ({
-          id: entry.id,
-          key: entry.key,
-          name: entry.name,
-          slug: entry.slug,
-          description: entry.description,
-          imageUrl: entry.imageUrl,
-          imageAlt: entry.imageAlt,
-          isDemo: entry.isDemo,
-          products: productCountByCategory.get(entry.id) ?? 0,
-          activeProducts: activeCountByCategory.get(entry.id) ?? 0
-        }));
+        const before: ExistingSnapshot[] = existingActive.map((entry) => {
+          const ids = subtreeIds(
+            entry.id,
+            categoriesBefore.map((category) => ({ id: category.id, parentId: category.parentId }))
+          );
+          return {
+            id: entry.id,
+            key: entry.key,
+            name: entry.name,
+            slug: entry.slug,
+            description: entry.description,
+            imageUrl: entry.imageUrl,
+            imageAlt: entry.imageAlt,
+            isDemo: entry.isDemo,
+            products: countInSubtree(productCountByCategory, ids),
+            activeProducts: countInSubtree(activeCountByCategory, ids)
+          };
+        });
         const totalActiveProductsBefore = before.reduce(
           (sum, entry) => sum + entry.activeProducts,
           0
@@ -442,11 +480,15 @@ async function main(): Promise<void> {
         const activeCountAfter = new Map(
           activeProductGroupsAfter.map((group) => [group.categoryId, group._count._all])
         );
+        const categoryTreeAfter = categoriesAfter.map((category) => ({
+          id: category.id,
+          parentId: category.parentId
+        }));
         const totalProductsAfter = await tx.product.count();
-        const totalActiveProductsAfter = before.reduce(
-          (sum, entry) => sum + (activeCountAfter.get(entry.id) ?? 0),
-          0
-        );
+        const totalActiveProductsAfter = before.reduce((sum, entry) => {
+          const ids = subtreeIds(entry.id, categoryTreeAfter);
+          return sum + countInSubtree(activeCountAfter, ids);
+        }, 0);
         const totalActiveAllAfterGroups = await tx.product.groupBy({
           by: ["status"],
           where: { status: "ACTIVE" },
@@ -478,8 +520,10 @@ async function main(): Promise<void> {
             throw new Error(`${snapshot.slug}: preserved category presentation fields changed`);
           }
           if (
-            (productCountAfter.get(after.id) ?? 0) !== snapshot.products ||
-            (activeCountAfter.get(after.id) ?? 0) !== snapshot.activeProducts
+            countInSubtree(productCountAfter, subtreeIds(after.id, categoryTreeAfter)) !==
+              snapshot.products ||
+            countInSubtree(activeCountAfter, subtreeIds(after.id, categoryTreeAfter)) !==
+              snapshot.activeProducts
           ) {
             throw new Error(`${snapshot.slug}: product mapping changed`);
           }
@@ -592,8 +636,14 @@ async function main(): Promise<void> {
             id: entry.id,
             slug: entry.slug,
             name: entry.name,
-            products: productCountAfter.get(entry.id) ?? 0,
-            activeProducts: activeCountAfter.get(entry.id) ?? 0
+            products: countInSubtree(
+              productCountAfter,
+              subtreeIds(entry.id, categoryTreeAfter)
+            ),
+            activeProducts: countInSubtree(
+              activeCountAfter,
+              subtreeIds(entry.id, categoryTreeAfter)
+            )
           })),
           products: {
             totalBefore: totalProductsBefore,

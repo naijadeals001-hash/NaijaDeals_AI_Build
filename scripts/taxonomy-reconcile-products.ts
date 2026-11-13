@@ -3,7 +3,8 @@
  * READ-ONLY active-product reconciliation for the REVIEW catalogue.
  *
  * Proves the reviewed arithmetic:
- *   49 active = 31 accepted baseline + 6 Batch A + 4 Batch B + 8 taxonomy batch
+ *   57 active = 31 accepted baseline + 6 Batch A + 4 Batch B + 8 taxonomy batch
+ *              + 8 Batch 2
  *
  * The script opens an explicit READ ONLY transaction, prints every active
  * product with its id, creation time (UTC and local), department, category and
@@ -26,6 +27,9 @@ import { Client } from "pg";
  * any of them. Batch A and Batch B are only eight minutes apart, while the
  * accepted baseline contains two creation runs more than two hours apart, so
  * windows are used instead of gap clustering.
+ *
+ * Batch 2 is deliberately one batch, not a taxonomy batch alias: the label
+ * must appear exactly once so the 57-product arithmetic cannot double count it.
  */
 const EXPECTED_BATCHES: ReadonlyArray<{
   label: string;
@@ -36,13 +40,15 @@ const EXPECTED_BATCHES: ReadonlyArray<{
   { label: "accepted-baseline", expected: 31, from: null, to: "2026-11-13T18:00:00.000Z" },
   { label: "batch-a", expected: 6, from: "2026-11-13T18:00:00.000Z", to: "2026-11-13T18:40:00.000Z" },
   { label: "batch-b", expected: 4, from: "2026-11-13T18:40:00.000Z", to: "2026-11-13T19:30:00.000Z" },
-  { label: "taxonomy-batch", expected: 8, from: "2026-11-13T19:30:00.000Z", to: null }
+  { label: "taxonomy-batch", expected: 8, from: "2026-11-13T19:30:00.000Z", to: "2026-11-13T21:00:00.000Z" },
+  { label: "batch-2", expected: 8, from: "2026-11-13T21:00:00.000Z", to: null }
 ];
 
-const EXPECTED_ACTIVE_TOTAL = 49;
-const EXPECTED_PRE_TAXONOMY_TOTAL = 41;
+const EXPECTED_ACTIVE_TOTAL = 57;
+const EXPECTED_PRE_BATCH2_TOTAL = 49;
 const FIXTURE_PATTERN =
   /(^|[^a-z])(qa|test|fixture|acceptance|dummy|sample|placeholder|probe)([^a-z]|$)/i;
+const CRF_PATTERN = /(^|[^a-z])crf([^a-z]|$)/i;
 
 type CategoryRow = {
   id: string;
@@ -272,12 +278,20 @@ async function main(): Promise<void> {
       };
     });
 
-    const preTaxonomy = batches
+    const batchLabels = EXPECTED_BATCHES.map((batch) => batch.label);
+    if (new Set(batchLabels).size !== batchLabels.length) {
+      problems.push("accepted batch labels are not unique");
+    }
+    if (batchLabels.filter((label) => /^batch-2$/.test(label)).length !== 1) {
+      problems.push("Batch 2 must appear exactly once in the accepted batches");
+    }
+
+    const preBatch2 = batches
       .slice(0, -1)
       .reduce((sum, batch) => sum + batch.count, 0);
-    if (preTaxonomy !== EXPECTED_PRE_TAXONOMY_TOTAL) {
+    if (preBatch2 !== EXPECTED_PRE_BATCH2_TOTAL) {
       problems.push(
-        `pre-taxonomy batches total ${preTaxonomy}; expected ${EXPECTED_PRE_TAXONOMY_TOTAL}`
+        `pre-Batch-2 batches total ${preBatch2}; expected ${EXPECTED_PRE_BATCH2_TOTAL}`
       );
     }
 
@@ -332,6 +346,22 @@ async function main(): Promise<void> {
     const categoryRequests = await client.query<{ status: string; count: number }>(
       `select status, count(*)::int as count from "CategoryRequest" group by status order by status`
     );
+    const crfCategories = await client.query<{ count: number }>(
+      `select count(*)::int as count from "Category"
+        where name ~* '(^|[^a-z])crf([^a-z]|$)'`
+    );
+    const crfRequests = await client.query<{ count: number }>(
+      `select count(*)::int as count from "CategoryRequest"
+        where "suggestedName" ~* '(^|[^a-z])crf([^a-z]|$)'`
+    );
+    const crfCategoryNames = crfCategories.rows[0]?.count ?? 0;
+    const crfRequestNames = crfRequests.rows[0]?.count ?? 0;
+    if (crfCategoryNames !== 0) {
+      problems.push(`CRF category names present: ${crfCategoryNames}`);
+    }
+    if (crfRequestNames !== 0) {
+      problems.push(`CRF category-request names present: ${crfRequestNames}`);
+    }
     const imagesTotal = await client.query<{ total: number }>(
       'select count(*)::int as total from "ProductImage"'
     );
@@ -352,15 +382,30 @@ async function main(): Promise<void> {
       active: {
         total: active.length,
         expected: EXPECTED_ACTIVE_TOTAL,
-        preTaxonomy: preTaxonomy,
-        expectedPreTaxonomy: EXPECTED_PRE_TAXONOMY_TOTAL,
-        taxonomyBatch: batches[batches.length - 1]?.count ?? 0,
+        preBatch2: preBatch2,
+        expectedPreBatch2: EXPECTED_PRE_BATCH2_TOTAL,
+        taxonomyBatch: batches.find((batch) => batch.label === "taxonomy-batch")?.count ?? 0,
+        batch2: batches.find((batch) => batch.label === "batch-2")?.count ?? 0,
         demo: rows.filter((row) => row.isDemo).length,
         live: rows.filter((row) => !row.isDemo).length
       },
-      batches,
+      batches: batches.map((batch, index) => ({
+        ...batch,
+        label: EXPECTED_BATCHES[index]?.label ?? batch.label
+      })),
+      batchLabels,
       statuses: statuses.rows,
       categoryRequests: categoryRequests.rows,
+      crf: {
+        categoryNames: crfCategoryNames,
+        categoryRequestNames: crfRequestNames
+      },
+      nonPublic: {
+        drafts: statuses.rows.find((row) => row.status === "DRAFT")?.count ?? 0,
+        archived: statuses.rows.find((row) => row.status === "ARCHIVED")?.count ?? 0,
+        draftFixtures: statuses.rows.find((row) => row.status === "DRAFT")?.fixtures ?? 0,
+        archivedFixtures: statuses.rows.find((row) => row.status === "ARCHIVED")?.fixtures ?? 0
+      },
       totals: {
         images: imagesTotal.rows[0]?.total ?? 0,
         stockRows: stockTotal.rows[0]?.total ?? 0
@@ -398,7 +443,8 @@ async function main(): Promise<void> {
       console.log("");
       console.log(
         `Totals: ${summary.active.total} active (${summary.active.demo} DEMO, ${summary.active.live} LIVE); ` +
-          `pre-taxonomy ${summary.active.preTaxonomy}; taxonomy batch ${summary.active.taxonomyBatch}`
+          `pre-Batch-2 ${summary.active.preBatch2}; taxonomy batch ${summary.active.taxonomyBatch}; ` +
+          `Batch 2 ${summary.active.batch2}`
       );
       console.log(
         `Product statuses: ${summary.statuses
@@ -406,9 +452,13 @@ async function main(): Promise<void> {
           .join(", ")}`
       );
       console.log(
+        `Non-public rows: drafts=${summary.nonPublic.drafts} (fixture-like=${summary.nonPublic.draftFixtures}); ` +
+          `archived=${summary.nonPublic.archived} (fixture-like=${summary.nonPublic.archivedFixtures})`
+      );
+      console.log(
         `Category requests: ${summary.categoryRequests
           .map((row) => `${row.status}=${row.count}`)
-          .join(", ") || "(none)"}`
+          .join(", ") || "(none)"}; CRF names=${summary.crf.categoryNames + summary.crf.categoryRequestNames}`
       );
       console.log(
         `Image rows: ${summary.totals.images}; inventory rows: ${summary.totals.stockRows}`
@@ -419,8 +469,9 @@ async function main(): Promise<void> {
         console.error("Result: FAIL");
       } else {
         console.log(
-          "Result: PASS — 49 active = 31 accepted baseline + 6 Batch A + 4 Batch B + 8 taxonomy batch; " +
-            "no acceptance fixture is ACTIVE; drafts and archived rows excluded."
+          "Result: PASS — 57 active = 31 accepted baseline + 6 Batch A + 4 Batch B + 8 taxonomy batch " +
+            "+ 8 Batch 2; Batch 2 appears once; no acceptance fixture is ACTIVE; " +
+            "drafts and archived rows are reported separately; CRF category names = 0."
         );
       }
     }

@@ -1,8 +1,14 @@
 # Taxonomy coverage and product-leaf mapping — 2026-11-13
 
-REVIEW target: `naijadeals_review` (`DatabaseClassification` = REVIEW). Read-only plan: no
-`Product.categoryId` was written. Source of truth: `lib/data/taxonomy.ts` and
-`docs/taxonomy/product-leaf-mapping.json`.
+REVIEW target: `naijadeals_review` (`DatabaseClassification` = REVIEW). The reviewed
+plan has been applied with audited `Product.categoryId` writes. Current numbers are
+computed by `scripts/taxonomy-coverage-report.ts`; the plan and taxonomy source remain
+`docs/taxonomy/product-leaf-mapping.json` and `lib/data/taxonomy.ts`. This document
+records the applied state and the remaining gaps, not a future-only plan.
+
+The 16 example areas used to size this taxonomy are illustrative coverage targets, **not
+the full requested marketplace scope**. Additional departments, leaves, country rules and
+listing types require a separately authorised slice.
 
 ## 1. Extended taxonomy (seeded and verified)
 
@@ -59,43 +65,61 @@ No regulated leaf is publishable in NG.
 note requiring a recognised standards marking. Other countries have no rule yet; they
 must add their own country review before any restricted leaf is enabled there.
 
-## 3. Product-leaf mapping plan (49 active products)
+## 3. Product-leaf mapping (57 active products, applied)
 
 | Measure | Count |
 |---|---|
-| Active products covered | 49 |
-| Mapped to a most-specific selectable leaf | 42 |
-| — already on the proposed leaf (`keep`) | 8 |
-| — proposed moves (`map`, **applied on 2026-11-13**) | 34 |
-| Ambiguous, retained on current assignment (`review`) | 7 |
-| Selectable leaves currently populated | 30 of 96 publishable |
-| Selectable leaves after the proposed mapping | 30 of 96 publishable |
-| `Product.categoryId` writes | **0** |
+| Active products covered | 57 |
+| On a most-specific selectable leaf (`map` + `keep`) | 50 |
+| — audited moves applied (`map`) | 34 |
+| — already on the proposed leaf (`keep`) | 16 |
+| Ambiguous, retained on selectable level-1 categories (`review`) | 7 |
+| Selectable leaves populated | 30 of 96 publishable |
+| `Product.categoryId` writes | **34 audited moves; 7 re-applied after a revert (41 audit rows)** |
 
-Current 8 populated leaves are the taxonomy batch (one product each): Teff Flour; Maize
-Meal & Porridge; African-Print Fabrics; Handwoven & Dyed Fabrics; Shea & Natural Butters;
-Traditional Cleansers & Black Soap; Cassava Processing Equipment; Storage & Organisation.
+The 30 populated leaves hold 50 active products; the 7 ambiguous products are not counted
+as leaf coverage. The seven re-applied products (diced onions, red bell peppers, green
+beans, rooftop solar panel array, solar inverter, wireless game controllers, coloured-button
+controller) are each on the leaf named in their latest `AuditLog`
+(`taxonomy.product.reclassified`) `afterCategoryId`; the coverage script verifies this from
+the database rather than a hardcoded list.
 
-Proposed populated leaves and counts after mapping (applied on 2026-11-13):
+Populated leaves and their active-product counts, computed from `naijadeals_review` on
+2026-11-13 (30 leaves / 50 products; the 7 ambiguous products are excluded):
 
-| Proposed leaf | Active products |
-|---|---|
-| Groceries & Household Essentials / Fresh Produce | 8 |
-| Electronics & Appliances / Small Appliances | 4 |
-| Phones & Tablets / Smartphones | 4 |
-| Computers / Computer Accessories | 3 |
-| Computers / Laptops | 2 |
-| Gaming / Gaming Accessories | 2 |
-| Fashion & Accessories / Bags & Accessories | 2 |
-| Fashion & Accessories / Footwear | 2 |
-| Beauty & Personal Care / Skincare | 1 |
-| Beauty & Personal Care / Hair Care | 1 |
-| Phones & Tablets / Tablets | 1 |
-| Phones & Tablets / Phone Accessories | 1 |
-| Home & Kitchen / Cookware & Bakeware | 1 |
-| Power & Solar / Solar Panels | 1 |
-| Power & Solar / Inverters & Batteries | 1 |
-| The 8 taxonomy-batch leaves above | 1 each |
+| Populated leaf | Active products |
+|---|---:|
+| Agriculture & Business / Processing Equipment / Cassava Processing Equipment | 1 |
+| Automotive & Motorcycle / Car Care & Accessories / Car Care & Cleaning | 1 |
+| Baby, Kids & Toys / Baby Feeding & Care / Bottles, Teats & Sterilisers | 1 |
+| Books & Stationery / Stationery & Office / Notebooks & Paper | 1 |
+| Electronics & Technology / Computers / Computer Accessories | 3 |
+| Electronics & Technology / Computers / Laptops | 2 |
+| Electronics & Technology / Electronics & Appliances / Small Appliances | 4 |
+| Electronics & Technology / Gaming / Gaming Accessories | 2 |
+| Electronics & Technology / Phones & Tablets / Phone Accessories | 1 |
+| Electronics & Technology / Phones & Tablets / Smartphones | 4 |
+| Electronics & Technology / Phones & Tablets / Tablets | 1 |
+| Fashion & Beauty / Beauty & Personal Care / Hair Care | 1 |
+| Fashion & Beauty / Beauty & Personal Care / Skincare | 1 |
+| Fashion & Beauty / Fabrics & Textiles / African-Print Fabrics | 1 |
+| Fashion & Beauty / Fabrics & Textiles / Handwoven & Dyed Fabrics | 1 |
+| Fashion & Beauty / Fashion & Accessories / Bags & Accessories | 3 |
+| Fashion & Beauty / Fashion & Accessories / Footwear | 2 |
+| Fashion & Beauty / Natural & Traditional Beauty / Shea & Natural Butters | 1 |
+| Fashion & Beauty / Natural & Traditional Beauty / Traditional Cleansers & Black Soap | 1 |
+| Food & Everyday Essentials / Grains & Flours / Cassava Products | 1 |
+| Food & Everyday Essentials / Grains & Flours / Maize Meal & Porridge | 1 |
+| Food & Everyday Essentials / Grains & Flours / Teff Flour | 1 |
+| Food & Everyday Essentials / Groceries & Household Essentials / Fresh Produce | 8 |
+| Health & Wellness / Medical Devices & Aids / First-Aid Supplies | 1 |
+| Home & Living / Home & Kitchen / Cookware & Bakeware | 1 |
+| Home & Living / Home & Kitchen / Storage & Organisation | 1 |
+| Home & Living / Power & Solar / Inverters & Batteries | 1 |
+| Home & Living / Power & Solar / Solar Panels | 1 |
+| Sports & Outdoors / Ball & Racquet Sports / Football & Basketball | 1 |
+| Tools & Building Materials / Power Tools / Drills & Drivers | 1 |
+| **Total** | **50** |
 
 ## 4. Ambiguous products — classification review required
 
@@ -123,34 +147,43 @@ These keep their current category; no mapping is proposed.
 
 ## 6. Exceptions and limits
 
-- The mapping has been applied. The 34 proposed moves were **applied on 2026-11-13**; the live
-  catalogue still has 41 active products on the nine existing level-1 categories and 8
-  on the taxonomy leaves.
-- `CategoryRequest` is **2**, not 0: two APPROVED, run-tagged synthetic requests
-  (`cmwf3aalh0004v4rcmix619ij`, `cmwf4er0d00slv40wlisfrtj9`) created by the earlier
-  taxonomy review flow. The seed preserves them and creates none (`created: 0`).
-  Destructive cleanup was not authorised and was not performed.
-- Acceptance fixtures are not active: 2 fixture-like DRAFT rows (`Final acceptance
-  blender …`) and 56 fixture-like ARCHIVED rows (including acceptance lifecycle probes)
-  remain excluded. ACTIVE fixture-like rows: 0.
-- Re-running the seed is idempotent: second run created 0 nodes, updated 160, kept 49
-  active products, 41 on existing categories, 148 image rows and 140 inventory rows
-  unchanged, and changed 0 `Product.categoryId` values.
-- 105 selectable leaves are still empty. They render honest empty states and are
-  deliberately not padded with duplicate products. Populating them needs original
-  imagery and reviewed listings.
+- The mapping has been applied. The 34 audited moves were applied on 2026-11-13 and the
+  seven reverted moves were re-applied; the computed state is **57 active products, 50 on
+  selectable leaves and 7 on selectable level-1 categories**. The live counts are derived
+  by `scripts/taxonomy-coverage-report.ts`, not asserted from this paragraph.
+- `CategoryRequest` is **4**, not 0: three APPROVED and one REJECTED run-tagged synthetic
+  requests created by the taxonomy review flows. Destructive cleanup was not authorised and
+  was not performed. CRF names in `Category.name` and `CategoryRequest.suggestedName`: 0.
+- Acceptance fixtures are not active: 2 fixture-like DRAFT rows and 76 fixture-like
+  ARCHIVED rows (including acceptance lifecycle probes) remain excluded. ACTIVE
+  fixture-like rows: 0. The archived count grows as the workflow archives its run-owned
+  fixtures instead of deleting them; the count above is the final 2026-11-13 check.
+- The taxonomy seed was not re-run in this slice. Its REVIEW expectations are re-baselined
+  to the 57-active state, but the coverage report and reconciliation script are the current
+  count authority. The seed does not move products.
+- 83 selectable leaves are empty: 66 publishable and 17 NG-regulated. Empty publishable
+  leaves render honest empty states and are deliberately not padded with duplicate
+  products. Populating them needs original imagery and reviewed listings.
+- Six departments have no approved banner art (`imageUrl = NULL`): Health & Wellness;
+  Baby, Kids & Toys; Sports & Outdoors; Automotive & Motorcycle; Tools & Building
+  Materials; Books & Stationery. No accurate approved asset exists for them, so no
+  unrelated image was substituted and none was generated in this slice.
 
 ## 7. Verification commands
 
 ```bash
-REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-seed.ts --expect-db=naijadeals_review
+REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-coverage-report.ts --expect-db=naijadeals_review --images
 REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-reconcile-products.ts --expect-db=naijadeals_review
-REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-product-mapping.ts --expect-db=naijadeals_review
-REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-mapping-dry-run.ts --expect-db=naijadeals_review
+REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-apply-mapping.ts --expect-db=naijadeals_review --apply
 npx tsc --noEmit
 ```
 
-All four scripts print `Result: PASS`. The mapping and reconciliation scripts open
-`BEGIN READ ONLY`, confirm `transaction_read_only = on`, and the mapping script also
-compares a `(Product.id, Product.categoryId)` fingerprint before and after its checks
-(`fingerprint stable: true`).
+The coverage report and reconciliation scripts open `BEGIN READ ONLY`, confirm
+`transaction_read_only = on`, and compare a `(Product.id, Product.categoryId)` fingerprint
+before and after their checks (`fingerprint stable: true`). The coverage report exits PASS
+with `57 active / 50 on leaves / 7 ambiguous / 30 of 96 populated / 66 gaps` and, with
+`--images`, `62/62` image URLs passing HEAD 200 and Chromium `naturalWidth > 0`. The guarded
+apply script refuses to re-apply a plan already marked `applied: true`; that refusal is the
+expected double-apply protection, not a failed move. `scripts/taxonomy-product-mapping.ts`
+and `scripts/taxonomy-mapping-dry-run.ts` were written for the pre-apply plan and are not
+the post-apply count authority.

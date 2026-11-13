@@ -1,11 +1,32 @@
-# Taxonomy coverage — 2026-11-13
+# Taxonomy coverage — current computed state (2026-11-13)
 
-> Historical record of the first taxonomy batch (73 nodes). The taxonomy was later
-> extended to 161 nodes (11 departments / 37 categories / 113 selectable subcategories),
-> and the current product-to-leaf plan and populated-leaf counts live in
-> `docs/taxonomy/coverage-gaps.md`. The eight products and images below are unchanged.
-Hierarchy: 5 departments / 17 categories / 51 subcategories (73 nodes), 387 aliases, 150 attributes, 2 country restrictions.
-Existing 41 active products keep their IDs/slugs/images/stock and remain on their original selectable category nodes (0 projected category changes in the dry run). Eight new DEMO products were published through the seller + Control Center workflow with original Kie imagery.
+> **Current coverage is computed from the REVIEW database by
+> `scripts/taxonomy-coverage-report.ts`.** Run it with
+> `REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-coverage-report.ts
+> --expect-db=naijadeals_review --images`. The verified values on 2026-11-13 are:
+>
+> - **161 active taxonomy nodes: 11 departments / 37 categories / 113 selectable leaves.**
+> - **96 publishable leaves; 17 NG-regulated leaves; 30 populated publishable leaves
+>   (30/96); 66 publishable leaves empty.**
+> - **57 ACTIVE products: 50 on selectable leaves, 7 retained on level-1 categories
+>   pending classification (ambiguous), 0 active acceptance fixtures.**
+> - **34 audited `Product.categoryId` moves applied; 16 products already on their leaf;
+>   7 ambiguous. Seven moves were re-applied after a revert and all seven now sit on
+>   their audited leaves.**
+> - **`CategoryRequest`: 3 APPROVED / 1 REJECTED; 0 CRF category or request names.**
+> - **62 image URLs audited (57 active products + 5 department banners): 62 HEAD 200
+>   and Chromium `naturalWidth > 0`; 6 departments have no approved banner art.**
+>
+> The 16 example areas used to size the first taxonomy batch are illustrative coverage
+> targets, **not the full requested marketplace scope**. The taxonomy remains a reviewed
+> starting point; additional departments, leaves and country rules require a separately
+> authorised slice. It does not by itself establish service availability.
+
+> Historical record below: the first taxonomy batch was 73 nodes. Those batch-1 figures
+> are retained for provenance and are **not** current coverage.
+
+Hierarchy at batch 1: 5 departments / 17 categories / 51 subcategories (73 nodes), 387 aliases, 150 attributes, 2 country restrictions.
+At batch 1, the then-existing 41 active products kept their IDs/slugs/images/stock and remained on their original selectable category nodes (0 projected category changes in that dry run). The later reviewed product-to-leaf mapping is recorded below and in `coverage-gaps.md`. Eight new DEMO products were published through the seller + Control Center workflow with original Kie imagery.
 
 | Department | Leaf category | Published DEMO products | Images |
 |---|---|---|---|
@@ -18,13 +39,13 @@ Existing 41 active products keep their IDs/slugs/images/stock and remain on thei
 | Agriculture & Business | Cassava Processing Equipment | Electric cassava grater | `cassava-grater.webp` |
 | Home & Living | Storage & Organisation | Woven storage baskets, set of three | `woven-baskets.webp` |
 
-Populated leaves: 8 of 51 selectable leaves. The remaining 43 selectable leaves are deliberately empty and render an honest empty state; they are selectable by sellers and searchable by alias. Populating them requires further original imagery and is not padded with duplicates. Regulated leaves (`seeds-seedlings`, `fertilizers-crop-nutrition`) are not publishable in NG.
+At the time of batch 1 (the 73-node taxonomy), 8 of 51 selectable leaves were populated. That is a historical batch-1 figure, not current coverage. The remaining batch-1 leaves were deliberately empty and rendered an honest empty state; they are selectable by sellers and searchable by alias. Populating them requires further original imagery and is not padded with duplicates. Regulated leaves (`seeds-seedlings`, `fertilizers-crop-nutrition`) are not publishable in NG.
 
 Kie generation: `gpt-image-2-5-flare-text-to-image`, 1K, 1:1, 6 credits/image read back from each job, **48 credits total** for 8 images. Provenance in `generation-ledger.json`; images inspected as a contact sheet before publication.
 
 ## Batch 2 — coverage and representative DEMO products (2026-11-13)
 
-Scope: 11 departments / 37 categories / 113 leaves. 17 regulated leaves are excluded from publication (NG `canPublish=false`); 96 leaves are approved publishable. The 34 product moves proposed in `product-leaf-mapping.json` were applied by the backend during this batch; the 7 ambiguous legacy listings remain on their level-1 categories and are not counted against a leaf.
+Scope: 11 departments / 37 categories / 113 leaves. 17 regulated leaves are excluded from publication (NG `canPublish=false`); 96 leaves are approved publishable. **Current computed coverage is 30 populated of 96 publishable leaves, with 66 publishable leaves empty.** The reviewed plan applied 34 audited `Product.categoryId` moves and kept 16 products already on their leaf; the 7 ambiguous legacy listings remain on their selectable level-1 categories and are not counted against a leaf. The coverage script derives the 57 active-product total, 50 leaf products and 7 ambiguous products from the database; none of those figures are hardcoded documentation claims.
 
 Batch 2 added eight representative DEMO products across eight departments, each with one original Kie image: First-Aid Supplies (Health & Wellness), Bottles/Teats/Sterilisers (Baby, Kids & Toys), Football & Basketball (Sports & Outdoors), Car Care & Cleaning (Automotive & Motorcycle), Drills & Drivers (Tools & Building Materials), Notebooks & Paper (Books & Stationery), Cassava Products (Food & Everyday Essentials) and Bags & Accessories (Fashion & Beauty). No regulated leaf was populated.
 
@@ -188,4 +209,4 @@ Kie MCP `prepare_media_generation` quoted 6 credits / $0.03 per 1K image (credit
 
 The eight listings were created as seller DRAFTs, given exact alt text and the DEMO flag by an administrator, passed `action=validate`, and were published with `action=publish`. A 160-check run passed on the production build (`BUILD_ID LlrV3NWSANnH6hr6mbNxN`, same as the existing 3047 preview) served from an isolated temporary port against `naijadeals_review`: direct page, leaf catalogue API, rendered leaf page, search API, rendered search page, DEMO label, alt text, exact leaf, attributes, price and stock. Production screenshots are in `qa-artifacts/taxonomy-batch2/` (direct, leaf and search at 1440px; direct at 390px).
 
-The existing 3047 process was not restarted. Its in-memory public-file index predates this batch, so the new image paths return 404 from 3047 until its next authorised start; the database listings themselves are live. An isolated temporary `next start` on port 3061 used the same build and public directory and served every image with HTTP 200; it was stopped after verification. Port 3057 (an existing development server) was left untouched.
+**Current canonical-preview image audit (2026-11-13):** the 3047 preview served all 62 audited URLs with HEAD 200 and Chromium `naturalWidth > 0` (57 active-product images plus 5 department banners). No restart was performed by this audit. Six departments (Health & Wellness; Baby, Kids & Toys; Sports & Outdoors; Automotive & Motorcycle; Tools & Building Materials; Books & Stationery) still have `imageUrl = NULL`; no accurate approved banner asset exists for them, so no unrelated image was substituted and none was generated in this slice. Their storefront tiles use the neutral fallback.

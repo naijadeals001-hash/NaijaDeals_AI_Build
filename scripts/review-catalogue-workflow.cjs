@@ -29,6 +29,7 @@
  *   node scripts/review-catalogue-workflow.cjs
  *   REVIEW_BASE_URL=http://localhost:3057 node scripts/review-catalogue-workflow.cjs
  */
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { chromium, request } = require("playwright");
@@ -57,22 +58,28 @@ const PRODUCT_SLUG = `demo-review-workflow-blender-${runId}`;
 const INCOMPLETE_NAME = `DEMO — Incomplete workflow probe ${runId}`;
 
 const GROCERIES_IMAGE_ALT = "Basket of fresh tomatoes, peppers, leafy greens and onions";
+/**
+ * Approved expansion taxonomy categories. Power & Solar and Gaming are
+ * level-1 categories under Home & Living and Electronics & Technology in the
+ * seeded taxonomy, not top-level departments. The workflow verifies them but
+ * never creates or rewrites a shared taxonomy node.
+ */
 const EXPANSION_DEPARTMENTS = [
   {
     name: "Power & Solar",
     slug: "power-solar",
+    parentSlug: "home-living",
     description: "DEMO department — demonstration inventory for owner review, not live supply.",
     imageUrl: "/generated/shop/category-power-solar.webp",
-    imageAlt: "Solar panel, portable power station and power bank on a pale blue surface",
-    sortOrder: 30
+    imageAlt: "Solar panel, portable power station and power bank on a pale blue surface"
   },
   {
     name: "Gaming",
     slug: "gaming",
+    parentSlug: "electronics-technology",
     description: "DEMO department — demonstration inventory for owner review, not live supply.",
     imageUrl: "/generated/shop/category-gaming.webp",
-    imageAlt: "Game controller, mechanical keyboard and headset on a dark surface",
-    sortOrder: 31
+    imageAlt: "Game controller, mechanical keyboard and headset on a dark surface"
   }
 ];
 
@@ -186,6 +193,7 @@ let createdDepartmentId = null;
 let baseline = null;
 let baselineIsSeed = false;
 let finalCounts = null;
+const baselineProductGuards = [];
 
 
 function check(name, ok, detail = "") {
@@ -208,6 +216,76 @@ function activeCounts(catalogue) {
     departments: catalogue.departments.filter((entry) => entry.isActive && (entry.level ?? 0) === 0).length,
     products: catalogue.products.filter((entry) => entry.status === "ACTIVE").length
   };
+}
+
+/**
+ * The preserved fields of an accepted catalogue record. These are exactly the
+ * fields an unrelated workflow must never change: identity, classification,
+ * publication state, DEMO provenance, imagery, inventory and price.
+ */
+function productSnapshot(product) {
+  return {
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    categoryId: product.categoryId,
+    status: product.status,
+    isDemo: product.isDemo === true,
+    isSample: product.isSample === true,
+    priceKobo: product.priceKobo === null || product.priceKobo === undefined ? null : String(product.priceKobo),
+    currency: product.currency ?? null,
+    countryCode: product.countryCode ?? null,
+    images: (product.images ?? []).map((image) => ({
+      url: image.url ?? null,
+      alt: image.alt ?? null,
+      sortOrder: image.sortOrder ?? 0
+    })),
+    stock: product.stock
+      ? {
+          quantity: product.stock.quantity ?? null,
+          reserved: product.stock.reserved ?? null,
+          lowStockLevel: product.stock.lowStockLevel ?? null
+        }
+      : null
+  };
+}
+
+function stableJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function fingerprintProducts(products) {
+  return crypto.createHash("sha256").update(stableJson(products)).digest("hex");
+}
+
+function productDifferences(before, after) {
+  const changedFields = [];
+  for (const field of Object.keys(before)) {
+    if (stableJson(before[field]) !== stableJson(after[field])) changedFields.push(field);
+  }
+  return changedFields;
+}
+
+function describeProductDrift(existing, spec) {
+  const mismatches = [];
+  if (existing.name !== spec.name) mismatches.push("name");
+  if (existing.slug !== spec.slug) mismatches.push("slug");
+  if (existing.description !== spec.description) mismatches.push("description");
+  if (existing.priceKobo !== String(spec.priceKobo)) mismatches.push("priceKobo");
+  if (existing.stock?.quantity !== spec.quantity) mismatches.push("stock.quantity");
+  if (existing.stock?.lowStockLevel !== spec.lowStockLevel) mismatches.push("stock.lowStockLevel");
+  if (existing.isDemo !== true) mismatches.push("isDemo");
+  if (existing.images.length !== 1) mismatches.push("images.length");
+  if (existing.images[0]?.url !== spec.imageUrl) mismatches.push("images[0].url");
+  if (existing.images[0]?.alt !== spec.imageAlt) mismatches.push("images[0].alt");
+  return mismatches.join(",") || "unknown";
 }
 
 function countsLabel(counts) {
@@ -293,6 +371,9 @@ function parse(response, body) {
     const catalogue = await adminCatalogue();
     const activeDepartments = catalogue.departments.filter((entry) => entry.isActive && (entry.level ?? 0) === 0);
     const activeProducts = catalogue.products.filter((entry) => entry.status === "ACTIVE");
+    const products = activeProducts
+      .map(productSnapshot)
+      .sort((left, right) => left.id.localeCompare(right.id));
     return {
       counts: {
         departments: activeDepartments.length,
@@ -311,7 +392,10 @@ function parse(response, body) {
       })),
       activeDepartmentIds: activeDepartments.map((entry) => entry.id),
       activeProductIds: activeProducts.map((entry) => entry.id),
-      activeProductSlugs: activeProducts.map((entry) => entry.slug)
+      activeProductSlugs: activeProducts.map((entry) => entry.slug),
+      products,
+      productFingerprint: fingerprintProducts(products),
+      activeProductFingerprint: fingerprintProducts(products)
     };
   }
 
@@ -392,14 +476,52 @@ function parse(response, body) {
         ? [...unexpected, ...stillWrong.map((entry) => entry.name)].join(" | ")
         : `${sharedBefore.length} shared departments verified`
     );
+  }
+
+  /**
+   * Byte-equivalence guard for every accepted baseline product.
+   *
+   * The earlier guard only re-checked that baseline products were still
+   * ACTIVE. That would have missed the obsolete broad-category correction,
+   * which rewrote Product.categoryId (and could silently rewrite imagery,
+   * inventory or price). This guard fingerprints the exact preserved fields
+   * captured before the run and fails on any difference, naming each changed
+   * field. A changed record must be run-owned; otherwise the workflow has
+   * mutated approved catalogue content.
+   */
+  async function guardBaselineProducts(stage) {
+    if (!baseline) return { stage, fingerprint: null, unchanged: false, differences: [] };
+    const catalogue = await adminCatalogue();
+    const byId = new Map(catalogue.products.map((entry) => [entry.id, entry]));
+    const differences = [];
+    const current = [];
+    for (const before of baseline.products) {
+      const entry = byId.get(before.id);
+      if (!entry) {
+        differences.push(`${before.slug}: missing from the catalogue`);
+        continue;
+      }
+      const after = productSnapshot(entry);
+      current.push(after);
+      const changedFields = productDifferences(before, after);
+      if (changedFields.length > 0) {
+        differences.push(`${before.slug}: ${changedFields.join(",")}${isRunOwned(entry) ? " (run-owned)" : ""}`);
+      }
+    }
+    const fingerprint = fingerprintProducts(current);
     check(
-      "baseline active products were not altered by the workflow",
-      baseline.activeProductIds.every((id) => {
-        const current = after.products.find((entry) => entry.id === id);
-        return current?.status === "ACTIVE";
-      }),
-      `${baseline.activeProductIds.length} baseline products checked`
+      `accepted baseline products are byte-equivalent ${stage} (id, slug, categoryId, status, DEMO, images, inventory, price)`,
+      differences.length === 0 && baseline.products.length === current.length,
+      differences.length
+        ? differences.slice(0, 8).join(" | ")
+        : `${baseline.products.length} products; ${baseline.productFingerprint.slice(0, 16)} -> ${fingerprint.slice(0, 16)}`
     );
+    check(
+      `no accepted baseline product was mutated by the workflow ${stage}`,
+      differences.length === 0,
+      differences.length ? `${differences.length} changed` : "0 changed"
+    );
+    return { stage, fingerprint, unchanged: differences.length === 0, differences };
   }
 
   /**
@@ -519,46 +641,34 @@ function parse(response, body) {
   }
 
   async function ensureExpansionDepartment(spec) {
-    let catalogue = await adminCatalogue();
-    let existing = catalogue.departments.find((entry) => entry.slug === spec.slug);
-    if (existing) {
-      const matches =
-        existing.name === spec.name &&
-        existing.description === spec.description &&
-        existing.imageUrl === spec.imageUrl &&
-        existing.imageAlt === spec.imageAlt &&
-        existing.sortOrder === spec.sortOrder &&
-        existing.isActive === true &&
-        existing.isDemo === true;
-      if (!matches) {
-        const updated = await api("/api/admin/catalogue/departments", {
-          method: "PATCH",
-          data: { ...spec, id: existing.id, isActive: true, isDemo: true }
-        });
-        check(
-          `expansion department ${spec.slug} corrected and activated`,
-          updated.status === 200 && updated.body?.isActive === true,
-          `status=${updated.status} active=${updated.body?.isActive}`
-        );
-      } else {
-        check(`expansion department ${spec.slug} already present and active`, true, spec.name);
-      }
-      catalogue = await adminCatalogue();
-      existing = catalogue.departments.find((entry) => entry.slug === spec.slug);
-      return existing ?? null;
+    const catalogue = await adminCatalogue();
+    const existing = catalogue.departments.find((entry) => entry.slug === spec.slug);
+    if (!existing) {
+      check(
+        `approved taxonomy category ${spec.slug} is present`,
+        false,
+        "missing from the catalogue; this workflow never creates shared taxonomy nodes"
+      );
+      return null;
     }
-
-    const created = await api("/api/admin/catalogue/departments", {
-      method: "POST",
-      data: { ...spec, isDemo: true }
-    });
+    const parent = existing.parentId
+      ? catalogue.departments.find((entry) => entry.id === existing.parentId)
+      : null;
+    const matches =
+      existing.name === spec.name &&
+      existing.description === spec.description &&
+      existing.imageUrl === spec.imageUrl &&
+      existing.imageAlt === spec.imageAlt &&
+      existing.isActive === true &&
+      existing.isDemo === true &&
+      existing.level === 1 &&
+      parent?.slug === spec.parentSlug;
     check(
-      `expansion department ${spec.slug} created through the Control Center API`,
-      created.status === 201 && created.body?.isActive === true && created.body?.isDemo === true,
-      `status=${created.status} active=${created.body?.isActive} demo=${created.body?.isDemo}`
+      `approved taxonomy category ${spec.slug} matches the seeded baseline`,
+      matches,
+      `level=${existing.level} parent=${parent?.slug ?? "none"} active=${existing.isActive} demo=${existing.isDemo} image=${existing.imageUrl ?? "none"}`
     );
-    if (created.body?.id) expansionCreatedDepartments.push(created.body.id);
-    return created.body ?? null;
+    return existing;
   }
 
   async function ensureExpansionProduct(spec, departmentId) {
@@ -583,6 +693,14 @@ function parse(response, body) {
         existing.images[0]?.alt === spec.imageAlt &&
         existing.isDemo === true;
       if (!matches) {
+        if (!isRunOwned(existing)) {
+          check(
+            `expansion product ${spec.slug} matches the approved baseline and was not mutated`,
+            false,
+            `approved catalogue drift (${describeProductDrift(existing, spec)}); refusing to PATCH a non-run-owned record`
+          );
+          return existing;
+        }
         const updated = await api("/api/admin/catalogue/products", {
           method: "PATCH",
           data: {
@@ -599,7 +717,7 @@ function parse(response, body) {
           }
         });
         check(
-          `expansion product ${spec.slug} corrected through the Control Center API`,
+          `run-owned expansion product ${spec.slug} corrected through the Control Center API`,
           updated.status === 200,
           `status=${updated.status} code=${updated.body?.code ?? "none"}`
         );
@@ -774,16 +892,17 @@ function parse(response, body) {
     }
 
     check(
-      "expansion adds Power & Solar and Gaming departments without disturbing the approved seed",
+      "expansion keeps Power & Solar and Gaming active under the seeded taxonomy without disturbing the approved seed",
       catalogue.departments.filter((entry) => entry.isActive && ["power-solar", "gaming"].includes(entry.slug)).length === 2 &&
         catalogue.departments.some((entry) => entry.slug === "groceries-household" && entry.isActive),
-      `${catalogue.departments.filter((entry) => entry.isActive).length} active departments`
+      `${catalogue.departments.filter((entry) => entry.isActive).length} active categories`
     );
     const counts = activeCounts(catalogue);
     check(
       "expansion matches the approved active-catalogue delta",
-      counts.departments === (baselineIsSeed ? 9 : baseline.counts.departments) &&
-        counts.products === (baselineIsSeed ? SEED_BASELINE.products + EXPANSION_PRODUCTS.length : baseline.counts.products),
+      counts.departments === baseline.counts.departments &&
+        counts.products ===
+          (baselineIsSeed ? SEED_BASELINE.products + EXPANSION_PRODUCTS.length : baseline.counts.products),
       countsLabel(counts)
     );
   }
@@ -871,10 +990,14 @@ function parse(response, body) {
         ? {
             counts: baseline.counts,
             departments: baseline.departments.length,
-            activeProductSlugs: baseline.activeProductSlugs
+            products: baseline.products.length,
+            activeProductSlugs: baseline.activeProductSlugs,
+            productFingerprint: baseline.productFingerprint,
+            activeProductFingerprint: baseline.activeProductFingerprint
           }
         : null,
       finalCounts,
+      baselineProductPreservation: baselineProductGuards,
       expansion: {
         createdDepartments: expansionCreatedDepartments,
         createdProducts: expansionCreatedProducts,
@@ -1590,6 +1713,7 @@ function parse(response, body) {
     // ---------------------------------------------------------------------
     await cleanupRunRecords({ assertBaseline: true });
     await guardSharedDepartments();
+    baselineProductGuards.push(await guardBaselineProducts("after run-record cleanup"));
     const afterCleanup = await adminCatalogue();
     const sharedPhones = afterCleanup.departments.find((entry) => entry.slug === "phones-tablets");
     check(
@@ -1629,7 +1753,7 @@ function parse(response, body) {
     for (const spec of EXPANSION_DEPARTMENTS) {
       const department = await ensureExpansionDepartment(spec);
       if (!department?.id) {
-        check(`expansion department ${spec.slug} is available`, false, "department create/repair returned no id");
+        check(`approved taxonomy category ${spec.slug} is available`, false, "catalogue lookup returned no id");
       }
     }
     await ensureGroceriesImageAlt();
@@ -1690,15 +1814,19 @@ function parse(response, body) {
     );
     const powerSolar = afterExpansion.departments.find((entry) => entry.slug === "power-solar");
     const gaming = afterExpansion.departments.find((entry) => entry.slug === "gaming");
+    const powerSolarParent = afterExpansion.departments.find((entry) => entry.id === powerSolar?.parentId);
+    const gamingParent = afterExpansion.departments.find((entry) => entry.id === gaming?.parentId);
     check(
-      "new departments match the approved sort order, imagery and alt text",
-      powerSolar?.sortOrder === 30 &&
+      "Power & Solar and Gaming keep their seeded taxonomy placement, imagery and alt text",
+      powerSolar?.level === 1 &&
+        powerSolarParent?.slug === "home-living" &&
         powerSolar?.imageUrl === "/generated/shop/category-power-solar.webp" &&
         powerSolar?.imageAlt === "Solar panel, portable power station and power bank on a pale blue surface" &&
-        gaming?.sortOrder === 31 &&
+        gaming?.level === 1 &&
+        gamingParent?.slug === "electronics-technology" &&
         gaming?.imageUrl === "/generated/shop/category-gaming.webp" &&
         gaming?.imageAlt === "Game controller, mechanical keyboard and headset on a dark surface",
-      `power-solar=${powerSolar?.sortOrder}/${powerSolar?.imageAlt ?? "no-alt"}; gaming=${gaming?.sortOrder}/${gaming?.imageAlt ?? "no-alt"}`
+      `power-solar=${powerSolar?.level}/${powerSolarParent?.slug ?? "none"}; gaming=${gaming?.level}/${gamingParent?.slug ?? "none"}`
     );
 
     // ---------------------------------------------------------------------
@@ -1790,6 +1918,7 @@ function parse(response, body) {
       activeRunRecords.map((entry) => entry.slug).join(",") || "none"
     );
     await guardSharedDepartments();
+    baselineProductGuards.push(await guardBaselineProducts("at final catalogue state"));
     check("no browser page errors", pageErrors.length === 0, pageErrors.slice(0, 2).join(" | "));
   } catch (error) {
     harnessError = error;
