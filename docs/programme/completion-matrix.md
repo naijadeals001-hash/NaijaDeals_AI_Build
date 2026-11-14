@@ -606,7 +606,7 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Batch B produce additions | 4 DEMO groceries (cabbage, carrots, cucumbers, mangoes), existing approved fresh assets, 41 active | VERIFIED |
 | Residue exclusion | 103 run-tagged non-public records; 0 public in API/search/navigation/shelves; read-only audit 321/321 | VERIFIED |
 | Catalogue baseline | 9 active departments / 41 active products / all isDemo / 0 CRF | VERIFIED |
-| Marketplace taxonomy | 5 departments / 17 categories / 51 subcategories, 387 aliases, 150 attributes, 2 country rules; 51 selectable empty leaves | VERIFIED |
+| Marketplace taxonomy | 11 departments / 37 categories / 113 leaves, 969 aliases, 353 attributes, 18 NG country rules; 18 regulated NG leaves gated | VERIFIED |
 | Seller category workflow | alias search, breadcrumb, attributes, draft persistence, request→admin resolution, restricted-category 403 | VERIFIED |
 | Admin taxonomy | nested tree, create/edit/aliases/attributes/rules/requests, audit; country scope enforced on mutations | VERIFIED |
 | Category image gaps | five department images corrected to existing approved assets | VERIFIED |
@@ -633,7 +633,9 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Browsing visibility admin | `Category.browsingVisible` separate from publication/homepage/selectable; admin edit + audit + tests 16/16 | VERIFIED |
 | Mobile product-first order | Explore shelf moved before category rail; first product card 661 px (was 910) | VERIFIED |
 | Demo wording in drawer | "live stock" replaced with demonstration-listing wording | VERIFIED |
-| Category rail acceptance | 145/145 on canonical: 37 categories, 19 populated/18 empty, 35 images, arrows/swipe/keyboard/snap/reduced motion, directory, no overflow | VERIFIED |
+| Category rail acceptance | 150/150 on canonical: 37 categories, 19 populated/18 empty, 35 images, arrows/swipe/keyboard/snap/reduced motion, directory, no overflow; separate GH zero-listing probe | VERIFIED |
+| Market-scoped storefront | `/naijashop`, category, search, bestsellers, header counts and related rail use the selected country/city; GH shows 0 shelves/grid products, NG 57; GH detail 404 vs NG 200 | VERIFIED |
+| Missing-rule semantics | Regulated node with no country rule is `market_eligibility_unresolved`; migration backfills 18 keys; catalogue, detail, cart, Aura candidates and admin reactivation fail closed; category copy states the restriction | VERIFIED |
 | Empty-category demo wording | "live stock/live listings" removed from category pages and drawer | VERIFIED |
 | Activation precedence | Least-permissive rule across GLOBAL/COUNTRY/CITY; local cannot loosen parent; responsible rule exposed; 30/30 | VERIFIED |
 | PREVIEW SSR + access | Authorized preview passes into homepage/Shop layout SSR; unauthorized paused; product page shared preview helper; no-store | VERIFIED |

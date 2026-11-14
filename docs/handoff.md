@@ -4776,3 +4776,35 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 - Final build `o4jEJVzz0uZG7KYL_Ewfe`: anonymous PREVIEW listing error no longer offers a
   dead "Try again"; it explains preview access instead. D2 department-banner crop remains a
   low visual note (banners render 1600x900 but the strip crops vertically).
+
+## Storefront taxonomy integration — final candidate (2026-11-13)
+
+- Source commit `a18ff9f`; served build `lJep3v0mjIXSUEz7i1OKQ` on `http://localhost:3047`,
+  database `naijadeals_review` (REVIEW, guard verified in `qa-artifacts/review-preview-3047.log`).
+- Market-scoped browsing: `/naijashop` shelves, Shop header counts, category/search/bestsellers
+  grids, category-page totals, product detail and related rail use the selected country/city.
+  GH (Accra) renders 0 shelves/grid products and a 404 for an NG detail; NG remains 57 active
+  listings and the 37-category rail. Cart-add rejects a listing from another selected market.
+- Missing-rule semantics are fail-closed: an `isRegulated` node with no country rule is
+  `market_eligibility_unresolved`, not permission. Migration
+  `20261113230000_category_regulated_backfill` backfills the 18 reviewed keys, and the catalogue,
+  product detail, Aura candidate list, cart and admin reactivation all use the shared rule.
+  Category pages now state the unresolved restriction instead of "open for listings".
+- `browsingVisible=false` remains browsing-only: hidden from rail/directory, still present in
+  `/api/taxonomy`, seller category options and product listings (16/16 suite).
+- Verification on the frozen build: landing 95/95, rail 150/150 (incl. GH zero-leak), market
+  11/11 (incl. regulated product API/detail and Aura exclusion), visibility 16/16, product detail
+  97/97, activation 30/30, financial refusal 46/46, six department banners 6/6. REVIEW restored to
+  57 active products, 18 regulated categories, 18 NG rules, 0 activation rows.
+- Independent acceptance: `journey-tester` agent `agent_4d83ce41-597d-4624-865e-930595fb5325`
+  (prior build PASS with P3 1440 peeking-card cosmetic note); `code-security-reviewer`
+  `agent_1379be1e-e1a6-4537-b24e-bac055e7cadd` accepted the missing-rule semantics and raised
+  H1/H2/M1–M4, which this increment fixes. Focused re-review of `a18ff9f` is the next gate.
+- Remaining known gaps: variant create/edit NOT IMPLEMENTED; Aura product tools still lack
+  publication filters (M5, pre-existing); GH category browse shows level-1 parents whose leaves
+  are all unresolved with zero counts; department banner strip crops vertically (low); 1440 rail
+  shows no peeking next card (P3 cosmetic); Valkey/BullMQ/Meilisearch remain down locally;
+  GitHub preservation BLOCKED by rejected credential.
+- Cross-market checkout fails closed with `409 item_market_mismatch` when a cart line's country
+  differs from the delivery address (verified by `scripts/cross-market-checkout-test.ts`, 0 orders
+  created); no cross-border shipping policy is invented.

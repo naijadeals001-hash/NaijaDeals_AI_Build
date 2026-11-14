@@ -231,6 +231,20 @@ export async function checkout(input: {
           throw new ApiError(409, "item_unavailable", `${unavailable.product.name} is no longer available. Remove it from the cart.`);
         }
 
+        // The selected market is the delivery market. A cart row listed for
+        // another country cannot be converted into an order here, even when it
+        // was added before the customer changed location.
+        const crossMarket = cart.items.find(
+          (item) => item.product.countryCode.trim().toUpperCase() !== country.code
+        );
+        if (crossMarket) {
+          throw new ApiError(
+            409,
+            "item_market_mismatch",
+            `${crossMarket.product.name} is listed for ${crossMarket.product.countryCode}. Choose a delivery address in that market or remove it from the cart.`
+          );
+        }
+
         const byVendor = new Map<string, typeof cart.items>();
         for (const item of cart.items) {
           const group = byVendor.get(item.product.vendorId) ?? [];
