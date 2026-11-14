@@ -4985,3 +4985,9 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   paid model call. Mocked acceptance remains available.
 - GitHub: `github-preservation` remote exists; `gh auth status` reports no logged-in host. No push,
   no force-push and no credential retry.
+- Final independent recheck on `x808UVLdTRA2NZivsV5tQ`: reviewer
+  `agent_25ed5f83-730c-423e-bb26-2f8468820bb0` PASS 21/21 for the variant-image gallery
+  (1440/390), product detail 101/101, variant 30/30, concurrency 100/100, activation 30/30,
+  landing 95/95, rail 150/150, basket 10/10, financial 46/46; DB restored to 253/57 ACTIVE,
+  0 variants, 0 activation rows. Screenshots/probe under
+  `qa-artifacts/visual/final-independent-71392e4/`.
