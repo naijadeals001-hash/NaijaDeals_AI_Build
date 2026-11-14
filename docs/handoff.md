@@ -4996,7 +4996,7 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 
 **Serviced build:** `1nRvPbicJwbL53G4k6prP` (`NEXT_DIST_DIR=.next-programme`, REVIEW catalogue) on
 `http://localhost:3047`, database `naijadeals_review` (REVIEW). Source commits are `7630ca9`
-(the slice) and `85f5382` (imagery review fixes), both on `naijashop-marketplace`. No production
+(the slice), `85f5382` (imagery review fixes) and `c2b370c` (Mauritania Arabic label and seed guard), all on `naijashop-marketplace`. No production
 deployment, live charge, payout or provider charge occurred.
 
 **Scope delivered.**
