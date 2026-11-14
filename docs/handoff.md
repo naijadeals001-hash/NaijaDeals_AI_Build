@@ -5291,6 +5291,10 @@ contains it); app commit **`8482d23`**. No deployment and no production write.
   response did not overwrite GH **3/3**; counts 57 → 0 → 57; search `raffia` 1 → 0 → 1; no overflow.
   The final build adds only the GH delivery disclosure; direct verification on
   `FtdTd85hiBH2IDlgapA77` shows "Shopping in Accra" and the unavailable-delivery notice.
+- Independent final-artifact check (`agent_9ef1e3be-742d-40e9-82a6-b5144ac7b9e3`): PASS on
+  served build ID, `8482d23` tree match, NG/GH runtime strings, 0 console/page errors and no 390px
+  overflow. Residual wording only: the GH city placeholder and aria suffix still say "delivery"
+  even though delivery is disclosed as unavailable.
 - Implementation agent: `agent_e9ff1785-01db-47f0-8493-93ec14129d69`.
   Evidence: `qa-artifacts/visual/market-switch-2026-11-14/` (ignored), including
   `final-gh-panel-390.png`, `shop-switch/` and the journey/race JSON files.
