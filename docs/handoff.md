@@ -4927,3 +4927,37 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 - Not implemented/claimed: variant row deletion (rows are deactivated), per-variant imagery,
   marketplace-wide product-management parity beyond this contract. GitHub preservation remains
   blocked by the rejected credential; no production deployment, live payment or paid provider call.
+
+## Next increment — paused Shop, Stay enforcement, catalogue coverage and variant images (2026-11-14)
+
+- Baseline note: the task brief's `4927d99` / `nju0nddge-JEb8Q_WQoOZ` values are historical. Actual
+  branch `naijashop-marketplace`, app code `71392e4`, served build `x808UVLdTRA2NZivsV5tQ` on
+  `http://localhost:3047`, DB `naijadeals_review` REVIEW. Existing accepted work was preserved.
+- **Paused Shop:** server-resolved availability is passed from `app/naijashop/page.tsx`; public
+  DISABLED/PREVIEW renders a paused Storefront/home without Shop hero, shelves, counts or new-order
+  CTAs, while orders/cart/help remain reachable. Authorized PREVIEW renders the preview experience.
+  `app/page.tsx` no longer queries Shop products when the server says Shop is unavailable.
+- **Stay is the first additional enforced vertical:** discovery/search/stays/destinations/property
+  pages resolve activation and render a paused state; POST `/api/stay/hold` and POST/PUT
+  `/api/stay/host` fail `409 vertical_unavailable`; existing bookings, cancellation, review, host
+  tools and help stay reachable. `VERTICAL_ENFORCEMENT.stay` is ENFORCED; every other non-Shop
+  vertical remains NOT_WIRED. No ecosystem-wide activation claim.
+- **Variant management:** added per-variant `imageUrl` (`20261114010000_variant_image`), validated
+  against the product gallery; gallery follows the selected variant; editor selection in seller and
+  Control Center. Variant row locks now serialize stock edits/deactivation with checkout
+  reservations. Product-level stock remains zero for variant products. Unsupported variant fields
+  are rejected. Concurrency/authority suite 100 PASS/0 gap; variant contract 30/30.
+- **Catalogue coverage:** four reviewed leaves added (headphones, fragrance, cameras, smartwatches);
+  all seven ambiguous products mapped. Current: 11 departments / 37 categories / 117 leaves;
+  57 ACTIVE, all 57 on leaves, 0 ambiguous; 35/100 publishable leaves populated, 65 gaps; 68/68
+  images pass. No new products/assets were invented; the 6-image population batch remains blocked
+  on asset generation authorization (0 credits spent).
+- **Related failure:** REVIEW-only server seam + retry remains; suite 101/101.
+- **Aura/Valkey:** Docker Desktop service exists but could not be started (`Cannot open
+  com.docker.service`); no Valkey start or rate-limit bypass, and no live paid model call.
+- **GitHub:** remote `github-preservation` configured; `gh auth status` says not logged in. No push
+  was attempted and preservation remains BLOCKED.
+- Acceptance on `x808…`: variant 30/30, concurrency 100/100, product detail 101/101, landing
+  95/95, rail 150/150, basket 10/10, activation 30/30, financial 46/46. Reviewer agent
+  `agent_25ed5f83-730c-423e-bb26-2f8468820bb0` found the variant-gallery defect on the preceding
+  build; focused recheck of this build is recorded below when complete.
