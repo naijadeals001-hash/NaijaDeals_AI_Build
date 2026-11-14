@@ -5042,9 +5042,11 @@ deployment, live charge, payout or provider charge occurred.
   replaced with a multi-pin wiring harness and the two Botswana/Lesotho tiles passed a focused
   recheck (PASS/PASS).
 - The 21 generic-mineral tiles were then replaced with 12 specific Kie photographs. Independent
-  focused audit: **21/21 PASS, 0 BROAD, 0 MATERIAL**. Derived full-audit totals are **228 PASS /
-  96 BROAD / 0 MATERIAL** (the non-mineral tiles were not re-audited in this focused pass).
-  Counts 122 GENERATED / 127 APPROVED_EXISTING / 75 ILLUSTRATION; all 24 generated files referenced.
+  focused audit: **21/21 PASS, 0 BROAD, 0 MATERIAL**.
+- Five grain photographs then replaced 14 generic grain tiles. Independent focused audit:
+  **6 PASS / 8 BROAD / 0 MATERIAL**. Derived full-audit totals are **234 PASS / 90 BROAD /
+  0 MATERIAL** (non-mineral/non-grain tiles were not re-audited in these focused passes).
+  Counts 136 GENERATED / 127 APPROVED_EXISTING / 61 ILLUSTRATION; all 29 generated files referenced.
 - Data/backend, public UI, Control Center and Kie integration were implemented by the coordinator;
   no separate implementation subagent was used. The final report must not claim otherwise.
 
