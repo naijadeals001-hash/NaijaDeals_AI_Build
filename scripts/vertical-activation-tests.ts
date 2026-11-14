@@ -37,6 +37,21 @@ import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { createServer } from "node:net";
 import { createWriteStream, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+  buildShopActivationSnapshot,
+  deleteShopActivationSnapshot,
+  formatShopActivationSnapshotSummary,
+  formatShopActivationRow,
+  isRunOwnedReason,
+  listShopActivationSnapshots,
+  readShopActivationRows,
+  readShopActivationSnapshot,
+  restoreShopActivationSnapshot,
+  shopActivationSnapshotPath,
+  writeShopActivationSnapshot,
+  type ShopActivationDatabase,
+  type ShopActivationRestoreResult
+} from "./lib/shop-activation-snapshot";
 
 type CheckResult = { name: string; status: "PASS" | "FAIL"; detail: string };
 const results: CheckResult[] = [];
@@ -122,6 +137,12 @@ async function freePort(): Promise<number> {
 
 type RunningServer = { base: string; process: ChildProcess | null; logPath: string };
 
+/**
+ * The spawned dev server, tracked separately so an abnormal exit can stop it
+ * even when the signal arrives before `ensureServer()` has returned.
+ */
+let activeServerChild: ChildProcess | null = null;
+
 async function waitForServer(base: string, child: ChildProcess | null, logPath: string) {
   const deadline = Date.now() + 180_000;
   while (Date.now() < deadline) {
@@ -172,6 +193,7 @@ async function ensureServer(): Promise<RunningServer> {
   });
   child.stdout?.pipe(output);
   child.stderr?.pipe(output);
+  activeServerChild = child;
   try {
     await waitForServer(base, child, logPath);
   } catch (error) {
@@ -182,15 +204,17 @@ async function ensureServer(): Promise<RunningServer> {
 }
 
 function stopServer(server: RunningServer | null) {
-  if (!server?.process?.pid) return;
+  const child = server?.process ?? activeServerChild;
+  if (!child?.pid) return;
+  activeServerChild = null;
   if (process.platform === "win32") {
-    spawnSync("taskkill", ["/pid", String(server.process.pid), "/T", "/F"], { stdio: "ignore" });
+    spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
   } else {
     try {
-      process.kill(-server.process.pid, "SIGTERM");
+      process.kill(-child.pid, "SIGTERM");
     } catch {
       try {
-        server.process.kill("SIGTERM");
+        child.kill("SIGTERM");
       } catch {
         /* already gone */
       }
@@ -283,6 +307,34 @@ async function main() {
   `;
   assert(Number(table[0]?.n) === 1, "VerticalActivation table is missing; apply the migration first.");
   console.log(`Database: ${dbName} (${marker}) — activation/audit fixtures only, no financial writes.`);
+
+  // Durable recovery: write the exact prior Shop activation rows before any
+  // mutation. The in-memory copy alone is lost on SIGINT/SIGKILL, which is how
+  // an interrupted run can leave a run-owned GLOBAL DISABLED rule behind.
+  const activationDb = prisma as unknown as ShopActivationDatabase;
+  const activationSnapshotPath = shopActivationSnapshotPath(runId);
+  const priorShopRows = await readShopActivationRows(activationDb);
+  const leftoverRunRows = priorShopRows.filter((row) => isRunOwnedReason(row.reason));
+  assert(
+    leftoverRunRows.length === 0,
+    "Refusing to start: a previous activation run left run-owned row(s) behind. " +
+      "Capturing them as prior state would restore the pause at the end of this run. Recover first:\n" +
+      leftoverRunRows.map((row) => `  - ${formatShopActivationRow(row)}`).join("\n") +
+      "\n  npx tsx scripts/recover-shop-activation.ts --expect-db=<db> --latest --apply " +
+      "(or --discard-run-owned=<runId> --apply when no snapshot exists)."
+  );
+  const activationSnapshot = buildShopActivationSnapshot({ runId, database: dbName, rows: priorShopRows });
+  writeShopActivationSnapshot(activationSnapshot, { path: activationSnapshotPath });
+  console.log(
+    `Activation snapshot: ${formatShopActivationSnapshotSummary(activationSnapshot)} -> ${activationSnapshotPath}`
+  );
+  const otherSnapshots = listShopActivationSnapshots().filter((entry) => entry.path !== activationSnapshotPath);
+  if (otherSnapshots.length > 0) {
+    console.warn(
+      `WARNING: ${otherSnapshots.length} other activation snapshot(s) exist under qa-artifacts/activation-snapshots. ` +
+        "If an earlier run was interrupted, restore it with scripts/recover-shop-activation.ts before assuming LIVE."
+    );
+  }
 
   // ---- Pure resolver matrix (no database dependency) ---------------------
   const registry = { verticalKey: "shop", registryStatus: "live" as const };
@@ -434,7 +486,6 @@ async function main() {
     include: { roles: { include: { role: true } }, vendors: true }
   });
 
-  const snapshot = await prisma.verticalActivation.findMany({ where: { verticalKey: "shop" } });
   const createdProductIds: string[] = [];
   let fixtureOrderId = "";
   let fixtureOrderNumber = "";
@@ -470,6 +521,74 @@ async function main() {
   async function effective(options: { countryCode?: string; cityCode?: string } = {}) {
     return activation.effectiveVerticalActivation("shop", { ...options, fresh: true });
   }
+
+  // ---- Durable snapshot restoration -------------------------------------
+  // `performSnapshotRestore` is used by check 30 (and therefore throws on a
+  // conflict). `restoreBestEffort` is the last-resort path for `finally` and
+  // signals: it reports and retains the snapshot instead of hiding a conflict.
+  async function performSnapshotRestore(reason: string): Promise<ShopActivationRestoreResult> {
+    const snapshot = readShopActivationSnapshot(activationSnapshotPath);
+    const result = await restoreShopActivationSnapshot({
+      db: activationDb,
+      snapshot,
+      currentDatabase: dbName
+    });
+    activation.clearVerticalActivationCache();
+    assert(result.verification.ok, "snapshot verification failed");
+    console.log(
+      `Activation snapshot restore (${reason}): ${result.restored} prior row(s), added ${result.added}, ` +
+        `removed ${result.removed}, changed ${result.changedRows}.`
+    );
+    return result;
+  }
+
+  let bestEffortRestore: Promise<boolean> | null = null;
+  function restoreBestEffort(reason: string): Promise<boolean> {
+    if (!bestEffortRestore) {
+      bestEffortRestore = (async () => {
+        try {
+          await performSnapshotRestore(reason);
+          deleteShopActivationSnapshot(activationSnapshotPath);
+          console.log(`Activation snapshot verified and removed: ${activationSnapshotPath}`);
+          return true;
+        } catch (error) {
+          console.error(
+            `WARNING: Shop activation was NOT restored from ${activationSnapshotPath}: ${
+              error instanceof Error ? error.message : String(error)
+            }\n` +
+              "         The snapshot file is retained; run scripts/recover-shop-activation.ts after inspecting the conflict."
+          );
+          return false;
+        }
+      })();
+    }
+    return bestEffortRestore;
+  }
+
+  let signalHandled = false;
+  function handleAbnormalExit(signal: string) {
+    if (signalHandled) return;
+    signalHandled = true;
+    console.error(`\n${signal}: restoring Shop activation before exit.`);
+    stopServer(server);
+    void restoreBestEffort(`abnormal exit ${signal}`)
+      .then(async () => {
+        await prisma.$disconnect().catch(() => undefined);
+        process.exit(130);
+      })
+      .catch(() => process.exit(1));
+  }
+  const onSigint = () => handleAbnormalExit("SIGINT");
+  const onSigterm = () => handleAbnormalExit("SIGTERM");
+  const onSigbreak = () => handleAbnormalExit("SIGBREAK");
+  const onUncaught = (error: unknown) => {
+    console.error(error instanceof Error ? error.stack ?? error.message : String(error));
+    handleAbnormalExit("uncaughtException");
+  };
+  process.once("SIGINT", onSigint);
+  process.once("SIGTERM", onSigterm);
+  if (process.platform === "win32") process.once("SIGBREAK", onSigbreak);
+  process.once("uncaughtException", onUncaught);
 
   try {
     // Seed one row through the real service so the DB path is exercised, then
@@ -927,36 +1046,12 @@ async function main() {
     });
 
     await check("30. Restoring the exact previous activation snapshot", async () => {
-      // Clear the local matrix through the audited API first so the server
-      // process invalidates its cache rather than waiting out the 5s TTL.
-      const leftoverCities = await prisma.verticalActivation.findMany({
-        where: { verticalKey: "shop", scopeType: "CITY" },
-        select: { countryCode: true, cityCode: true }
-      });
-      for (const row of leftoverCities) {
-        await apiClear({
-          scopeType: "CITY",
-          countryCode: row.countryCode,
-          cityCode: row.cityCode,
-          reason: reasonFor("restore city rows")
-        });
-      }
-      const leftoverCountries = await prisma.verticalActivation.findMany({
-        where: { verticalKey: "shop", scopeType: "COUNTRY" },
-        select: { countryCode: true }
-      });
-      for (const row of leftoverCountries) {
-        await apiClear({
-          scopeType: "COUNTRY",
-          countryCode: row.countryCode,
-          reason: reasonFor("restore country rows")
-        });
-      }
-      await prisma.verticalActivation.deleteMany({ where: { verticalKey: "shop" } });
-      for (const row of snapshot) {
-        await prisma.verticalActivation.create({ data: row });
-      }
-      activation.clearVerticalActivationCache();
+      // The helper restores from the run-owned file written before the first
+      // mutation. It removes all Shop rows (the prior snapshot is authoritative
+      // for this run) and re-inserts the exact ids, statuses, reasons and
+      // timestamps. Rows not owned by this run would block instead of being
+      // silently cleared.
+      const restored = await performSnapshotRestore("check 30");
       const expected = await effective({ countryCode: "NG" });
       const deadline = Date.now() + 15_000;
       let live = await availability("?country=NG");
@@ -969,30 +1064,14 @@ async function main() {
         live.available === activation.activationAllowsAccess(expected.status, {}),
         `restored availability ${live.available} does not match ${expected.status}`
       );
-      return `restored ${snapshot.length} prior row(s); effective ${expected.status}`;
+      return `restored ${restored.restored} prior row(s) from the run snapshot; effective ${expected.status}`;
     });
   } finally {
     // ---- Restore exact previous activation state --------------------------
-    await prisma.verticalActivation.deleteMany({ where: { verticalKey: "shop" } }).catch(() => undefined);
-    for (const row of snapshot) {
-      await prisma.verticalActivation
-        .create({
-          data: {
-            id: row.id,
-            verticalKey: row.verticalKey,
-            scopeType: row.scopeType,
-            countryCode: row.countryCode,
-            cityCode: row.cityCode,
-            status: row.status,
-            reason: row.reason,
-            updatedById: row.updatedById,
-            createdAt: row.createdAt,
-            updatedAt: row.updatedAt
-          }
-        })
-        .catch(() => undefined);
-    }
-    activation.clearVerticalActivationCache();
+    // The snapshot file is the authority. It is removed only after the helper
+    // verified every row (id, scope, status, reason and timestamps) against
+    // the snapshot; a conflict retains the file for explicit recovery.
+    await restoreBestEffort("finally");
 
     // Run-owned order fixture. Cancellation normally released the reservation;
     // if a test failed before cancelling, release exactly this order's units
@@ -1099,6 +1178,10 @@ async function main() {
     if (runOrderCount > 0) console.error(`WARNING: ${runOrderCount} run-owned order(s) remain.`);
     if (runEatsRows > 0) console.error(`WARNING: ${runEatsRows} NOT_WIRED activation row(s) remain.`);
 
+    process.off("SIGINT", onSigint);
+    process.off("SIGTERM", onSigterm);
+    if (process.platform === "win32") process.off("SIGBREAK", onSigbreak);
+    process.off("uncaughtException", onUncaught);
     stopServer(server);
     await prisma.$disconnect().catch(() => undefined);
   }
