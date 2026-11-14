@@ -2,7 +2,7 @@
 
 Date: 2026-11-14. Model: `gpt-image-2-5-flare-text-to-image` via the connected Kie.ai MCP, `flare`, `1K`, `1:1`. Price recorded by the MCP plan: **6 credits per image** (rate card `2026-10-28`; USD conversion shown by the tool was $0.03 at the tool's published $0.005/credit basis). **No credits were purchased and no top-up was performed.**
 
-## Generated photography (24 images, 144 credits)
+## Generated photography (29 images, 174 credits)
 
 Every prompt excluded baked-in text, logos, flags, landmarks, brands and people. Assets were downloaded from the provider result URL, resized/cropped to 900×900 and encoded as WebP (quality 82). Each is illustrative editorial imagery; none is evidence of actual NaijaDeals stock or a specific country's product.
 
@@ -32,14 +32,19 @@ Every prompt excluded baked-in text, logos, flags, landmarks, brands and people.
 | `public/generated/countries/theme-soda-ash.webp` | Soda ash | `817da062c4a98a1f044961c582fc0a97` | 6 | White soda ash powder | Accepted |
 | `public/generated/countries/theme-lithium.webp` | Lithium | `6c616984a5281e2e483b29e84584de5d` | 6 | Pale lithium-bearing ore | Accepted |
 | `public/generated/countries/theme-rutile.webp` | Rutile | `469662cd0cfd1b405d2d74a1113ad571` | 6 | Dark rutile mineral sand | Accepted |
+| `public/generated/countries/theme-sorghum.webp` | Sorghum / millet-sorghum | `b91cdb846d8cc2810dec1c5ce74da8ff` | 6 | Red and white sorghum grain | Accepted |
+| `public/generated/countries/theme-teff.webp` | Teff | `fe4da8b64050c9f09ad275aa4536c224` | 6 | Ivory teff grain in a woven basket | Accepted |
+| `public/generated/countries/theme-fonio.webp` | Fonio | `87c98893ab962c3f702bc10455486b84` | 6 | Pale fonio grain | Accepted |
+| `public/generated/countries/theme-couscous.webp` | Couscous | `e720ec03776cb83144d8ed63fd95d563` | 6 | Steamed couscous | Accepted |
+| `public/generated/countries/theme-wheat.webp` | Wheat / barley / cereals | `753b4fdf93ae641246c5ff484687ca39` | 6 | Wheat and barley ears | Accepted |
 
-**Actual Discover Africa spend: 144 credits.** 24 provider tasks completed successfully; all 24 assets are integrated.
+**Actual Discover Africa spend: 174 credits.** 29 provider tasks completed successfully; all 29 assets are integrated.
 
 The host approval path for further `prepare_media_generation` calls timed out and returned no plan; no provider task was created for those attempts, so no additional credits were consumed. The implementation does **not** bypass that approval through another interface. Themes without an accurate generated photograph use approved existing project photography or an original code-native vector illustration.
 
 ## Reused approved assets
 
-127 tiles use approved existing project photography and 75 use original vector illustrations. Of the 324 tiles, 122 use the 24 generated photographs (all 24 are now referenced). Matching is explicit in `scripts/seed-country-discovery.ts`; examples: cocoa, vanilla, cloves, cashew, shea, rice, maize, millet, plantain, cassava, avocado, mango, citrus, pineapple, fish, poultry, spices, textiles, baskets and solar. These are illustrative project assets; they are not country-specific product photography and do not assert origin.
+127 tiles use approved existing project photography and 61 use original vector illustrations. Of the 324 tiles, 136 use the 29 generated photographs (all 29 are now referenced). Matching is explicit in `scripts/seed-country-discovery.ts`; examples: cocoa, vanilla, cloves, cashew, shea, rice, maize, millet, plantain, cassava, avocado, mango, citrus, pineapple, fish, poultry, spices, textiles, baskets and solar. These are illustrative project assets; they are not country-specific product photography and do not assert origin.
 
 ## Original vector illustrations (25 assets, 0 credits)
 
