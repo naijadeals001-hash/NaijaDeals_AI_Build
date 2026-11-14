@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { addCartItem, cartTotals } from "@/lib/services/core/cart.service";
 import { ApiError, assertSameOrigin, jsonError, readJson, requireNumber, requireString, requireUser } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
+import { readLocale } from "@/lib/i18n/server";
 import { prisma } from "@/lib/prisma";
 import {
   assertVerticalAccess,
@@ -37,8 +37,10 @@ export async function POST(request: Request) {
       .findUnique({ where: { id: productId }, select: { countryCode: true } })
       .catch(() => null);
     const { previewAuthorized } = await previewAuthorizationForRequest();
-    const cookieStore = cookies();
-    const visitorCountry = (cookieStore.get("nd_country")?.value ?? "NG").toUpperCase().slice(0, 2);
+    // The validated locale is the effective market. An unknown country falls
+    // back to the home market and a foreign/unrecognised city is not selected.
+    const { country: visitorCountry, city: visitorCityName } = readLocale();
+    const visitorCity = visitorCityName || null;
     if (target && target.countryCode.trim().toUpperCase() !== visitorCountry) {
       throw new ApiError(
         409,
@@ -48,13 +50,21 @@ export async function POST(request: Request) {
     }
     await assertVerticalAccess("shop", {
       countryCode: visitorCountry,
+      cityCode: visitorCity,
       previewAuthorized,
       statusCode: 409,
       message:
         "Shop is not accepting new cart additions in this market right now. Your cart, existing orders, receipts and support remain available."
     });
 
-    const cart = await addCartItem({ userId: user.id, productId, variantId, quantity });
+    const cart = await addCartItem({
+      userId: user.id,
+      productId,
+      variantId,
+      quantity,
+      market: { countryCode: visitorCountry, cityCode: visitorCity },
+      previewAuthorized
+    });
     return NextResponse.json(jsonSafe({ ...cart, totals: cartTotals(cart) }), { status: 201 });
   } catch (error) {
     return jsonError(error);

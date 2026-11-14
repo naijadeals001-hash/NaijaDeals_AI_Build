@@ -115,6 +115,10 @@ export default async function CategoryPage({ params }: { params: { slug: string 
   const alternatives = alternativesFor(roots, match, slug);
   const children = match?.node.children ?? [];
   const isBranch = children.length > 0;
+  // The server knows the unfiltered total for this market. When it is zero the
+  // header below is the single authoritative empty state; CategoryBrowse must
+  // not repeat the same message under the grid.
+  const serverEmpty = Boolean(match) && total === 0;
 
   return (
     <>
@@ -195,7 +199,10 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                 </ul>
               </div>
             ) : total === 0 ? (
-              <div className="mt-2 rounded-lg border border-dashed border-[#cfdccb] bg-white p-3">
+              <div
+                data-category-empty="server"
+                className="mt-2 rounded-lg border border-dashed border-[#cfdccb] bg-white p-3"
+              >
                 <p className="break-words text-[12px] font-extrabold text-[#0f1111]">
                   {marketRestricted
                     ? `${match.node.name} is not open for listings in ${country} yet.`
@@ -238,7 +245,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
           </div>
         </div>
       ) : null}
-      <CategoryBrowse categorySlug={params.slug} />
+      <CategoryBrowse categorySlug={params.slug} serverEmpty={serverEmpty} />
     </>
   );
 }

@@ -12,16 +12,16 @@ listing types require a separately authorised slice.
 
 ## 1. Extended taxonomy (seeded and verified)
 
-161 nodes: **11 departments / 37 active categories / 113 selectable subcategories**.
+165 nodes: **11 departments / 37 active categories / 117 selectable subcategories**.
 The original 73 nodes (5 departments, 17 categories, 51 subcategories) keep their keys
 and ids. The nine existing active catalogue categories keep their ids, slugs, names,
 images, `isDemo` flag and demo descriptions.
 
 | Department | Key | Level-1 categories | Selectable leaves | NG-blocked leaves |
 |---|---|---|---|---|
-| Electronics & Technology | `electronics` | 4 | 12 | 0 |
+| Electronics & Technology | `electronics` | 4 | 15 | 0 |
 | Home & Living | `home` | 3 | 9 | 0 |
-| Fashion & Beauty | `fashion` | 4 | 11 | 0 |
+| Fashion & Beauty | `fashion` | 4 | 12 | 0 |
 | Food & Everyday Essentials | `food` | 3 | 9 | 0 |
 | Agriculture & Business | `agriculture` | 3 | 11 | 3 |
 | Health & Wellness | `health-wellness` | 3 | 6 | 5 |
@@ -30,18 +30,45 @@ images, `isDemo` flag and demo descriptions.
 | Automotive & Motorcycle | `automotive-motorcycle` | 3 | 13 | 6 |
 | Tools & Building Materials | `tools-building` | 4 | 11 | 1 |
 | Books & Stationery | `books-stationery` | 3 | 10 | 0 |
-| **Total** | 11 | **37** | **113** | **17** |
+| **Total** | 11 | **37** | **117** | **17** |
 
-Added nodes: 6 departments + 20 categories + 62 subcategories = 88 new nodes.
+Added nodes: 6 departments + 20 categories + 66 subcategories = 92 new nodes.
 Vocabulary seeded: 969 aliases (`en`/`fr`/`pt`/`ar`/`sw`), 353 attributes and 18 country
 rules. Wholesale stays a purchasing mode (`allowedListingTypes` + minimum-order
 attributes); origin, material, style and technique stay attributes, not departments.
 Children's clothing and footwear stay under Fashion & Accessories to avoid duplicate
 leaves; school textbooks sit under Books & Stationery.
 
-The six added departments currently have no approved department image (`imageUrl` null).
-The storefront falls back to a neutral tile rather than using unrelated imagery; original
-assets are a separate, unauthorised-here task.
+All 11 departments now have approved banner art, applied and verified by the guarded
+`scripts/apply-department-images.ts` (6/6 applied, 0 writes on re-run). The six that were
+previously `imageUrl = NULL` were filled from original assets; no unrelated image was
+substituted. Level-1 category tiles were completed by `scripts/apply-category-images.ts`
+(19 generated, 7 reused approved photographs and 6 alt-only completions; 32/32 applied,
+0 writes on re-run). The two level-1 categories whose entire subtree is NG-restricted
+(`medicines-treatments`, `vitamins-supplements`) intentionally remain without tiles.
+
+### 1.1 Image persistence (seed and admin edits)
+
+Image fields on `lib/data/taxonomy.ts` definitions are **create-only defaults**.
+`scripts/taxonomy-seed.ts` builds its rows through `lib/services/taxonomy/seed-update.ts`,
+whose update payload type omits `imageUrl`/`imageAlt`. Re-running the seed therefore
+preserves the stored image and alt on every existing category, including administrator-
+edited rows and the five department definitions that still carry a source default.
+The defaults are used only when the seed creates a missing category.
+
+Admin `PATCH /api/admin/taxonomy/[id]` image semantics:
+
+- omitting both fields preserves the stored pair;
+- `imageUrl: ""` or `imageUrl: null` is an explicit clear and removes both image and alt;
+- a different non-empty `imageUrl` requires non-empty `imageAlt` in the same request,
+  otherwise the request fails `400 image_alt_required` and writes nothing;
+- an unchanged URL keeps the stored alt; `imageAlt` alone updates only the alt.
+
+Evidence: `REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-image-persistence-tests.ts
+--expect-db=naijadeals_review` (run-owned fixtures created and removed in a `finally`
+block; a fingerprint of all other `Category` id/imageUrl/imageAlt values and the `Product`
+distribution is verified unchanged; append-only `AuditLog`/`SystemEvent` evidence is
+retained).
 
 ## 2. Regulated definitions and NG publication rules
 

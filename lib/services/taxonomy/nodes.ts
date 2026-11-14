@@ -484,6 +484,48 @@ async function loadDescendants(
   return { ids, height, depths };
 }
 
+type CategoryImageUpdate = { imageUrl?: string | null; imageAlt?: string | null };
+
+/**
+ * Category imagery is a pair: the visible image and the alt text that
+ * describes it. Omitted fields preserve the stored pair. An explicit clear
+ * (`imageUrl: null` or `""`) is one intentional action and removes both, so a
+ * stale alt cannot outlive its image. Replacing the image with a different
+ * non-empty URL requires non-empty alt text in the same request; an unchanged
+ * URL keeps its existing alt unless the caller supplies a new one.
+ */
+function readCategoryImageUpdate(
+  body: Record<string, unknown>,
+  existing: { imageUrl: string | null; imageAlt: string | null }
+): CategoryImageUpdate {
+  const urlSupplied = body.imageUrl !== undefined;
+  const altSupplied = body.imageAlt !== undefined;
+  if (!urlSupplied && !altSupplied) return {};
+
+  const requestedUrl = urlSupplied ? readImagePath(body.imageUrl) ?? null : undefined;
+  const requestedAlt = altSupplied ? readNullableText(body.imageAlt, "Image alt text", 220) ?? null : undefined;
+
+  if (urlSupplied && requestedUrl === null) {
+    return { imageUrl: null, imageAlt: null };
+  }
+
+  if (requestedUrl !== undefined && requestedUrl !== existing.imageUrl) {
+    if (!requestedAlt) {
+      throw new ApiError(
+        400,
+        "image_alt_required",
+        "Replacing a category image requires non-empty imageAlt text in the same request."
+      );
+    }
+    return { imageUrl: requestedUrl, imageAlt: requestedAlt };
+  }
+
+  return {
+    ...(requestedUrl !== undefined ? { imageUrl: requestedUrl } : {}),
+    ...(requestedAlt !== undefined ? { imageAlt: requestedAlt } : {})
+  };
+}
+
 /**
  * Edits a category, its aliases, attributes and country rules.
  *
@@ -603,8 +645,7 @@ export async function updateCategoryNode(
         ...(name !== undefined ? { name } : {}),
         ...(slug !== undefined ? { slug } : {}),
         ...(body.description !== undefined ? { description: readNullableText(body.description, "Description", 2000) ?? null } : {}),
-        ...(body.imageUrl !== undefined ? { imageUrl: readImagePath(body.imageUrl) ?? null } : {}),
-        ...(body.imageAlt !== undefined ? { imageAlt: readNullableText(body.imageAlt, "Image alt text", 220) ?? null } : {}),
+        ...readCategoryImageUpdate(body, existing),
         ...(body.isSelectable !== undefined ? { isSelectable: readBoolean(body.isSelectable, "isSelectable") } : {}),
         ...(body.showOnHomepage !== undefined ? { showOnHomepage: readBoolean(body.showOnHomepage, "showOnHomepage") } : {}),
         ...(body.browsingVisible !== undefined

@@ -25,18 +25,11 @@ import {
   TAXONOMY_NODES,
   validateTaxonomy
 } from "../lib/data/taxonomy";
-import { isRegulatedCategoryKey } from "../lib/taxonomy/regulated";
-
-/**
- * The regulated publication flag comes from the established definition, never
- * from the editorial `reviewRequired` property. A definition may state
- * `isRegulated` explicitly; otherwise set membership decides. Writing and
- * verifying through one helper means a definition that disagrees with the set
- * fails the seed instead of silently changing market powers.
- */
-function regulatedFlagFor(definition: { key: string; isRegulated?: boolean }): boolean {
-  return definition.isRegulated ?? isRegulatedCategoryKey(definition.key);
-}
+import {
+  buildSeedCreateData,
+  buildSeedUpdateData,
+  seedRegulatedFlagFor
+} from "../lib/services/taxonomy/seed-update";
 
 /**
  * REVIEW acceptance expectations. Update these deliberately when a reviewed
@@ -318,20 +311,7 @@ async function main(): Promise<void> {
           const found = matches[0];
           if (!found) {
             const created = await tx.category.create({
-              data: {
-                key: definition.key,
-                name: definition.name,
-                slug: definition.slug,
-                description: definition.description,
-                parentId,
-                level: definition.level,
-                isSelectable: definition.isSelectable,
-                showOnHomepage: definition.showOnHomepage,
-                isRegulated: regulatedFlagFor(definition),
-                sortOrder: definition.sortOrder,
-                isActive: true,
-                isDemo: false
-              },
+              data: buildSeedCreateData(definition, parentId),
               select: { id: true }
             });
             categoryId = created.id;
@@ -347,42 +327,12 @@ async function main(): Promise<void> {
                 `${definition.key}: existing category slug is ${found.slug}, expected ${definition.slug}; refusing to rename`
               );
             }
-            if (definition.isExisting) {
-              // Preserve name, slug, demo description, image and isDemo flag.
-              await tx.category.update({
-                where: { id: found.id },
-                data: {
-                  key: definition.key,
-                  parentId,
-                  level: definition.level,
-                  isSelectable: definition.isSelectable,
-                  showOnHomepage: definition.showOnHomepage,
-                  isRegulated: regulatedFlagFor(definition),
-                  sortOrder: definition.sortOrder,
-                  isActive: true,
-                  deprecatedAt: null
-                }
-              });
-            } else {
-              await tx.category.update({
-                where: { id: found.id },
-                data: {
-                  key: definition.key,
-                  name: definition.name,
-                  description: definition.description,
-                  imageUrl: definition.imageUrl ?? found.imageUrl,
-                  imageAlt: definition.imageAlt ?? found.imageAlt,
-                  parentId,
-                  level: definition.level,
-                  isSelectable: definition.isSelectable,
-                  showOnHomepage: definition.showOnHomepage,
-                  isRegulated: regulatedFlagFor(definition),
-                  sortOrder: definition.sortOrder,
-                  isActive: true,
-                  deprecatedAt: null
-                }
-              });
-            }
+            // The update payload never contains imageUrl/imageAlt: seeded image
+            // defaults are create-only and cannot overwrite administrator art.
+            await tx.category.update({
+              where: { id: found.id },
+              data: buildSeedUpdateData(definition, parentId)
+            });
             categoryId = found.id;
             updatedKeys.push(definition.key);
           }
@@ -594,9 +544,9 @@ async function main(): Promise<void> {
               `${definition.key}: saved isSelectable ${saved.isSelectable} != ${definition.isSelectable}`
             );
           }
-          if (saved.isRegulated !== regulatedFlagFor(definition)) {
+          if (saved.isRegulated !== seedRegulatedFlagFor(definition)) {
             throw new Error(
-              `${definition.key}: saved isRegulated ${saved.isRegulated} != established definition ${regulatedFlagFor(
+              `${definition.key}: saved isRegulated ${saved.isRegulated} != established definition ${seedRegulatedFlagFor(
                 definition
               )}`
             );

@@ -129,7 +129,7 @@ export async function listRelatedProducts(
   categorySlug: string,
   excludeId: string,
   limit = 4,
-  access: { previewAuthorized?: boolean; countryCode?: string | null } = {}
+  access: { previewAuthorized?: boolean; countryCode?: string | null; cityCode?: string | null } = {}
 ) {
   const page = await queryCatalogProducts(
     {
@@ -144,7 +144,7 @@ export async function listRelatedProducts(
       page: 1,
       pageSize: null
     },
-    { previewAuthorized: access.previewAuthorized }
+    { previewAuthorized: access.previewAuthorized, cityCode: access.cityCode }
   );
   return page.items.filter((product) => product.id !== excludeId).slice(0, limit);
 }
@@ -511,6 +511,70 @@ const STORE_FIXTURE =
 
 function isStorefrontVisible(product: CatalogProduct) {
   return !STORE_FIXTURE.test(product.name) && !STORE_FIXTURE.test(product.slug);
+}
+
+/**
+ * The canonical set of product ids that may be publicly listed for a market.
+ *
+ * This is the same eligibility decision the public detail page and checkout
+ * share:
+ *  - the Shop activation gate is reachable for the country/city (PREVIEW only
+ *    for an authorized Control Center caller — and only for activation);
+ *  - the product is ACTIVE, not sample inventory and its seller is VERIFIED;
+ *  - the product's fulfilment country is the requested market;
+ *  - its category is selectable, reachable and publishable for that country,
+ *    including the regulated-node rule (`effectivePublishRule`): an explicit
+ *    deny or an unresolved regulated node contributes no ids.
+ *
+ * `productIds` narrows the database read for cart/checkout callers; it never
+ * relaxes a rule. Preview authorization deliberately does not bypass the
+ * product/market checks, so a Control Center preview cannot add another
+ * market's product to a cart.
+ *
+ * Catalogue display has a separate acceptance-name filter (`STORE_FIXTURE`)
+ * for legacy fixture rows. It is not repeated here: a seller-created listing
+ * that a verification run names "Test …" is still a real ACTIVE row, and the
+ * product detail page plus the historical cart/checkout contract expose it.
+ */
+export async function listPublicEligibleProductIds(
+  options: {
+    countryCode?: string | null;
+    cityCode?: string | null;
+    previewAuthorized?: boolean;
+    fresh?: boolean;
+    productIds?: readonly string[];
+  } = {}
+): Promise<Set<string>> {
+  const country = (options.countryCode ?? "").trim().toUpperCase() || DEFAULT_PUBLIC_COUNTRY;
+  const requested = options.productIds ? [...new Set(options.productIds.filter(Boolean))] : null;
+  if (requested && requested.length === 0) return new Set();
+
+  const allowed = await shopReadAllowed({
+    countryCode: country,
+    cityCode: options.cityCode,
+    previewAuthorized: options.previewAuthorized,
+    fresh: options.fresh
+  });
+  if (!allowed) return new Set();
+
+  const tree = await loadPublicCategoryTree(country);
+  const categoryIds = tree.visible
+    .filter((row) => row.isSelectable && !tree.restricted.has(row.id))
+    .map((row) => row.id);
+  if (categoryIds.length === 0) return new Set();
+
+  const rows = await prisma.product.findMany({
+    where: {
+      ...(requested ? { id: { in: requested } } : {}),
+      status: "ACTIVE",
+      isSample: false,
+      countryCode: country,
+      categoryId: { in: categoryIds },
+      vendor: { status: "VERIFIED" }
+    },
+    select: { id: true }
+  });
+  return new Set(rows.map((row) => row.id));
 }
 
 function readText(params: URLSearchParams, field: string, maxLength: number): string | null {

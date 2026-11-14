@@ -10,6 +10,7 @@ import { cancelOrderDeliveries } from "./delivery.service";
 import { availablePaymentMethods } from "@/lib/payments/service";
 import { activationFor } from "./country.service";
 import { assertShopAccess } from "./vertical-activation.service";
+import { listPublicEligibleProductIds } from "./catalog.service";
 import { resolveCheckoutAttribution } from "@/lib/services/affiliate/service";
 
 export type CheckoutAddress = {
@@ -242,6 +243,26 @@ export async function checkout(input: {
             409,
             "item_market_mismatch",
             `${crossMarket.product.name} is listed for ${crossMarket.product.countryCode}. Choose a delivery address in that market or remove it from the cart.`
+          );
+        }
+
+        // A cart can outlive the listing's eligibility: a regulated category
+        // may have been restricted afterwards, or a seller suspended. Re-check
+        // every line against the same public eligibility set the storefront
+        // uses before any order or reservation is written. A failed check
+        // leaves the cart and stock untouched.
+        const eligibleProductIds = await listPublicEligibleProductIds({
+          countryCode: country.code,
+          cityCode: input.address.city,
+          previewAuthorized: input.previewAuthorized,
+          productIds: cart.items.map((item) => item.productId)
+        });
+        const ineligible = cart.items.find((item) => !eligibleProductIds.has(item.productId));
+        if (ineligible) {
+          throw new ApiError(
+            409,
+            "item_market_unavailable",
+            `${ineligible.product.name} is not available in this market. Remove it from the cart or change your delivery address.`
           );
         }
 

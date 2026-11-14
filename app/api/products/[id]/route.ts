@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { getProduct, getPublicProductDetail } from "@/lib/services/core/catalog.service";
 import { jsonSafe } from "@/lib/services/core/serialize";
 import { jsonError } from "@/lib/auth/guard";
+import { readLocale } from "@/lib/i18n/server";
 import {
   assertVerticalAccess,
   previewAuthorizationForRequest
@@ -10,7 +11,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Confirm the row exists before evaluating the visitor's market. No field is
     // returned until the Shop gate and the public-visibility checks both pass.
@@ -23,8 +24,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   const { previewAuthorized } = await previewAuthorizationForRequest();
-  const countryCode = (request.cookies.get("nd_country")?.value ?? "NG").toUpperCase().slice(0, 2);
-  const cityCode = (request.cookies.get("nd_city")?.value ?? "").toLowerCase().slice(0, 40) || null;
+  // Validate the market exactly like the server page: an unknown country falls
+  // back to the home market and a city that belongs to another country is not
+  // treated as selected.
+  const { country, city } = readLocale();
+  const countryCode = country;
+  const cityCode = city || null;
   try {
     await assertVerticalAccess("shop", {
       countryCode,

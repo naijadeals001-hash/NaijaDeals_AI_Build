@@ -1,21 +1,25 @@
 import type { Metadata } from "next";
 import { unstable_noStore as noStore } from "next/cache";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { ProductDetailClient } from "@/components/functional/product-detail-client";
 import type { ProductAttributeDefinition } from "@/components/product-detail/types";
 import { getPublicProductDetail, listRelatedProducts } from "@/lib/services/core/catalog.service";
 import { jsonSafe } from "@/lib/services/core/serialize";
 import { previewAuthorizationForRequest } from "@/lib/services/core/vertical-activation.service";
+import { readLocale } from "@/lib/i18n/server";
 import { prisma } from "@/lib/prisma";
 import type { ApiProduct } from "@/lib/api-client";
 
-/** The visitor's selected market; the catalogue never falls back to a product's own country. */
+/**
+ * The visitor's selected market, validated by the shared locale reader: an
+ * unsupported country falls back to the home market and a city that does not
+ * belong to the country is treated as no selection. The catalogue never falls
+ * back to a product's own country.
+ */
 function visitorMarket() {
-  const store = cookies();
-  const countryCode = (store.get("nd_country")?.value ?? "NG").toUpperCase().slice(0, 2);
-  const cityCode = (store.get("nd_city")?.value ?? "").toLowerCase().slice(0, 40) || null;
-  return { countryCode, cityCode };
+  const { country, city } = readLocale();
+  return { countryCode: country, cityCode: city || null };
 }
 
 /**
@@ -126,7 +130,8 @@ export default async function ProductDetail({ params }: { params: { id: string }
       initialRelated = jsonSafe(
         await listRelatedProducts(product.category.slug, product.id, 4, {
           previewAuthorized,
-          countryCode: market.countryCode
+          countryCode: market.countryCode,
+          cityCode: market.cityCode
         })
       ) as unknown as ApiProduct[];
     } catch {
@@ -144,7 +149,9 @@ export default async function ProductDetail({ params }: { params: { id: string }
 
   return (
     <ProductDetailClient
-      key={params.id}
+      // Remount when the validated market changes so the client never keeps a
+      // previous market's server-rendered product/rail state after a refresh.
+      key={`${params.id}:${market.countryCode}:${market.cityCode ?? ""}`}
       id={params.id}
       initialProduct={initialProduct}
       initialRelated={initialRelated}

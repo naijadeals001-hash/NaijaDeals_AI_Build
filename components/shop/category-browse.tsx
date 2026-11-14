@@ -41,11 +41,18 @@ function prettifySlug(slug: string) {
 export function CategoryBrowse({
   categorySlug,
   mode = "category",
-  initialQuery = ""
+  initialQuery = "",
+  serverEmpty = false
 }: {
   categorySlug?: string;
   mode?: "category" | "deals" | "all";
   initialQuery?: string;
+  /**
+   * The server-rendered category header already showed the authoritative empty
+   * state for this market (unfiltered total 0). Suppress the duplicate grid
+   * message only until the visitor applies a filter.
+   */
+  serverEmpty?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -193,6 +200,11 @@ export function CategoryBrowse({
     Boolean(categorySlug) &&
     taxonomyStatus === "ready" &&
     !knownCategory;
+
+  // Only the unfiltered first page is described by the server header. A search,
+  // price cap or later page is client-side state and keeps its own empty state.
+  const serverOwnsEmptyState =
+    serverEmpty && mode === "category" && !departmentMissing && !q && !maxPrice && page === 1;
 
   const heading =
     mode === "deals"
@@ -407,34 +419,39 @@ export function CategoryBrowse({
           ) : null}
 
           {status === "ready" && products.length === 0 ? (
-            <div className="rounded border border-dashed border-[#d5d9d9] p-8 text-center text-[12.5px] text-[#565959]">
-              {departmentMissing ? (
-                <>
-                  <p className="font-bold text-[#0f1111]">We couldn’t find that department.</p>
-                  <p className="mt-1">It may have been renamed or removed.</p>
-                  <Link href="/naijashop/categories" className="mt-2 inline-block font-semibold text-[#007185] hover:underline">
-                    Browse all departments
-                  </Link>
-                </>
-              ) : page > 1 && pageInfo.total > 0 ? (
-                <>
-                  <p className="font-bold text-[#0f1111]">No products on this page.</p>
-                  <button type="button" onClick={() => goToPage(page - 1)} className="mt-2 font-semibold text-[#007185] hover:underline">
-                    Go to the previous page
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="font-bold text-[#0f1111]">
-                    {q ? `No products match “${q}”` : "No products match these filters yet."}
-                  </p>
-                  {maxPrice ? <p className="mt-1">The maximum price is ₦{Number(maxPrice).toLocaleString("en-NG")}.</p> : null}
-                  <button type="button" onClick={clearFilters} className="mt-2 font-semibold text-[#007185] hover:underline">
-                    Clear filters
-                  </button>
-                </>
-              )}
-            </div>
+            serverOwnsEmptyState ? null : (
+              <div
+                data-category-empty="client"
+                className="rounded border border-dashed border-[#d5d9d9] p-8 text-center text-[12.5px] text-[#565959]"
+              >
+                {departmentMissing ? (
+                  <>
+                    <p className="font-bold text-[#0f1111]">We couldn’t find that department.</p>
+                    <p className="mt-1">It may have been renamed or removed.</p>
+                    <Link href="/naijashop/categories" className="mt-2 inline-block font-semibold text-[#007185] hover:underline">
+                      Browse all departments
+                    </Link>
+                  </>
+                ) : page > 1 && pageInfo.total > 0 ? (
+                  <>
+                    <p className="font-bold text-[#0f1111]">No products on this page.</p>
+                    <button type="button" onClick={() => goToPage(page - 1)} className="mt-2 font-semibold text-[#007185] hover:underline">
+                      Go to the previous page
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-bold text-[#0f1111]">
+                      {q ? `No products match “${q}”` : "No products match these filters yet."}
+                    </p>
+                    {maxPrice ? <p className="mt-1">The maximum price is ₦{Number(maxPrice).toLocaleString("en-NG")}.</p> : null}
+                    <button type="button" onClick={clearFilters} className="mt-2 font-semibold text-[#007185] hover:underline">
+                      Clear filters
+                    </button>
+                  </>
+                )}
+              </div>
+            )
           ) : null}
 
           <ul aria-busy={status === "loading"} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

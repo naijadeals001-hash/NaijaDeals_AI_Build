@@ -12,7 +12,7 @@
  *   - inactive/deprecated/CRF/test categories never appear;
  *   - draft/archived products never appear;
  *   - `/api/categories` roots and per-root counts match the active tree;
- *   - `/api/taxonomy` keeps its contract (11 departments / 113 leaves);
+ *   - `/api/taxonomy` keeps its contract (11 departments / 117 leaves);
  *   - the deterministic alias search still resolves eligible categories;
  *   - the optional Aura path accepts only eligible ids from a mocked generator.
  *
@@ -277,8 +277,8 @@ async function main(): Promise<void> {
       actualDb
     );
     check(
-      "11 public roots, 113 selectable leaves",
-      tree.roots.length === 11 && tree.publicRows.filter((row) => row.level === 2 && row.isSelectable).length === 113,
+      "11 public roots, 117 selectable leaves",
+      tree.roots.length === 11 && tree.publicRows.filter((row) => row.level === 2 && row.isSelectable).length === 117,
       `${tree.roots.length} roots / ${tree.publicRows.filter((row) => row.level === 2 && row.isSelectable).length} leaves`
     );
 
@@ -576,8 +576,8 @@ async function main(): Promise<void> {
         const taxonomyIds = new Set<string>();
         for (const node of departments) collectIds(node, taxonomyIds);
         httpCheck(
-          "HTTP /api/taxonomy contract: 11 departments, 113 leaves",
-          tax.status === 200 && departments.length === 11 && leaves === 113,
+          "HTTP /api/taxonomy contract: 11 departments, 117 leaves",
+          tax.status === 200 && departments.length === 11 && leaves === 117,
           `status=${tax.status}, departments=${departments.length}, leaves=${leaves}`
         );
         httpCheck(

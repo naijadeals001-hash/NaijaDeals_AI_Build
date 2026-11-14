@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
+import { listPublicEligibleProductIds } from "./catalog.service";
 
 const cartInclude = {
   items: {
@@ -31,7 +32,24 @@ function availableStock(item: { variant?: { stock: number; reserved: number } | 
   return item.product.stock ? item.product.stock.quantity - item.product.stock.reserved : 0;
 }
 
-export async function addCartItem(input: { userId: string; productId: string; variantId?: string | null; quantity: number }) {
+/**
+ * Add a new item to the customer's active cart.
+ *
+ * `market` is the visitor's effective market (resolved server-side from the
+ * validated locale, never from the request body). It is optional only for
+ * non-HTTP maintenance callers: when omitted, eligibility is evaluated against
+ * the product's own fulfilment country, which still enforces the public
+ * category/regulated rules rather than skipping them. Preview authorization is
+ * forwarded to the activation gate only; it never bypasses product eligibility.
+ */
+export async function addCartItem(input: {
+  userId: string;
+  productId: string;
+  variantId?: string | null;
+  quantity: number;
+  market?: { countryCode: string; cityCode?: string | null };
+  previewAuthorized?: boolean;
+}) {
   const quantity = Math.trunc(input.quantity);
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
     throw new ApiError(400, "validation_error", "Quantity must be between 1 and 10.");
@@ -45,6 +63,33 @@ export async function addCartItem(input: { userId: string; productId: string; va
     throw new ApiError(400, "contact_seller_only", "This listing is fulfilled by the seller directly; use Contact seller instead of checkout.");
   }
   if (product.vendor.status !== "VERIFIED") throw new ApiError(409, "vendor_unavailable", "This seller is not accepting orders.");
+
+  // The selected market is a publication boundary. A product listed for
+  // another country keeps the historical refusal code/message; a product that
+  // is not publicly eligible in this market (regulated/unresolved category,
+  // restricted node or fixture inventory) is rejected before any cart write.
+  const marketCountry = (input.market?.countryCode ?? product.countryCode).trim().toUpperCase();
+  const cityCode = input.market?.cityCode ?? null;
+  if (product.countryCode.trim().toUpperCase() !== marketCountry) {
+    throw new ApiError(
+      409,
+      "product_market_unavailable",
+      "This listing is not sold in your selected market. Change your delivery location to shop its home market."
+    );
+  }
+  const eligibleIds = await listPublicEligibleProductIds({
+    countryCode: marketCountry,
+    cityCode,
+    previewAuthorized: input.previewAuthorized,
+    productIds: [product.id]
+  });
+  if (!eligibleIds.has(product.id)) {
+    throw new ApiError(
+      409,
+      "product_market_unavailable",
+      "This listing is not available in your selected market. Choose another product or change your delivery location."
+    );
+  }
 
   let variant = null;
   if (input.variantId) {

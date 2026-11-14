@@ -504,10 +504,11 @@ function money(value) {
       check(scope, "African discovery has at least three accurate featured items", (feature?.items?.length ?? 0) >= 3, `${feature?.items?.length ?? 0} items`);
       const featureOffenders = (feature?.items ?? []).filter((item) => {
         const product = viewportProductBySlug.get(item.slug);
+        const visibleName = product?.name?.replace(/^DEMO\s*[—-]\s*/i, "") ?? "";
         return (
           !product ||
           !EXPECTED_AFRICAN_CATEGORIES.has(product.category?.slug ?? "") ||
-          !item.text.includes(product.name) ||
+          !(item.text.includes(product.name) || (visibleName && item.text.includes(visibleName))) ||
           !item.image?.complete ||
           item.image?.naturalWidth <= 0 ||
           !samePath(item.image?.src, product.images?.[0]?.url ?? "")

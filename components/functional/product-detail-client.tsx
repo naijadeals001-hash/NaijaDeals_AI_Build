@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Info, RotateCcw } from "lucide-react";
 import { ApiRequestError, apiClient, type ApiProduct } from "@/lib/api-client";
+import { useLocale } from "@/lib/i18n/locale-provider";
 import { announceShopCartCount } from "@/components/shop/shop-header";
 import { ProductGallery } from "@/components/product-detail/gallery";
 import { ProductPurchasePanel, type CartNotice } from "@/components/product-detail/purchase-panel";
@@ -25,8 +26,16 @@ function cartItemCount(cart: Awaited<ReturnType<typeof apiClient.addCartItem>>) 
   return cart.items.filter((item) => !item.savedForLater).reduce((sum, item) => sum + item.quantity, 0);
 }
 
-async function loadRelated(product: ShopProduct): Promise<ShopProduct[]> {
-  const items = await apiClient.getProducts({ category: product.category.slug, sort: "trust" });
+async function loadRelated(product: ShopProduct, market: { country: string; city: string }): Promise<ShopProduct[]> {
+  // Related products are a public catalogue view, so they carry the same
+  // validated market context as the server-rendered rail. Without it the retry
+  // could show another market's listings after hydration.
+  const items = await apiClient.getProducts({
+    category: product.category.slug,
+    sort: "trust",
+    country: market.country,
+    ...(market.city ? { city: market.city } : {})
+  });
   return (items as ShopProduct[]).filter((candidate) => candidate.id !== product.id).slice(0, 4);
 }
 
@@ -56,6 +65,7 @@ export function ProductDetailClient({
   reviewEnvironment?: boolean;
 }) {
   const router = useRouter();
+  const { country, city } = useLocale();
   const seededProduct =
     initialProduct && (initialProduct.id === id || initialProduct.slug.toLowerCase() === id.toLowerCase())
       ? (initialProduct as ShopProduct)
@@ -97,7 +107,7 @@ export function ProductDetailClient({
 
         // Related products are a convenience rail, never a prerequisite for
         // showing the product. A failed/slow request is ignored.
-        void loadRelated(item)
+        void loadRelated(item, { country, city })
           .then((items) => {
             if (active) setRelated(items);
           })
@@ -113,7 +123,7 @@ export function ProductDetailClient({
     return () => {
       active = false;
     };
-  }, [id, seededProduct, initialError, reloadKey]);
+  }, [id, seededProduct, initialError, reloadKey, country, city]);
 
   // A related-rail failure during the server render is retried once after
   // hydration. It stays silent: the product page does not depend on it.
@@ -121,7 +131,7 @@ export function ProductDetailClient({
     if (!seededProduct || !initialRelatedUnavailable) return;
     let active = true;
     setRelatedStatus("loading");
-    void loadRelated(seededProduct)
+    void loadRelated(seededProduct, { country, city })
       .then((items) => {
         if (!active) return;
         setRelated(items);
@@ -133,12 +143,12 @@ export function ProductDetailClient({
     return () => {
       active = false;
     };
-  }, [seededProduct, initialRelatedUnavailable]);
+  }, [seededProduct, initialRelatedUnavailable, country, city]);
 
   function retryRelated() {
     if (!seededProduct) return;
     setRelatedStatus("loading");
-    void loadRelated(seededProduct)
+    void loadRelated(seededProduct, { country, city })
       .then((items) => {
         setRelated(items);
         setRelatedStatus("ready");
