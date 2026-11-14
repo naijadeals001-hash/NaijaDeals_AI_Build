@@ -5611,3 +5611,60 @@ their correct leaves; accepted catalogue delta is exactly the six planned rows.
 - The separate variant-integrity LOW findings remain OPEN: stock-row-absent transition risk and
   product-level cart lines becoming unfulfillable after stocked-to-variant conversion.
 - No push or deployment.
+
+
+## 2026-11-14 — Variant concurrency serialization and strict input acceptance
+
+**Served artifact:** canonical 3047 from clean worktree
+`C:/Users/User/naijadeals-clean-20261114-135010`, app commit **`0b53d49`**, build
+**`apf5ObexQcwV5Pmk3_sAl`**, PID 14712. Shop LIVE; 0 activation rows; REVIEW 259 products /
+63 ACTIVE / 0 variants.
+
+### Fixed
+
+- Missing `InventoryStock` rows are created at zero and locked inside the transaction; lock order
+  is user/cart -> order -> product stock (sorted) -> variants (sorted), with no retries/sleeps.
+  Checkout, cart, seller/admin quantity writes, commit/release/restock and transitions follow it.
+- Variant activation/conversion is refused (`409 product_in_live_cart`) while a live unsaved
+  product-level cart line exists; saved-for-later and CHECKED_OUT lines do not block. Refusal is
+  audited as `product.variant_transition_blocked`.
+- Checkout re-reads variant `priceKobo` under the locked variant row before subtotal/order creation.
+- Per-variant `imageId`/`imageUrl` are rejected with `400 unsupported_variant_field`; public/admin
+  catalogue variant payloads and variant UI no longer expose an image claim. Product-level images
+  remain intact; legacy column values are preserved but not settable.
+- Same-customer concurrent cart adds serialize to one line with combined quantity; last-unit race
+  preserves one reservation.
+- Exclusive REVIEW acceptance lease prevents concurrent activation-mutating suites; snapshot
+  recovery remains the sole Shop-state restore authority.
+
+### Evidence
+
+- Before/after logs: `qa-artifacts/_variant-lock-before.log`, `_variant-lock-after.log`.
+- Lock suite **29/29**; full HTTP concurrency **109/109, 0 blocked** (artifact
+  `VARIANT-CONC-MWGXZI1C-E8282E.json`); management **32/32**; lease **18/18**; TEST restock
+  **24/24** (`naijadeals_checkout_refund_test`, guard verified); activation **30/30**; landing
+  **95/95**; market **18/18**; basket **10/10**; financial refusal **46/46**, 0 provider calls.
+- Independent reviewer `agent_6babd783-d4dd-4f01-8c84-54b4d2ddb8f6` reproduced lock waits,
+  same-customer adds and price-under-lock, and signed the exact build. Audit/price findings closed.
+
+### Agents
+
+- Inventory/concurrency: `agent_91a4024e-3ee7-4e0f-873a-90f143331516`.
+- Contract/test isolation: `agent_94f6495a-b812-4554-bebd-2052906b6892`.
+- Independent reviewer: `agent_6babd783-d4dd-4f01-8c84-54b4d2ddb8f6`.
+
+### Still open (not inferred closed)
+
+1. Legacy per-variant `imageUrl` remains in some non-catalogue payloads/order snapshots
+   (`checkout.service.ts`, raw seller/admin includes, account saved). Current data has 0 legacy
+   variant images; latent.
+2. No DB CHECK constraints for nonnegative stock/reserved or reserved <= stock; service guards hold.
+3. `variant-management-tests.cjs` header omits required `DATABASE_URL` for ambient Prisma.
+4. Activation snapshot restore TOCTOU window and unaudited `discardRunOwnedShopActivation`.
+5. Saved-items availability does not check product status; raw saved variant payload.
+6. Refund/restock suppression (`stock_row_missing`/`variant_managed`) writes the once-marker, so
+   suppressed units cannot be restored by a later retry.
+7. Homepage paused-Shop RSC path not re-executed in this review.
+8. TEST-only side effect: SYSTEM wallet moved from -91,000,000 to -97,000,000 kobo through balanced
+   journals; no REVIEW financial rows or provider calls.
+9. No push or deployment.
