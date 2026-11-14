@@ -252,7 +252,7 @@ async function main(): Promise<void> {
     const nodes = await import("../lib/services/taxonomy/nodes");
     prisma = prismaModule.prisma;
     const { buildSeedCreateData, buildSeedUpdateData } = seedUpdate;
-    const { updateCategoryNode } = nodes;
+    const { createCategoryNode, updateCategoryNode } = nodes;
 
     const createFixture = async (source: SeedNodeSource): Promise<string> => {
       const row = await prisma!.category.create({
@@ -399,6 +399,43 @@ async function main(): Promise<void> {
       await updateCategoryNode(actor, preserveId, { imageAlt: revised });
       assertImage(await readImage(preserveId), { imageUrl: imageA, imageAlt: revised }, "alt-only update");
       await prisma!.category.update({ where: { id: preserveId }, data: { imageAlt: altA } });
+    });
+
+    await step("alt text without an existing image is refused", async () => {
+      const noImageId = await createFixture(
+        definition({
+          ...baseDefinition,
+          key: `${keyPrefix}_no_image`,
+          name: `${runId} No Image`,
+          slug: `${runLower}-no-image`
+        })
+      );
+      await expectApiError(
+        () => updateCategoryNode(actor, noImageId, { imageAlt: `${runId} orphan alt` }),
+        400,
+        "image_required_for_alt",
+        "alt-only update without image"
+      );
+      assertImage(await readImage(noImageId), { imageUrl: null, imageAlt: null }, "no-image fixture after refused alt");
+    });
+
+    await step("creating a category image without alt is refused", async () => {
+      let createdId: string | null = null;
+      try {
+        const created = await createCategoryNode(actor, {
+          parentId: null,
+          key: `${keyPrefix}_create_no_alt`,
+          name: `${runId} Create No Alt`,
+          slug: `${runLower}-create-no-alt`,
+          imageUrl: imageA
+        });
+        createdId = created.id;
+      } catch (error) {
+        const api = error as { status?: unknown; code?: unknown; message?: unknown };
+        assert(api.status === 400, `create without alt: expected HTTP 400, got ${String(api.status)} (${String(api.message)})`);
+        assert(api.code === "image_alt_required", `create without alt: expected image_alt_required, got ${String(api.code)}`);
+      }
+      assert(!createdId, "create without alt unexpectedly created a category");
     });
 
     await step("explicit empty-string clear removes both image and alt", async () => {

@@ -49,7 +49,10 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
       previewAuthorized
     });
     if (!detail) {
-      return NextResponse.json({ error: "This product is not available.", code: "product_unavailable" }, { status: 404 });
+      return NextResponse.json(
+        { error: "This product is not available.", code: "product_unavailable" },
+        { status: 404, headers: { "Cache-Control": "no-store" } }
+      );
     }
     return NextResponse.json(jsonSafe(detail), {
       headers: {

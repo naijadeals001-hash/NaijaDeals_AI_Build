@@ -693,7 +693,9 @@ export async function updateDepartment(input: {
     "Department image",
     false
   );
-  const effectiveAlt = imageAlt ?? existing.imageAlt;
+  // Image and alt are a pair. An explicit clear removes both; a surviving
+  // image must have accessible alt text.
+  const effectiveAlt = image.imageUrl ? imageAlt ?? existing.imageAlt : null;
   if (image.imageUrl && !effectiveAlt) throw new ApiError(400, "alt_required", "Accessible alt text is required for the department image.");
   const sortOrder =
     input.sortOrder === undefined ? existing.sortOrder : integer(input.sortOrder, "Department order", 0, 9999);

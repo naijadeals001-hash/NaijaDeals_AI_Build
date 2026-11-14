@@ -85,7 +85,13 @@ function alternativesFor(
   return pool.filter((entry) => entry.slug !== slug).slice(0, 6);
 }
 
-export default async function CategoryPage({ params }: { params: { slug: string } }) {
+export default async function CategoryPage({
+  params,
+  searchParams
+}: {
+  params: { slug: string };
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
   let slug = params.slug;
   try {
     slug = decodeURIComponent(params.slug);
@@ -105,6 +111,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
   const productQuery = new URLSearchParams({
     category: slug,
     country,
+    ...(city ? { city } : {}),
     page: "1",
     pageSize: "1"
   }).toString();
@@ -118,7 +125,15 @@ export default async function CategoryPage({ params }: { params: { slug: string 
   // The server knows the unfiltered total for this market. When it is zero the
   // header below is the single authoritative empty state; CategoryBrowse must
   // not repeat the same message under the grid.
-  const serverEmpty = Boolean(match) && total === 0;
+  // A query/price/page filter is client-owned: CategoryBrowse renders its
+  // single, more specific empty state and the server panel steps aside. The
+  // unfiltered zero-result category uses the server panel as the only message.
+  const firstPage = String(Array.isArray(searchParams?.page) ? searchParams?.page[0] : searchParams?.page ?? "1");
+  const filtered = ["q", "price", "maxPrice"].some((key) => {
+    const value = searchParams?.[key];
+    return Array.isArray(value) ? value.some(Boolean) : Boolean(value);
+  }) || (firstPage !== "1" && firstPage !== "");
+  const serverEmpty = Boolean(match) && total === 0 && !filtered;
 
   return (
     <>
@@ -198,7 +213,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                   ))}
                 </ul>
               </div>
-            ) : total === 0 ? (
+            ) : total === 0 && !filtered ? (
               <div
                 data-category-empty="server"
                 className="mt-2 rounded-lg border border-dashed border-[#cfdccb] bg-white p-3"

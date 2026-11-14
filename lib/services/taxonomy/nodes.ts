@@ -186,6 +186,21 @@ export async function validateCategoryCreateInput(tx: Db, body: Record<string, u
     sortOrder: body.sortOrder === undefined ? 0 : readInteger(body.sortOrder, "sortOrder", 0, 100_000)
   };
 
+  if (values.imageUrl && !values.imageAlt) {
+    throw new ApiError(
+      400,
+      "image_alt_required",
+      "A category image requires non-empty imageAlt text in the same request."
+    );
+  }
+  if (!values.imageUrl && values.imageAlt) {
+    throw new ApiError(
+      400,
+      "image_required_for_alt",
+      "Image alt text cannot be supplied without a category image."
+    );
+  }
+
   await assertUniqueCategory(tx, { key: values.key, name: values.name, slug: values.slug });
   return values;
 }
@@ -507,6 +522,14 @@ function readCategoryImageUpdate(
 
   if (urlSupplied && requestedUrl === null) {
     return { imageUrl: null, imageAlt: null };
+  }
+
+  if (requestedAlt && !existing.imageUrl && requestedUrl === undefined) {
+    throw new ApiError(
+      400,
+      "image_required_for_alt",
+      "Image alt text cannot be supplied while the category has no image."
+    );
   }
 
   if (requestedUrl !== undefined && requestedUrl !== existing.imageUrl) {
