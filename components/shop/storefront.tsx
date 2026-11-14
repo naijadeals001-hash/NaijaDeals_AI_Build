@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   ArrowRight,
@@ -26,12 +26,21 @@ import { CountryDiscoveryRow } from "./country-discovery";
 import { MarketplaceProductCard } from "./marketplace-card";
 import type { CountryCardSummary } from "@/lib/services/countries/discovery.service";
 import { announceShopCartCount } from "./shop-header";
+import type { StorefrontDiscoveryCard, StorefrontDiscoveryLink } from "@/lib/config/storefront-discovery";
 
 type StorefrontConfig = {
   showHero?: boolean;
   showShelves?: boolean;
   shelfLimit?: number;
+  showAfricanDiscovery?: boolean;
+  africanFeaturedProductIds?: string[];
+  africanDiscoveryEyebrow?: string;
+  africanDiscoveryTitle?: string;
+  africanDiscoveryIntro?: string;
+  africanDiscoveryLinks?: StorefrontDiscoveryLink[];
+  discoveryCards?: StorefrontDiscoveryCard[];
 };
+
 
 /**
  * The same effective-activation signal the Shop header reads.
@@ -169,17 +178,14 @@ const SHELF_GROUPS: ShelfDefinition[] = [
   }
 ];
 
-/**
- * One listing per African discovery category. These are demonstration rows;
- * the section repeats the seller's own item name and image and never adds an
- * origin, maker or material claim the listing has not recorded.
- */
+// Client-safe copy of the server allowlist. The server module imports node:fs for
+// image-existence validation and cannot be bundled into the client.
 const AFRICAN_FEATURE_SLUGS = [
   "african-print-fabrics",
   "handwoven-dyed-fabrics",
   "shea-natural-butters",
   "traditional-cleansers-black-soap"
-];
+] as const;
 
 type ShelfView = {
   id: string;
@@ -291,6 +297,8 @@ export function NaijaDealsMarketplace({
   const [addedId, setAddedId] = useState("");
   const [notice, setNotice] = useState<Notice>(null);
   const [config, setConfig] = useState<StorefrontConfig>({});
+  const [draftPreview, setDraftPreview] = useState(false);
+  const previewApplied = useRef(false);
   const [shopAvailability, setShopAvailability] = useState<ShopAvailability | null>(initialShopAvailability);
   const [missingArt, setMissingArt] = useState<Record<string, boolean>>({});
 
@@ -344,7 +352,7 @@ export function NaijaDealsMarketplace({
     fetch("/api/storefront", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((value) => {
-        if (active && value) setConfig(value as StorefrontConfig);
+        if (active && value && !previewApplied.current) setConfig(value as StorefrontConfig);
       })
       .catch(() => undefined);
 
@@ -352,6 +360,33 @@ export function NaijaDealsMarketplace({
       active = false;
     };
   }, [reloadKey, country, city]);
+
+  /**
+   * Staff draft preview.
+   *
+   * `/api/admin/storefront/preview` requires `products:moderate`; an anonymous
+   * or customer visitor receives 401/403 and keeps the published config. The
+   * published fetch above also refuses to overwrite an applied preview, so a
+   * slower public response cannot replace the draft.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("storefrontPreview") !== "draft") return;
+    let active = true;
+    fetch("/api/admin/storefront/preview", { cache: "no-store" })
+      .then(async (response) => (response.ok ? response.json() : null))
+      .then((value: { preview?: StorefrontConfig; isDraft?: boolean } | null) => {
+        if (!active || !value?.preview) return;
+        previewApplied.current = true;
+        setConfig(value.preview);
+        setDraftPreview(Boolean(value.isDraft));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [reloadKey]);
 
   // Taxonomy is market-scoped, so both the published tree (shelves/navigation)
   // and the level-1 browsing projection (rail/directory) refetch when the
@@ -388,6 +423,19 @@ export function NaijaDealsMarketplace({
   const showHero = config.showHero !== false;
   const showShelves = config.showShelves !== false;
   const shelfLimit = Math.min(Math.max(config.shelfLimit && config.shelfLimit > 0 ? config.shelfLimit : 4, 1), 8);
+  const discoveryCards = useMemo(
+    () =>
+      [...(config.discoveryCards ?? [])]
+        .filter((card) => card.enabled)
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id)),
+    [config.discoveryCards]
+  );
+  // Copy comes from the published config. A missing config leaves the section
+  // out instead of inventing hardcoded marketing text in the client.
+  const africanSectionEnabled =
+    config.showAfricanDiscovery !== false &&
+    typeof config.africanDiscoveryTitle === "string" &&
+    config.africanDiscoveryTitle.trim().length > 0;
 
   // Three states drive the whole page:
   // - paused: the resolver explicitly refused this request (DISABLED public, or
@@ -466,7 +514,13 @@ export function NaijaDealsMarketplace({
    * Claiming order is explicit: African feature first, then named shelves in
    * their retail order, then Explore from the remainder. This guarantees no
    * product repeats across shelves and keeps the first shelf a varied mix.
+   *
+   * The featured row honours the operator's ordered ids. Only an empty list
+   * falls back to one listing per approved African feature category; a
+   * configured id that the current market cannot serve is omitted rather than
+   * silently replaced by a different listing.
    */
+  const featuredKey = (config.africanFeaturedProductIds ?? []).join(",");
   const discovery = useMemo(() => {
     const claimedIds = new Set<string>();
     const claimedNames = new Set<string>();
@@ -477,9 +531,16 @@ export function NaijaDealsMarketplace({
     const isClaimed = (product: ApiProduct) =>
       claimedIds.has(product.id) || claimedNames.has(productNameKey(product));
 
-    const african = AFRICAN_FEATURE_SLUGS.map((slug) =>
-      products.find((product) => product.category?.slug === slug && shelfEligible(product))
-    ).filter((product): product is ApiProduct => Boolean(product));
+    const configuredIds = featuredKey ? featuredKey.split(",") : [];
+    const african =
+      configuredIds.length > 0
+        ? configuredIds
+            .map((id) => products.find((product) => product.id === id))
+            .filter((product): product is ApiProduct => Boolean(product))
+            .filter(shelfEligible)
+        : AFRICAN_FEATURE_SLUGS.map((slug) =>
+            products.find((product) => product.category?.slug === slug && shelfEligible(product))
+          ).filter((product): product is ApiProduct => Boolean(product));
     african.forEach(claim);
 
     const shelves: Array<{ shelf: ShelfView; items: ApiProduct[] }> = [];
@@ -507,7 +568,7 @@ export function NaijaDealsMarketplace({
     const exploreItems = pickExplore(products, claimedIds, claimedNames, departments, shelfLimit);
 
     return { african, shelves, exploreItems };
-  }, [products, departments, allDepartments, shelfLimit]);
+  }, [products, departments, allDepartments, shelfLimit, featuredKey]);
 
   // Listings with enough stock for a business enquiry. The unit price shown on
   // the listing is retail; any wholesale price must come from the seller.
@@ -586,6 +647,18 @@ export function NaijaDealsMarketplace({
                 Dismiss
               </button>
             </span>
+          </div>
+        ) : null}
+
+        {draftPreview ? (
+          <div
+            data-storefront-draft-preview
+            role="status"
+            className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-[#e1d6b4] bg-[#fbf4e4] px-3 py-2 text-[11px] font-bold text-[#7a4c00]"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>Draft preview.</span>
+            <span className="font-semibold">Visitors still see the published storefront until you publish this draft.</span>
           </div>
         ) : null}
 
@@ -826,8 +899,17 @@ export function NaijaDealsMarketplace({
             ))
           : null}
 
-        {shopOpen && status === "ready" && discovery.african.length > 0 ? (
-          <AfricanDiscovery items={discovery.african} />
+        {shopOpen && status === "ready" && africanSectionEnabled && (discovery.african.length > 0 || discoveryCards.length > 0) ? (
+          <AfricanDiscovery
+            eyebrow={config.africanDiscoveryEyebrow?.trim() ?? ""}
+            title={config.africanDiscoveryTitle ?? ""}
+            intro={config.africanDiscoveryIntro?.trim() ?? ""}
+            links={config.africanDiscoveryLinks ?? []}
+            items={discovery.african}
+            cards={discoveryCards}
+            missingArt={missingArt}
+            onImageError={markMissing}
+          />
         ) : null}
 
         {shopOpen && status !== "loading" ? (
@@ -1105,70 +1187,167 @@ function ProductShelf({
 }
 
 /**
- * Editorial African discovery band. It reuses approved demonstration listing
- * images and the seller's own item names, and explicitly avoids adding an
- * origin or maker claim.
+ * Editorial African discovery band.
+ *
+ * One compact full-width heading row, one balanced row of featured listings and
+ * one image-led discovery strip. Copy, links, cards and featured ids all come
+ * from the published storefront config; the component adds no promotion claim,
+ * discount, urgency or origin the listing has not recorded.
  */
-function AfricanDiscovery({ items }: { items: ApiProduct[] }) {
+function AfricanDiscovery({
+  eyebrow,
+  title,
+  intro,
+  links,
+  items,
+  cards,
+  missingArt,
+  onImageError
+}: {
+  eyebrow: string;
+  title: string;
+  intro: string;
+  links: StorefrontDiscoveryLink[];
+  items: ApiProduct[];
+  cards: StorefrontDiscoveryCard[];
+  missingArt: Record<string, boolean>;
+  onImageError: (key: string) => void;
+}) {
   return (
     <section
       aria-labelledby="african-discovery-heading"
       data-african-feature
       className="mt-8 overflow-hidden rounded-[26px] bg-[#07351f] text-white"
     >
-      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-        <div className="min-w-0 p-5 sm:p-8">
-          <p className="text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-[#f5b52e]">African discovery</p>
-          <h2 id="african-discovery-heading" className="mt-2 break-words font-display text-[24px] font-extrabold leading-tight tracking-tight sm:text-[28px]">
-            African print, handwoven cloth and natural care.
-          </h2>
-          <p className="mt-2 max-w-lg text-[11.5px] leading-6 text-[#c3d9c7] sm:text-[12.5px]">
-            Explore demonstration listings for African-print fabric, handwoven cloth, shea butter and black soap. Item names and
-            imagery come from the listing; no maker or origin is claimed where the seller has not recorded one.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {[
-              { label: "African-print fabrics", href: "/naijashop/c/african-print-fabrics" },
-              { label: "Handwoven & dyed", href: "/naijashop/c/handwoven-dyed-fabrics" },
-              { label: "Shea & natural butters", href: "/naijashop/c/shea-natural-butters" }
-            ].map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="inline-flex h-9 items-center rounded-full border border-white/25 px-3 text-[10.5px] font-extrabold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-              >
-                {link.label}
-              </Link>
-            ))}
+      <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7">
+        {/* One full-width row on desktop: no tall left column and no empty pane. */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
+          <div className="min-w-0 max-w-[52rem]">
+            {eyebrow ? (
+              <p className="text-[10.5px] font-extrabold uppercase tracking-[0.18em] text-[#f5b52e]">{eyebrow}</p>
+            ) : null}
+            <h2
+              id="african-discovery-heading"
+              className="mt-1.5 break-words font-display text-[22px] font-extrabold leading-tight tracking-tight sm:text-[26px] lg:text-[28px]"
+            >
+              {title}
+            </h2>
+            {intro ? (
+              <p className="mt-2 max-w-2xl text-[12px] leading-5 text-[#c3d9c7] sm:text-[12.5px] sm:leading-6">{intro}</p>
+            ) : null}
           </div>
+          {links.length > 0 ? (
+            <ul className="flex flex-wrap gap-2 lg:justify-end" aria-label="African discovery categories">
+              {links.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="inline-flex min-h-10 items-center rounded-full border border-white/25 px-3.5 text-[11.5px] font-extrabold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white motion-reduce:transition-none"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
-        <ul className="grid min-w-0 grid-cols-2 gap-2 p-3 sm:gap-3 sm:p-6">
-          {items.map((product) => (
-            <li key={product.id} data-african-item={product.slug} className="min-w-0">
-              <Link
-                href={`/product/${product.slug}`}
-                className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl bg-white text-[#14241b] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5b52e] focus-visible:ring-offset-2 focus-visible:ring-offset-[#07351f]"
-              >
-                <span className="relative block aspect-[4/3] overflow-hidden bg-[#f6f8f4]">
-                  <img
-                    src={product.images?.[0]?.url}
-                    alt={product.images?.[0]?.alt || product.name}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]"
-                  />
-                  <span className="absolute left-1.5 top-1.5 rounded-full bg-[#F2D48C] px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase tracking-wide text-[#07351f]">
-                    DEMO
-                  </span>
-                </span>
-                <span className="flex min-w-0 flex-1 flex-col p-2.5">
-                  <span className="line-clamp-2 break-words text-[11px] font-bold leading-4">{product.name}</span>
-                  <span className="mt-1 text-[12px] font-extrabold tracking-tight">{naira(Number(product.priceKobo))}</span>
-                  <span className="mt-0.5 text-[9px] font-semibold text-[#566359]">Illustrative demonstration listing</span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+
+        {items.length > 0 ? (
+          <ul
+            data-african-products
+            aria-label="Featured African discovery listings"
+            className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4"
+          >
+            {items.map((product) => {
+              const image = product.images?.[0];
+              const missing = missingArt[`african-product:${product.id}`] || !image?.url;
+              const displayName = product.isDemo
+                ? product.name.replace(/^DEMO\s*[—-]\s*/i, "")
+                : product.name;
+              return (
+                <li key={product.id} data-african-item={product.slug} className="min-w-0">
+                  <Link
+                    href={`/product/${product.slug}`}
+                    className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl bg-white text-[#14241b] transition hover:shadow-[0_14px_30px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5b52e] focus-visible:ring-offset-2 focus-visible:ring-offset-[#07351f] motion-reduce:transition-none"
+                  >
+                    <span className="relative block aspect-[4/3] overflow-hidden bg-[#f6f8f4] md:aspect-[2/1] lg:aspect-[4/3]">
+                      {!missing ? (
+                        <img
+                          src={image.url}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          onError={() => onImageError(`african-product:${product.id}`)}
+                          className="h-full w-full object-cover transition duration-300 motion-safe:group-hover:scale-[1.03] motion-reduce:transition-none"
+                        />
+                      ) : (
+                        <span className="grid h-full place-items-center">
+                          <Store className="h-6 w-6 text-[#7a9c80]" aria-hidden />
+                        </span>
+                      )}
+                      {product.isDemo ? (
+                        <span className="absolute left-1.5 top-1.5 rounded-full bg-[#F2D48C] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#07351f]">
+                          DEMO
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col p-2.5">
+                      <span className="line-clamp-2 break-words text-[12px] font-bold leading-4">{displayName}</span>
+                      <span className="mt-1 text-[13px] font-extrabold tracking-tight">{naira(Number(product.priceKobo))}</span>
+                      {!product.isDemo && product.category?.name ? (
+                        <span className="mt-0.5 line-clamp-1 text-[10.5px] font-semibold text-[#566359]">{product.category.name}</span>
+                      ) : null}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+
+        {cards.length > 0 ? (
+          <div data-african-discovery-strip className="mt-4 border-t border-white/10 pt-4">
+            <ul className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4" aria-label="Explore NaijaDeals services">
+              {cards.map((card) => {
+                const missing = missingArt[`discovery:${card.id}`];
+                return (
+                  <li key={card.id} data-discovery-card={card.id} className="min-w-0">
+                    <Link
+                      href={card.href}
+                      className="group flex h-full min-h-11 min-w-0 flex-col overflow-hidden rounded-xl bg-white/[0.07] ring-1 ring-white/[0.12] transition hover:bg-white/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5b52e] motion-reduce:transition-none"
+                    >
+                      <span className="relative block aspect-[16/9] overflow-hidden bg-white/10 md:aspect-[5/2] lg:aspect-[16/9]">
+                        {!missing ? (
+                          <img
+                            src={card.imageUrl}
+                            alt={card.imageAlt}
+                            loading="lazy"
+                            decoding="async"
+                            onError={() => onImageError(`discovery:${card.id}`)}
+                            className="h-full w-full object-cover transition duration-300 motion-safe:group-hover:scale-[1.03] motion-reduce:transition-none"
+                          />
+                        ) : (
+                          <span className="grid h-full place-items-center px-2 text-center text-[10px] font-bold text-white/70">
+                            Image unavailable
+                          </span>
+                        )}
+                      </span>
+                      <span className="flex min-w-0 flex-1 items-start justify-between gap-2 p-2.5 sm:p-3">
+                        <span className="min-w-0">
+                          <span className="block break-words text-[12.5px] font-extrabold leading-4 text-white">{card.label}</span>
+                          {card.description ? (
+                            <span className="mt-1 block break-words text-[11px] leading-4 text-[#c3d9c7]">{card.description}</span>
+                          ) : null}
+                        </span>
+                        <ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#f5b52e]" aria-hidden />
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </section>
   );

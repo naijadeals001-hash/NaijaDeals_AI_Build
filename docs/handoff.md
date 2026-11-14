@@ -5087,3 +5087,67 @@ deployment, live charge, payout or provider charge occurred.
 - External source URLs were checked for presence/format, not re-fetched in final acceptance.
 - GitHub preservation remains blocked: `gh auth status` is not logged in and the known credential was
   rejected; no push, no force-push, no credential retry. Local commits remain the preservation path.
+
+## 2026-11-14 — African Discovery density and storefront controls
+
+**Serviced build:** `oUHNCbuYMp52y_tVrzpZO` (`NEXT_DIST_DIR=.next-programme`, REVIEW catalogue)
+on `http://localhost:3047`, database `naijadeals_review` (REVIEW). Source branch
+`naijashop-marketplace`; no production deployment, live charge or provider charge occurred.
+
+**Scope delivered.**
+- Replaced the two-column African Discovery band with a compact full-width heading/intro/category
+  row, four featured product cards in one balanced desktop row, and a four-card internal discovery
+  strip: Discover Africa `/naijashop/countries`, Explore more Shop categories `/naijashop/categories`,
+  Sell on NaijaDeals `/sell`, Deliveries & Freight `/naijasend`.
+- 390/768/1024/1440 responsive; 2-column product/discovery cards at 390/768 and 4-column at 1024/1440.
+  Section heights observed: 772px at 1440, 1152px at 768, 1126px at 390; no page-wide overflow.
+- Intro is now: “Explore demonstration listings in African print, handwoven cloth and natural care.
+  Names and imagery are illustrative; origin and maker are not verified.” One DEMO badge per card;
+  no repeated visible prefix/caption; product thumbnail is decorative (`alt=""`) and the card title
+  carries the name.
+- Storefront config now controls section visibility, copy, category links, four ordered featured
+  product IDs and four discovery cards (label, description, href, image, alt, enabled, order).
+- Admin `/admin?tab=products` supports Save draft, Publish draft, Discard draft, Preview draft,
+  Reload, section/card enable/disable, ordered featured selection and card editing. Drafts live in
+  the existing `StorefrontConfig.config` JSONB `draft` envelope; no migration was added. Public
+  `/api/storefront` is an explicit whitelist and never returns `draft`/`version`. Publish
+  revalidates products, categories and assets and uses optimistic version checks. Mutations require
+  same-origin and `products:moderate`; preview requires `products:moderate`. An ordinary visitor
+  cannot read or preview a draft.
+- Destinations are exact allowlisted internal paths; images must exist under `/generated` or
+  `/uploads`; featured products must be ACTIVE, non-sample, imaged and in the four approved African
+  feature categories. Legacy flat config rows and legacy direct PATCH remain readable, while a
+  legacy PATCH now refuses to overwrite a waiting draft (`409 draft_exists`).
+
+**Agents actually used.**
+- Implementation: `agent_fb2573e7-0593-4d0a-aeae-31d61ec115fb` — redesigned section, config contract,
+  draft/publish service and APIs, admin panel, and the 20-check acceptance harness.
+- Independent journey/visual review: `agent_cd52da29-c7c2-4836-be1d-a24f46b2d9fa` — found the
+  unsupported provenance sentence and excessive DEMO repetition; both were fixed, and the recheck
+  passed all four deltas (copy, one DEMO per card, full 390 names, no overflow).
+- Independent security review: `agent_24497c5a-7729-4c91-906d-c5161d9bdff3` — verified draft
+  isolation/authz/validation; found image-path, endpoint-guidance, max-card, legacy-draft and
+  featured-stock issues. The recheck passed all seven items.
+
+**Verification.**
+- `DATABASE_URL=<REVIEW> TEST_BASE_URL=http://localhost:3047 npx tsx scripts/storefront-discovery-tests.ts`
+  — **20/20 PASS**; log `qa-artifacts/visual/african-discovery/acceptance-final-oUH.log`.
+  Covers four destinations, 54 country links, section composition, draft privacy, preview/admin
+  authorization, same-origin, 14 invalid payloads, publish/order/cards, disable section/card,
+  shelves/cart/archived 404/country row, stale draft, legacy PATCH and flat-row compatibility.
+- `npx tsc --noEmit` — 0 errors.
+- axe WCAG 2.0/2.1 A/AA: 0 violations on `/naijashop` at 390, 768 and 1440; evidence
+  `qa-artifacts/visual/african-discovery/axe-final.json`.
+- Clean screenshots: `qa-artifacts/visual/african-discovery/final-oUH-1440.png`,
+  `final-accepted-768.png`, `final-delivery-390.png`, `admin-final-1440.png`; reviewer captures under
+  `qa-artifacts/visual/african-discovery/reviewer/`.
+- `StorefrontConfig` row restored to 0 (published defaults); 253 products unchanged.
+
+**Known limits.**
+- Full draft→preview→publish click-through is covered by the 20/20 harness; the independent
+  read-only reviewer did not repeat the write path by design.
+- 768px remains a 2×2 product and 2×2 discovery layout at 1152px total height; content is dense with
+  no blank pane, but it is not a one-row tablet layout.
+- Existing product names still contain the underlying `DEMO —` catalogue prefix in data; only the
+  discovery card display strips it.
+- No Git push or deployment. GitHub preservation remains blocked by unavailable authentication.
