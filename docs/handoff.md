@@ -5155,3 +5155,21 @@ on `http://localhost:3047`, database `naijadeals_review` (REVIEW). Source branch
 - Existing product names still contain the underlying `DEMO —` catalogue prefix in data; only the
   discovery card display strips it.
 - No Git push or deployment. GitHub preservation remains blocked by unavailable authentication.
+
+### 2026-11-14 — Shop-wide density follow-up (category header)
+
+**Build:** `SWjAQdiFECBSf38LOPq9t` on `naijadeals_review` (REVIEW), canonical 3047.
+
+The category browse page had a second oversized dead area: a 176–240px wide hero strip with a
+small centered square category image and blurred empty sides. It is now a compact 56–64px square
+category thumbnail beside the real `<h1>` and product count. Department-level banners remain wide
+because those assets are authored for that shape. No products, filters, category hierarchy or
+category links were removed.
+
+- Category (`/naijashop/c/phones-tablets`): 7 products, 0 horizontal overflow at 390 and 1440;
+  products begin immediately after a compact heading.
+- Department (`/naijashop/c/electronics-technology`): wide banner retained; 21 products; 0 overflow.
+- Before screenshot: `qa-artifacts/visual/density-audit/category-phones-1440.png`.
+- After: `category-phones-final-1440.png` and `category-phones-final-390.png` in the same folder.
+- Storefront discovery acceptance remains **20/20** (`acceptance-SWj.log`); typecheck clean.
+- No paid promotions, fabricated imagery or unrelated sections were introduced. No push/deployment.

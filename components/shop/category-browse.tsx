@@ -253,45 +253,37 @@ export function CategoryBrowse({
       </nav>
       {(() => {
         const node = knownCategory;
-        if (!node?.imageUrl) return null;
-        const isDepartment = node.level === 0;
+        if (!node?.imageUrl || node.level !== 0) return null;
         return (
           <div className="mt-3 overflow-hidden rounded-xl ring-1 ring-[#e3e6e6]">
-            {isDepartment ? (
-              /* Department banners are authored wide; a full-width cover is
-                 appropriate and does not crop a square category subject. */
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={node.imageUrl} alt={node.imageAlt || `${node.name} department`} className="h-28 w-full object-cover sm:h-36" />
-            ) : (
-              /* Category tiles are square or near-square. Keep the whole
-                 subject visible; the softly scaled copy fills the wide strip
-                 without presenting a cropped product as the category. */
-              <div className="relative h-44 overflow-hidden bg-[#eef3ec] sm:h-60">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={node.imageUrl}
-                  alt=""
-                  aria-hidden
-                  className="absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-2xl"
-                />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={node.imageUrl}
-                  alt={node.imageAlt || `${node.name} category`}
-                  className="relative mx-auto h-full w-auto max-w-full object-contain drop-shadow-[0_8px_18px_rgba(20,36,27,0.18)]"
-                />
-              </div>
-            )}
+            {/* Department banners are authored wide; a full-width cover is
+                appropriate and does not crop a square category subject. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={node.imageUrl} alt={node.imageAlt || `${node.name} department`} className="h-28 w-full object-cover sm:h-36" />
           </div>
         );
       })()}
-      <div className="mt-1 flex flex-wrap items-end justify-between gap-2">
-        <h1 className="font-display text-[22px] font-extrabold">{heading}</h1>
-        <p aria-live="polite" className="text-[12px] text-[#565959]">
-          {status === "loading" && products.length === 0
-            ? "Loading products…"
-            : `${rangeStart}–${rangeEnd} of ${pageInfo.total} products`}
-        </p>
+      <div className="mt-2 flex items-center gap-3">
+        {knownCategory?.imageUrl && knownCategory.level !== 0 ? (
+          // A square category asset reads better as a compact thumbnail than as
+          // a wide banner with empty blurred sides.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={knownCategory.imageUrl}
+            alt={knownCategory.imageAlt || `${knownCategory.name} category`}
+            className="h-14 w-14 shrink-0 rounded-lg object-cover ring-1 ring-[#e3e6e6] sm:h-16 sm:w-16"
+          />
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <h1 className="break-words font-display text-[22px] font-extrabold">{heading}</h1>
+            <p aria-live="polite" className="text-[12px] text-[#565959]">
+              {status === "loading" && products.length === 0
+                ? "Loading products…"
+                : `${rangeStart}–${rangeEnd} of ${pageInfo.total} products`}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="mt-3 grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
