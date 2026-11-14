@@ -5310,3 +5310,81 @@ contains it); app commit **`8482d23`**. No deployment and no production write.
 - GitHub push remains blocked by the rejected preservation credential; this commit is local. The
   previously dirty line-ending-only `scripts/marketplace-tests.ts` and
   `scripts/optimize-photography.mjs` were left untouched.
+
+
+## 2026-11-14 — Image persistence and market-consistent catalogue remediation
+
+**Served artifact:** canonical 3047, REVIEW `naijadeals_review`, guarded
+`scripts/start-review-preview.cmd`; build **`wqEwmZkVLJJidM3Zh6lWx`**, app commit
+**`fd4207c`**. Previous build `Gn091HjK27Z6A7VnF_cRe` is gone. No image regeneration, no full
+taxonomy seed, no deployment.
+
+### Demonstrated image root cause and fix
+
+- The seed update branch wrote `definition.imageUrl ?? found.imageUrl` and the alt equivalent.
+  Five department definitions carry hardcoded defaults, so a seed rerun could reset an
+  administrator-edited banner. The image suite reproduced the overwrite against a run-owned row.
+- Seed image fields are now **create-only** through `lib/services/taxonomy/seed-update.ts`; the
+  update payload type omits `imageUrl`/`imageAlt`. A rerun preserves every existing category's
+  approved pair.
+- Admin semantics: omitted fields preserve; `imageUrl: ""`/null is one intentional clear of both;
+  a different URL requires non-empty alt (`400 image_alt_required`); alt-only writes require an
+  existing image (`400 image_required_for_alt`); unchanged URLs keep the stored alt. Department
+  edits clear alt when clearing the image.
+- Image-bearing seller category requests still approve: when no admin alt override exists, the
+  approval derives `${category name} category image` as a neutral accessible alt.
+
+### Restoration (guarded, idempotent, no regeneration)
+
+- `scripts/apply-department-images.ts --apply`: **6/6 already applied, 0 rows written**, other rows
+  unchanged.
+- `scripts/apply-category-images.ts --apply`: **32 targets (19 generated, 7 reused, 6 alt-only),
+  32/32 already applied, 0 rows written**, other rows unchanged.
+- Independent browser verification: all six 1600x900 banners visibly render at 390/768/1440
+  (366x206, 728x410, 900x506); 37 category tiles, 35 loaded images, 0 broken, 32/32 approved targets
+  exact; `medicines-treatments` and `vitamins-supplements` intentionally have no tile.
+- `storefront-landing-audit.cjs`: **95/95 PASS**; its image gate still requires `complete`,
+  `naturalWidth > 0` and the matching catalogue image. The only updated assertion accepts the
+  visible DEMO-prefix-normalised name.
+
+### Market consistency
+
+- Related products now carry city; product page/API use `readLocale()`; client related retry passes
+  validated country/city; product `key` includes market. Market-dependent product 404s are
+  `no-store`.
+- Cart additions and checkout call `listPublicEligibleProductIds` (ACTIVE, non-sample, verified
+  seller, selected country, public selectable category tree, regulated/unresolved restrictions)
+  before writes. Existing cart viewing and historical orders remain available.
+- Category pages render one empty state: server unfiltered/restricted state or the client's
+  filter-specific state, never both. Server count includes city.
+
+### Verification
+
+- `taxonomy-image-persistence-tests.ts`: **13/13**; fingerprint 277 other categories / 253 products
+  across 97 categories unchanged; fixtures removed.
+- `market-cart-consistency-tests.ts`: **19/19** on 3047; controlled GH fixture accepted, NG+GH and
+  NG+regulated rejected, checkout refusals before orders, cleanup zero.
+- `vertical-activation-tests.ts` **30/30**; visibility **16/16**; aggregation **34/34**; landing
+  **95/95**; basket **10/10**; REVIEW financial boundary **46/46** (0 provider calls); Aura **9/9**;
+  `tsc --noEmit` clean.
+- Independent code/security reviewer `agent_e2fbc440-4e00-48b3-aedf-aae8fab3b360`: final exact
+  build PASS for persistence, request approval, 404 cache, empty-state ownership and guards.
+- Independent journey reviewer `agent_2b94ef55-097c-4baf-ab9a-c9b5fcefb08f`: six banners, 35/37
+  tiles (two intentionally absent), single empty states, NG/GH/NG counts and 0px overflow all PASS
+  at 390/768/1440.
+- Implementation agents: `agent_5934b0d7-cd49-47f4-b719-b7f8efcd8701` (image persistence) and
+  `agent_2c4d25cc-a6af-4f7e-8fb8-9f8b4a81c71c` (market/cart).
+
+### Limitations
+
+- Full `taxonomy-seed.ts` was not run (prohibited); the extracted seed payload is exercised against
+  REVIEW and the guarded apply scripts are idempotent.
+- Checkout was exercised with negative eligibility cases only; no financial/order success was
+  created. GH has no live supply, so GH is honestly empty; a run-owned GH cart-acceptance fixture
+  was used.
+- Chromium/headless only; no physical device, live provider or deployment validation. GitHub push
+  remains blocked by the rejected preservation credential; commits are local.
+- `scripts/review-catalogue-assets-audit.ts` is a legacy pre-expansion audit (23 products/7
+  departments) and still reports REVIEW REQUIRED against the current 57/11 taxonomy; it is not the
+  landing gate. The current `storefront-landing-audit.cjs` passes 95/95 with image requirements
+  unchanged.
