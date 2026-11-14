@@ -5054,6 +5054,11 @@ deployment, live charge, payout or provider charge occurred.
 - Visual evidence under `qa-artifacts/visual/discover-africa/` (390/768/1440 directory, row, landing,
   admin; reviewer folders).
 
+**Deployment prerequisites.**
+- Apply `20261114074843_country_discovery` and `20261114110000_country_theme_source_unique` through `prisma migrate deploy`.
+- Run `DATABASE_URL=<review-or-approved-db> npx tsx scripts/seed-country-discovery.ts` and `scripts/seed-country-roles.ts` in an isolated/reviewed environment; the roles are data rows, not a migration. Do not run the seed against `naijadeals_core` or production.
+- The preview currently needs `REVIEW_DATABASE_URL`, `REVIEW_EXPECTED_DATABASE=naijadeals_review`, `NEXT_DIST_DIR=.next-programme`, `NEXT_PUBLIC_REVIEW_CATALOGUE=1`.
+
 **Remaining gaps.**
 - No product currently has a recorded origin, so every country's Available on NaijaDeals section is
   an honest empty state; the populated origin path is implemented and code-reviewed but not exercised
