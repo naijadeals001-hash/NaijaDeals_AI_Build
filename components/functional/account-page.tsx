@@ -143,10 +143,21 @@ export function AccountPage() {
     finally { setAddressBusy(""); }
   }
 
+  function savedAvailability(product: ApiProduct) {
+    const variants = (product.variants ?? []).filter((variant) => variant.isActive);
+    if (variants.length > 0) {
+      return variants.reduce((total, variant) => total + Math.max(variant.stock - variant.reserved, 0), 0);
+    }
+    return Math.max((product.stock?.quantity ?? 0) - (product.stock?.reserved ?? 0), 0);
+  }
+
   async function moveSavedToCart(product: ApiProduct) {
     setError(""); setAddressBusy(product.id);
     try {
-      await apiClient.addCartItem(product.id, 1, product.variants?.[0]?.id ?? null);
+      const variants = (product.variants ?? []).filter((variant) => variant.isActive);
+      const variant = variants.find((entry) => entry.stock - entry.reserved > 0) ?? null;
+      if (variants.length > 0 && !variant) throw new Error("This saved item has no available variant.");
+      await apiClient.addCartItem(product.id, 1, variant?.id ?? null);
       setNotice("Added to cart.");
     } catch (err) { setError(err instanceof Error ? err.message : "Could not add saved item to cart."); }
     finally { setAddressBusy(""); }
@@ -386,11 +397,11 @@ export function AccountPage() {
                   <div>
                     <p className="line-clamp-2 text-sm font-bold">{item.product.name}</p>
                     <p className="text-sm font-black text-primary">{koboToNaira(item.product.priceKobo)}</p>
-                    <p className="text-[11px] text-muted">{(item.product.stock?.quantity ?? 0) > 0 ? "In stock" : "Out of stock"}</p>
+                    <p className="text-[11px] text-muted">{savedAvailability(item.product) > 0 ? "In stock" : "Out of stock"}</p>
                   </div>
                 </Link>
                 <div className="mt-2 flex gap-3 text-xs font-bold">
-                  <button type="button" disabled={addressBusy === item.product.id || (item.product.stock?.quantity ?? 0) <= 0} onClick={() => void moveSavedToCart(item.product)} className="text-primary underline disabled:opacity-50">Add to cart</button>
+                  <button type="button" disabled={addressBusy === item.product.id || savedAvailability(item.product) <= 0} onClick={() => void moveSavedToCart(item.product)} className="text-primary underline disabled:opacity-50">Add to cart</button>
                   <button type="button" disabled={addressBusy === item.product.id} onClick={() => void removeSaved(item.product.id)} className="text-crimson underline disabled:opacity-50">Remove</button>
                 </div>
               </div>

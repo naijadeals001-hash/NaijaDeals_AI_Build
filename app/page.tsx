@@ -41,7 +41,11 @@ function isGenuineListing(product: {
  * is no longer rendered here or offered by the public navigation.
  */
 export default async function HomePage() {
-  const deals = await prisma.product
+  const { previewAuthorized } = await previewAuthorizationForRequest();
+  const shop = await verticalAccess("shop", { countryCode: "NG", previewAuthorized }).catch(() => null);
+  const canBrowseShop = shop?.accessible === true;
+  const deals = canBrowseShop
+    ? await prisma.product
     .findMany({
       where: { status: "ACTIVE" },
       orderBy: { createdAt: "desc" },
@@ -53,14 +57,21 @@ export default async function HomePage() {
         priceKobo: true,
         isSample: true,
         images: { take: 1, select: { url: true } },
-        stock: { select: { quantity: true } },
+        stock: { select: { quantity: true, reserved: true } },
+        variants: { where: { isActive: true }, select: { stock: true, reserved: true } },
         vendor: { select: { name: true, owner: { select: { email: true } } } }
       }
     })
-    .catch(() => []);
+    .catch(() => [])
+    : [];
 
   const products: HomeProduct[] = deals
-    .filter((product) => (product.stock?.quantity ?? 0) > 0)
+    .filter((product) => {
+      if (product.variants.length > 0) {
+        return product.variants.reduce((total, variant) => total + Math.max(variant.stock - variant.reserved, 0), 0) > 0;
+      }
+      return (product.stock?.quantity ?? 0) - (product.stock?.reserved ?? 0) > 0;
+    })
     .filter(isGenuineListing)
     .slice(0, 4)
     .map((product) => ({
@@ -71,8 +82,6 @@ export default async function HomePage() {
       image: product.images[0]?.url ?? null
     }));
 
-  const { previewAuthorized } = await previewAuthorizationForRequest();
-  const shop = await verticalAccess("shop", { countryCode: "NG", previewAuthorized }).catch(() => null);
   const initialShopAvailability = shop
     ? { available: shop.accessible, status: shop.effective.status }
     : null;

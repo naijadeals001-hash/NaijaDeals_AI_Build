@@ -1021,7 +1021,8 @@ export async function updateProduct(input: {
               tx,
               productId: existing.id,
               productCurrency: COUNTRIES[existing.countryCode]?.currency ?? "NGN",
-              variants
+              variants,
+              allowZeroProductStock: quantity === 0
             })
           : null;
       if (quantity !== undefined) await assertProductQuantityAllowed(tx, existing.id, quantity);

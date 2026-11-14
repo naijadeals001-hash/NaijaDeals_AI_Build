@@ -194,6 +194,26 @@ async function main() {
       `status=${duplicateSku.status} code=${duplicateSku.body?.code}`
     );
 
+    /* ---------------- one-save product-stock transition ---------------- */
+    const transitionCreate = await createAdminProduct(adminCookie, "transition", 100000, 2, undefined, 2);
+    const transitionId = transitionCreate.body?.id ?? null;
+    if (transitionId) created.productIds.push(transitionId);
+    const transition = transitionId
+      ? await api(adminCookie, "PATCH", "/api/admin/catalogue/products", {
+          id: transitionId,
+          quantity: 0,
+          variants: variantsFixture("TRANSITION", 100000, 2)
+        })
+      : { status: 0, body: {} };
+    const transitionRow = (await api(adminCookie, "GET", "/api/admin/catalogue")).body?.products?.find(
+      (entry) => entry.id === transitionId
+    );
+    check(
+      "stocked product can become a variant product in one explicit save",
+      transition.status === 200 && transitionRow?.stock?.quantity === 0 && transitionRow?.variants?.length === 2,
+      `status=${transition.status} quantity=${transitionRow?.stock?.quantity} variants=${transitionRow?.variants?.length}`
+    );
+
     /* ---------------- admin create → preview → publish ---------------- */
     const adminVariants = variantsFixture("ADMIN", 125000, 4);
     const adminCreate = await createAdminProduct(adminCookie, "main", 125000, 0, adminVariants, 0);
@@ -290,7 +310,7 @@ async function main() {
       "accepted catalogue counts remain unchanged by the suite",
       after.products === baseline.products + created.productIds.length &&
         after.active === baseline.active + 2 &&
-        after.variants === baseline.variants + 5,
+        after.variants === baseline.variants + 7,
       `before=${JSON.stringify(baseline)} after=${JSON.stringify(after)}`
     );
   } finally {

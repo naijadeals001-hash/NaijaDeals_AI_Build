@@ -211,6 +211,7 @@ export async function syncProductVariants(input: {
   productId: string;
   productCurrency: string;
   variants: VariantInput[];
+  allowZeroProductStock?: boolean;
 }): Promise<{ before: VariantSnapshot[]; after: VariantSnapshot[]; active: number }> {
   const { tx, productId, productCurrency } = input;
   const stock = await tx.$queryRaw<Array<{ quantity: number; reserved: number }>>`
@@ -227,11 +228,16 @@ export async function syncProductVariants(input: {
   const touched = new Set<string>();
   const targetActive = input.variants.filter((variant) => variant.isActive);
   if (targetActive.length > 0 && stockRow && stockRow.quantity !== 0) {
-    throw new ApiError(
-      409,
-      "variant_stock_conflict",
-      "A variant product's product-level inventory must be zero. Set the product quantity to 0 before adding variants."
-    );
+    if (!input.allowZeroProductStock || stockRow.reserved > 0) {
+      throw new ApiError(
+        409,
+        "variant_stock_conflict",
+        "A variant product's product-level inventory must be zero. Set the product quantity to 0 before adding variants."
+      );
+    }
+    // Atomic one-save transition: the request explicitly sets product-level
+    // quantity to zero and nothing is reserved against that source.
+    await tx.inventoryStock.update({ where: { productId }, data: { quantity: 0 } });
   }
 
   const updates: Array<{ id: string; data: Prisma.ProductVariantUpdateInput }> = [];
@@ -325,7 +331,9 @@ async function assertVariantCanDeactivate(
   tx: Prisma.TransactionClient,
   variant: { id: string; name: string; reserved: number }
 ) {
-  const cartRows = await tx.cartItem.count({ where: { variantId: variant.id } });
+  const cartRows = await tx.cartItem.count({
+    where: { variantId: variant.id, cart: { status: "ACTIVE" } }
+  });
   if (variant.reserved > 0 || cartRows > 0) {
     throw new ApiError(
       409,

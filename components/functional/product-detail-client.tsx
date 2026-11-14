@@ -141,7 +141,7 @@ export function ProductDetailClient({
     void loadRelated(seededProduct)
       .then((items) => {
         setRelated(items);
-        setRelatedStatus(items.length > 0 ? "ready" : "ready");
+        setRelatedStatus("ready");
       })
       .catch(() => setRelatedStatus("unavailable"));
   }

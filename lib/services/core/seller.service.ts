@@ -257,12 +257,14 @@ export async function createSellerProduct(userId: string, input: {
         status: product.status,
         attributes: resolved.attributes ?? null,
         images: images.map((image, index) => ({ ...image, sortOrder: index, primary: index === 0 })),
+        variants: variantState ? { before: variantState.before, after: variantState.after } : null,
         before: null,
         after: {
           status: product.status,
           categoryId: product.categoryId,
           attributes: resolved.attributes ?? null,
-          images: images.map((image, index) => ({ ...image, sortOrder: index, primary: index === 0 }))
+          images: images.map((image, index) => ({ ...image, sortOrder: index, primary: index === 0 })),
+          ...(variantState ? { variants: variantState.after } : {})
         }
       }
     });
@@ -370,13 +372,25 @@ export async function updateSellerProduct(userId: string, productId: string, inp
             tx,
             productId: product.id,
             productCurrency: COUNTRIES[product.countryCode]?.currency ?? "NGN",
-            variants
+            variants,
+            allowZeroProductStock: input.quantity === 0
           })
         : null;
     if (input.quantity !== undefined) {
       await assertProductQuantityAllowed(tx, product.id, input.quantity);
       if (!Number.isInteger(input.quantity) || input.quantity < 0) {
         throw new ApiError(400, "validation_error", "Stock must be a non-negative integer.");
+      }
+      const lockedStock = await tx.$queryRaw<Array<{ reserved: number }>>`
+        SELECT "reserved" FROM "InventoryStock" WHERE "productId" = ${product.id} FOR UPDATE
+      `;
+      const reserved = lockedStock[0]?.reserved ?? 0;
+      if (input.quantity < reserved) {
+        throw new ApiError(
+          409,
+          "stock_below_reserved",
+          `Inventory cannot be set to ${input.quantity} while ${reserved} units are reserved by open orders.`
+        );
       }
       if (product.stock) {
         await tx.inventoryStock.update({
@@ -425,9 +439,9 @@ export async function updateSellerProduct(userId: string, productId: string, inp
             sortOrder: image.sortOrder,
             primary: index === 0
           })),
-          variants: variantState?.after ?? []
+          ...(variantState ? { variants: variantState.after } : {})
         },
-        variants: variantState ? { before: variantState.before, after: variantState.after } : null
+        ...(variantState ? { variants: { before: variantState.before, after: variantState.after } } : {})
       }
     });
     return freshProduct;

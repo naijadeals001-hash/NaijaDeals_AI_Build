@@ -50,7 +50,13 @@ export async function listSavedItems(userId: string) {
     where: { userId },
     include: {
       product: {
-        include: { images: true, vendor: true, stock: true, category: true }
+        include: {
+          images: true,
+          vendor: true,
+          stock: true,
+          category: true,
+          variants: { where: { isActive: true } }
+        }
       }
     },
     orderBy: { createdAt: "desc" }

@@ -63,12 +63,18 @@ function productDocument(product: {
   vendor: { name: string; status: string };
   category: { name: string } | null;
   stock: { quantity: number; reserved: number } | null;
+  variants?: Array<{ stock: number; reserved: number }>;
 }): ProductDocument | null {
   if (product.status !== "ACTIVE") return null;
   if (!["VERIFIED", "PENDING"].includes(product.vendor.status)) return null;
   if (isFixtureListing(product as never)) return null;
 
-  const available = product.stock ? product.stock.quantity - product.stock.reserved : 0;
+  const available =
+    product.variants && product.variants.length > 0
+      ? product.variants.reduce((total, variant) => total + Math.max(variant.stock - variant.reserved, 0), 0)
+      : product.stock
+        ? Math.max(product.stock.quantity - product.stock.reserved, 0)
+        : 0;
   return {
     id: product.id,
     title: product.name,
@@ -113,7 +119,8 @@ export async function processPendingSync(limit = 25): Promise<SyncResult> {
               updatedAt: true,
               vendor: { select: { name: true, status: true } },
               category: { select: { name: true } },
-              stock: { select: { quantity: true, reserved: true } }
+              stock: { select: { quantity: true, reserved: true } },
+              variants: { where: { isActive: true }, select: { stock: true, reserved: true } }
             }
           });
 
