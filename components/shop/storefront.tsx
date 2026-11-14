@@ -452,32 +452,10 @@ export function NaijaDealsMarketplace({
   const shopPreview = shopAvailability?.status === "PREVIEW" && shopAvailability.available === true;
 
   // The market-scoped published taxonomy is the navigation source. If it is
-  // unavailable, derive departments from the already market-scoped product
-  // response; never substitute an unscoped category list from another market.
-  const departments = useMemo<Department[]>(() => {
-    if (taxonomyTree.length > 0) return taxonomyTree;
-    const map = new Map<string, Department>();
-    for (const product of products) {
-      const category = product.category;
-      if (!category || map.has(category.slug)) continue;
-      map.set(category.slug, {
-        id: category.id,
-        name: category.name,
-        slug: category.slug,
-        imageUrl: null,
-        level: 0,
-        sortOrder: 0,
-        browsingVisible: true,
-        canPublish: true,
-        restrictionNote: null,
-        restrictionReason: null,
-        isRegulated: false,
-        productCount: null,
-        subtreeProductCount: null
-      });
-    }
-    return [...map.values()];
-  }, [taxonomyTree, products]);
+  // unavailable/malformed, do not synthesize nodes from products: a product
+  // category is not a browsing permission and cannot supply browsingVisible or
+  // canPublish. The navigation shows its honest unavailable state instead.
+  const departments = useMemo<Department[]>(() => taxonomyTree, [taxonomyTree]);
 
   const allDepartments = useMemo(() => flattenDepartments(departments), [departments]);
 
