@@ -5172,4 +5172,7 @@ category links were removed.
 - Before screenshot: `qa-artifacts/visual/density-audit/category-phones-1440.png`.
 - After: `category-phones-final-1440.png` and `category-phones-final-390.png` in the same folder.
 - Storefront discovery acceptance remains **20/20** (`acceptance-SWj.log`); typecheck clean.
+- Independent focused recheck (`agent_cd52da29-c7c2-4836-be1d-a24f46b2d9fa`) PASS: 64px/56px
+  thumbnail beside H1, 7 products begin earlier, no blurred banner/overflow, and the Electronics &
+  Technology wide department banner remains 1400x144 / 366x112.
 - No paid promotions, fabricated imagery or unrelated sections were introduced. No push/deployment.
