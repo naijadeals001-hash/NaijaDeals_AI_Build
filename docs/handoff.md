@@ -5061,8 +5061,11 @@ deployment, live charge, payout or provider charge occurred.
 
 **Remaining gaps.**
 - No product currently has a recorded origin, so every country's Available on NaijaDeals section is
-  an honest empty state; the populated origin path is implemented and code-reviewed but not exercised
-  with real supply. Dispatch location is not separately modelled.
+  an honest empty state. The populated path WAS exercised with a temporary REVIEW fixture: a demo
+  product was assigned GH `SELLER_DECLARED` origin, then `VERIFIED`, both appeared with the correct
+  labels and DEMO badge, and it was cleared back to null. Evidence:
+  `qa-artifacts/visual/discover-africa/origin-fixture-check.json`. This proves the mechanics, not
+  real supply. Dispatch location is not separately modelled.
 - Some theme images are broad existing assets or original illustrations rather than specific
   commodity photographs. The 28 originally flagged and 9 regression tiles were corrected; a full
   324-tile visual re-audit was not repeated after the final Imigongo change, though the focused
