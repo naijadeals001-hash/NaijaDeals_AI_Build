@@ -653,3 +653,8 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Variant inventory contract | Active variants authoritative; product stock 0; validation, SKU/options/price/stock/currency/ownership, audit, seller/admin editors, publish-only Control Center; suite 26/26 | VERIFIED |
 | Related-products controlled failure | REVIEW-only server seam; product detail survives, unavailable/retry recovers; 99/99 | VERIFIED |
 | Variant/activation integrated acceptance | Landing 95/95, rail 150/150, market 11/11, visibility 16/16, variant 26/26, detail 99/99, basket 10/10, activation 30/30, financial 46/46; 57 ACTIVE restored | VERIFIED |
+
+| Paused Shop presentation | DISABLED/PREVIEW public storefront and homepage hide Shop hero/shelves/counts/new-order CTAs; authorized PREVIEW sees preview UI; orders/cart/help preserved; server initial availability passed | VERIFIED |
+| Stay activation | Stay discovery/search/stays/destinations/property pages paused; new holds and host listings 409 vertical_unavailable; bookings/cancel/review/host tools/help preserved; public and authorized PREVIEW verified | VERIFIED |
+| Variant image + locking | ProductVariant.imageUrl validated against product gallery; selected-variant gallery switch; variant row locks serialize edits with reservations; contract 30/30, concurrency 100/100 | VERIFIED |
+| Catalogue coverage 2026-11-14 | 11 departments / 37 categories / 117 leaves; 57 ACTIVE products all on leaves; 35/100 populated, 65 gaps; 68/68 images | VERIFIED (population batch blocked on assets) |
