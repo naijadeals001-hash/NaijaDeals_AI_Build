@@ -14,7 +14,18 @@
  *   6. Are malformed, duplicate, unsupported and cross-product variant payloads
  *      rejected rather than silently ignored?
  *   7. Do variant ids stay stable and does the audit trail carry before/after?
- *   8. Is optional per-variant image selection implemented?
+ *   8. Are unsupported per-variant image fields rejected explicitly while
+ *      product-level image management remains?
+ *   9. Do two concurrent adds from the same customer stay one cart line?
+ *
+ * Review test lease
+ * -----------------
+ * The activation suite replaces Shop `VerticalActivation` rows and this suite
+ * asserts exact catalogue counts, so overlapping runs corrupt both. This
+ * harness acquires the exclusive REVIEW acceptance lease before reading the
+ * baseline and releases it in `finally` and signal paths. The lease never
+ * touches activation rows; the operator DISABLED rule stays with
+ * `scripts/lib/shop-activation-snapshot.ts` recovery.
  *
  * REVIEW financial boundary
  * -------------------------
@@ -77,6 +88,35 @@ const { randomBytes, scrypt: scryptCallback } = require("node:crypto");
 const { promisify } = require("node:util");
 const { PrismaClient } = require("@prisma/client");
 
+function loadReviewTestLease() {
+  try {
+    // Node 22+/26 strips TypeScript types natively; older hosts use the
+    // project's installed tsx CJS require hook. One implementation is shared
+    // with scripts/vertical-activation-tests.ts.
+    return require("./lib/review-test-lease.ts");
+  } catch (nativeError) {
+    try {
+      require("tsx/cjs");
+      return require("./lib/review-test-lease.ts");
+    } catch (fallbackError) {
+      throw new Error(
+        `the review test lease module could not be loaded: ${
+          (fallbackError && fallbackError.message) || (nativeError && nativeError.message) || "unknown error"
+        }`
+      );
+    }
+  }
+}
+
+let leaseModule;
+try {
+  leaseModule = loadReviewTestLease();
+} catch (error) {
+  console.error(`REFUSED ${error.message}`);
+  process.exit(2);
+}
+const { acquireReviewTestLease, describeReviewTestLease, formatReviewTestLeaseSummary } = leaseModule;
+
 const scrypt = promisify(scryptCallback);
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "..");
@@ -136,6 +176,8 @@ const runId = `VARIANT-CONC-${runToken}`;
 const runSku = `VC-${runToken}`;
 let categoryId = null;
 let buildId = null;
+let lease = null;
+let activationBaseline = null;
 
 function record(name, status, detail = "") {
   const entry = { name, status, detail: sanitize(detail) };
@@ -189,12 +231,16 @@ async function guard() {
   if (cartProbe.status !== 401) {
     throw new Error(`refusing: ${BASE} did not answer the canonical preview (GET /api/cart HTTP ${cartProbe.status})`);
   }
+  const explicitBuildId = process.env.REVIEW_BUILD_ID?.trim();
   try {
-    buildId = fs.readFileSync(path.join(ROOT, ".next-programme", "BUILD_ID"), "utf8").trim();
+    buildId = explicitBuildId || fs.readFileSync(path.join(ROOT, ".next-programme", "BUILD_ID"), "utf8").trim();
   } catch {
     buildId = null;
   }
-  console.log(`GUARD database=${name} classification=REVIEW base=${BASE} buildId=${buildId ?? "unknown"}`);
+  const buildIdSource = explicitBuildId ? "REVIEW_BUILD_ID" : ".next-programme/BUILD_ID";
+  console.log(
+    `GUARD database=${name} classification=REVIEW base=${BASE} buildId=${buildId ?? "unknown"} source=${buildIdSource}`
+  );
 }
 
 async function snapshot() {
@@ -220,6 +266,20 @@ async function snapshot() {
     prisma.wallet.count()
   ]);
   return { products, active, variants, orders, payments, refunds, carts, users, wallets };
+}
+
+/**
+ * Read-only Shop activation rows. This harness never writes them; comparing
+ * before/after proves the lease and catalogue fixtures did not clear or add an
+ * operator rule.
+ */
+async function readShopActivationRows() {
+  return prisma.$queryRawUnsafe(`
+    SELECT id, "scopeType", "countryCode", "cityCode", status, reason
+    FROM "VerticalActivation"
+    WHERE "verticalKey" = 'shop'
+    ORDER BY id
+  `);
 }
 
 async function login(label, email, password) {
@@ -858,6 +918,18 @@ async function run(baseline) {
     "variant_currency_mismatch"
   );
   await reject(
+    "per-variant imageId refused as unsupported",
+    [{ ...variantSet("IMAGEID", 100_000, 1)[0], imageId: "run-variant-image" }],
+    400,
+    "unsupported_variant_field"
+  );
+  await reject(
+    "per-variant imageUrl refused as unsupported",
+    [{ ...variantSet("IMAGEURL", 100_000, 1)[0], imageUrl: FIXTURE_IMAGE.url }],
+    400,
+    "unsupported_variant_field"
+  );
+  await reject(
     "more than 50 variants refused",
     Array.from({ length: 51 }, (_, index) => ({
       name: `Many ${index}`,
@@ -1357,6 +1429,38 @@ async function run(baseline) {
   );
 
   /* ------------------------------------------------------------------ */
+  /* 5b. Same-customer concurrent cart add keeps one line               */
+  /* ------------------------------------------------------------------ */
+  const [sameAddA, sameAddB] = await Promise.all([
+    addCartLine(customerA, sellerId, mediumAfter.id, 1),
+    addCartLine(customerA, sellerId, mediumAfter.id, 1)
+  ]);
+  const sameCart = await getCart(customerA.cookie);
+  const sameLines = (sameCart.body?.items ?? []).filter((item) => item.variantId === mediumAfter.id);
+  const sameDbLines = sameCart.body?.id
+    ? await prisma.cartItem.count({ where: { cartId: sameCart.body.id, variantId: mediumAfter.id } })
+    : -1;
+  check(
+    "same-customer concurrent cart adds keep one line with the summed quantity",
+    sameAddA.status === 201 &&
+      sameAddB.status === 201 &&
+      sameLines.length === 1 &&
+      sameLines[0].quantity === 2 &&
+      sameDbLines === 1,
+    `mode=${DB_FIXTURES ? "service" : "http"} a=${sameAddA.status} b=${sameAddB.status} lines=${
+      sameLines.length
+    } quantity=${sameLines[0]?.quantity} dbLines=${sameDbLines}`
+  );
+  const clearSameCart = sameLines[0]
+    ? await patchCartItem(customerA.cookie, sameLines[0].id, 0)
+    : { status: 0, body: {} };
+  check(
+    "same-customer race cart line cleared before the next check",
+    clearSameCart.status === 200 && (clearSameCart.body?.items ?? []).length === 0,
+    `status=${clearSameCart.status} items=${(clearSameCart.body?.items ?? []).length}`
+  );
+
+  /* ------------------------------------------------------------------ */
   /* 6. Reservation-safe deactivation (cart line)                        */
   /* ------------------------------------------------------------------ */
   const cartForDeactivation = await addCartLine(customerA, sellerId, sellerSmall.id, 1);
@@ -1602,17 +1706,8 @@ async function run(baseline) {
   await releaseReserved(gapDeactivateVariant.id);
 
   /* ------------------------------------------------------------------ */
-  /* 10. Optional per-variant image selection                            */
+  /* 10. Per-variant images are unsupported; product gallery remains    */
   /* ------------------------------------------------------------------ */
-  const variantColumns = await prisma.$queryRawUnsafe(
-    `SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'ProductVariant' ORDER BY column_name`
-  );
-  const imageColumn = variantColumns.find((row) => /image/i.test(row.column_name));
-  check(
-    "ProductVariant has a per-variant image column",
-    imageColumn?.column_name === "imageUrl",
-    `column=${imageColumn?.column_name ?? "none"}`
-  );
   const imageColumns = await prisma.$queryRawUnsafe(
     `SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'ProductImage' ORDER BY column_name`
   );
@@ -1622,8 +1717,17 @@ async function run(baseline) {
     !variantReference,
     `column=${variantReference?.column_name ?? "none"}`
   );
+  const productGallery = await prisma.productImage.findMany({
+    where: { productId: sellerId },
+    select: { url: true }
+  });
+  check(
+    "product-level gallery remains the listing image source",
+    productGallery.some((image) => image.url === FIXTURE_IMAGE.url),
+    `urls=${JSON.stringify(productGallery.map((image) => image.url))}`
+  );
 
-  const imagePayload = await api(sellerB.cookie, "PATCH", `/api/seller/products/${sellerId}`, {
+  const imageUpdatePayload = (field, value) => ({
     variants: [
       {
         id: sellerSmall.id,
@@ -1633,8 +1737,7 @@ async function run(baseline) {
         stock: 4,
         isActive: false,
         attributes: { Size: "Small" },
-        imageId: "run-variant-image",
-        imageUrl: "/generated/shop/product-stainless-steel-cookware-set.webp"
+        [field]: value
       },
       {
         id: mediumAfter.id,
@@ -1647,26 +1750,109 @@ async function run(baseline) {
       }
     ]
   });
-  const imageVariant = (imagePayload.body?.variants ?? []).find((variant) => variant.id === mediumAfter.id);
-  check(
-    "unsupported per-variant fields are rejected rather than ignored",
-    imagePayload.status === 400 && imagePayload.body?.code === "unsupported_variant_field",
-    `status=${imagePayload.status} code=${imagePayload.body?.code ?? ""}`
+
+  const variantsBeforeImageAttempts = await dbVariants(sellerId);
+  const imageIdPatch = await api(
+    sellerB.cookie,
+    "PATCH",
+    `/api/seller/products/${sellerId}`,
+    imageUpdatePayload("imageId", "run-variant-image")
   );
+  check(
+    "per-variant imageId update is refused explicitly as unsupported",
+    imageIdPatch.status === 400 &&
+      imageIdPatch.body?.code === "unsupported_variant_field" &&
+      /imageId/.test(String(imageIdPatch.body?.error ?? "")),
+    `status=${imageIdPatch.status} code=${imageIdPatch.body?.code ?? ""} error=${JSON.stringify(
+      imageIdPatch.body?.error ?? ""
+    )}`
+  );
+  const imageUrlPatch = await api(
+    sellerB.cookie,
+    "PATCH",
+    `/api/seller/products/${sellerId}`,
+    imageUpdatePayload("imageUrl", FIXTURE_IMAGE.url)
+  );
+  check(
+    "per-variant imageUrl update is refused explicitly as unsupported",
+    imageUrlPatch.status === 400 &&
+      imageUrlPatch.body?.code === "unsupported_variant_field" &&
+      /imageUrl/.test(String(imageUrlPatch.body?.error ?? "")),
+    `status=${imageUrlPatch.status} code=${imageUrlPatch.body?.code ?? ""} error=${JSON.stringify(
+      imageUrlPatch.body?.error ?? ""
+    )}`
+  );
+  const variantsAfterImageAttempts = await dbVariants(sellerId);
+  const imageAttemptsUnchanged =
+    variantsBeforeImageAttempts.length === variantsAfterImageAttempts.length &&
+    variantsBeforeImageAttempts.every((before) => {
+      const after = variantsAfterImageAttempts.find((row) => row.id === before.id);
+      return (
+        Boolean(after) &&
+        after.name === before.name &&
+        after.sku === before.sku &&
+        after.priceKobo === before.priceKobo &&
+        after.stock === before.stock &&
+        after.isActive === before.isActive &&
+        after.reserved === before.reserved &&
+        (after.imageUrl ?? null) === (before.imageUrl ?? null)
+      );
+    });
+  check(
+    "refused per-variant image attempts changed no variant row",
+    imageAttemptsUnchanged,
+    `before=${variantsBeforeImageAttempts.length} after=${variantsAfterImageAttempts.length}`
+  );
+
   if (DB_FIXTURES) {
     blocked(
-      "public variant payload exposes no image selection",
-      "public product detail is Shop-gated; the schema checks above and the API response below still prove the field is absent"
+      "public variant payload exposes no per-variant image claim",
+      "public product detail is Shop-gated by the shared activation fixture; the admin payload and the rejected writes still prove no per-variant image contract"
     );
   } else {
     const publicSellerImage = await api("", "GET", `/api/products/${encodeURIComponent(sellerSlug)}`);
-    const publicVariantImageKey = (publicSellerImage.body?.variants ?? []).some((variant) => "imageUrl" in variant);
-    check("public variant payload exposes image selection", publicVariantImageKey, `hasImageKey=${publicVariantImageKey}`);
+    const publicVariants = publicSellerImage.body?.variants ?? [];
+    const publicImageKeys = publicVariants.flatMap((variant) =>
+      ["imageUrl", "imageId"].filter((key) => key in variant)
+    );
+    const publicImageClaims = publicVariants.flatMap((variant) =>
+      ["imageUrl", "imageId"].filter((key) => variant[key] !== null && variant[key] !== undefined)
+    );
+    check(
+      "public variant payload exposes no per-variant image claim",
+      publicSellerImage.status === 200 && publicVariants.length > 0 && publicImageClaims.length === 0,
+      `status=${publicSellerImage.status} variants=${publicVariants.length} keys=${JSON.stringify(
+        publicImageKeys
+      )} claims=${JSON.stringify(publicImageClaims)}`
+    );
+    const publicGallery = publicSellerImage.body?.images ?? [];
+    check(
+      "public product detail retains its product-level gallery",
+      publicGallery.some((image) => image.url === FIXTURE_IMAGE.url),
+      `urls=${JSON.stringify(publicGallery.map((image) => image.url))}`
+    );
   }
+
+  const adminImageRow = await adminRow(adminCookie, sellerId);
+  const adminImageVariants = adminImageRow?.variants ?? [];
+  const adminImageKeys = adminImageVariants.flatMap((variant) =>
+    ["imageUrl", "imageId"].filter((key) => key in variant)
+  );
+  const adminImageClaims = adminImageVariants.flatMap((variant) =>
+    ["imageUrl", "imageId"].filter((key) => variant[key] !== null && variant[key] !== undefined)
+  );
   check(
-    "optional per-variant image selection is implemented",
-    Boolean(imageColumn) && imagePayload.status === 400,
-    "ProductVariant.imageUrl, validated against the product gallery; public variants expose imageUrl"
+    "admin catalogue variant rows expose no per-variant image claim",
+    adminImageVariants.length > 0 && adminImageClaims.length === 0,
+    `variants=${adminImageVariants.length} keys=${JSON.stringify(adminImageKeys)} claims=${JSON.stringify(
+      adminImageClaims
+    )}`
+  );
+  const adminGallery = adminImageRow?.images ?? [];
+  check(
+    "admin catalogue retains the product-level gallery",
+    adminGallery.some((image) => image.url === FIXTURE_IMAGE.url),
+    `urls=${JSON.stringify(adminGallery.map((image) => image.url))}`
   );
 
   /* ------------------------------------------------------------------ */
@@ -1768,6 +1954,17 @@ async function finalize(baseline, cleanupProblems) {
   check("no run-owned product remains", strayProducts === 0, `remaining=${strayProducts}`);
   check("cleanup completed without errors", cleanupProblems.length === 0, cleanupProblems.join(" | "));
 
+  let activationAfter = null;
+  if (baseline && activationBaseline) {
+    activationAfter = await readShopActivationRows().catch(() => null);
+    check(
+      "Shop activation rows unchanged by this harness",
+      Boolean(activationAfter) &&
+        JSON.stringify(activationAfter) === JSON.stringify(activationBaseline),
+      `before=${JSON.stringify(activationBaseline)} after=${JSON.stringify(activationAfter)}`
+    );
+  }
+
   const failedNow = results.filter((row) => row.status === "FAIL").length;
   const gapsNow = results.filter((row) => row.status === "GAP").length;
   const summaryNow = {
@@ -1783,9 +1980,12 @@ async function finalize(baseline, cleanupProblems) {
     runId,
     base: BASE,
     buildId,
+    buildIdSource: process.env.REVIEW_BUILD_ID?.trim() ? "REVIEW_BUILD_ID" : ".next-programme/BUILD_ID",
     database: { name: EXPECTED_DB, classification: "REVIEW" },
     startedAt: startedAt.toISOString(),
     finishedAt: new Date().toISOString(),
+    lease: lease ? { path: lease.path, lease: lease.lease, takeover: lease.takeover } : null,
+    activation: { before: activationBaseline, after: activationAfter },
     baseline,
     final,
     summary: summaryNow,
@@ -1829,6 +2029,53 @@ async function finalize(baseline, cleanupProblems) {
     process.exit(2);
   }
 
+  try {
+    lease = acquireReviewTestLease({
+      owner: "variant-concurrency-tests",
+      runId,
+      purpose: `Variant concurrency acceptance on ${EXPECTED_DB}`,
+      database: EXPECTED_DB,
+      classification: "REVIEW"
+    });
+    console.log(`LEASE ${describeReviewTestLease(lease.path)}`);
+    if (lease.takeover) {
+      console.log(`LEASE takeover from ${formatReviewTestLeaseSummary(lease.takeover)}`);
+    }
+    activationBaseline = await readShopActivationRows();
+  } catch (error) {
+    if (lease) lease.releaseSync();
+    console.error(`REFUSED ${sanitize(error.message)}`);
+    await prisma.$disconnect();
+    process.exit(2);
+  }
+
+  let signalHandled = false;
+  const releaseLeaseSync = () => {
+    try {
+      return Boolean(lease && lease.releaseSync());
+    } catch {
+      return false;
+    }
+  };
+  const handleSignal = (signal) => {
+    if (signalHandled) return;
+    signalHandled = true;
+    const released = releaseLeaseSync();
+    console.error(`\n${signal}: review test lease ${released ? "released" : "not released"}; exiting.`);
+    process.exit(130);
+  };
+  const onSigint = () => handleSignal("SIGINT");
+  const onSigterm = () => handleSignal("SIGTERM");
+  const onSigbreak = () => handleSignal("SIGBREAK");
+  const onUncaught = (error) => {
+    console.error(error instanceof Error ? error.stack ?? error.message : String(error));
+    handleSignal("uncaughtException");
+  };
+  process.once("SIGINT", onSigint);
+  process.once("SIGTERM", onSigterm);
+  if (process.platform === "win32") process.once("SIGBREAK", onSigbreak);
+  process.once("uncaughtException", onUncaught);
+
   poller = new PrismaClient({ datasources: { db: { url: limitedUrl(REVIEW_URL, 2) } } });
   locker = new PrismaClient({ datasources: { db: { url: limitedUrl(REVIEW_URL, 2) } } });
   clientA = new PrismaClient({ datasources: { db: { url: limitedUrl(REVIEW_URL, 2) } } });
@@ -1851,6 +2098,14 @@ async function finalize(baseline, cleanupProblems) {
     try {
       await finalize(baseline, cleanupProblems);
     } finally {
+      const released = releaseLeaseSync();
+      if (!released) {
+        console.error(`LEASE WARN the review test lease was not released: ${describeReviewTestLease(lease ? lease.path : undefined)}`);
+      }
+      process.off("SIGINT", onSigint);
+      process.off("SIGTERM", onSigterm);
+      if (process.platform === "win32") process.off("SIGBREAK", onSigbreak);
+      process.off("uncaughtException", onUncaught);
       await Promise.all(
         [prisma, poller, locker, clientA, clientB]
           .filter(Boolean)

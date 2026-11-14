@@ -7,10 +7,14 @@
  *   - product-level stock must be zero when active variants exist;
  *   - variant stock is the only stock source for variant products;
  *   - SKU/options/price/stock/currency/ownership validation;
- *   - unsupported payloads are rejected, never ignored;
+ *   - unsupported payloads are rejected, never ignored; per-variant imageId and
+ *     imageUrl are unsupported while product-level images remain supported;
  *   - seller drafts remain unpublished; admin preview/publish remains the only
  *     publication path;
  *   - public variant selection and cart use the variant stock.
+ *
+ * The suite takes the exclusive REVIEW acceptance lease so it cannot overlap an
+ * activation or variant-concurrency run. The lease never writes activation rows.
  *
  * Run-owned rows are deleted in `finally`. Accepted catalogue rows are counted
  * before and after; the script refuses non-REVIEW databases.
@@ -24,6 +28,32 @@ const path = require("node:path");
 const { randomBytes } = require("node:crypto");
 const { PrismaClient } = require("@prisma/client");
 
+function loadReviewTestLease() {
+  try {
+    return require("./lib/review-test-lease.ts");
+  } catch (nativeError) {
+    try {
+      require("tsx/cjs");
+      return require("./lib/review-test-lease.ts");
+    } catch (fallbackError) {
+      throw new Error(
+        `the review test lease module could not be loaded: ${
+          (fallbackError && fallbackError.message) || (nativeError && nativeError.message) || "unknown error"
+        }`
+      );
+    }
+  }
+}
+
+let leaseModule;
+try {
+  leaseModule = loadReviewTestLease();
+} catch (error) {
+  console.error(`REFUSED ${error.message}`);
+  process.exit(2);
+}
+const { acquireReviewTestLease, describeReviewTestLease, formatReviewTestLeaseSummary } = leaseModule;
+
 const BASE = (process.env.REVIEW_BASE_URL || "http://localhost:3047").replace(/\/+$/, "");
 const EXPECTED_DB = process.env.REVIEW_EXPECTED_DATABASE || "naijadeals_review";
 const prisma = new PrismaClient();
@@ -35,6 +65,7 @@ const CUSTOMER_CREDENTIAL = path.join("qa-artifacts", "review-basket", ".credent
 const runId = `VARIANT-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString("hex").toUpperCase()}`;
 const results = [];
 const created = { productIds: [], cartIds: [] };
+let lease = null;
 
 function check(name, ok, detail = "") {
   const result = { name, ok: Boolean(ok), detail: String(detail).slice(0, 500) };
@@ -147,6 +178,45 @@ async function createSellerProduct(cookie, suffix, priceKobo, stock, variants, q
 
 async function main() {
   await guard();
+  try {
+    lease = acquireReviewTestLease({
+      owner: "variant-management-tests",
+      runId,
+      purpose: `Variant management acceptance on ${EXPECTED_DB}`,
+      database: EXPECTED_DB,
+      classification: "REVIEW"
+    });
+    console.log(`LEASE ${describeReviewTestLease(lease.path)}`);
+    if (lease.takeover) console.log(`LEASE takeover from ${formatReviewTestLeaseSummary(lease.takeover)}`);
+  } catch (error) {
+    if (lease) lease.releaseSync();
+    console.error(`REFUSED ${error.message}`);
+    await prisma.$disconnect();
+    process.exit(2);
+  }
+
+  const releaseLeaseSync = () => {
+    try {
+      return Boolean(lease && lease.releaseSync());
+    } catch {
+      return false;
+    }
+  };
+  let signalHandled = false;
+  const handleSignal = (signal) => {
+    if (signalHandled) return;
+    signalHandled = true;
+    releaseLeaseSync();
+    console.error(`\n${signal}: review test lease released; exiting.`);
+    process.exit(130);
+  };
+  const onSigint = () => handleSignal("SIGINT");
+  const onSigterm = () => handleSignal("SIGTERM");
+  const onSigbreak = () => handleSignal("SIGBREAK");
+  process.once("SIGINT", onSigint);
+  process.once("SIGTERM", onSigterm);
+  if (process.platform === "win32") process.once("SIGBREAK", onSigbreak);
+
   const [adminEmail, adminPassword] = credentials(ADMIN_CREDENTIAL);
   const [sellerEmail, sellerPassword] = credentials(SELLER_CREDENTIAL);
   const [customerEmail, customerPassword] = credentials(CUSTOMER_CREDENTIAL);
@@ -185,22 +255,28 @@ async function main() {
       `status=${conflict.status} code=${conflict.body?.code}`
     );
 
-    const invalidImage = variantsFixture("BADIMAGE", 100000, 1);
-    invalidImage[0].imageUrl = "https://example.invalid/not-a-product.webp";
-    const badImage = await createAdminProduct(adminCookie, "badimage", 100000, 0, invalidImage, 0);
+    const invalidImageUrl = variantsFixture("BADIMAGE", 100000, 1);
+    invalidImageUrl[0].imageUrl = "/generated/shop/product-stainless-steel-cookware-set.webp";
+    const badImageUrl = await createAdminProduct(adminCookie, "badimage", 100000, 0, invalidImageUrl, 0);
     check(
-      "admin rejects a variant image outside the product gallery",
-      badImage.status === 400 && badImage.body?.code === "variant_image_invalid",
-      `status=${badImage.status} code=${badImage.body?.code}`
+      "admin rejects a per-variant imageUrl as unsupported",
+      badImageUrl.status === 400 &&
+        badImageUrl.body?.code === "unsupported_variant_field" &&
+        /imageUrl/.test(String(badImageUrl.body?.error ?? "")),
+      `status=${badImageUrl.status} code=${badImageUrl.body?.code} error=${JSON.stringify(badImageUrl.body?.error ?? "")}`
     );
 
     const unsupported = variantsFixture("UNSUPPORTED", 100000, 1);
     unsupported[0].imageId = "some-image-id";
     const unsupportedField = await createAdminProduct(adminCookie, "unsupported", 100000, 0, unsupported, 0);
     check(
-      "admin rejects unsupported variant fields",
-      unsupportedField.status === 400 && unsupportedField.body?.code === "unsupported_variant_field",
-      `status=${unsupportedField.status} code=${unsupportedField.body?.code}`
+      "admin rejects a per-variant imageId as unsupported",
+      unsupportedField.status === 400 &&
+        unsupportedField.body?.code === "unsupported_variant_field" &&
+        /imageId/.test(String(unsupportedField.body?.error ?? "")),
+      `status=${unsupportedField.status} code=${unsupportedField.body?.code} error=${JSON.stringify(
+        unsupportedField.body?.error ?? ""
+      )}`
     );
 
     const duplicate = variantsFixture("DUP", 100000, 2);
@@ -234,7 +310,6 @@ async function main() {
 
     /* ---------------- admin create → preview → publish ---------------- */
     const adminVariants = variantsFixture("ADMIN", 125000, 4);
-    adminVariants[0].imageUrl = "/generated/shop/product-stainless-steel-cookware-set.webp";
     const adminCreate = await createAdminProduct(adminCookie, "main", 125000, 0, adminVariants, 0);
     const adminId = adminCreate.body?.id ?? null;
     if (adminId) created.productIds.push(adminId);
@@ -245,7 +320,24 @@ async function main() {
     const adminRow = (adminList.body?.products || []).find((entry) => entry.id === adminId);
     check("admin catalogue returns the created variants", adminRow?.variants?.length === 2, `variants=${adminRow?.variants?.length}`);
     check("admin catalogue returns variant options", adminRow?.variants?.[0]?.attributes?.Size === "Small", JSON.stringify(adminRow?.variants?.[0]?.attributes));
-    check("admin catalogue returns the matching variant image", adminRow?.variants?.[0]?.imageUrl === "/generated/shop/product-stainless-steel-cookware-set.webp", String(adminRow?.variants?.[0]?.imageUrl));
+    const adminVariantImageKeys = (adminRow?.variants ?? []).flatMap((variant) =>
+      ["imageUrl", "imageId"].filter((key) => key in variant)
+    );
+    const adminVariantImageClaims = (adminRow?.variants ?? []).flatMap((variant) =>
+      ["imageUrl", "imageId"].filter((key) => variant[key] !== null && variant[key] !== undefined)
+    );
+    check(
+      "admin catalogue variant rows expose no per-variant image claim",
+      adminRow?.variants?.length === 2 && adminVariantImageClaims.length === 0,
+      `variants=${adminRow?.variants?.length} keys=${JSON.stringify(
+        adminVariantImageKeys
+      )} claims=${JSON.stringify(adminVariantImageClaims)}`
+    );
+    check(
+      "admin catalogue retains the product-level gallery",
+      (adminRow?.images ?? []).some((image) => image.url === "/generated/shop/product-stainless-steel-cookware-set.webp"),
+      `urls=${JSON.stringify((adminRow?.images ?? []).map((image) => image.url))}`
+    );
     check("variant product keeps product-level stock at zero", adminRow?.stock?.quantity === 0, `quantity=${adminRow?.stock?.quantity}`);
 
     const preview = await api(adminCookie, "GET", `/admin/catalogue/products/${adminId}/preview`);
@@ -255,7 +347,7 @@ async function main() {
       id: adminId,
       quantity: 0,
       variants: [
-        { id: adminRow.variants[0].id, name: "Admin Small revised", sku: adminRow.variants[0].sku, priceKobo: "135000", stock: 6, isActive: true, attributes: { Size: "Small" }, imageUrl: adminRow.variants[0].imageUrl },
+        { id: adminRow.variants[0].id, name: "Admin Small revised", sku: adminRow.variants[0].sku, priceKobo: "135000", stock: 6, isActive: true, attributes: { Size: "Small" } },
         { id: adminRow.variants[1].id, name: "Admin Large revised", sku: adminRow.variants[1].sku, priceKobo: "155000", stock: 3, isActive: true, attributes: { Size: "Large" } },
         { name: "Admin Medium", sku: `${runId}-ADMIN-M`, priceKobo: "145000", stock: 2, isActive: true, attributes: { Size: "Medium" } }
       ]
@@ -279,7 +371,22 @@ async function main() {
     check("public detail exposes active variants", publicDetail.status === 200 && publicDetail.body?.variants?.length === 3, `status=${publicDetail.status} variants=${publicDetail.body?.variants?.length}`);
     const publicVariant = publicDetail.body?.variants?.find((variant) => variant.name === "Admin Small revised");
     check("public variant price/stock comes from the variant", publicVariant?.priceKobo === "135000" && publicVariant?.stock === 6, JSON.stringify(publicVariant));
-    check("public variant carries its matching image", publicVariant?.imageUrl === "/generated/shop/product-stainless-steel-cookware-set.webp", String(publicVariant?.imageUrl));
+    const publicVariantImageKeys = ["imageUrl", "imageId"].filter((key) => publicVariant && key in publicVariant);
+    const publicVariantImageClaims = ["imageUrl", "imageId"].filter(
+      (key) => publicVariant && publicVariant[key] !== null && publicVariant[key] !== undefined
+    );
+    check(
+      "public variant payload exposes no per-variant image claim",
+      Boolean(publicVariant) && publicVariantImageClaims.length === 0,
+      `keys=${JSON.stringify(publicVariantImageKeys)} claims=${JSON.stringify(publicVariantImageClaims)}`
+    );
+    check(
+      "public product detail retains its product-level gallery",
+      (publicDetail.body?.images ?? []).some(
+        (image) => image.url === "/generated/shop/product-stainless-steel-cookware-set.webp"
+      ),
+      `urls=${JSON.stringify((publicDetail.body?.images ?? []).map((image) => image.url))}`
+    );
 
     const cart = await api(customerCookie, "POST", "/api/cart/items", { productId: adminId, variantId: publicVariant?.id, quantity: 1 });
     check("cart accepts the selected variant", cart.status === 201 && cart.body?.items?.some((item) => item.variantId === publicVariant?.id), `status=${cart.status} code=${cart.body?.code ?? ""}`);
@@ -336,6 +443,17 @@ async function main() {
     );
   } finally {
     try {
+      // A refusal assertion that unexpectedly succeeded (for example an older
+      // runtime storing a per-variant imageUrl) persists a run-named product
+      // that was never added to `created`. Sweep it so cleanup does not hide
+      // the unexpected write.
+      const strayProducts = await prisma.product.findMany({
+        where: { name: { startsWith: runId } },
+        select: { id: true }
+      });
+      for (const stray of strayProducts) {
+        if (!created.productIds.includes(stray.id)) created.productIds.push(stray.id);
+      }
       for (const productId of created.productIds) {
         await prisma.cartItem.deleteMany({ where: { productId } });
         await prisma.productVariant.deleteMany({ where: { productId } });
@@ -346,6 +464,11 @@ async function main() {
     } catch (error) {
       console.error(`CLEANUP ${error.message}`);
     }
+    const released = releaseLeaseSync();
+    if (!released) console.error(`LEASE WARN the review test lease was not released: ${describeReviewTestLease(lease ? lease.path : undefined)}`);
+    process.off("SIGINT", onSigint);
+    process.off("SIGTERM", onSigterm);
+    if (process.platform === "win32") process.off("SIGBREAK", onSigbreak);
     await prisma.$disconnect();
     const failed = results.filter((entry) => !entry.ok);
     console.log(`\n${results.length - failed.length}/${results.length} checks passed (run ${runId})`);

@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { commissionFor, deliveryQuote, escrowFee, getCountry } from "@/lib/config/commerce";
@@ -11,6 +11,7 @@ import { availablePaymentMethods } from "@/lib/payments/service";
 import { activationFor } from "./country.service";
 import { assertShopAccess } from "./vertical-activation.service";
 import { listPublicEligibleProductIds } from "./catalog.service";
+import { lockInventoryStock } from "./variant-contract";
 import { resolveCheckoutAttribution } from "@/lib/services/affiliate/service";
 
 export type CheckoutAddress = {
@@ -284,6 +285,64 @@ export async function checkout(input: {
             "item_market_unavailable",
             `${ineligible.product.name} is not available in this market. Remove it from the cart or change your delivery address.`
           );
+        }
+
+        // Canonical inventory lock order for the reservation below:
+        //   user -> cart -> product stock (sorted) -> variant rows (sorted).
+        //
+        // Taking the stock lock for every product, including variant-managed
+        // ones, makes a concurrent seller transition/quantity edit wait here.
+        // Variant rows are locked in id order so two carts holding the same
+        // products in a different order cannot deadlock on the reservation
+        // updates. Eligibility is then re-read from the locked state: the
+        // earlier read happened before these locks and is only a routing hint.
+        const stockProductIds = [...new Set(items.map((item) => item.productId))].sort();
+        for (const productId of stockProductIds) {
+          await lockInventoryStock(tx, productId);
+        }
+
+        const lockedVariantIds = [
+          ...new Set(items.map((item) => item.variantId).filter((variantId): variantId is string => Boolean(variantId)))
+        ].sort();
+        const lockedVariantRows =
+          lockedVariantIds.length > 0
+            ? await tx.$queryRaw<Array<{ id: string; isActive: boolean }>>`
+                SELECT id, "isActive" FROM "ProductVariant"
+                WHERE id IN (${Prisma.join(lockedVariantIds)})
+                ORDER BY id
+                FOR UPDATE
+              `
+            : [];
+        const lockedVariantById = new Map(lockedVariantRows.map((variant) => [variant.id, variant]));
+        const inactiveVariantLine = items.find(
+          (item) => item.variantId && !lockedVariantById.get(item.variantId)?.isActive
+        );
+        if (inactiveVariantLine) {
+          throw new ApiError(
+            409,
+            "item_unavailable",
+            `${inactiveVariantLine.product.name} is no longer available. Remove it from the cart.`
+          );
+        }
+
+        const productLevelProductIds = [
+          ...new Set(items.filter((item) => !item.variantId).map((item) => item.productId))
+        ].sort();
+        if (productLevelProductIds.length > 0) {
+          const activeVariantCounts = await tx.productVariant.groupBy({
+            by: ["productId"],
+            where: { productId: { in: productLevelProductIds }, isActive: true },
+            _count: { _all: true }
+          });
+          const variantManagedRow = activeVariantCounts.find((row) => row._count._all > 0);
+          if (variantManagedRow) {
+            const affected = items.find((item) => item.productId === variantManagedRow.productId);
+            throw new ApiError(
+              409,
+              "item_unavailable",
+              `${affected?.product.name ?? "This product"} now sells by option. Remove it from the cart or choose an option.`
+            );
+          }
         }
 
         const byVendor = new Map<string, typeof items>();

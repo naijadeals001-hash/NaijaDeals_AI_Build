@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
-import type { Order, Payment, Prisma, PrismaClient, Refund } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { Order, Payment, PrismaClient, Refund } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCountry, commissionFor } from "@/lib/config/commerce";
 import { ApiError } from "@/lib/auth/guard";
@@ -217,8 +218,48 @@ export async function initializePayment(input: {
   }
 }
 
+/**
+ * Lock the inventory rows an order touches in the canonical order:
+ *
+ *   order (already taken by the caller) -> product stock (sorted) -> variant rows (sorted)
+ *
+ * The conditional updates below are atomic on their own, but two orders that
+ * contain the same products in a different item order could otherwise update
+ * the rows in opposite order and deadlock. The order row lock already
+ * serialises work on one order; this helper serialises stock/source changes
+ * across orders and against checkout/seller transitions, which use the same
+ * stock -> variant order.
+ *
+ * Existing rows are locked only. A product-level item whose stock row is
+ * missing is deliberately left missing so restock keeps its documented
+ * `stock_row_missing` suppression instead of reviving a zero row.
+ */
+async function lockOrderInventoryRows(
+  tx: Db,
+  items: Array<{ productId: string; variantId: string | null }>
+) {
+  const productIds = [...new Set(items.filter((item) => !item.variantId).map((item) => item.productId))].sort();
+  for (const productId of productIds) {
+    await tx.$queryRaw`
+      SELECT id FROM "InventoryStock" WHERE "productId" = ${productId} FOR UPDATE
+    `;
+  }
+  const variantIds = [
+    ...new Set(items.map((item) => item.variantId).filter((variantId): variantId is string => Boolean(variantId)))
+  ].sort();
+  if (variantIds.length > 0) {
+    await tx.$queryRaw`
+      SELECT id FROM "ProductVariant"
+      WHERE id IN (${Prisma.join(variantIds)})
+      ORDER BY id
+      FOR UPDATE
+    `;
+  }
+}
+
 async function commitReservedStock(tx: Db, orderId: string) {
   const items = await tx.orderItem.findMany({ where: { orderId } });
+  await lockOrderInventoryRows(tx, items);
   for (const item of items) {
     if (item.variantId) {
       const updated = await tx.productVariant.updateMany({
@@ -238,6 +279,7 @@ async function commitReservedStock(tx: Db, orderId: string) {
 
 export async function releaseReservedStock(tx: Db, orderId: string) {
   const items = await tx.orderItem.findMany({ where: { orderId } });
+  await lockOrderInventoryRows(tx, items);
   for (const item of items) {
     if (item.variantId) {
       await tx.productVariant.updateMany({
@@ -306,6 +348,7 @@ export async function restockOrderItemsOnce(
   }
 
   const items = await tx.orderItem.findMany({ where: { orderId }, orderBy: { id: "asc" } });
+  await lockOrderInventoryRows(tx, items);
   const result: OrderRestockResult = {
     restored: false,
     alreadyRestocked: false,

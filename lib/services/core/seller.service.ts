@@ -424,16 +424,22 @@ export async function updateSellerProduct(userId: string, productId: string, inp
         // active variant owns the stock source, then refuses a quantity below
         // the units already reserved by open orders.
         await assertProductQuantityAllowed(tx, product.id, input.quantity);
-        if (product.stock) {
-          await tx.inventoryStock.update({
-            where: { productId: product.id },
-            data: { quantity: input.quantity, ...(input.lowStockLevel !== undefined ? { lowStockLevel: input.lowStockLevel } : {}) }
-          });
-        } else {
-          await tx.inventoryStock.create({
-            data: { productId: product.id, quantity: input.quantity, lowStockLevel: input.lowStockLevel ?? 3 }
-          });
-        }
+        // `assertProductQuantityAllowed` creates and locks a zero row for a
+        // legacy product that had none. Upsert (do not branch on the stale
+        // pre-transaction read) so the lock-created row is updated instead of
+        // colliding with a second create.
+        await tx.inventoryStock.upsert({
+          where: { productId: product.id },
+          create: {
+            productId: product.id,
+            quantity: input.quantity,
+            lowStockLevel: input.lowStockLevel ?? 3
+          },
+          update: {
+            quantity: input.quantity,
+            ...(input.lowStockLevel !== undefined ? { lowStockLevel: input.lowStockLevel } : {})
+          }
+        });
       }
       const freshImages = await tx.productImage.findMany({
         where: { productId: product.id },

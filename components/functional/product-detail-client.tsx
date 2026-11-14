@@ -177,14 +177,6 @@ export function ProductDetailClient({
       alt: image.alt,
       sortOrder: image.sortOrder
     }));
-    if (selectedVariant?.imageUrl) {
-      gallery.unshift({
-        id: `variant-${selectedVariant.id}`,
-        url: selectedVariant.imageUrl,
-        alt: `${product?.name ?? "Product"} — ${selectedVariant.name}`,
-        sortOrder: -1
-      });
-    }
     return gallery;
   }, [product, selectedVariant]);
 
@@ -328,7 +320,7 @@ export function ProductDetailClient({
           <ProductGallery
             name={product.name}
             images={images}
-            preferredUrl={selectedVariant?.imageUrl ?? null}
+            preferredUrl={null}
             demo={demo}
           />
         </div>

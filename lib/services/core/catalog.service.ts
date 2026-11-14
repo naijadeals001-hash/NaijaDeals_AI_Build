@@ -40,7 +40,11 @@ const productInclude = {
   // secondary key keeps the detail gallery on the same image every request.
   images: { orderBy: [{ sortOrder: "asc" as const }, { id: "asc" as const }] },
   stock: true,
-  variants: { where: { isActive: true }, orderBy: { name: "asc" as const } },
+  variants: {
+    where: { isActive: true },
+    orderBy: { name: "asc" as const },
+    select: { id: true, name: true, sku: true, priceKobo: true, stock: true, reserved: true, isActive: true, attributes: true }
+  },
   reviews: { where: { status: "APPROVED" as const }, select: { rating: true } }
 };
 

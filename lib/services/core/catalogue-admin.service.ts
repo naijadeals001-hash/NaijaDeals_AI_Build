@@ -398,8 +398,7 @@ export async function listCatalogue(actor: SessionUser) {
             stock: true,
             reserved: true,
             isActive: true,
-            attributes: true,
-            imageUrl: true
+            attributes: true
           },
           orderBy: [{ createdAt: "asc" }, { id: "asc" }]
         },
@@ -499,7 +498,6 @@ export type CatalogueProductPreview = {
     reserved: number;
     isActive: boolean;
     attributes: Record<string, unknown> | null;
-    imageUrl: string | null;
   }>;
   stock: { quantity: number; reserved: number; lowStockLevel: number } | null;
   available: number;
@@ -559,8 +557,7 @@ export async function getCatalogueProductPreview(actor: SessionUser, id: string)
           stock: true,
           reserved: true,
           isActive: true,
-          attributes: true,
-          imageUrl: true
+          attributes: true
         },
         orderBy: [{ createdAt: "asc" }, { id: "asc" }]
       },

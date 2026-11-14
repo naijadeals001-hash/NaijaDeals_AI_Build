@@ -35,7 +35,6 @@ export type ApiVariant = {
   reserved: number;
   isActive: boolean;
   attributes?: Record<string, unknown> | null;
-  imageUrl?: string | null;
 };
 
 export type ApiSaleMode = "escrow" | "contact";

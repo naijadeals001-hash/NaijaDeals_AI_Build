@@ -52,6 +52,13 @@ import {
   type ShopActivationDatabase,
   type ShopActivationRestoreResult
 } from "./lib/shop-activation-snapshot";
+import {
+  ReviewTestLeaseError,
+  acquireReviewTestLease,
+  describeReviewTestLease,
+  formatReviewTestLeaseSummary,
+  type ReviewTestLeaseHandle
+} from "./lib/review-test-lease";
 
 type CheckResult = { name: string; status: "PASS" | "FAIL"; detail: string };
 const results: CheckResult[] = [];
@@ -307,6 +314,23 @@ async function main() {
   `;
   assert(Number(table[0]?.n) === 1, "VerticalActivation table is missing; apply the migration first.");
   console.log(`Database: ${dbName} (${marker}) — activation/audit fixtures only, no financial writes.`);
+
+  // Serialise acceptance runs before reading the snapshot. The lease is
+  // filesystem-only and never touches activation rows; snapshot restoration
+  // remains the authority for any rule that this run writes.
+  const acceptanceLease: ReviewTestLeaseHandle = acquireReviewTestLease({
+    owner: "vertical-activation-tests",
+    runId: `activation-${runId}`,
+    purpose: `Shop activation acceptance on ${dbName} (${marker})`,
+    database: dbName,
+    classification: marker
+  });
+  console.log(`Review test lease: ${describeReviewTestLease(acceptanceLease.path)}`);
+  if (acceptanceLease.takeover) {
+    console.warn(
+      `Review test lease takeover from an expired holder: ${formatReviewTestLeaseSummary(acceptanceLease.takeover)}`
+    );
+  }
 
   // Durable recovery: write the exact prior Shop activation rows before any
   // mutation. The in-memory copy alone is lost on SIGINT/SIGKILL, which is how
@@ -572,7 +596,14 @@ async function main() {
     console.error(`\n${signal}: restoring Shop activation before exit.`);
     stopServer(server);
     void restoreBestEffort(`abnormal exit ${signal}`)
-      .then(async () => {
+      .then(async (restored) => {
+        const released = acceptanceLease.releaseSync();
+        console.error(
+          `Review test lease ${released ? "released" : "was not released; bounded expiry applies"}: ${acceptanceLease.path}`
+        );
+        if (!restored) {
+          console.error("Shop activation restoration was not verified; the snapshot file is retained for recovery.");
+        }
         await prisma.$disconnect().catch(() => undefined);
         process.exit(130);
       })
@@ -1178,6 +1209,15 @@ async function main() {
     if (runOrderCount > 0) console.error(`WARNING: ${runOrderCount} run-owned order(s) remain.`);
     if (runEatsRows > 0) console.error(`WARNING: ${runEatsRows} NOT_WIRED activation row(s) remain.`);
 
+    const leaseReleased = acceptanceLease.releaseSync();
+    if (!leaseReleased) {
+      console.error(
+        `WARNING: the review test lease was not released: ${describeReviewTestLease(acceptanceLease.path)}`
+      );
+    } else {
+      console.log(`Review test lease released: ${acceptanceLease.path}`);
+    }
+
     process.off("SIGINT", onSigint);
     process.off("SIGTERM", onSigterm);
     if (process.platform === "win32") process.off("SIGBREAK", onSigbreak);
@@ -1195,6 +1235,11 @@ async function main() {
 }
 
 main().catch((error) => {
+  if (error instanceof ReviewTestLeaseError) {
+    console.error(`REFUSED ${error.message}`);
+    process.exitCode = 2;
+    return;
+  }
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });

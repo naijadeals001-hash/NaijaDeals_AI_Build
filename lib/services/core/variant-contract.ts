@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/auth/guard";
 
@@ -23,7 +24,6 @@ export type VariantInput = {
   priceKobo: bigint;
   stock: number;
   attributes: VariantAttributes | null;
-  imageUrl?: string | null;
   isActive: boolean;
   currency: string | null;
 };
@@ -37,7 +37,6 @@ export type VariantSnapshot = {
   reserved: number;
   isActive: boolean;
   attributes: VariantAttributes | null;
-  imageUrl: string | null;
 };
 
 const MAX_VARIANTS = 50;
@@ -53,10 +52,15 @@ const VARIANT_FIELDS = new Set([
   "stock",
   "attributes",
   "options",
-  "imageUrl",
   "currency",
   "isActive"
 ]);
+/**
+ * Per-variant images are deliberately not part of the variant payload. Image
+ * selection belongs to the product gallery; a legacy `ProductVariant.imageUrl`
+ * remains readable but cannot be set or changed through this contract.
+ */
+const VARIANT_IMAGE_FIELDS = new Set(["imageUrl", "imageId"]);
 
 function fail(message: string, code = "invalid_variants", details?: Record<string, unknown>): never {
   throw new ApiError(400, code, message, details);
@@ -76,25 +80,6 @@ function readStock(value: unknown, field: string): number {
     fail(`${field} must be a whole number between 0 and ${MAX_VARIANT_STOCK}.`, "invalid_variant_stock");
   }
   return parsed;
-}
-
-function readVariantImage(value: unknown, field: string): string | null | undefined {
-  if (value === undefined) return undefined;
-  if (value === null) return null;
-  if (typeof value !== "string") fail(`${field} must be an image URL or null.`, "invalid_variant_image");
-  const image = value.trim();
-  if (!image) return null;
-  if (image.length > 500) fail(`${field} is too long.`, "invalid_variant_image");
-  if (image.startsWith("/")) {
-    if (image.startsWith("//") || image.includes("\\") || image.split("/").includes("..")) {
-      fail(`${field} must stay inside the project's public assets.`, "invalid_variant_image");
-    }
-    return image;
-  }
-  if (!/^https:\/\//i.test(image)) {
-    fail(`${field} must be an HTTPS URL or a project path starting with "/".`, "invalid_variant_image");
-  }
-  return image;
 }
 
 function readAttributes(value: unknown, field: string): VariantAttributes | null {
@@ -146,6 +131,12 @@ export function parseVariantsPayload(value: unknown, field = "variants"): Varian
     }
     const row = raw as Record<string, unknown>;
     for (const key of Object.keys(row)) {
+      if (VARIANT_IMAGE_FIELDS.has(key)) {
+        fail(
+          `${field}[${index}] does not accept per-variant image fields ("${key}"); use the product gallery instead.`,
+          "unsupported_variant_field"
+        );
+      }
       if (!VARIANT_FIELDS.has(key)) {
         fail(`${field}[${index}] has unsupported field "${key}".`, "unsupported_variant_field");
       }
@@ -190,7 +181,6 @@ export function parseVariantsPayload(value: unknown, field = "variants"): Varian
       priceKobo: readMinorUnits(row.priceKobo ?? row.price ?? null, `${field}[${index}].priceKobo`),
       stock: readStock(row.stock ?? 0, `${field}[${index}].stock`),
       attributes,
-      imageUrl: readVariantImage(row.imageUrl, `${field}[${index}].imageUrl`),
       isActive:
         row.isActive === undefined
           ? true
@@ -222,7 +212,6 @@ export function variantSnapshot(variant: {
   reserved: number;
   isActive: boolean;
   attributes: Prisma.JsonValue | null;
-  imageUrl?: string | null;
 }): VariantSnapshot & { attributes: VariantAttributes | null } {
   return {
     id: variant.id,
@@ -235,8 +224,7 @@ export function variantSnapshot(variant: {
     attributes:
       variant.attributes && typeof variant.attributes === "object" && !Array.isArray(variant.attributes)
         ? (variant.attributes as VariantAttributes)
-        : null,
-    imageUrl: variant.imageUrl ?? null
+        : null
   };
 }
 
@@ -249,16 +237,39 @@ export type LockedStockRow = { quantity: number; reserved: number };
  * Every writer that compares an absolute quantity with reservations must use
  * this (not a pre-transaction read): a concurrent checkout reservation or a
  * variant transition takes the same row lock, so the check and the write are
- * serialised. Returns null when the product has no stock row yet.
+ * serialised.
+ *
+ * Legacy products may predate the mandatory stock row. The helper creates a
+ * zero row inside the caller's transaction and then locks it, so a later
+ * cart/reservation/quantity write cannot slip between "there is no row" and
+ * the variant transition. `ON CONFLICT DO NOTHING` makes two first-time
+ * creators queue on the same unique productId; the loser re-reads the committed
+ * zero row under `FOR UPDATE`.
  */
 export async function lockInventoryStock(
   tx: Prisma.TransactionClient,
   productId: string
-): Promise<LockedStockRow | null> {
-  const rows = await tx.$queryRaw<LockedStockRow[]>`
+): Promise<LockedStockRow> {
+  const existing = await tx.$queryRaw<LockedStockRow[]>`
     SELECT "quantity", "reserved" FROM "InventoryStock" WHERE "productId" = ${productId} FOR UPDATE
   `;
-  return rows[0] ?? null;
+  if (existing[0]) return existing[0];
+
+  await tx.$executeRaw`
+    INSERT INTO "InventoryStock" ("id", "productId", "quantity", "reserved", "lowStockLevel", "updatedAt")
+    VALUES (${randomUUID()}, ${productId}, 0, 0, 3, NOW())
+    ON CONFLICT ("productId") DO NOTHING
+  `;
+  const created = await tx.$queryRaw<LockedStockRow[]>`
+    SELECT "quantity", "reserved" FROM "InventoryStock" WHERE "productId" = ${productId} FOR UPDATE
+  `;
+  if (!created[0]) {
+    // The product row disappeared between the insert and the lock, or the
+    // database rejected the fixture row without raising. Never continue with
+    // an unserialised stock decision.
+    throw new ApiError(409, "stock_lock_unavailable", "The product inventory row could not be locked.");
+  }
+  return created[0];
 }
 
 /**
@@ -271,7 +282,7 @@ export async function lockInventoryStock(
 export async function assertLockedProductQuantity(
   tx: Prisma.TransactionClient,
   input: { productId: string; quantity: number }
-): Promise<LockedStockRow | null> {
+): Promise<LockedStockRow> {
   const stock = await lockInventoryStock(tx, input.productId);
   // Re-read active variants under the stock lock: a concurrent variant
   // transition also takes this lock first, so the two cannot interleave.
@@ -285,7 +296,7 @@ export async function assertLockedProductQuantity(
       "This product uses variant stock. Edit variant quantities instead of the product-level inventory."
     );
   }
-  const reserved = stock?.reserved ?? 0;
+  const reserved = stock.reserved;
   if (input.quantity < reserved) {
     throw new ApiError(
       409,
@@ -321,14 +332,42 @@ export async function syncProductVariants(input: {
     where: { productId },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }]
   });
-  const productImages = await tx.productImage.findMany({ where: { productId }, select: { url: true } });
-  const allowedImages = new Set(productImages.map((image) => image.url));
   const before = existing.map(variantSnapshot);
   const existingById = new Map(existing.map((variant) => [variant.id, variant]));
   const existingBySku = new Map(existing.map((variant) => [variant.sku, variant]));
   const touched = new Set<string>();
   const targetActive = input.variants.filter((variant) => variant.isActive);
-  if (targetActive.length > 0 && stockRow && stockRow.quantity !== 0) {
+  const wasVariantManaged = existing.some((variant) => variant.isActive);
+
+  // Activation/conversion is the moment the product-level pool stops being the
+  // sellable source. A live unsaved product-level cart line would become
+  // unfulfillable at checkout, so it is a commitment that must be cleared
+  // before the transition. Saved-for-later lines are not reservations and
+  // historical CHECKED_OUT carts are never rewritten; neither blocks.
+  //
+  // This check runs after the stock row lock and before any stock, variant or
+  // cart write, so a concurrent cart add either commits before it (and is seen)
+  // or waits for the stock lock and re-reads the active variants afterwards.
+  if (targetActive.length > 0 && !wasVariantManaged) {
+    const liveProductLines = await tx.cartItem.count({
+      where: {
+        productId,
+        variantId: null,
+        savedForLater: false,
+        cart: { status: "ACTIVE" }
+      }
+    });
+    if (liveProductLines > 0) {
+      throw new ApiError(
+        409,
+        "product_in_live_cart",
+        "This product has an item without an option in an active cart. It must be removed or saved for later before the listing can move to option-level stock.",
+        { productId, liveCartLines: liveProductLines }
+      );
+    }
+  }
+
+  if (targetActive.length > 0 && stockRow.quantity !== 0) {
     if (!input.allowZeroProductStock || stockRow.reserved > 0) {
       throw new ApiError(
         409,
@@ -363,9 +402,6 @@ export async function syncProductVariants(input: {
     if (variant.id && !matched) {
       throw new ApiError(403, "variant_ownership", `Variant ${variant.id} does not belong to this product.`);
     }
-    if (variant.imageUrl && !allowedImages.has(variant.imageUrl)) {
-      throw new ApiError(400, "variant_image_invalid", "Choose an image that belongs to this product.");
-    }
     if (!matched) {
       creates.push(variant);
       continue;
@@ -389,7 +425,6 @@ export async function syncProductVariants(input: {
         priceKobo: variant.priceKobo,
         stock: variant.stock,
         attributes: variant.attributes ? (variant.attributes as Prisma.InputJsonValue) : Prisma.DbNull,
-        ...(variant.imageUrl !== undefined ? { imageUrl: variant.imageUrl } : {}),
         isActive: variant.isActive
       }
     });
@@ -417,7 +452,6 @@ export async function syncProductVariants(input: {
           priceKobo: variant.priceKobo,
           stock: variant.stock,
           attributes: variant.attributes ? (variant.attributes as Prisma.InputJsonValue) : undefined,
-          imageUrl: variant.imageUrl ?? null,
           isActive: variant.isActive
         }
       });

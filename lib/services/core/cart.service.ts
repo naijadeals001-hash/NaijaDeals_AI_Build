@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
 import { availabilityProjection } from "./availability";
 import { listPublicEligibleProductIds } from "./catalog.service";
+import { lockInventoryStock } from "./variant-contract";
 
 const cartInclude = {
   items: {
@@ -126,7 +127,6 @@ export async function getOrCreateActiveCart(userId: string): Promise<DecoratedCa
 }
 
 type LockedVariant = { id: string; isActive: boolean; stock: number; reserved: number };
-type LockedStock = { quantity: number; reserved: number };
 
 async function lockProductVariant(
   tx: Prisma.TransactionClient,
@@ -138,13 +138,6 @@ async function lockProductVariant(
     FROM "ProductVariant"
     WHERE id = ${variantId} AND "productId" = ${productId}
     FOR UPDATE
-  `;
-  return rows[0] ?? null;
-}
-
-async function lockProductStock(tx: Prisma.TransactionClient, productId: string): Promise<LockedStock | null> {
-  const rows = await tx.$queryRaw<LockedStock[]>`
-    SELECT "quantity", "reserved" FROM "InventoryStock" WHERE "productId" = ${productId} FOR UPDATE
   `;
   return rows[0] ?? null;
 }
@@ -229,6 +222,11 @@ export async function addCartItem(input: {
 
     let available: number;
     if (variantId) {
+      // Canonical order: user/cart -> product stock -> variant row. The stock
+      // lock (a zero row for a variant-managed product) serialises this add
+      // with `syncProductVariants` and the other cart paths, while the variant
+      // lock protects its stock/reserved/active state.
+      await lockInventoryStock(tx, product.id);
       const locked = await lockProductVariant(tx, product.id, variantId);
       if (!locked || !locked.isActive) {
         throw new ApiError(400, "variant_unavailable", "The selected option is not available.");
@@ -237,7 +235,7 @@ export async function addCartItem(input: {
     } else {
       // Locking the stock row serialises this add with a seller quantity edit
       // and with `syncProductVariants`, which takes the same row first.
-      const locked = await lockProductStock(tx, product.id);
+      const locked = await lockInventoryStock(tx, product.id);
       const activeVariants = await tx.productVariant.count({ where: { productId: product.id, isActive: true } });
       if (activeVariants > 0) {
         throw new ApiError(400, "variant_required", "Choose a product option before adding this item to the cart.");
@@ -315,6 +313,10 @@ export async function updateCartItem(input: {
 
     let available: number;
     if (item.variantId) {
+      // Canonical order: user/cart -> product stock -> variant row. The stock
+      // lock keeps a concurrent variant transition from changing the source
+      // between the availability read and the cart write.
+      await lockInventoryStock(tx, item.productId);
       // Re-read the variant under its row lock: a concurrent deactivation takes
       // this lock, then counts live cart lines. A saved line may be deactivated
       // while saved; moving it back to the cart must therefore fail cleanly.
@@ -328,7 +330,7 @@ export async function updateCartItem(input: {
       }
       available = availabilityProjection({ variants: [locked] }).available;
     } else {
-      const locked = await lockProductStock(tx, item.productId);
+      const locked = await lockInventoryStock(tx, item.productId);
       const activeVariants = await tx.productVariant.count({ where: { productId: item.productId, isActive: true } });
       if (activeVariants > 0) {
         throw new ApiError(
