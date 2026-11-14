@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { jsonError, requireUser, assertSameOrigin } from "@/lib/auth/guard";
 import { checkAuraRateLimit } from "@/lib/aura/rate-limit";
 import { runTurn } from "@/lib/aura/chat";
+import { readLocale } from "@/lib/i18n/server";
+import { previewAuthorizationForRequest } from "@/lib/services/core/vertical-activation.service";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -71,6 +73,10 @@ export async function POST(request: NextRequest) {
 
     const signal = request.signal;
     const encoder = new TextEncoder();
+    // The market comes from the visitor's validated locale cookies, and preview
+    // authorization from the session — never from the model or the request body.
+    const locale = readLocale();
+    const { previewAuthorized } = await previewAuthorizationForRequest();
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -84,7 +90,14 @@ export async function POST(request: NextRequest) {
         send({ type: "conversation", conversationId });
 
         try {
-          for await (const event of runTurn({ userId: user.id, conversationId, signal })) {
+          for await (const event of runTurn({
+            userId: user.id,
+            conversationId,
+            signal,
+            countryCode: locale.country,
+            city: locale.city,
+            previewAuthorized
+          })) {
             send(event);
             if (signal.aborted) break;
           }

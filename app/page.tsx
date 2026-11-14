@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { EcosystemHome2026, type HomeProduct } from "@/components/home/ecosystem-home-2026";
 import { previewAuthorizationForRequest, verticalAccess } from "@/lib/services/core/vertical-activation.service";
+import { listEligiblePublicCategoryIds } from "@/lib/services/core/catalog.service";
+import { readLocale } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -42,28 +44,46 @@ function isGenuineListing(product: {
  */
 export default async function HomePage() {
   const { previewAuthorized } = await previewAuthorizationForRequest();
-  const shop = await verticalAccess("shop", { countryCode: "NG", previewAuthorized }).catch(() => null);
+  // The rail follows the visitor's selected market. The eligibility ids come
+  // from the canonical public category tree (active, reachable, selectable,
+  // non-fixture, not publish-restricted/unresolved for the country), so a
+  // regulated or otherwise ineligible leaf cannot surface a deal here.
+  const locale = readLocale();
+  const countryCode = locale.country;
+  const shop = await verticalAccess("shop", { countryCode, cityCode: locale.city, previewAuthorized }).catch(() => null);
   const canBrowseShop = shop?.accessible === true;
-  const deals = canBrowseShop
-    ? await prisma.product
-    .findMany({
-      where: { status: "ACTIVE" },
-      orderBy: { createdAt: "desc" },
-      take: 40,
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        priceKobo: true,
-        isSample: true,
-        images: { take: 1, select: { url: true } },
-        stock: { select: { quantity: true, reserved: true } },
-        variants: { where: { isActive: true }, select: { stock: true, reserved: true } },
-        vendor: { select: { name: true, owner: { select: { email: true } } } }
-      }
-    })
-    .catch(() => [])
+  const eligibleCategoryIds = canBrowseShop
+    ? await listEligiblePublicCategoryIds(countryCode).catch(() => [])
     : [];
+  const deals =
+    eligibleCategoryIds.length > 0
+      ? await prisma.product
+          .findMany({
+            where: {
+              status: "ACTIVE",
+              isSample: false,
+              countryCode,
+              categoryId: { in: eligibleCategoryIds },
+              vendor: { status: "VERIFIED" }
+            },
+            orderBy: { createdAt: "desc" },
+            take: 40,
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              priceKobo: true,
+              isSample: true,
+              images: { take: 1, select: { url: true } },
+              stock: { select: { quantity: true, reserved: true } },
+              variants: { where: { isActive: true }, select: { stock: true, reserved: true } },
+              // Read server-side only, for the demo-vendor filter below. The
+              // mapped HomeProduct sent to the client never includes the owner.
+              vendor: { select: { name: true, owner: { select: { email: true } } } }
+            }
+          })
+          .catch(() => [])
+      : [];
 
   const products: HomeProduct[] = deals
     .filter((product) => {

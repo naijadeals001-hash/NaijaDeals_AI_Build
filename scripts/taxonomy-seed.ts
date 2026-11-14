@@ -25,6 +25,18 @@ import {
   TAXONOMY_NODES,
   validateTaxonomy
 } from "../lib/data/taxonomy";
+import { isRegulatedCategoryKey } from "../lib/taxonomy/regulated";
+
+/**
+ * The regulated publication flag comes from the established definition, never
+ * from the editorial `reviewRequired` property. A definition may state
+ * `isRegulated` explicitly; otherwise set membership decides. Writing and
+ * verifying through one helper means a definition that disagrees with the set
+ * fails the seed instead of silently changing market powers.
+ */
+function regulatedFlagFor(definition: { key: string; isRegulated?: boolean }): boolean {
+  return definition.isRegulated ?? isRegulatedCategoryKey(definition.key);
+}
 
 /**
  * REVIEW acceptance expectations. Update these deliberately when a reviewed
@@ -315,7 +327,7 @@ async function main(): Promise<void> {
                 level: definition.level,
                 isSelectable: definition.isSelectable,
                 showOnHomepage: definition.showOnHomepage,
-                isRegulated: definition.reviewRequired,
+                isRegulated: regulatedFlagFor(definition),
                 sortOrder: definition.sortOrder,
                 isActive: true,
                 isDemo: false
@@ -345,7 +357,7 @@ async function main(): Promise<void> {
                   level: definition.level,
                   isSelectable: definition.isSelectable,
                   showOnHomepage: definition.showOnHomepage,
-                  isRegulated: definition.reviewRequired,
+                  isRegulated: regulatedFlagFor(definition),
                   sortOrder: definition.sortOrder,
                   isActive: true,
                   deprecatedAt: null
@@ -364,7 +376,7 @@ async function main(): Promise<void> {
                   level: definition.level,
                   isSelectable: definition.isSelectable,
                   showOnHomepage: definition.showOnHomepage,
-                  isRegulated: definition.reviewRequired,
+                  isRegulated: regulatedFlagFor(definition),
                   sortOrder: definition.sortOrder,
                   isActive: true,
                   deprecatedAt: null
@@ -582,9 +594,11 @@ async function main(): Promise<void> {
               `${definition.key}: saved isSelectable ${saved.isSelectable} != ${definition.isSelectable}`
             );
           }
-          if (saved.isRegulated !== definition.reviewRequired) {
+          if (saved.isRegulated !== regulatedFlagFor(definition)) {
             throw new Error(
-              `${definition.key}: saved isRegulated ${saved.isRegulated} != reviewRequired ${definition.reviewRequired}`
+              `${definition.key}: saved isRegulated ${saved.isRegulated} != established definition ${regulatedFlagFor(
+                definition
+              )}`
             );
           }
           if (definition.parentKey) {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
+import { readLocale } from "@/lib/i18n/server";
 import { ArrowRight, FolderTree } from "lucide-react";
 import { CategoryBrowse } from "@/components/shop/category-browse";
 import type { PublicTaxonomyNode } from "@/lib/taxonomy-api";
@@ -92,9 +93,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
     /* keep the raw segment */
   }
 
-  const cookieStore = cookies();
-  const country = (cookieStore.get("nd_country")?.value ?? "NG").toUpperCase().slice(0, 2);
-  const city = (cookieStore.get("nd_city")?.value ?? "").toLowerCase().slice(0, 40);
+  const { country, city } = readLocale();
   const taxonomyQuery = new URLSearchParams({ country, ...(city ? { city } : {}) }).toString();
   const taxonomy = await fetchInternal<{ departments?: PublicTaxonomyNode[] }>(`/api/taxonomy?${taxonomyQuery}`);
   const roots = Array.isArray(taxonomy?.departments) ? taxonomy.departments : [];

@@ -66,10 +66,13 @@ type ShopAvailability = {
  */
 export function EcosystemHome2026({ products = [], initialShopAvailability = null }: EcosystemHome2026Props) {
   const [shopAvailability, setShopAvailability] = useState<ShopAvailability | null>(initialShopAvailability);
+  const { country, city } = useLocale();
 
   useEffect(() => {
     let active = true;
-    fetch("/api/products/availability?country=NG", { cache: "no-store" })
+    const params = new URLSearchParams({ country });
+    if (city) params.set("city", city);
+    fetch(`/api/products/availability?${params.toString()}`, { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((value: ShopAvailability | null) => {
         if (active && value && typeof value.status === "string") setShopAvailability(value);
@@ -80,7 +83,7 @@ export function EcosystemHome2026({ products = [], initialShopAvailability = nul
     return () => {
       active = false;
     };
-  }, []);
+  }, [country, city]);
 
   const services = useMemo(() => {
     if (!shopAvailability) return publicServices;

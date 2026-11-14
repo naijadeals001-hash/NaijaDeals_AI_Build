@@ -22,6 +22,8 @@
  * not imply an informal-unit conversion.
  */
 
+import { REGULATED_CATEGORY_KEYS, isRegulatedCategoryKey } from "../taxonomy/regulated";
+
 export type TaxonomyLocale = "en" | "fr" | "pt" | "ar" | "sw";
 export type TaxonomyAttributeType = "TEXT" | "NUMBER" | "SELECT" | "BOOLEAN";
 export type TaxonomyListingType = "escrow" | "contact";
@@ -63,7 +65,15 @@ export interface TaxonomyNode {
   /** When true the seed must not overwrite description, image or isDemo. */
   preserveExistingCategory: boolean;
   allowedListingTypes: TaxonomyListingType[];
+  /** Editorial property: this leaf's copy, imagery or vocabulary needs review. */
   reviewRequired: boolean;
+  /**
+   * Safety/standards/health publication status per market. When omitted the
+   * seed derives it from the established `REGULATED_CATEGORY_KEYS` set; it is
+   * never derived from `reviewRequired`. An explicit value must agree with
+   * that set (`validateTaxonomy` refuses a contradiction).
+   */
+  isRegulated?: boolean;
   aliases: TaxonomyAlias[];
   attributes: TaxonomyAttribute[];
   countryRules: TaxonomyCountryRule[];
@@ -4998,6 +5008,26 @@ export function validateTaxonomy(nodes: TaxonomyNode[] = TAXONOMY_NODES): void {
     );
     if (blockedInNg && !restricted.has(entry.key)) {
       throw new Error(`${entry.key}: canPublish=false for NG must be listed in RESTRICTED_CATEGORY_KEYS`);
+    }
+  }
+
+  // Regulated membership is its own established decision (see
+  // lib/taxonomy/regulated.ts). Keep the data and the set from drifting apart:
+  // every regulated key must exist as a selectable leaf, and an explicit
+  // per-node flag must agree with set membership. `reviewRequired` is not
+  // consulted here on purpose.
+  for (const key of REGULATED_CATEGORY_KEYS) {
+    const entry = byKey.get(key);
+    if (!entry) throw new Error(`Missing regulated leaf ${key}`);
+    if (entry.level !== 2 || !entry.isSelectable) {
+      throw new Error(`${key}: regulated leaves must be selectable level-2 nodes`);
+    }
+  }
+  for (const entry of nodes) {
+    if (entry.isRegulated !== undefined && entry.isRegulated !== isRegulatedCategoryKey(entry.key)) {
+      throw new Error(
+        `${entry.key}: isRegulated=${String(entry.isRegulated)} contradicts the established regulated set`
+      );
     }
   }
 }

@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
+import { DEFAULT_COUNTRY } from "@/lib/config/regions";
+import { getPublicProductDetail, queryCatalogProducts, type CatalogQuery } from "@/lib/services/core/catalog.service";
 
 /**
  * Aura tool implementations.
@@ -7,6 +9,9 @@ import { ApiError } from "@/lib/auth/guard";
  * Rules that hold for every tool here:
  *  - The acting user comes from the authenticated session, passed in by the
  *    route. No tool accepts a user or wallet id from the model.
+ *  - Catalogue tools receive the visitor's market from the request (never from
+ *    the model) and read through the canonical public services, so Aura sees
+ *    exactly the products the storefront would show in that country.
  *  - Arguments are validated and coerced; unknown or malformed values are
  *    rejected rather than passed through.
  *  - Results are data, never instructions. Retrieved text is wrapped as
@@ -16,7 +21,14 @@ import { ApiError } from "@/lib/auth/guard";
  *    happens only through the user's explicit confirmation endpoint.
  */
 
-export type ToolContext = { userId: string };
+export type ToolContext = {
+  userId: string;
+  /** Visitor market from the request locale/cookies; null means no market chosen. */
+  countryCode?: string | null;
+  city?: string | null;
+  /** Signed-in Control Center preview authorization, propagated to public reads. */
+  previewAuthorized?: boolean;
+};
 
 export type ToolResult = {
   /** Structured data the UI renders as cards. */
@@ -175,23 +187,41 @@ async function searchMeals(_ctx: ToolContext, args: Record<string, unknown>): Pr
   };
 }
 
-async function searchProducts(_ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
+/** The visitor's market, defaulting to the catalogue's home market. */
+function contextCountry(ctx: ToolContext): string {
+  return (ctx.countryCode ?? "").trim().toUpperCase() || DEFAULT_COUNTRY;
+}
+
+async function searchProducts(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
   const query = asString(args.query, 80);
   if (!query) throw new ApiError(400, "invalid_argument", "A search term is required.");
   const take = asNumber(args.take, 1, 6, 4) ?? 4;
   const max = asNumber(args.maxPriceNaira, 0, 50_000_000);
+  const countryCode = contextCountry(ctx);
 
-  const products = await prisma.product.findMany({
-    where: {
-      name: { contains: query, mode: "insensitive" },
-      ...(max ? { priceKobo: { lte: BigInt(Math.round(max * 100)) } } : {})
-    },
-    select: { id: true, name: true, priceKobo: true, images: { take: 1, orderBy: { sortOrder: "asc" }, select: { url: true } }, vendor: { select: { name: true } } },
-    take,
-    orderBy: { priceKobo: "asc" }
+  // The canonical public catalogue query applies shop activation, the selected
+  // country, verified sellers, the public category tree (including regulated /
+  // unresolved market restrictions) and the sample/fixture exclusions. A raw
+  // `prisma.product` query would bypass all of those.
+  const catalogQuery: CatalogQuery = {
+    q: query,
+    category: null,
+    market: null,
+    country: countryCode,
+    vendor: null,
+    price: null,
+    maxPriceKobo: max ? BigInt(Math.round(max * 100)) : null,
+    // Preserve the pre-existing Aura ordering: cheapest eligible result first.
+    sort: "price-asc",
+    page: 1,
+    pageSize: take
+  };
+  const page = await queryCatalogProducts(catalogQuery, {
+    previewAuthorized: ctx.previewAuthorized,
+    cityCode: ctx.city
   });
 
-  const cards: AuraCard[] = products.map((p) => ({
+  const cards: AuraCard[] = page.items.map((p) => ({
     kind: "product",
     title: p.name,
     subtitle: p.vendor?.name ?? "NaijaShop",
@@ -202,20 +232,44 @@ async function searchProducts(_ctx: ToolContext, args: Record<string, unknown>):
   }));
 
   return {
-    data: { query, results: cards },
-    summary: cards.length ? untrusted(`${cards.length} product(s): ` + cards.map((c) => `${c.title} — ₦${c.priceNaira?.toLocaleString("en-NG")}`).join("; ")) : `No products match "${query}".`,
+    data: { query, countryCode, results: cards },
+    summary: cards.length
+      ? untrusted(
+          `${cards.length} product(s) available in ${countryCode}: ` +
+            cards.map((c) => `${c.title} — ₦${c.priceNaira?.toLocaleString("en-NG")}`).join("; ")
+        )
+      : `No publicly listed products match "${query}" in ${countryCode}.`,
     cards
   };
 }
 
-async function compareProducts(_ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
+async function compareProducts(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
   const ids = Array.isArray(args.productIds) ? args.productIds.map(String).slice(0, 3) : [];
   if (ids.length < 2) throw new ApiError(400, "invalid_argument", "Two or three product ids are required.");
-  const products = await prisma.product.findMany({
-    where: { id: { in: ids } },
-    select: { id: true, name: true, priceKobo: true, description: true, images: { take: 1, orderBy: { sortOrder: "asc" }, select: { url: true } }, vendor: { select: { name: true } } }
-  });
-  if (products.length < 2) throw new ApiError(404, "not_found", "Those products are not both in the catalogue.");
+  const countryCode = contextCountry(ctx);
+  const cityCode = ctx.city ?? null;
+
+  // Resolve each id through the same public detail service the product page
+  // uses. Ineligible ids (wrong country, unverified seller, restricted or
+  // unresolved category, sample rows) resolve to null and are treated as
+  // absent — their name or price is never read into the response.
+  const resolved = await Promise.all(
+    ids.map(async (id) => {
+      try {
+        return await getPublicProductDetail(id, {
+          countryCode,
+          cityCode,
+          previewAuthorized: ctx.previewAuthorized
+        });
+      } catch {
+        return null;
+      }
+    })
+  );
+  const products = resolved.filter(
+    (product): product is NonNullable<typeof product> => product !== null && product.isSample !== true
+  );
+  if (products.length < 2) throw new ApiError(404, "not_found", "Those products are not both publicly available in this market.");
   const cards: AuraCard[] = products.map((p) => ({
     kind: "product",
     title: p.name,
@@ -226,7 +280,7 @@ async function compareProducts(_ctx: ToolContext, args: Record<string, unknown>)
     href: `/product/${p.id}`
   }));
   return {
-    data: { results: cards },
+    data: { countryCode, results: cards },
     summary: untrusted("Comparison: " + cards.map((c) => `${c.title} — ₦${c.priceNaira?.toLocaleString("en-NG")}`).join(" vs ")),
     cards
   };

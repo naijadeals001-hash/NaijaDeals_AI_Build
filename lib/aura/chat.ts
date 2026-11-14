@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/auth/guard";
 import { streamCompletion, providerConfigured, providerInfo, type ProviderMessage } from "./provider";
 import { TOOL_SPECS, buildCapabilities, type CapabilitySnapshot } from "./capabilities";
 import { TOOLS, TOOL_STATUS, type AuraCard, type ToolResult } from "./tools";
+import { countPublicCatalogProducts } from "@/lib/services/core/catalog.service";
 
 /**
  * Aura orchestration.
@@ -37,11 +38,28 @@ function hashInput(input: unknown) {
   return createHash("sha256").update(JSON.stringify(input)).digest("hex");
 }
 
-export async function capabilitySnapshot(): Promise<CapabilitySnapshot> {
+/**
+ * What Aura can actually read for this visitor's market.
+ *
+ * The shop count comes from the canonical public catalogue query when a country
+ * is known, so it matches the storefront's activation, country, category
+ * eligibility and fixture filters. Without a market the historical unscoped
+ * count is kept for the UI overview.
+ */
+export async function capabilitySnapshot(
+  options: { countryCode?: string | null; city?: string | null; previewAuthorized?: boolean } = {}
+): Promise<CapabilitySnapshot> {
+  const countryCode = (options.countryCode ?? "").trim().toUpperCase() || null;
   const [stays, restaurants, products, pros, providers, tracks, groceries] = await Promise.all([
     prisma.stayProperty.count({ where: { status: "published" } }),
     prisma.restaurant.count({ where: { status: "VERIFIED" } }),
-    prisma.product.count({ where: { status: "ACTIVE" } }),
+    countryCode
+      ? countPublicCatalogProducts({
+          countryCode,
+          cityCode: options.city ?? null,
+          previewAuthorized: options.previewAuthorized
+        })
+      : prisma.product.count({ where: { status: "ACTIVE" } }),
     prisma.professionalProfile.count({ where: { published: true } }),
     prisma.logisticsProvider.count({ where: { status: "VERIFIED" } }).catch(() => 0),
     prisma.streamTrack.count(),
@@ -111,9 +129,19 @@ export type PendingAction = {
  * Runs one assistant turn for an owned conversation, yielding events as they
  * happen so the route can forward them over SSE.
  */
-export async function* runTurn(input: { userId: string; conversationId: string; signal?: AbortSignal }): AsyncGenerator<TurnEvent> {
+export async function* runTurn(input: {
+  userId: string;
+  conversationId: string;
+  signal?: AbortSignal;
+  /** Visitor market from the request cookies; tool reads are scoped to it. */
+  countryCode?: string | null;
+  city?: string | null;
+  previewAuthorized?: boolean;
+}): AsyncGenerator<TurnEvent> {
   const started = Date.now();
   const info = providerInfo();
+  const countryCode = (input.countryCode ?? "").trim().toUpperCase() || null;
+  const city = input.city?.trim() || null;
 
   if (!providerConfigured()) {
     yield { type: "error", code: "provider_not_configured", message: "Aura is not connected to a model in this environment yet. You can still browse your services and records from the menu." };
@@ -121,8 +149,29 @@ export async function* runTurn(input: { userId: string; conversationId: string; 
     return;
   }
 
+  // Capability context is advisory. A catalogue read failure must not stop the
+  // conversation; the tools still run their own scoped reads and report errors.
+  let snapshot: CapabilitySnapshot | null = null;
+  try {
+    snapshot = await capabilitySnapshot({
+      countryCode,
+      city,
+      previewAuthorized: input.previewAuthorized
+    });
+  } catch {
+    snapshot = null;
+  }
+  // The market line is real state, not a claim: it tells the model which
+  // country it may answer for and how many shop listings are publicly eligible
+  // there, so it does not invent availability from another market.
+  const marketCount =
+    snapshot === null ? "" : ` The public NaijaShop catalogue has ${snapshot.counts.naijashop ?? 0} eligible product(s) for this market.`;
+  const marketContext = countryCode
+    ? `\n\nVisitor market: ${countryCode}${city ? ` / ${city}` : ""}.${marketCount} Only present listings the tools return; do not offer inventory from another country.`
+    : "";
+
   const history = await buildMessages(input.conversationId);
-  const messages: ProviderMessage[] = [{ role: "system", content: SYSTEM_PROMPT }, ...history];
+  const messages: ProviderMessage[] = [{ role: "system", content: SYSTEM_PROMPT + marketContext }, ...history];
 
   let finalText = "";
   const cards: AuraCard[] = [];
@@ -184,7 +233,16 @@ export async function* runTurn(input: { userId: string; conversationId: string; 
         const args = parseArgs(call.arguments);
         const tool = TOOLS[call.name];
         if (!tool) throw new ApiError(400, "unknown_tool", "That action is not available.");
-        result = await tool({ userId: input.userId }, args, input.conversationId);
+        result = await tool(
+          {
+            userId: input.userId,
+            countryCode,
+            city,
+            previewAuthorized: input.previewAuthorized
+          },
+          args,
+          input.conversationId
+        );
       } catch (error) {
         const code = (error as { code?: string }).code ?? "tool_failed";
         const message = error instanceof Error ? error.message : "That check failed.";

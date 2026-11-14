@@ -5,7 +5,7 @@
  * Proves, against an explicit REVIEW database and an optional isolated HTTP
  * server:
  *   - the active canonical taxonomy is 11 departments / 37 level-1 categories /
- *     113 leaves, derived from the authoritative node list;
+ *     leaves, derived from the authoritative node list;
  *   - `/api/taxonomy` exposes browsingVisible, sortOrder, imagery, country
  *     publication state and per-node direct/aggregated counts;
  *   - counts exclude drafts, archived rows, sample/fixture listings,
@@ -60,6 +60,9 @@ const CANONICAL = {
   leaves: TAXONOMY_NODES.filter((node) => node.level === 2).length
 };
 const CANONICAL_SLUGS = TAXONOMY_NODES.map((node) => node.slug);
+// 2026-11-14 REVIEW tree. Four legacy leaf definitions were reattached to the
+// live tree; keep this literal independent so a silent node-list edit fails.
+const EXPECTED_LEAVES = 117;
 const COUNTRY = "NG";
 const PRODUCT_PAGE_QUERY = "page=1&pageSize=60";
 let failures = 0;
@@ -416,7 +419,8 @@ async function main(): Promise<void> {
     const ghRuleByCategory = new Map(ghRules.rows.map((rule) => [rule.categoryId, rule]));
     const canonicalRows = categories.rows.filter((row) => CANONICAL_SLUGS.includes(row.slug));
 
-    await step("canonical taxonomy is 11 departments / 37 level-1 / 113 leaves", async () => {
+    await step(`canonical taxonomy is ${CANONICAL.departments} departments / ${CANONICAL.levelOne} level-1 / ${EXPECTED_LEAVES} leaves`, async () => {
+      assert(CANONICAL.leaves === EXPECTED_LEAVES, `node list has ${CANONICAL.leaves} leaves, expected ${EXPECTED_LEAVES}`);
       const counts = new Map<number, number>();
       for (const row of canonicalRows) {
         if (!row.isActive || row.deprecatedAt) continue;
@@ -424,7 +428,7 @@ async function main(): Promise<void> {
       }
       assert(counts.get(0) === CANONICAL.departments, `active departments ${counts.get(0)} != ${CANONICAL.departments}`);
       assert(counts.get(1) === CANONICAL.levelOne, `active level-1 ${counts.get(1)} != ${CANONICAL.levelOne}`);
-      assert(counts.get(2) === CANONICAL.leaves, `active leaves ${counts.get(2)} != ${CANONICAL.leaves}`);
+      assert(counts.get(2) === EXPECTED_LEAVES, `active leaves ${counts.get(2)} != ${EXPECTED_LEAVES}`);
     });
 
     await step("REVIEW level-1 rows carry the browsing flag", async () => {
@@ -464,7 +468,7 @@ async function main(): Promise<void> {
       const levelOne = all.filter((node) => node.level === 1);
       const leaves = all.filter((node) => node.level === 2);
       assert(levelOne.length === 37, `level-1 nodes ${levelOne.length}`);
-      assert(leaves.length === 113, `leaf nodes ${leaves.length}`);
+      assert(leaves.length === EXPECTED_LEAVES, `leaf nodes ${leaves.length} != ${EXPECTED_LEAVES}`);
       for (const node of levelOne) {
         assert(
           node.subtreeProductCount === (ngCountsLevelOne.get(node.id) ?? 0),
@@ -667,7 +671,10 @@ async function main(): Promise<void> {
         assert(body.countryCode === COUNTRY, `countryCode ${String(body.countryCode)}`);
         assert(departments.length === 11, `roots ${departments.length}`);
         assert(all.filter((node) => node.level === 1).length === 37, "level-1 nodes");
-        assert(all.filter((node) => node.level === 2).length === 113, "leaf nodes");
+        assert(
+          all.filter((node) => node.level === 2).length === EXPECTED_LEAVES,
+          `leaf nodes ${all.filter((node) => node.level === 2).length} != ${EXPECTED_LEAVES}`
+        );
         assertNodeContract(all, "HTTP /api/taxonomy");
         for (const node of all.filter((row) => row.level === 1)) {
           assert(

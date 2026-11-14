@@ -345,6 +345,20 @@ async function allPublicCategoryIds(countryCode: string): Promise<string[]> {
 }
 
 /**
+ * Every category id a product may be publicly listed in for this market.
+ *
+ * This is the same eligibility decision the catalogue query applies: active,
+ * reachable, selectable, not an acceptance fixture and not publish-restricted
+ * or unresolved for the country. Callers that cannot use `queryCatalogProducts`
+ * directly (for example a homepage rail with its own stock/genuine filters)
+ * must use this helper rather than duplicating tree logic.
+ */
+export function listEligiblePublicCategoryIds(countryCode: string): Promise<string[]> {
+  const country = countryCode.trim().toUpperCase() || DEFAULT_PUBLIC_COUNTRY;
+  return allPublicCategoryIds(country);
+}
+
+/**
  * Browsing roots for the Shop shell and the public directory.
  *
  * The contract requires the same active roots that `/api/taxonomy` returns.
@@ -674,11 +688,12 @@ function matchesText(product: CatalogProduct, needle: string) {
  */
 export async function queryCatalogProducts(
   query: CatalogQuery,
-  options: { rankedIds?: string[] | null; previewAuthorized?: boolean; fresh?: boolean } = {}
+  options: { rankedIds?: string[] | null; previewAuthorized?: boolean; fresh?: boolean; cityCode?: string | null } = {}
 ): Promise<CatalogPage> {
   if (
     !(await shopReadAllowed({
       countryCode: query.country ?? DEFAULT_PUBLIC_COUNTRY,
+      cityCode: options.cityCode,
       previewAuthorized: options.previewAuthorized,
       fresh: options.fresh
     }))
@@ -729,6 +744,35 @@ export async function queryCatalogProducts(
     totalPages,
     hasMore: start + query.pageSize < total
   };
+}
+
+/**
+ * Number of publicly eligible products for a market.
+ *
+ * Uses the canonical catalogue query, so shop activation, country, category
+ * eligibility and fixture filtering are identical to the storefront. A plain
+ * `prisma.product.count` is unscoped and must not be used for customer-facing
+ * availability.
+ */
+export async function countPublicCatalogProducts(
+  options: { countryCode?: string | null; cityCode?: string | null; previewAuthorized?: boolean; fresh?: boolean } = {}
+): Promise<number> {
+  const page = await queryCatalogProducts(
+    {
+      q: null,
+      category: null,
+      market: null,
+      country: (options.countryCode ?? "").trim().toUpperCase() || DEFAULT_PUBLIC_COUNTRY,
+      vendor: null,
+      price: null,
+      maxPriceKobo: null,
+      sort: "featured",
+      page: 1,
+      pageSize: null
+    },
+    { previewAuthorized: options.previewAuthorized, fresh: options.fresh, cityCode: options.cityCode }
+  );
+  return page.total;
 }
 
 export async function saleModesFor(ids: string[]): Promise<Map<string, "escrow" | "contact">> {

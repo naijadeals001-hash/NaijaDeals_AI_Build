@@ -352,10 +352,11 @@ export function TaxonomyNodeEditor({
           <input
             type="checkbox"
             checked={draft.isRegulated}
-            disabled={disabled}
+            disabled={disabled || Boolean(scopedCountry)}
             onChange={(event) => update({ isRegulated: event.target.checked })}
           />
           Regulated goods (explicit country rule required)
+          {scopedCountry ? <span className="font-semibold text-[#8B949E]">Platform-wide decision</span> : null}
         </label>
         <label className="flex items-center gap-2 text-[11px] font-bold text-[#F0F6FC]">
           <input
@@ -382,7 +383,8 @@ export function TaxonomyNodeEditor({
         only hides it from category rails and browsing directories such as{" "}
         <code className="rounded bg-[#161B22] px-1">/api/taxonomy/categories</code>; the node stays published, keeps its
         listings and still appears in the full department tree. Homepage merchandising and seller listability are separate
-        decisions.
+        decisions. <span className="font-bold text-[#C9D1D9]">Regulated goods</span> is a platform-wide safety decision:
+        country-scoped administrators can read it but never change it, and the server returns 403 for any attempt.
       </p>
 
       {draft.imageUrl ? (

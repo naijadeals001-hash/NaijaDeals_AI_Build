@@ -31,6 +31,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
+  const cityCode = searchParams.get("city")?.trim() || null;
 
   let parsed: ReturnType<typeof parseCatalogQuery>;
   try {
@@ -52,6 +53,7 @@ export async function GET(request: NextRequest) {
   try {
     await assertVerticalAccess("shop", {
       countryCode: parsed.query.country ?? "NG",
+      cityCode,
       previewAuthorized
     });
   } catch (error) {
@@ -72,7 +74,7 @@ export async function GET(request: NextRequest) {
       ? await searchProductIds(parsed.query.q, { limit: 200 })
       : null;
 
-  const result = await queryCatalogProducts(parsed.query, { rankedIds, previewAuthorized });
+  const result = await queryCatalogProducts(parsed.query, { rankedIds, previewAuthorized, cityCode });
   const saleModes = await saleModesFor(result.items.map((product) => product.id));
   const items = result.items.map((product) => ({
     ...product,

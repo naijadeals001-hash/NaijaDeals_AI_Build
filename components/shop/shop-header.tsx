@@ -26,6 +26,7 @@ import { apiClient, type ApiCategory, type ApiProduct, type SessionUser } from "
 import { getPublicTaxonomy, type PublicTaxonomyNode } from "@/lib/taxonomy-api";
 import { NaijaDealsLogo } from "@/components/brand/naijadeals-logo";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { COUNTRIES } from "@/lib/config/commerce";
 import { AllDrawer, ShopPanelFrame, type DepartmentStatus, type ShopDepartment } from "./all-drawer";
 import { AccountMenu, rememberRecentlyViewed } from "./account-menu";
 import { ShopSiteFooter } from "./shop-site-footer";
@@ -132,7 +133,7 @@ export function ShopShell({ children, initialShopAvailability = null }: { childr
 
 function ShopHeader({ initialShopAvailability = null }: { initialShopAvailability?: { available: boolean; status: "LIVE" | "PREVIEW" | "DISABLED"; message?: string | null } | null }) {
   const pathname = usePathname();
-  const { city, cities, setCity, country } = useLocale();
+  const { city, cities, setCity, setCountry, country, countryName, deliveryEnabled } = useLocale();
 
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [departmentTree, setDepartmentTree] = useState<ShopDepartment[]>([]);
@@ -318,8 +319,9 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
   const accountGreeting = sessionUser ? `Hello, ${firstName}` : sessionUser === null ? "Hello, sign in" : "Hello";
   const savedAddress = useMemo(() => addressSummary(address), [address]);
   const locationLabel = savedAddress || city.trim();
+  const locationPrefix = deliveryEnabled ? "Deliver to" : "Shopping in";
   const locationAria = locationLabel
-    ? `Deliver to ${locationLabel}. Change delivery location`
+    ? `${locationPrefix} ${locationLabel}. Change delivery location`
     : "Choose delivery location. Change delivery location";
 
   function openAll(trigger: HTMLElement) {
@@ -344,6 +346,13 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
 
   function closePanels() {
     setOpenPanel(null);
+  }
+
+  function chooseCountry(next: string) {
+    if (!next || next === country) return;
+    // setCountry clears a city that is not valid for the new country; the
+    // panel stays open so the visitor can immediately choose a city there.
+    setCountry(next);
   }
 
   function chooseCity(next: string) {
@@ -527,7 +536,7 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
             >
               <MapPin className="h-4 w-4 shrink-0 text-[#0f7a4a]" aria-hidden />
               <span className="min-w-0 leading-tight">
-                <span className="block text-[9px] font-semibold text-[#566359]">Deliver to</span>
+                <span className="block text-[9px] font-semibold text-[#566359]">{locationPrefix}</span>
                 <span className="flex min-w-0 items-center gap-1">
                   <span
                     className={`truncate text-[11px] font-extrabold ${
@@ -674,8 +683,12 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
         returnFocusRef={locationReturnFocusRef}
         address={address}
         savedAddress={savedAddress}
+        country={country}
+        countryName={countryName}
+        deliveryEnabled={deliveryEnabled}
         city={city}
         cities={cities}
+        onChooseCountry={chooseCountry}
         onChooseCity={chooseCity}
       />
     </>
@@ -812,8 +825,12 @@ function LocationPanel({
   returnFocusRef,
   address,
   savedAddress,
+  country,
+  countryName,
+  deliveryEnabled,
   city,
   cities,
+  onChooseCountry,
   onChooseCity
 }: {
   open: boolean;
@@ -821,8 +838,12 @@ function LocationPanel({
   returnFocusRef: React.RefObject<HTMLElement | null>;
   address: SavedAddress | null;
   savedAddress: string;
+  country: string;
+  countryName: string;
+  deliveryEnabled: boolean;
   city: string;
   cities: string[];
+  onChooseCountry: (next: string) => void;
   onChooseCity: (next: string) => void;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -847,7 +868,7 @@ function LocationPanel({
           <div className="min-w-0 flex-1">
             <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#8fb89a]">NaijaDeals Marketplace</p>
             <h2 id="shop-location-title" className="mt-0.5 truncate text-[17px] font-extrabold leading-tight">
-              Delivery location
+              {deliveryEnabled ? "Delivery location" : "Shopping location"}
             </h2>
             <p className="mt-0.5 line-clamp-2 text-[10.5px] leading-4 text-[#b9d5bd]">
               {savedAddress ? `Saved delivery address: ${savedAddress}.` : "Choose where you are shopping from."}
@@ -882,6 +903,27 @@ function LocationPanel({
           </div>
         )}
 
+        <label htmlFor="shop-location-country" className="mt-4 block text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#566359]">
+          Marketplace country
+        </label>
+        <div className="relative mt-1">
+          <select
+            id="shop-location-country"
+            value={country}
+            onChange={(event) => onChooseCountry(event.target.value)}
+            className="h-11 w-full appearance-none rounded-xl border border-[#cfdccb] bg-white pl-3 pr-9 text-[13px] font-semibold text-[#14241b] outline-none transition focus:border-[#0b5c33] focus-visible:ring-2 focus-visible:ring-[#0b5c33]/20"
+          >
+            {Object.entries(COUNTRIES)
+              .filter(([, item]) => item.enabled)
+              .map(([code, item]) => (
+                <option key={code} value={code}>
+                  {item.name}
+                </option>
+              ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#4b5b51]" aria-hidden />
+        </div>
+
         <label htmlFor="shop-location-city" className="mt-4 block text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#566359]">
           Marketplace city
         </label>
@@ -903,11 +945,17 @@ function LocationPanel({
           </select>
           <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#4b5b51]" aria-hidden />
         </div>
-        <p className="mt-2 text-[10.5px] leading-4 text-[#566359]">
-          {savedAddress
-            ? "Your saved delivery address stays unchanged. This city only sets the Marketplace browsing context."
-            : "This city is a browsing preference. A delivery address and delivery fee are confirmed at checkout."}
-        </p>
+        {!deliveryEnabled ? (
+          <p role="status" className="mt-2 rounded-xl border border-[#e2c98d] bg-[#fff8e6] px-3 py-2 text-[10.5px] leading-4 text-[#6b4b00]">
+            Delivery is not configured for {countryName} yet. You can browse available listings, but checkout delivery is unavailable.
+          </p>
+        ) : (
+          <p className="mt-2 text-[10.5px] leading-4 text-[#566359]">
+            {savedAddress
+              ? "Your saved delivery address stays unchanged. This city only sets the Marketplace browsing context."
+              : "This city is a browsing preference. A delivery address and delivery fee are confirmed at checkout."}
+          </p>
+        )}
 
         <Link
           href="/account#addresses"

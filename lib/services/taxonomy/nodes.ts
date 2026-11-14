@@ -87,6 +87,31 @@ export function slugifyCategoryName(value: string): string {
   );
 }
 
+/**
+ * The regulated flag is a platform-wide publication decision, not a
+ * country-scoped merchandising choice. A scoped administrator may resend the
+ * current value (the editor submits every flag on save, so an unchanged value
+ * must not block an in-scope edit) but may not change it.
+ */
+function assertRegulatedFlagInScope(actor: SessionUser, requested: boolean, current: boolean) {
+  const scopeCountry = actor.scopeCountryCode ? actor.scopeCountryCode.toUpperCase() : null;
+  if (!scopeCountry || requested === current) return;
+  throw new ApiError(
+    403,
+    "region_forbidden",
+    "Regulated status is a platform-wide taxonomy decision; a country-scoped administrator cannot change it. Ask a platform-wide administrator."
+  );
+}
+
+/** Who made this regulated-flag decision, recorded in the audit trail. */
+export function regulatedScopeDecision(actor: SessionUser) {
+  const scopeCountryCode = actor.scopeCountryCode ? actor.scopeCountryCode.toUpperCase() : null;
+  return {
+    scopeCountryCode,
+    isRegulatedFlagAuthority: scopeCountryCode ? "country_scoped_admin" : "platform_admin"
+  };
+}
+
 async function assertUniqueCategory(
   tx: Db,
   input: { key?: string | null; name?: string | null; slug?: string | null; excludeId?: string }
@@ -196,6 +221,10 @@ export async function createCategoryNode(actor: SessionUser, body: Record<string
   try {
     return await prisma.$transaction(async (tx) => {
       const values = await validateCategoryCreateInput(tx, body);
+      // Enforced before the category row, aliases, attributes or country rules
+      // are written: a scoped administrator cannot establish the platform-wide
+      // regulated flag.
+      assertRegulatedFlagInScope(actor, values.isRegulated, false);
       const created = await createCategoryRecord(tx, actor.id, values);
       const aliasCount = body.aliases === undefined ? 0 : await replaceAliases(tx, created.id, body.aliases);
       const attributeCount = body.attributes === undefined ? 0 : await replaceAttributes(tx, created.id, body.attributes);
@@ -216,6 +245,8 @@ export async function createCategoryNode(actor: SessionUser, body: Record<string
           isSelectable: values.isSelectable,
           showOnHomepage: values.showOnHomepage,
           browsingVisible: values.browsingVisible,
+          isRegulated: values.isRegulated,
+          scope: regulatedScopeDecision(actor),
           isActive: values.isActive,
           aliasCount,
           attributeCount,
@@ -482,6 +513,14 @@ export async function updateCategoryNode(
       });
       if (!existing) throw new ApiError(404, "category_not_found", "Category not found.");
 
+      // Parse and authorise the regulated flag before any write (including the
+      // audit row): only a platform-wide administrator may change it.
+      const requestedRegulated =
+        body.isRegulated === undefined ? undefined : readBoolean(body.isRegulated, "isRegulated");
+      if (requestedRegulated !== undefined) {
+        assertRegulatedFlagInScope(actor, requestedRegulated, existing.isRegulated);
+      }
+
       const key =
         body.key === undefined || body.key === null || body.key === "" ? undefined : readKey(body.key);
       const name = body.name === undefined ? undefined : readText(body.name, "Category name", 2, 120);
@@ -571,7 +610,7 @@ export async function updateCategoryNode(
         ...(body.browsingVisible !== undefined
           ? { browsingVisible: readBoolean(body.browsingVisible, "browsingVisible") }
           : {}),
-        ...(body.isRegulated !== undefined ? { isRegulated: readBoolean(body.isRegulated, "isRegulated") } : {}),
+        ...(requestedRegulated !== undefined ? { isRegulated: requestedRegulated } : {}),
         ...(body.isActive !== undefined ? { isActive: readBoolean(body.isActive, "isActive") } : {}),
         ...(body.sortOrder !== undefined ? { sortOrder: readInteger(body.sortOrder, "sortOrder", 0, 100_000) } : {}),
         ...(body.deprecatedAt !== undefined ? { deprecatedAt: readDate(body.deprecatedAt, "deprecatedAt") ?? null } : {})
@@ -649,7 +688,9 @@ export async function updateCategoryNode(
             aliases: body.aliases !== undefined,
             attributes: body.attributes !== undefined,
             countryRules: body.countryRules !== undefined
-          }
+          },
+          scope: regulatedScopeDecision(actor),
+          regulatedChangeRequested: requestedRegulated !== undefined
         }
       });
 

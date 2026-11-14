@@ -999,6 +999,9 @@ export function SearchPage() {
   const [notice, setNotice] = useState("");
   const [adding, setAdding] = useState("");
   const router = useRouter();
+  // A market switch can leave an older request in flight. Only the newest
+  // request may write state, so a slow NG response cannot replace GH results.
+  const loadSequence = useRef(0);
 
   async function add(product: ApiProduct) {
     setAdding(product.id);
@@ -1020,23 +1023,36 @@ export function SearchPage() {
   }
 
   const load = useCallback(async () => {
+    const sequence = ++loadSequence.current;
     setStatus("loading");
     setError("");
     try {
       const items = await apiClient.getProducts({ q: query, category, sort, country, city });
+      if (sequence !== loadSequence.current) return;
       setProducts(items);
       setStatus("ready");
     } catch (err) {
+      if (sequence !== loadSequence.current) return;
       setError(err instanceof Error ? err.message : "Search failed.");
       setStatus("error");
     }
   }, [query, category, sort, country, city]);
 
   useEffect(() => {
-    void apiClient.getCategories({ country, city }).then(setCategories).catch(() => undefined);
+    let active = true;
+    setCategories([]);
+    void apiClient.getCategories({ country, city }).then((items) => {
+      if (active) setCategories(items);
+    }).catch(() => undefined);
+    return () => {
+      active = false;
+    };
   }, [country, city]);
 
   useEffect(() => {
+    // Invalidate an in-flight request as soon as the market/query changes,
+    // before the debounce starts, so its late response cannot win.
+    loadSequence.current += 1;
     const timeout = setTimeout(() => void load(), 250);
     return () => clearTimeout(timeout);
   }, [load]);

@@ -11,6 +11,7 @@ import { assertSellerCategoryEligibility } from "./eligibility";
 import {
   ADMIN_CATEGORY_INCLUDE,
   createCategoryRecord,
+  regulatedScopeDecision,
   slugifyCategoryName,
   validateCategoryCreateInput,
   type AdminCategoryRecord
@@ -471,7 +472,9 @@ export async function resolveCategoryRequest(input: {
           slug: created.slug,
           key: created.key,
           parentId: created.parentId,
-          level: created.level
+          level: created.level,
+          isRegulated: created.isRegulated,
+          scope: regulatedScopeDecision(input.actor)
         }
       });
     }
