@@ -346,12 +346,14 @@ export async function getPublicTaxonomy(
 /**
  * Lightweight category-level projection for browsing rails.
  *
- * Returns every active, reachable level-1 category whose browsing flag is on
- * and which is publishable in the selected market, in merchandising order, with
- * its aggregated counts and imagery. The caller does not have to flatten the
- * full department/leaf tree. Departments and level-2 leaves stay out of this
- * list by contract, and an explicitly country-restricted category is not
- * offered for browsing there.
+ * Browsing eligibility is explicit and separate from publishing eligibility:
+ * every active, reachable level-1 category whose `browsingVisible` flag is on is
+ * returned in merchandising order, with its aggregated counts and imagery.
+ * `canPublish` is carried through unchanged. A browsing-visible category whose
+ * market eligibility is unresolved or denied remains browsable with
+ * `canPublish: false` and a restriction note, but its listing count is zero and
+ * it cannot accept publications. No missing regional rule is treated as
+ * approval. Departments and level-2 leaves stay out of this list by contract.
  */
 export async function getPublicLevelOneCategories(
   options: { countryCode?: string | null; city?: string | null } = {}
@@ -365,7 +367,6 @@ export async function getPublicLevelOneCategories(
   for (const root of taxonomy.roots) {
     for (const row of taxonomy.childrenByParent.get(root.id) ?? []) {
       if (row.level !== 1 || !row.browsingVisible) continue;
-      if (taxonomy.publishState.get(row.id)?.canPublish === false) continue;
       categories.push(toNodeFields(taxonomy, counts, row));
     }
   }

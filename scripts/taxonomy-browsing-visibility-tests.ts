@@ -611,7 +611,7 @@ async function main(): Promise<void> {
       assert(ngTree, "NG tree missing for order comparison");
       const treeOrder = (ngTree?.departments ?? []).flatMap((department) =>
         (department.children ?? [])
-          .filter((node) => node.level === 1 && node.browsingVisible !== false && node.canPublish !== false)
+          .filter((node) => node.level === 1 && node.browsingVisible !== false)
           .map((node) => node.id)
       );
       assert(

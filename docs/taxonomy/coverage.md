@@ -314,19 +314,21 @@ text through the guarded apply script.
 | Phones & Tablets | `/generated/shop/category-phones-tablets.webp` | 1024x682 | added |
 | Computers | `/generated/shop/category-computers.webp` | 1024x576 | added |
 | Gaming | `/generated/shop/category-gaming.webp` | 1024x576 | already present |
-| Electronics & Appliances | `/generated/shop/banner-electronics.webp` | 1024x576 | added |
+| Electronics & Appliances | `/generated/taxonomy/category-electronics-appliances.webp` | 1600x900 (composed from approved LED-monitor + coffee-maker assets) | added |
 | Home & Kitchen | `/generated/shop/category-home-kitchen.webp` | 1024x576 | added |
 | Power & Solar | `/generated/shop/category-power-solar.webp` | 1024x576 | already present |
 | Fashion & Accessories | `/generated/shop/category-fashion.webp` | 1024x1024 | added |
 | Beauty & Personal Care | `/generated/shop/category-beauty.webp` | 1024x1024 | added |
 | Groceries & Household Essentials | `/generated/shop/category-groceries.webp` | 1024x1066 | already present |
 
-Known pre-existing art limitation (not changed here): `electronics-appliances`
-uses `banner-electronics.webp`, which depicts gaming peripherals on a neon-lit
-desk rather than the whole Electronics & Appliances category. It is treated as
-approved art and was not overwritten; a versioned replacement needs an owner
-decision. `gaming` alt says "dark surface" while the image is neon-lit; the alt
-was already present and was left unchanged.
+The acknowledged `electronics-appliances` mismatch was corrected on 2026-11-13:
+the old `banner-electronics.webp` showed gaming peripherals on a neon-lit desk.
+The category now uses `category-electronics-appliances.webp`, a 1600x900
+catalogue diptych composed from the approved `product-led-monitor.webp` and
+`product-coffee-maker.webp` assets (zero new Kie credits; provenance in the
+generation ledger). The category page keeps the whole subject visible in its
+wide hero. `gaming` alt says "dark surface" while its image is neon-lit; that
+pre-existing alt was not changed.
 
 ### Reused approved product photographs — 7 categories, 0 credits
 

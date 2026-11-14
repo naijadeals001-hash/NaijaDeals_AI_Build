@@ -187,8 +187,8 @@ const ALT_ONLY_TARGETS: Target[] = [
     key: "electronics-appliances",
     slug: "electronics-appliances",
     mode: "alt-only",
-    expectedImageUrl: "/generated/shop/banner-electronics.webp",
-    alt: "Gaming headset, keyboard, controller, phone, smartwatch and laptop on a neon-lit desk"
+    expectedImageUrl: "/generated/taxonomy/category-electronics-appliances.webp",
+    alt: "Slim LED monitor on a stand beside a black drip coffee maker with a glass carafe"
   },
   {
     key: "home-kitchen",

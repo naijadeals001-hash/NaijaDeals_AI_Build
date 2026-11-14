@@ -1292,6 +1292,26 @@
       "review": "visually inspected 2026-11-13T21:24:01.642Z: contact-sheet-c.png and full-resolution inspection: subject matches category, no text/logos, square crop safe, equipment and food accurate",
       "lastError": null,
       "reviewedAt": "2026-11-13T21:24:01.642Z"
+    },
+    {
+      "id": "category-electronics-appliances",
+      "prompt": null,
+      "model": null,
+      "size": null,
+      "status": "composed",
+      "credits": 0,
+      "batch": "taxonomy-category-art-fix",
+      "sourceAssets": [
+        "/generated/shop/product-led-monitor.webp",
+        "/generated/shop/product-coffee-maker.webp"
+      ],
+      "compositor": "sharp 1024x1024 + 1024x576 → 1600x900 WebP quality 88",
+      "pngPath": null,
+      "webpPath": "/generated/taxonomy/category-electronics-appliances.webp",
+      "alt": "Slim LED monitor on a stand beside a black drip coffee maker with a glass carafe",
+      "generatedAt": "2026-11-14T03:46:45.747Z",
+      "review": "visually inspected 2026-11-13; accurate electronics + appliance composition, no essential crop",
+      "note": "Replaced the acknowledged banner-electronics gaming-peripheral mismatch using already-approved assets; zero new Kie credits."
     }
   ],
   "cumulativeCredits": 246,

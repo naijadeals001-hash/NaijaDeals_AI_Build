@@ -1059,7 +1059,7 @@ export function SearchPage() {
     <div className="space-y-5">
       <header>
         <h1 className="font-display text-3xl font-extrabold">Search Shop</h1>
-        <p className="text-sm text-muted">Results are filtered from live product inventory.</p>
+        <p className="text-sm text-muted">Results are filtered from published product listings.</p>
       </header>
       <form
         onSubmit={(event) => {

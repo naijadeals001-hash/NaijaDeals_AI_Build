@@ -2,7 +2,19 @@
 
 export type ApiMoney = string | number;
 
-export type ApiCategory = { id: string; name: string; slug: string };
+export type ApiCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  imageAlt?: string | null;
+  /** 0 = department, 1 = category, 2 = leaf when the endpoint supplies it. */
+  level?: number;
+  productCount?: number | null;
+  showOnHomepage?: boolean;
+  isSelectable?: boolean;
+};
 
 export type ApiVendor = {
   id: string;

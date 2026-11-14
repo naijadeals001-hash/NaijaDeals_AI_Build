@@ -476,9 +476,9 @@ export function AllDrawer({
 
   const countLabel = (department: ShopDepartment) => {
     const count = countOf(department);
-    if (count === null) return "Live stock unavailable";
+    if (count === null) return "Listing count unavailable";
     if (count === 0) return "No demonstration listings yet";
-    return `${count} live ${count === 1 ? "listing" : "listings"}`;
+    return `${count} demonstration ${count === 1 ? "listing" : "listings"}`;
   };
 
   const populatedDepartments = countsKnown
@@ -750,10 +750,10 @@ export function AllDrawer({
                           <span className="flex items-center justify-between gap-1.5 text-[9.5px] font-semibold text-[#4b5b51]">
                             <span>
                               {live === null
-                                ? "Live stock unavailable"
+                                ? "Listing count unavailable"
                                 : live === 0
                                   ? "No demonstration listings yet"
-                                  : `${live} live`}
+                                  : `${live} demonstration ${live === 1 ? "listing" : "listings"}`}
                             </span>
                             <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
                           </span>
@@ -883,7 +883,7 @@ export function AllDrawer({
                 <RowLink
                   href="/naijashop/categories"
                   label="Open the full departments page"
-                  description="Search and filter every live listing."
+                  description="Search and filter every published listing."
                   icon={Grid2x2}
                   onClick={close}
                 />
@@ -939,7 +939,7 @@ export function AllDrawer({
 
               {departmentsStatus === "ready" && departments.length === 0 ? (
                 <p className="mt-2 rounded-xl border border-dashed border-[#cfdccb] bg-[#f7faf4] p-3 text-[11px] leading-5 text-[#4b5b51]">
-                  No departments are published yet. Live listings will appear here once their department is published.
+                  No departments are published yet. Published listings will appear here once their department is published.
                 </p>
               ) : null}
 
@@ -947,7 +947,7 @@ export function AllDrawer({
                 <div className="mt-2 rounded-xl border border-dashed border-[#cfdccb] bg-[#f7faf4] p-3 text-[11px] leading-5 text-[#4b5b51]">
                   <p className="font-extrabold text-[#14241b]">The directory is published; no department has demonstration listings yet.</p>
                   <p className="mt-1">
-                    Every category below is a real published node. Until a seller publishes stock you can browse the full
+                    Every category below is a real published node. Until a seller publishes listings you can browse the full
                     departments page, check price drops, or open a seller account.
                   </p>
                   <span className="mt-2 flex flex-wrap gap-2 font-extrabold">
@@ -982,7 +982,7 @@ export function AllDrawer({
                 ? serverCounts
                   ? "Counts are server-reported published listings, including subcategories."
                   : "Counts are counted from published listings, including subcategories."
-                : "Live listing counts are unavailable right now."}{" "}
+                : "Listing counts are unavailable right now."}{" "}
               Homepage cards use the taxonomy&apos;s homepage flag, not product count. A published node with no demonstration listings
               stays in the directory and says so instead of disappearing.
             </p>

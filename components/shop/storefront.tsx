@@ -13,7 +13,7 @@ import {
   Store,
   Truck
 } from "lucide-react";
-import { apiClient, type ApiCategory, type ApiProduct } from "@/lib/api-client";
+import { apiClient, type ApiProduct } from "@/lib/api-client";
 import {
   getPublicLevelOneCategories,
   getPublicTaxonomy,
@@ -30,10 +30,6 @@ type StorefrontConfig = {
   showShelves?: boolean;
   shelfLimit?: number;
 };
-
-function finiteCount(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
-}
 
 /** The published tree already carries every taxonomy field the shelves use. */
 type Department = PublicTaxonomyNode;
@@ -261,9 +257,7 @@ function pickExplore(
 export function NaijaDealsMarketplace() {
   const { country, city } = useLocale();
   const [products, setProducts] = useState<ApiProduct[]>([]);
-  const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [categoriesStatus, setCategoriesStatus] = useState<"loading" | "ready" | "error">("loading");
   const [taxonomyTree, setTaxonomyTree] = useState<Department[]>([]);
   const [taxonomyStatus, setTaxonomyStatus] = useState<"loading" | "ready" | "error">("loading");
   const [levelOneCategories, setLevelOneCategories] = useState<PublicCategoryLevel[]>([]);
@@ -297,18 +291,6 @@ export function NaijaDealsMarketplace() {
         if (!active) return;
         setError(err instanceof Error ? err.message : "The marketplace catalogue could not be loaded.");
         setStatus("error");
-      });
-
-    apiClient
-      .getCategories()
-      .then((items) => {
-        if (!active) return;
-        setCategories(Array.isArray(items) ? items : []);
-        setCategoriesStatus("ready");
-      })
-      .catch(() => {
-        if (!active) return;
-        setCategoriesStatus("error");
       });
 
     fetch("/api/storefront", { cache: "no-store" })
@@ -359,32 +341,11 @@ export function NaijaDealsMarketplace() {
   const showShelves = config.showShelves !== false;
   const shelfLimit = Math.min(Math.max(config.shelfLimit && config.shelfLimit > 0 ? config.shelfLimit : 4, 1), 8);
 
-  // Prefer the published taxonomy; then the canonical department directory; if
-  // both fail, derive departments from the live products so navigation still
-  // works rather than disappearing.
+  // The market-scoped published taxonomy is the navigation source. If it is
+  // unavailable, derive departments from the already market-scoped product
+  // response; never substitute an unscoped category list from another market.
   const departments = useMemo<Department[]>(() => {
     if (taxonomyTree.length > 0) return taxonomyTree;
-    if (categories.length > 0) {
-      return categories.map((category) => {
-        const extended = category as ApiCategory & { imageUrl?: string | null; productCount?: unknown };
-        const count = finiteCount(extended.productCount);
-        return {
-          id: category.id,
-          name: category.name,
-          slug: category.slug,
-          imageUrl: extended.imageUrl ?? null,
-          level: 0,
-          sortOrder: 0,
-          browsingVisible: true,
-          canPublish: true,
-          restrictionNote: null,
-          restrictionReason: null,
-          isRegulated: false,
-          productCount: count,
-          subtreeProductCount: count
-        };
-      });
-    }
     const map = new Map<string, Department>();
     for (const product of products) {
       const category = product.category;
@@ -406,7 +367,7 @@ export function NaijaDealsMarketplace() {
       });
     }
     return [...map.values()];
-  }, [taxonomyTree, categories, products]);
+  }, [taxonomyTree, products]);
 
   const allDepartments = useMemo(() => flattenDepartments(departments), [departments]);
 
@@ -414,6 +375,10 @@ export function NaijaDealsMarketplace() {
   // Counts, imagery, order, browsing visibility and country publication state
   // all come from that response; `null` counts are reported honestly.
   const railEntries = useMemo(() => categoryRailEntries(levelOneCategories), [levelOneCategories]);
+  const restrictedRailCount = useMemo(
+    () => railEntries.filter((entry) => !entry.canPublish).length,
+    [railEntries]
+  );
 
   const demoCount = useMemo(() => products.filter((product) => product.isDemo).length, [products]);
 
@@ -427,6 +392,13 @@ export function NaijaDealsMarketplace() {
       : status === "loading"
         ? "Counting the published catalogue…"
         : "The catalogue is unavailable right now.";
+
+  const railSummary =
+    restrictedRailCount > 0
+      ? `${listingFact} ${restrictedRailCount} ${
+          restrictedRailCount === 1 ? "category is" : "categories are"
+        } browsing-visible but not open for listings in ${country}.`
+      : listingFact;
 
   /**
    * Claiming order is explicit: African feature first, then named shelves in
@@ -700,7 +672,7 @@ export function NaijaDealsMarketplace() {
 
         {/* Compact taxonomy rail; the full hierarchy stays in All departments. */}
         {levelOneStatus === "ready" ? (
-          <CategoryRail entries={railEntries} countsStatus="ready" summary={listingFact} />
+          <CategoryRail entries={railEntries} countsStatus="ready" summary={railSummary} />
         ) : null}
 
         {levelOneStatus === "loading" ? (
@@ -724,9 +696,7 @@ export function NaijaDealsMarketplace() {
             The browsing category list could not be loaded for {country}, so the category rail is hidden.
             {taxonomyStatus === "ready"
               ? " The published department tree, All departments and category pages still work."
-              : categoriesStatus === "ready"
-                ? " The fallback directory and All departments still work."
-                : " The fallback directory could not be loaded either."}
+              : " The department tree and All departments are also unavailable; no other market's categories are shown."}
           </p>
         ) : null}
 

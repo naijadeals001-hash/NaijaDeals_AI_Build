@@ -5,7 +5,7 @@ import { ShopShell } from "@/components/shop/shop-header";
 
 export const metadata: Metadata = {
   title: "Search",
-  description: "Search live NaijaShop product inventory by category and price."
+  description: "Search published NaijaShop product listings by category and price."
 };
 
 export default function Page() {

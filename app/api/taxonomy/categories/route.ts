@@ -8,14 +8,13 @@ export const dynamic = "force-dynamic";
 
 /**
  * Lightweight browsing-rail projection: every active, reachable level-1
- * category with `browsingVisible` on and publishable in the selected market, in
- * merchandising order, carrying its image/alt, country publication state and
- * aggregated product counts.
+ * category with `browsingVisible` on, in merchandising order, carrying its
+ * image/alt, country publication state and aggregated product counts.
  *
- * Departments, level-2 leaves and country-restricted categories are absent so
- * a client does not have to flatten the full tree to render a category rail.
- * `browsingVisible` filters this endpoint only; `/api/taxonomy` keeps the same
- * nodes published.
+ * Browsing and publishing are separate: a country-restricted category remains
+ * here with `canPublish:false`, its restriction note and a zero listing count;
+ * it is not silently removed. `browsingVisible=false` filters this endpoint
+ * only; `/api/taxonomy` keeps the same nodes published.
  */
 export async function GET(request: NextRequest) {
   try {

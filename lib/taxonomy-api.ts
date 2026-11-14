@@ -44,11 +44,16 @@ export type PublicTaxonomyNode = {
   level: number;
   sortOrder: number;
   /**
-   * Browsing rail/directory visibility. False hides the node from browsing
-   * lists only; it remains published here and on its category page.
+   * Browsing eligibility is independent of publishing eligibility. False hides
+   * the node from browsing lists only; it remains published here and on its
+   * category page.
    */
   browsingVisible: boolean;
-  /** Whether sellers in the requested country may publish into this node. */
+  /**
+   * Whether a seller may publish listings into the node in the requested
+   * market. A false value does not remove a browsing-visible node from the
+   * rail; the UI shows its restriction notice and its listing count is zero.
+   */
   canPublish: boolean;
   /** Why publishing is restricted, or null when publishable. */
   restrictionNote: string | null;
@@ -58,13 +63,16 @@ export type PublicTaxonomyNode = {
   /** Server-reported public listing counts; null when the response omits it. */
   productCount: number | null;
   subtreeProductCount: number | null;
+  parentId?: string | null;
+  parentName?: string | null;
   children?: PublicTaxonomyNode[];
 };
 
 /**
  * Level-1 browsing projection returned by `/api/taxonomy/categories`. The
- * service already filters to active, reachable, browsing-visible categories in
- * merchandising order; parent fields let the directory group them.
+ * service returns active, reachable, browsing-visible categories in
+ * merchandising order; `canPublish` may be false for a browsable category
+ * whose market eligibility is unresolved.
  */
 export type PublicCategoryLevel = Omit<PublicTaxonomyNode, "children"> & {
   parentId: string | null;
@@ -163,6 +171,9 @@ function toIssues(value: unknown): Array<{ field: string; message: string }> {
 }
 
 async function requestTaxonomy<T>(path: string, init?: RequestInit): Promise<T> {
+  // `path` is built from `taxonomyQuery`, so the selected country and city are
+  // part of the cache key/URL. `no-store` below prevents one market's response
+  // from being reused for another after a market switch.
   let response: Response;
   try {
     response = await fetch(path, {
@@ -304,23 +315,42 @@ function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
-function taxonomyQuery(options: { country?: string | null; city?: string | null }): string {
-  const params = new URLSearchParams();
-  if (options.country) params.set("country", options.country);
-  if (options.city) params.set("city", options.city);
-  const query = params.toString();
-  return query ? `?${query}` : "";
+export type TaxonomyMarket = {
+  /** ISO country selected by the visitor. Required: no silent NG fallback. */
+  country: string;
+  city?: string | null;
+};
+
+/**
+ * Stable identity for a market-scoped taxonomy request. It is used in the
+ * request URL and by consumers when keying refetches, so a market switch can
+ * never reuse another country's categories or counts.
+ */
+export function taxonomyMarketKey(market: TaxonomyMarket): string {
+  return `${market.country.trim().toUpperCase()}|${market.city?.trim() ?? ""}`;
 }
 
-type PublicTaxonomyOptions = {
-  country?: string | null;
-  city?: string | null;
+function taxonomyQuery(options: TaxonomyMarket): string {
+  const country = options.country?.trim().toUpperCase();
+  if (!country || !/^[A-Z]{2}$/.test(country)) {
+    throw new TaxonomyApiError(
+      "Select a valid market before loading categories.",
+      400,
+      "country_required"
+    );
+  }
+  const params = new URLSearchParams({ country });
+  if (options.city) params.set("city", options.city);
+  return `?${params.toString()}`;
+}
+
+type PublicTaxonomyOptions = TaxonomyMarket & {
   signal?: AbortSignal;
 };
 
 /** Public hierarchy. Throws a TaxonomyApiError when the endpoint is missing. */
 export async function getPublicTaxonomy(
-  options: PublicTaxonomyOptions = {}
+  options: PublicTaxonomyOptions
 ): Promise<{ countryCode: string | null; city: string | null; departments: PublicTaxonomyNode[] }> {
   const body = await requestTaxonomy<{
     countryCode?: unknown;
@@ -342,7 +372,7 @@ export async function getPublicTaxonomy(
  * the client maps and renders that response without inventing a count.
  */
 export async function getPublicLevelOneCategories(
-  options: PublicTaxonomyOptions = {}
+  options: PublicTaxonomyOptions
 ): Promise<{ countryCode: string | null; city: string | null; categories: PublicCategoryLevel[] }> {
   const body = await requestTaxonomy<{
     countryCode?: unknown;

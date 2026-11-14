@@ -16,10 +16,11 @@ import { categoryCountLabel, categoryRailEntry, type CategoryRailEntry } from ".
  * category, so the expandable hierarchy continues to live in All departments.
  *
  * Nothing here is fixed: categories, order, images, names and counts come from
- * `/api/taxonomy`. Nodes hidden from browsing (`browsingVisible=false`) or not
- * publishable in the browsing market (`canPublish=false`) are not offered here.
- * Counts are server-computed subtree counts; a missing count is shown as
- * unavailable, never as zero and never as live stock.
+ * `/api/taxonomy`. `browsingVisible=false` stays out. A browsing-visible
+ * category with `canPublish=false` remains listed with its restriction notice
+ * and a zero count; browsing does not grant publishing permission. Counts are
+ * server-computed subtree counts; a missing count is shown as unavailable,
+ * never as zero and never as a live-stock claim.
  */
 export function CategoryDirectory() {
   const { country, city } = useLocale();
@@ -75,6 +76,11 @@ export function CategoryDirectory() {
   const allEntries = useMemo<CategoryRailEntry[]>(() => groups.flatMap((group) => group.entries), [groups]);
   const countsMissing = allEntries.some((entry) => entry.count === null);
   const withListings = allEntries.filter((entry) => (entry.count ?? 0) > 0).length;
+  const restricted = allEntries.filter((entry) => !entry.canPublish).length;
+  const restrictedNote =
+    restricted > 0
+      ? ` ${restricted} ${restricted === 1 ? "category is" : "categories are"} browsing-visible but not open for listings in this market.`
+      : "";
 
   const summary =
     allEntries.length === 0
@@ -82,14 +88,14 @@ export function CategoryDirectory() {
       : countsMissing
         ? `${allEntries.length} ${allEntries.length === 1 ? "category" : "categories"} across ${groups.length} ${
             groups.length === 1 ? "department" : "departments"
-          }. Some server listing counts are unavailable; no zero counts are inferred.`
+          }. Some server listing counts are unavailable; no zero counts are inferred.${restrictedNote}`
         : `${allEntries.length} ${allEntries.length === 1 ? "category" : "categories"} across ${groups.length} ${
             groups.length === 1 ? "department" : "departments"
           }. ${
             allEntries.every((entry) => entry.count === 0)
               ? "No published listings yet."
               : `${withListings} have published listings; counts reflect the published catalogue, including labelled demonstration inventory where present.`
-          }`;
+          }${restrictedNote}`;
 
   const directoryCountsStatus = taxonomyStatus !== "ready" ? taxonomyStatus : countsMissing ? "unavailable" : "ready";
 
@@ -201,10 +207,14 @@ export function CategoryDirectory() {
                       <li key={entry.id} className="min-w-0">
                         <Link
                           href={`/naijashop/c/${entry.slug}`}
-                          aria-label={`${entry.name} — ${countLabel}`}
+                          aria-label={`${entry.name} — ${countLabel}${
+                            !entry.canPublish && entry.restrictionNote ? `. ${entry.restrictionNote}` : ""
+                          }`}
+                          title={!entry.canPublish ? entry.restrictionNote ?? "Not open for listings in this market." : undefined}
                           data-category-directory-card
                           data-category-slug={entry.slug}
                           data-category-count={entry.count === null ? "" : String(entry.count)}
+                          data-category-restricted={entry.canPublish ? "false" : "true"}
                           className="group flex h-full min-w-0 items-center gap-2.5 rounded-2xl border border-[#e1e8de] bg-white p-2.5 transition hover:border-[#c7d7c2] hover:shadow-[0_10px_22px_rgba(7,53,31,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
                         >
                           <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#eef4ea]">
@@ -230,7 +240,7 @@ export function CategoryDirectory() {
                             </span>
                             <span
                               className={`mt-0.5 block text-[9.5px] font-semibold leading-tight ${
-                                entry.count === 0 ? "text-[#7a4c00]" : "text-[#566359]"
+                                !entry.canPublish || entry.count === 0 ? "text-[#7a4c00]" : "text-[#566359]"
                               }`}
                             >
                               {countLabel}

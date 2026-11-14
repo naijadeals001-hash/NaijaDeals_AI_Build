@@ -12,6 +12,15 @@ Schema already migrated (review + TEST): `Category.parentId/level/key/isSelectab
 Only `isActive=true`, `deprecatedAt=null`, ordered by sortOrder. Include selectable nodes with zero products.
 `GET /api/categories` remains for the existing Shop shell but must return the same active tree roots used by navigation.
 
+`GET /api/taxonomy/categories?country=NG&city=Lagos`
+Returns every active, reachable level-1 node with `browsingVisible=true` in published
+department/category order, including image/alt, effective `canPublish`, `restrictionNote`,
+`restrictionReason`, `productCount`, `subtreeProductCount`, `parentId` and `parentName`.
+Browsing and publishing are independent: a country-restricted node remains in this projection
+with `canPublish=false` and a zero listing count so the rail/directory can show its restriction
+notice; `browsingVisible=false` is the only browsing-removal flag. The selected country is part
+of the request key; clients must not omit it or reuse a response across markets.
+
 ## Seller (authenticated seller)
 `GET /api/seller/categories` → `{ categories: [{ id,key,name,path,level,isSelectable,attributes:[{key,label,type,required,options}],canPublish,restrictionNote }] }`
 Only active, non-deprecated, selectable nodes reachable from active parents; `canPublish` derives from CategoryCountryRule for the seller's country (default true).

@@ -17,7 +17,7 @@ type TrailEntry = { id: string; name: string; slug: string };
 /**
  * The grid itself is CategoryBrowse. This header only adds facts the grid
  * cannot know: the published hierarchy position and, when the category has no
- * live listings, an honest empty state with real alternative departments.
+ * published listings, an honest empty state with real alternative departments.
  * If the taxonomy or catalogue endpoints are unavailable the page renders
  * exactly as before rather than inventing a position or a count.
  */

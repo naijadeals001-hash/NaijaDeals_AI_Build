@@ -19,9 +19,10 @@ import type { PublicCategoryLevel, PublicTaxonomyNode } from "@/lib/taxonomy-api
  * level-1 categories in the selected market's merchandising order, with
  * imagery, effective country publication state and server-computed
  * direct/subtree listing counts. We never invent a category, a count or an
- * image: a node without a server count stays `null` and says so. Nodes hidden
- * from browsing or not publishable in the browsing market stay out of the
- * rail/directory; `/api/taxonomy` and category pages continue to publish them.
+ * image: a node without a server count stays `null` and says so. Browsing and
+ * publishing are separate: a browsing-visible category with
+ * `canPublish:false` remains in the rail with its restriction notice and a
+ * zero count, while `browsingVisible:false` stays out of browsing.
  */
 
 /**
@@ -54,6 +55,9 @@ export type CategoryRailEntry = {
   isSelectable: boolean;
   /** `null` means the taxonomy did not supply a count; never rendered as zero. */
   count: number | null;
+  /** Browsing does not imply publishing in the selected market. */
+  canPublish: boolean;
+  restrictionNote: string | null;
 };
 
 function finiteCount(value: unknown): number | null {
@@ -66,7 +70,8 @@ function finiteCount(value: unknown): number | null {
  * Eligibility is the taxonomy's own contract, not a local category list:
  *   - only level 1 (category); roots/leaves are excluded
  *   - `browsingVisible === false` stays out of browsing lists
- *   - `canPublish === false` is not offered in the browsing market
+ *   - `canPublish === false` stays browsable with a restriction notice and a
+ *     zero listing count; it never becomes publishable from this projection
  *
  * Counts are the server's subtree product counts, which exclude fixtures,
  * non-public products and publish-restricted branches. A response without a
@@ -76,7 +81,6 @@ export function categoryRailEntry(node: PublicTaxonomyNode | PublicCategoryLevel
   if (!node || !node.id || !node.slug || !node.name) return null;
   if (typeof node.level === "number" && node.level !== 1) return null;
   if (node.browsingVisible === false) return null;
-  if (node.canPublish === false) return null;
   return {
     id: node.id,
     name: node.name,
@@ -84,7 +88,9 @@ export function categoryRailEntry(node: PublicTaxonomyNode | PublicCategoryLevel
     imageUrl: node.imageUrl ?? null,
     imageAlt: node.imageAlt ?? null,
     isSelectable: node.isSelectable !== false,
-    count: finiteCount(node.subtreeProductCount) ?? finiteCount(node.productCount)
+    count: finiteCount(node.subtreeProductCount) ?? finiteCount(node.productCount),
+    canPublish: node.canPublish !== false,
+    restrictionNote: typeof node.restrictionNote === "string" ? node.restrictionNote : null
   };
 }
 
@@ -123,7 +129,11 @@ export function deriveCategoryRail(departments: PublicTaxonomyNode[]): CategoryR
 export type CountsStatus = "loading" | "ready" | "error";
 
 /** Honest listing count copy. A missing taxonomy count is never reported as zero. */
-export function categoryCountLabel(entry: Pick<CategoryRailEntry, "count">, countsStatus: CountsStatus): string {
+export function categoryCountLabel(
+  entry: Pick<CategoryRailEntry, "count" | "canPublish" | "restrictionNote">,
+  countsStatus: CountsStatus
+): string {
+  if (!entry.canPublish) return "Not open in this market";
   if (entry.count !== null) {
     if (entry.count === 0) return "No listings yet";
     return `${entry.count} ${entry.count === 1 ? "listing" : "listings"}`;
@@ -353,11 +363,15 @@ export function CategoryRail({
                 data-category-slug={entry.slug}
                 data-category-count={entry.count === null ? "" : String(entry.count)}
                 data-category-selectable={entry.isSelectable ? "true" : "false"}
+                data-category-restricted={entry.canPublish ? "false" : "true"}
                 className="w-[132px] shrink-0 snap-start sm:w-[150px] lg:w-[164px]"
               >
                 <Link
                   href={`/naijashop/c/${entry.slug}`}
-                  aria-label={`${entry.name} — ${countLabel}`}
+                  aria-label={`${entry.name} — ${countLabel}${
+                    !entry.canPublish && entry.restrictionNote ? `. ${entry.restrictionNote}` : ""
+                  }`}
+                  title={!entry.canPublish ? entry.restrictionNote ?? "Not open for listings in this market." : undefined}
                   className="group flex h-full min-w-0 flex-col items-center gap-1.5 rounded-2xl border border-[#e1e8de] bg-white p-2 text-center transition hover:-translate-y-0.5 hover:border-[#c7d7c2] hover:shadow-[0_10px_22px_rgba(7,53,31,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
                 >
                   <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#eef4ea] sm:h-16 sm:w-16">
@@ -380,7 +394,11 @@ export function CategoryRail({
                   <span className="line-clamp-2 min-h-[2.2em] break-words text-[10.5px] font-extrabold leading-[1.15] text-[#14241b] sm:text-[11px]">
                     {entry.name}
                   </span>
-                  <span className={`text-[9.5px] font-semibold leading-tight ${entry.count === 0 ? "text-[#7a4c00]" : "text-[#566359]"}`}>
+                  <span
+                    className={`text-[9.5px] font-semibold leading-tight ${
+                      !entry.canPublish || entry.count === 0 ? "text-[#7a4c00]" : "text-[#566359]"
+                    }`}
+                  >
                     {countLabel}
                   </span>
                 </Link>

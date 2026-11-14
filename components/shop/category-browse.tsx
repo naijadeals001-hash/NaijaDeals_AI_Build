@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { apiClient, type ApiCategory, type ApiProduct } from "@/lib/api-client";
+import { getPublicTaxonomy, type PublicTaxonomyNode } from "@/lib/taxonomy-api";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import {
   BROWSE_PAGE_SIZE,
@@ -66,10 +67,12 @@ export function CategoryBrowse({
   const [notice, setNotice] = useState("");
   const [addingId, setAddingId] = useState("");
 
-  const [categories, setCategories] = useState<ApiCategory[]>([]);
-  const [categoriesStatus, setCategoriesStatus] = useState<"loading" | "ready" | "error">("loading");
   const [taxonomyNodes, setTaxonomyNodes] = useState<ApiCategory[]>([]);
   const [taxonomyStatus, setTaxonomyStatus] = useState<"loading" | "ready" | "error">("loading");
+  const categories = useMemo(
+    () => taxonomyNodes.filter((node) => node.level === 0),
+    [taxonomyNodes]
+  );
 
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
@@ -103,50 +106,32 @@ export function CategoryBrowse({
   }, [searchKey, initialQuery, defaultSort]);
 
   useEffect(() => {
-    let active = true;
-    apiClient
-      .getCategories()
-      .then((items) => {
-        if (!active) return;
-        setCategories(items);
-        setCategoriesStatus("ready");
-      })
-      .catch(() => active && setCategoriesStatus("error"));
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    const query = new URLSearchParams({ country, ...(city ? { city } : {}) });
-    fetch(`/api/taxonomy?${query}`, { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("taxonomy"))))
-      .then((payload: { departments?: Array<Record<string, unknown>> }) => {
-        if (!active) return;
+    const controller = new AbortController();
+    setTaxonomyStatus("loading");
+    getPublicTaxonomy({ country, city, signal: controller.signal })
+      .then(({ departments }) => {
+        if (controller.signal.aborted) return;
         const flat: ApiCategory[] = [];
-        const walk = (node: Record<string, unknown>) => {
-          if (node && typeof node.slug === "string" && typeof node.name === "string") {
-            flat.push({
-              id: String(node.id ?? node.slug),
-              name: node.name,
-              slug: node.slug,
-              imageUrl: typeof node.imageUrl === "string" ? node.imageUrl : null,
-              imageAlt: typeof node.imageAlt === "string" ? node.imageAlt : null,
-              level: typeof node.level === "number" ? node.level : undefined
-            } as ApiCategory & { imageUrl?: string | null; imageAlt?: string | null; level?: number });
-          }
-          const children = Array.isArray(node?.children) ? node.children : [];
-          for (const child of children) walk(child as Record<string, unknown>);
+        const walk = (node: PublicTaxonomyNode) => {
+          flat.push({
+            id: node.id,
+            name: node.name,
+            slug: node.slug,
+            description: node.description ?? null,
+            imageUrl: node.imageUrl ?? null,
+            imageAlt: node.imageAlt ?? null,
+            level: node.level
+          });
+          for (const child of node.children ?? []) walk(child);
         };
-        for (const department of payload.departments ?? []) walk(department);
+        for (const department of departments) walk(department);
         setTaxonomyNodes(flat);
         setTaxonomyStatus("ready");
       })
-      .catch(() => active && setTaxonomyStatus("error"));
-    return () => {
-      active = false;
-    };
+      .catch(() => {
+        if (!controller.signal.aborted) setTaxonomyStatus("error");
+      });
+    return () => controller.abort();
   }, [country, city]);
 
   // Typing searches after a short pause; Enter applies immediately.
@@ -202,11 +187,10 @@ export function CategoryBrowse({
     };
   }, [q, sort, maxPrice, page, categorySlug, mode, attempt, country, city]);
 
-  const knownCategory = taxonomyNodes.find((item) => item.slug === categorySlug) ?? categories.find((item) => item.slug === categorySlug);
+  const knownCategory = taxonomyNodes.find((item) => item.slug === categorySlug);
   const departmentMissing =
     mode === "category" &&
     Boolean(categorySlug) &&
-    categoriesStatus === "ready" &&
     taxonomyStatus === "ready" &&
     !knownCategory;
 
@@ -268,12 +252,36 @@ export function CategoryBrowse({
         <span>{heading}</span>
       </nav>
       {(() => {
-        const node = knownCategory as (ApiCategory & { imageUrl?: string | null; imageAlt?: string | null; level?: number }) | undefined;
+        const node = knownCategory;
         if (!node?.imageUrl) return null;
+        const isDepartment = node.level === 0;
         return (
           <div className="mt-3 overflow-hidden rounded-xl ring-1 ring-[#e3e6e6]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={node.imageUrl} alt={node.imageAlt || `${node.name} department`} className="h-28 w-full object-cover sm:h-36" />
+            {isDepartment ? (
+              /* Department banners are authored wide; a full-width cover is
+                 appropriate and does not crop a square category subject. */
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={node.imageUrl} alt={node.imageAlt || `${node.name} department`} className="h-28 w-full object-cover sm:h-36" />
+            ) : (
+              /* Category tiles are square or near-square. Keep the whole
+                 subject visible; the softly scaled copy fills the wide strip
+                 without presenting a cropped product as the category. */
+              <div className="relative h-40 overflow-hidden bg-[#eef3ec] sm:h-52">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={node.imageUrl}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-2xl"
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={node.imageUrl}
+                  alt={node.imageAlt || `${node.name} category`}
+                  className="relative mx-auto h-full w-auto max-w-full object-contain drop-shadow-[0_8px_18px_rgba(20,36,27,0.18)]"
+                />
+              </div>
+            )}
           </div>
         );
       })()}
@@ -347,7 +355,7 @@ export function CategoryBrowse({
                 </li>
               ))}
             </ul>
-            {categoriesStatus === "error" ? (
+            {taxonomyStatus === "error" ? (
               <p className="mt-1 text-[11px] text-[#8a1c14]">Departments could not be loaded.</p>
             ) : null}
           </div>

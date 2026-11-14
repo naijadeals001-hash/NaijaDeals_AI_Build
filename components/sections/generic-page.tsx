@@ -79,7 +79,7 @@ export function GenericPage({ slug }: { slug: string }) {
   if (slug === "naijagigs") return <NaijaGigsLanding />;
   if (slug === "naijapay") return <NaijaPayLanding />;
   if (slug === "naijasend" || slug === "shipping") return <NaijaSendPage />;
-  if (slug === "product-detail") return <ConfiguredLink title="Product detail" description="Open a live product from NaijaShop to see variants, stock, reviews and escrow checkout." href="/naijashop" cta="Browse NaijaShop" />;
+  if (slug === "product-detail") return <ConfiguredLink title="Product detail" description="Open a published product from NaijaShop to see variants, stock, reviews and escrow checkout." href="/naijashop" cta="Browse NaijaShop" />;
   if (slug === "safety") return <SafetyPage />;
   if (slug === "help") return <HelpPage />;
   if (slug === "ecosystem-hub") return <EcosystemPage />;

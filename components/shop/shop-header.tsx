@@ -61,25 +61,11 @@ function addressSummary(address: SavedAddress | null) {
   return area || address.line1?.trim() || "Saved address";
 }
 
-/**
- * Counts and market availability are optional taxonomy additions. Keep the
- * original flags authoritative and only forward well-typed values, so a
- * missing field is never rendered as zero stock.
- */
-type PublicTaxonomyNodeWithCounts = PublicTaxonomyNode & {
-  productCount?: unknown;
-  subtreeProductCount?: unknown;
-  descendantProductCount?: unknown;
-  canPublish?: unknown;
-  restrictionNote?: unknown;
-};
-
 function finiteCount(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
 }
 
 function toShopDepartment(node: PublicTaxonomyNode): ShopDepartment {
-  const extended = node as PublicTaxonomyNodeWithCounts;
   return {
     id: node.id,
     name: node.name,
@@ -88,10 +74,10 @@ function toShopDepartment(node: PublicTaxonomyNode): ShopDepartment {
     description: node.description ?? null,
     isSelectable: node.isSelectable !== false,
     showOnHomepage: node.showOnHomepage === true,
-    productCount: finiteCount(extended.productCount),
-    subtreeProductCount: finiteCount(extended.subtreeProductCount) ?? finiteCount(extended.descendantProductCount),
-    canPublish: typeof extended.canPublish === "boolean" ? extended.canPublish : null,
-    restrictionNote: typeof extended.restrictionNote === "string" ? extended.restrictionNote : null,
+    productCount: finiteCount(node.productCount),
+    subtreeProductCount: finiteCount(node.subtreeProductCount) ?? finiteCount(node.productCount),
+    canPublish: node.canPublish,
+    restrictionNote: node.restrictionNote,
     children: (node.children ?? []).map(toShopDepartment)
   };
 }
@@ -177,10 +163,9 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
   useEffect(() => {
     let active = true;
     setCategoriesStatus("loading");
-    // The published taxonomy is the navigation source of truth. While that
-    // endpoint is unavailable the header still works from the canonical
-    // /api/categories list, and says so in the All drawer rather than
-    // presenting a flat list as the complete hierarchy.
+    // The published taxonomy for the selected country/city is the navigation
+    // source of truth. If it fails, the drawer reports that honestly instead of
+    // falling back to an unscoped category list from another market.
     getPublicTaxonomy({ country, city })
       .then(({ departments }) => {
         if (!active) return;
@@ -195,43 +180,15 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
       })
       .catch(() => {
         if (!active) return;
-        apiClient
-          .getCategories()
-          .then((items) => {
-            if (!active) return;
-            const list = Array.isArray(items) ? items : [];
-            setCategories(list);
-            setDepartmentTree(
-              list.map((category) => {
-                const extended = category as ApiCategory & {
-                  imageUrl?: string | null;
-                  productCount?: unknown;
-                  showOnHomepage?: unknown;
-                  isSelectable?: unknown;
-                };
-                const count = finiteCount(extended.productCount);
-                return {
-                  id: category.id,
-                  name: category.name,
-                  slug: category.slug,
-                  imageUrl: extended.imageUrl ?? null,
-                  productCount: count,
-                  subtreeProductCount: count,
-                  isSelectable: extended.isSelectable !== false,
-                  showOnHomepage: extended.showOnHomepage === true,
-                  children: []
-                };
-              })
-            );
-            setTaxonomyAvailable(false);
-            setDirectoryNotice(
-              "The full published hierarchy could not be loaded. These are the published departments only; subcategories and homepage flags are unavailable."
-            );
-            setCategoriesStatus("ready");
-          })
-          .catch(() => {
-            if (active) setCategoriesStatus("error");
-          });
+        // Never substitute the unscoped /api/categories list after a market
+        // switch: it would silently present another market's departments.
+        setTaxonomyAvailable(false);
+        setCategories([]);
+        setDepartmentTree([]);
+        setDirectoryNotice(
+          "The published taxonomy for this market could not be loaded. All departments and account links remain available; retry after the service recovers."
+        );
+        setCategoriesStatus("error");
       });
     return () => {
       active = false;
@@ -317,7 +274,7 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
     }
   }, [pathname]);
 
-  // Live listing counts are only needed once the All drawer is opened. Fetch
+  // Listing counts are only needed once the All drawer is opened. Fetch
   // them on demand instead of downloading the catalogue for every shop route.
   useEffect(() => {
     if (openPanel !== "all") return;

@@ -211,7 +211,7 @@ function expectedBrowsingLevelOne(
     categories
       .filter(
         (row) =>
-          row.level === 1 && row.isActive && !row.deprecatedAt && row.browsingVisible && reachable(row) && publishable(row)
+          row.level === 1 && row.isActive && !row.deprecatedAt && row.browsingVisible && reachable(row)
       )
       .map((row) => row.id)
   );
@@ -823,7 +823,7 @@ async function main(): Promise<void> {
       );
     });
 
-    await step("selected market changes the browsing set (NG visible, GH restricted by explicit rule)", async () => {
+    await step("selected market changes publication eligibility, not browsing membership", async () => {
       const patch = await http.patch(
         `/api/admin/taxonomy/${created.browsingCategoryId}`,
         {
@@ -844,11 +844,14 @@ async function main(): Promise<void> {
         ngRows.some((row) => row.id === created.browsingCategoryId),
         "run-owned category is missing from NG browsing"
       );
-      assert(
-        !ghRows.some((row) => row.id === created.browsingCategoryId),
-        "run-owned category with an explicit GH deny leaked into GH browsing"
-      );
-      assert(ngRows.length === ghRows.length + 1, `NG/GH browsing counts ${ngRows.length}/${ghRows.length} are not market-scoped`);
+      const ghRunRow = ghRows.find((row) => row.id === created.browsingCategoryId);
+      assert(ghRunRow, "a browsing-visible category with an explicit GH deny disappeared from GH browsing");
+      assert(ghRunRow.canPublish === false, "GH run-owned category did not carry canPublish=false");
+      assert(ghRunRow.restrictionReason === "country_rule", `GH run-owned reason ${String(ghRunRow.restrictionReason)}`);
+      assert(ghRunRow.subtreeProductCount === 0, `restricted GH category count ${String(ghRunRow.subtreeProductCount)}`);
+      assert(ngRows.length === ghRows.length, `browsing membership changed by market: ${ngRows.length}/${ghRows.length}`);
+      const ngRunRow = ngRows.find((row) => row.id === created.browsingCategoryId);
+      assert(ngRunRow?.canPublish === true, "NG run-owned category lost publishing eligibility");
     });
 
     // ---- browser: selected market, dynamic count, states -----------------
@@ -864,7 +867,7 @@ async function main(): Promise<void> {
         expectStatus(gh, 200, "GET GH categories for browser");
         const ngRows = asArray(asRecord(ng.body).categories).map((row) => asRecord(row));
         const ghRows = asArray(asRecord(gh.body).categories).map((row) => asRecord(row));
-        assert(ngRows.length !== ghRows.length, "NG/GH browsing counts must differ for the run-owned market rule");
+        assert(ngRows.length === ghRows.length, "NG/GH browsing membership must stay stable for a publication-only rule");
 
         const ngContext = await browserWithLocale(activeBrowser, baseUrl, { width: 390, height: 844 }, "NG", "Lagos");
         const ngPage = await ngContext.newPage();
@@ -921,7 +924,15 @@ async function main(): Promise<void> {
           ghSlugs.every((slug, index) => slug === String(ghRows[index]?.slug)),
           "GH rail order differs from the API merchandising order"
         );
-        assert(!ghSlugs.includes(runSlug), "GH rail leaked a category explicitly restricted for GH");
+        assert(ghSlugs.includes(runSlug), "GH rail hid a browsing-visible category with a publication restriction");
+        const ghRestrictedCard = await ghPage.locator(`[data-category-card][data-category-slug="${runSlug}"]`).evaluate((card) => ({
+          restricted: card.getAttribute("data-category-restricted"),
+          count: card.getAttribute("data-category-count"),
+          text: card.textContent ?? ""
+        }));
+        assert(ghRestrictedCard.restricted === "true", "GH restricted card did not expose its restriction state");
+        assert(ghRestrictedCard.count === "0", `GH restricted card count ${ghRestrictedCard.count}`);
+        assert(/Not open in this market/i.test(ghRestrictedCard.text), `GH restricted card copy: ${ghRestrictedCard.text}`);
 
         const directoryNg = await browserWithLocale(activeBrowser, baseUrl, { width: 768, height: 1024 }, "NG", "Lagos");
         const directoryPage = await directoryNg.newPage();
@@ -953,7 +964,11 @@ async function main(): Promise<void> {
           directoryGhSlugs.every((slug, index) => slug === String(ghRows[index]?.slug)),
           "GH directory order differs from the API grouping/order"
         );
-        assert(!directoryGhSlugs.includes(runSlug), "GH directory leaked a category explicitly restricted for GH");
+        assert(directoryGhSlugs.includes(runSlug), "GH directory hid a browsing-visible restricted category");
+        assert(
+          (await directoryGhPage.locator(`[data-category-directory-card][data-category-slug="${runSlug}"][data-category-restricted="true"]`).count()) === 1,
+          "GH directory restricted card did not expose its restriction state"
+        );
 
         await ngContext.close();
         await ghContext.close();
@@ -1030,7 +1045,7 @@ async function main(): Promise<void> {
         flagged[0].browsingVisible = false;
         flagged[1].canPublish = false;
         const expected = flagged
-          .filter((row) => row.browsingVisible !== false && row.canPublish !== false)
+          .filter((row) => row.browsingVisible !== false)
           .map((row) => String(row.id));
 
         const flagContext = await browserWithLocale(activeBrowser, baseUrl, { width: 1440, height: 900 }, "NG", "Lagos");
@@ -1049,7 +1064,11 @@ async function main(): Promise<void> {
         );
         assert(rendered.length === expected.length, `flag rail cards ${rendered.length} != expected ${expected.length}`);
         assert(!rendered.includes(hiddenBrowsing), "browsingVisible=false leaked into the rail");
-        assert(!rendered.includes(hiddenCountry), "canPublish=false leaked into the rail");
+        assert(rendered.includes(hiddenCountry), "canPublish=false incorrectly removed a browsing-visible category");
+        assert(
+          (await flagPage.locator(`[data-category-card][data-category-slug="${hiddenCountry}"][data-category-restricted="true"]`).count()) === 1,
+          "canPublish=false card did not expose its restriction notice"
+        );
         await flagContext.close();
 
         const noCounts = structuredClone(rows);

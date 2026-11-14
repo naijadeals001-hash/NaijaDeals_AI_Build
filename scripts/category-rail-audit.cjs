@@ -7,9 +7,9 @@
  *     the canonical `/api/taxonomy/categories` browsing projection; server
  *     subtree counts match both sources
  *   - NG and GH market responses are checked; the desktop viewport runs GH
- *   - `browsingVisible=false` and `canPublish=false` nodes stay out; a missing
- *     count says so instead of becoming zero; empty categories say "No listings
- *     yet"
+ *   - `browsingVisible=false` stays out; `canPublish=false` remains browsable
+ *     with a restriction notice and a zero count; a missing count says so
+ *     instead of becoming zero; empty categories say "No listings yet"
  *   - every card links to `/naijashop/c/<slug>` and returns HTTP 200
  *   - carousel boundaries (aria-disabled, focus retained), touch swipe,
  *     trackpad scroll, keyboard Home/End/Arrow, scroll-snap, reduced motion,
@@ -97,7 +97,6 @@ function eligibleLevelOne(departments) {
       if (!node || typeof node.slug !== "string" || typeof node.name !== "string") continue;
       if (typeof node.level === "number" && node.level !== 1) continue;
       if (node.browsingVisible === false) continue;
-      if (node.canPublish === false) continue;
       rows.push(node);
     }
   }
@@ -105,6 +104,7 @@ function eligibleLevelOne(departments) {
     slug: node.slug,
     name: node.name,
     imageUrl: node.imageUrl ?? null,
+    canPublish: node.canPublish !== false,
     count:
       typeof node.subtreeProductCount === "number"
         ? node.subtreeProductCount
@@ -137,11 +137,12 @@ function expectedFromPayload(taxonomyPayload) {
 function expectedFromProjection(projectionPayload) {
   const rows = Array.isArray(projectionPayload?.categories) ? projectionPayload.categories : [];
   const eligible = rows
-    .filter((node) => node && node.level === 1 && node.browsingVisible !== false && node.canPublish !== false)
+    .filter((node) => node && node.level === 1 && node.browsingVisible !== false)
     .map((node) => ({
       slug: node.slug,
       name: node.name,
       imageUrl: node.imageUrl ?? null,
+      canPublish: node.canPublish !== false,
       count:
         typeof node.subtreeProductCount === "number"
           ? node.subtreeProductCount
@@ -321,7 +322,8 @@ async function railSnapshot(page) {
   });
 }
 
-function countLabelFor(count) {
+function countLabelFor(count, canPublish = true) {
+  if (!canPublish) return "Not open in this market";
   if (count === 0) return "No listings yet";
   return `${count} ${count === 1 ? "listing" : "listings"}`;
 }
@@ -349,7 +351,7 @@ async function compareCards(snapshot, eligible, scope) {
     const node = eligible.find((entry) => entry.slug === card.slug);
     if (!node) return true;
     if (node.count === null) return !/Listing count unavailable|Counting listings/i.test(card.text);
-    return !card.text.includes(countLabelFor(node.count));
+    return !card.text.includes(countLabelFor(node.count, node.canPublish));
   });
   check(`${scope}: count labels are honest (zero says "No listings yet")`, labelMismatch.length === 0, labelMismatch.slice(0, 3).map((card) => `${card.slug}: ${card.text}`).join(" | "));
 
@@ -875,8 +877,8 @@ async function runStateInterception(browser, eligible, taxonomy, projection) {
     await context.close();
   }
 
-  // Storefront: browsingVisible=false and canPublish=false nodes stay out of
-  // the rail, with both taxonomy responses carrying the same flags.
+  // Storefront: browsingVisible=false stays out; canPublish=false remains with
+  // a restriction notice, with both taxonomy responses carrying the flags.
   if (taxonomy && projection && eligible.length >= 3) {
     const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
@@ -908,13 +910,25 @@ async function runStateInterception(browser, eligible, taxonomy, projection) {
       return { count: cards.length, slugs: cards.map((card) => card.getAttribute("data-category-slug")) };
     });
     const expectedSlugs = eligible
-      .filter((node) => node.slug !== hiddenBrowsing && node.slug !== hiddenCountry)
+      .filter((node) => node.slug !== hiddenBrowsing)
       .map((node) => node.slug);
     const exactOrder = state.count === expectedSlugs.length && state.slugs.every((slug, index) => slug === expectedSlugs[index]);
+    const restrictedCard = await page
+      .locator(`[data-category-card][data-category-slug="${hiddenCountry}"]`)
+      .evaluate((card) => ({
+        restricted: card.getAttribute("data-category-restricted"),
+        count: card.getAttribute("data-category-count"),
+        text: card.textContent ?? ""
+      }));
     check(
-      "visibility flags: browsingVisible=false and canPublish=false are excluded",
-      exactOrder && !state.slugs.includes(hiddenBrowsing) && !state.slugs.includes(hiddenCountry),
-      `${state.count} cards, hidden ${hiddenBrowsing}/${hiddenCountry}`
+      "visibility flags: browsingVisible=false is excluded; canPublish=false remains restricted",
+      exactOrder &&
+        !state.slugs.includes(hiddenBrowsing) &&
+        state.slugs.includes(hiddenCountry) &&
+        restrictedCard.restricted === "true" &&
+        restrictedCard.count === "0" &&
+        /Not open in this market/i.test(restrictedCard.text),
+      `${state.count} cards, hidden ${hiddenBrowsing}, restricted ${hiddenCountry}: ${restrictedCard.text.slice(0, 80)}`
     );
     await context.close();
   }
@@ -1021,7 +1035,7 @@ async function runMarketScopeCheck(browser) {
       eligible: eligibleLevel,
       projectionRows: rows,
       projectionEligible: rows.filter(
-        (node) => node.level === 1 && node.browsingVisible !== false && node.canPublish !== false
+        (node) => node.level === 1 && node.browsingVisible !== false
       )
     };
   }
