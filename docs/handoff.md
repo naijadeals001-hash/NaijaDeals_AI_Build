@@ -4838,3 +4838,47 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   `qa-artifacts/visual/final-acceptance/final-GN-opuHx19t-independent/`; security reviewer
   `agent_1379be1e-e1a6-4537-b24e-bac055e7cadd` CLOSED the migration history and cross-market
   checkout checks with no new high-severity finding.
+
+## Final integrated Shop delivery — build `m509RMr4jP6oQWfS71Cvo`
+
+- Served **http://localhost:3047/naijashop**; `.next-programme/BUILD_ID` **`m509RMr4jP6oQWfS71Cvo`**;
+  app code **`3f171e7`**; final repository HEAD **`3c376f8`** (the later commit only adds the
+  canonical tsconfig build includes and an admin `isRegulated` assertion; it does not change
+  application code). REVIEW guard: `naijadeals_review`, classification REVIEW, 273 categories,
+  253 products, 0 orders; 57 ACTIVE products, 11/37/113 taxonomy, 18 regulated, 18 NG rules.
+- **Browsing vs publishing is explicit:** `/api/taxonomy/categories` returns all 37
+  browsing-visible level-1 categories in both NG and GH. A browsing-visible category restricted
+  for a market stays in the rail/directory with `canPublish:false`, its note and a zero count and
+  is labelled "Not open in this market"; `browsingVisible=false` remains the only browsing-removal
+  flag. NG: 37 categories / 57 listings / 19 populated. GH: 37 / 0 / 0. Missing rules remain
+  fail-closed.
+- **Shared client:** `lib/taxonomy-api.ts` requires `country` (no NG fallback), puts country/city
+  in every URL/request key, uses `cache:"no-store"`, and fails closed when publication state is
+  malformed. Rail, directory, Shop header/drawer, counts, category grid, heroes and product detail
+  all pass the effective locale and refetch on country/city changes. The legacy `/api/categories`
+  endpoint and both legacy consumers now accept country/city; `/api/categories?country=GH`
+  reports 0 counts instead of NG counts.
+- **Type workarounds removed:** `PublicTaxonomyNode` carries level/order/browsing/publish/
+  restriction/counts/parent fields; `ApiCategory` carries the fields used by the grid/hero; no
+  Shop intersection casts remain.
+- **Rail:** final position is the true maximum; the next arrow reaches `art-craft` fully at
+  390/768/1440 (4806/4806, 5118/5118, 4980/4980; next inert at end). Landing 95/95, rail 150/150.
+- **Images:** the mismatched Electronics & Appliances gaming banner is replaced by
+  `/generated/taxonomy/category-electronics-appliances.webp` (1600x900, composed from approved
+  LED-monitor + coffee-maker assets, 0 new Kie credits, ledger/coverage updated). Category
+  heroes contain the full subject (square and wide), rail/directory thumbnails use
+  `object-contain`, department banners remain wide cover.
+- **Acceptance on this build:** market semantics 11/11, visibility 16/16 (including admin
+  `isRegulated` create/update), product detail 97/97, basket 10/10, activation 30/30, financial
+  refusal 46/46, cross-market checkout refusal PASS (0 orders). Admin image/order/visibility
+  changes and audit rows were exercised by the market suite. Independent browser reviewer
+  `agent_bd3de2e2-eb04-495a-a643-1c49be0429b4` rechecked the rail end fix (PASS 30/30 values
+  above); independent security reviewer `agent_debc43a9-a5fb-4809-a9cb-302ed3efa78a` closed the
+  prior high/medium findings with no new high severity. The only residual LOW is display-only
+  seller/legacy fallback normalisation; server publication gates remain authoritative.
+- Canonical screenshots: `qa-artifacts/visual/taxonomy-final/m509RMr4jP6oQWfS71Cvo/` and the
+  reviewer's `qa-artifacts/visual/independent-g6wbo/reverify-rail-*.png`.
+- Not run/known: the isolated `checkout-refund-delivery-acceptance.ts` suite remains uncompleted
+  from the prior round (idle-session hang); variant create/edit is NOT IMPLEMENTED; Control Center
+  has no dedicated image-remediation queue; GitHub preservation remains BLOCKED by the rejected
+  credential; no production deployment or paid provider call was made.
