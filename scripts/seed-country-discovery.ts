@@ -312,8 +312,16 @@ function assertReviewDatabase() {
   }
 }
 
+async function assertReviewClassification() {
+  const rows = await prisma.databaseClassification.findMany({ select: { classification: true } });
+  if (!rows.some((row) => row.classification === "REVIEW")) {
+    throw new Error("Refusing to seed: the database is not classified REVIEW.");
+  }
+}
+
 async function main() {
   assertReviewDatabase();
+  await assertReviewClassification();
   const countries = loadCountries();
   if (countries.length !== 54) throw new Error(`Expected 54 countries, found ${countries.length}.`);
   const codes = new Set(countries.map((country) => country.code));
