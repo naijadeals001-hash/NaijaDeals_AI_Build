@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" width="900" height="900" role="img">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4ecdc"/><stop offset="1" stop-color="#e8efe2"/></linearGradient></defs>
+<rect width="900" height="900" fill="url(#bg)"/>
+<rect x="150" y="150" width="600" height="600" fill="#f7f0df" stroke="#233a2c" stroke-width="12"/>
+<g fill="#233a2c">
+<path d="M210 210 H420 V300 H300 V390 H210Z"/><path d="M480 210 H690 V390 H600 V300 H480Z"/>
+<path d="M210 480 H300 V570 H420 V690 H210Z"/><path d="M480 480 H690 V690 H570 V570 H480Z"/>
+</g>
+<g fill="#b56a43">
+<path d="M300 300 H390 V390 H300Z"/><path d="M510 300 H600 V390 H510Z"/>
+<path d="M300 510 H390 V600 H300Z"/><path d="M510 510 H600 V600 H510Z"/>
+</g>
+<g fill="#d9a441">
+<path d="M420 210 L480 210 L480 270 L420 270Z"/><path d="M420 390 L480 390 L480 450 L420 450Z"/>
+<path d="M420 450 L480 450 L480 510 L420 510Z"/><path d="M420 630 L480 630 L480 690 L420 690Z"/>
+</g>
+<g stroke="#f7f0df" stroke-width="10" fill="none">
+<path d="M240 240 H390 V330 H330 V360 H240Z"/><path d="M510 240 H660 V330 H600 V360 H510Z"/>
+<path d="M240 540 H360 V630 H300 V660 H240Z"/><path d="M540 540 H660 V660 H600 V630 H540Z"/>
+</g>
+</svg>

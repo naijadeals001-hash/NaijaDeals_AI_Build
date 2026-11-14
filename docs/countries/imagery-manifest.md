@@ -29,11 +29,11 @@ The host approval path for further `prepare_media_generation` calls timed out an
 
 127 tiles use approved existing project photography and 96 use original vector illustrations. Of the 324 tiles, 101 use the 12 generated photographs (all 12 are now referenced). Matching is explicit in `scripts/seed-country-discovery.ts`; examples: cocoa, vanilla, cloves, cashew, shea, rice, maize, millet, plantain, cassava, avocado, mango, citrus, pineapple, fish, poultry, spices, textiles, baskets and solar. These are illustrative project assets; they are not country-specific product photography and do not assert origin.
 
-## Original vector illustrations (24 assets, 0 credits)
+## Original vector illustrations (25 assets, 0 credits)
 
 When no accurate photograph was available, the implementation uses original SVG illustrations generated from `scripts/generate-country-illustrations.mjs`. They are code-native, text-free and explicitly recorded as illustrations in `CountryTheme.imageKind` / `imageProvenance`:
 
-- minerals, energy, tourism, pottery, furniture, fruit, grain, wool, leaf/tobacco, flower, bottle/wine-oil, water, automotive components, factory, boat, hydropower, gas, carpet, handloom, carved sculpture, candles, wild mushrooms, leather and rubber tapping.
+- minerals, energy, tourism, pottery, furniture, fruit, grain, wool, leaf/tobacco, flower, bottle/wine-oil, water, automotive components, factory, boat, hydropower, gas, carpet, handloom, carved sculpture, Imigongo panel, candles, wild mushrooms, leather and rubber tapping.
 
 They are **not** photographs, do not depict a specific country landmark or product, and are labelled by the real HTML theme label on the card.
 

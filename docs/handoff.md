@@ -4994,7 +4994,7 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 
 ## 2026-11-14 — Discover Africa, country by country
 
-**Serviced build:** `8V0zQOmjU9smSC40XLGRJ` (`NEXT_DIST_DIR=.next-programme`, REVIEW catalogue) on
+**Serviced build:** `1nRvPbicJwbL53G4k6prP` (`NEXT_DIST_DIR=.next-programme`, REVIEW catalogue) on
 `http://localhost:3047`, database `naijadeals_review` (REVIEW). Source HEAD was `fb1ff28` plus this
 uncommitted slice. No production deployment, live charge, payout or provider charge occurred.
 
@@ -5033,7 +5033,7 @@ uncommitted slice. No production deployment, live charge, payout or provider cha
   role-separation, acceptance-DB-guard, audit-scope, published-drift, origin-scope and duplicate-source
   findings, which were fixed.
 - Independent imagery review: `agent_4ac60da2-e285-4551-a7a2-2800df194696` — found 28 material
-  fallback mismatches; targeted remaps and nine additional original illustrations were applied.
+  fallback mismatches; targeted remaps and ten additional original illustrations were applied.
 - Data/backend, public UI, Control Center and Kie integration were implemented by the coordinator;
   no separate implementation subagent was used. The final report must not claim otherwise.
 
@@ -5041,7 +5041,7 @@ uncommitted slice. No production deployment, live charge, payout or provider cha
 - `scripts/country-discovery-acceptance.cjs`: **34/34** on the frozen build, including 54 pages,
   six labels per page, directory coverage, 404 cases, delivery-cookie preservation, scoped/ordinary
   admin refusals, drift gates, audit/origin scope, unpublish → public 404 → authorized preview 200 →
-  republish 200. Log: `qa-artifacts/visual/discover-africa/acceptance-final4.log`.
+  republish 200. Log: `qa-artifacts/visual/discover-africa/acceptance-final5.log`.
 - 324/324 theme image URLs resolve on disk; 68 distinct assets; 324/324 alt; 93 GENERATED,
   135 APPROVED_EXISTING, 96 ILLUSTRATION. No null images.
 - Kie: 12 generated WebP, 72 credits, model `gpt-image-2-5-flare-text-to-image`, tasks recorded in
