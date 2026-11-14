@@ -633,9 +633,11 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Browsing visibility admin | `Category.browsingVisible` separate from publication/homepage/selectable; admin edit + audit + tests 16/16 | VERIFIED |
 | Mobile product-first order | Explore shelf moved before category rail; first product card 661 px (was 910) | VERIFIED |
 | Demo wording in drawer | "live stock" replaced with demonstration-listing wording | VERIFIED |
-| Category rail acceptance | 150/150 on canonical: 37 categories, 19 populated/18 empty, 35 images, arrows/swipe/keyboard/snap/reduced motion, directory, no overflow; separate GH zero-listing probe | VERIFIED |
+| Category rail acceptance | 150/150 on canonical: 37 categories, 19 populated/18 empty, 35 images, arrows/swipe/keyboard/nap snap/reduced motion, directory, no overflow; arrow end reaches true max at 390/768/1440; separate GH zero-listing probe | VERIFIED |
 | Market-scoped storefront | `/naijashop`, category, search, bestsellers, header counts and related rail use the selected country/city; GH shows 0 shelves/grid products, NG 57; GH detail 404 vs NG 200 | VERIFIED |
-| Missing-rule semantics | Regulated node with no country rule is `market_eligibility_unresolved`; migration backfills 18 keys; catalogue, detail, cart, Aura candidates and admin reactivation fail closed; category copy states the restriction | VERIFIED |
+| Missing-rule semantics | Regulated node with no country rule is `market_eligibility_unresolved`; migration backfills 18 keys; catalogue, detail, cart, Aura candidates, admin reactivation and admin `isRegulated` create/update fail closed; category copy states the restriction | VERIFIED |
+| Browsing vs publishing | 37 browsing-visible level-1 categories in NG and GH; restricted L1 remains with `canPublish:false`, notice and zero count; `browsingVisible=false` is the only browsing-removal flag; NG 57 listings / GH 0 | VERIFIED |
+| Category hero/art | Accurate Electronics & Appliances 1600x900 composition from approved monitor + coffee-maker assets, 0 new Kie credits; square/wide heroes contain the full subject; rail/directory thumbnails uncropped | VERIFIED |
 | Empty-category demo wording | "live stock/live listings" removed from category pages and drawer | VERIFIED |
 | Activation precedence | Least-permissive rule across GLOBAL/COUNTRY/CITY; local cannot loosen parent; responsible rule exposed; 30/30 | VERIFIED |
 | PREVIEW SSR + access | Authorized preview passes into homepage/Shop layout SSR; unauthorized paused; product page shared preview helper; no-store | VERIFIED |
