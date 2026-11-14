@@ -711,7 +711,7 @@ export function AllDrawer({
 
               {departmentsStatus === "error" ? (
                 <div role="alert" className="mt-2 rounded-xl border border-[#eadfc6] bg-[#fbf4e4] p-3 text-[11px] leading-5 text-[#7a4c00]">
-                  <p>Only departments with demonstration listings are shown for now.</p>
+                  <p>The published department navigation could not be loaded. Nothing is inferred in its place.</p>
                   <Link href="/naijashop/categories" onClick={close} className="mt-1 inline-flex font-extrabold text-[#0b5c33] underline">
                     Open the departments page
                   </Link>
