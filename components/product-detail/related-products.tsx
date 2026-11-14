@@ -46,8 +46,47 @@ function RelatedProductCard({ item }: { item: ShopProduct }) {
  * the related request fails or returns nothing, so a taxonomy hiccup can never
  * blank the product itself.
  */
-export function RelatedProducts({ items, categoryName }: { items: ShopProduct[]; categoryName: string }) {
-  if (items.length === 0) return null;
+export function RelatedProducts({
+  items,
+  categoryName,
+  status = "ready",
+  onRetry
+}: {
+  items: ShopProduct[];
+  categoryName: string;
+  status?: "idle" | "loading" | "ready" | "unavailable";
+  onRetry?: () => void;
+}) {
+  if (items.length === 0) {
+    if (status === "unavailable") {
+      return (
+        <section data-testid="related-products-unavailable" role="status" aria-live="polite">
+          <h2 className="mb-2 font-display text-xl font-extrabold text-ink sm:text-2xl">More in {categoryName}</h2>
+          <p className="text-sm font-semibold text-muted">
+            Related listings could not be loaded. The product above is unaffected.
+          </p>
+          {onRetry ? (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-border-soft px-3 text-sm font-bold text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              Try related listings again
+            </button>
+          ) : null}
+        </section>
+      );
+    }
+    if (status === "loading") {
+      return (
+        <section data-testid="related-products-loading" aria-busy="true">
+          <h2 className="mb-2 font-display text-xl font-extrabold text-ink sm:text-2xl">More in {categoryName}</h2>
+          <p role="status" className="text-sm font-semibold text-muted">Loading related listings…</p>
+        </section>
+      );
+    }
+    return null;
+  }
   return (
     <section data-testid="related-products" aria-labelledby="related-heading">
       <h2 id="related-heading" className="mb-4 font-display text-xl font-extrabold text-ink sm:text-2xl">

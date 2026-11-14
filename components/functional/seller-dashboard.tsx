@@ -25,6 +25,15 @@ const PRODUCT_DRAFT_KEY = "naijashop:seller:product-draft:v1";
 const MAX_PRODUCT_IMAGES = 6;
 
 type ImageDraft = { url: string; alt: string };
+type VariantDraft = {
+  id?: string;
+  name: string;
+  sku: string;
+  priceNaira: string;
+  stock: string;
+  isActive: boolean;
+  optionsText: string;
+};
 
 type ProductDraft = {
   name: string;
@@ -34,6 +43,7 @@ type ProductDraft = {
   images: ImageDraft[];
   quantity: string;
   attributes: Record<string, string>;
+  variants: VariantDraft[];
 };
 
 const EMPTY_PRODUCT: ProductDraft = {
@@ -43,7 +53,8 @@ const EMPTY_PRODUCT: ProductDraft = {
   priceNaira: "",
   images: [{ url: "/products/tecno-spark-20.svg", alt: "Product image" }],
   quantity: "5",
-  attributes: {}
+  attributes: {},
+  variants: []
 };
 
 function normaliseSavedImages(value: unknown, fallbackName: string): ImageDraft[] {
@@ -79,6 +90,20 @@ function readSavedDraft(): ProductDraft | null {
             ? [{ url: parsed.imageUrl, alt: `${name || "Product"} image` }]
             : normaliseSavedImages(undefined, name),
       quantity: typeof parsed.quantity === "string" ? parsed.quantity : EMPTY_PRODUCT.quantity,
+      variants: Array.isArray(parsed.variants)
+        ? (parsed.variants as unknown[])
+            .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
+            .map((entry, index) => ({
+              id: typeof entry.id === "string" ? entry.id : undefined,
+              name: typeof entry.name === "string" ? entry.name : "",
+              sku: typeof entry.sku === "string" ? entry.sku : "",
+              priceNaira: typeof entry.priceNaira === "string" ? entry.priceNaira : "",
+              stock: typeof entry.stock === "string" ? entry.stock : "0",
+              isActive: entry.isActive !== false,
+              optionsText: typeof entry.optionsText === "string" ? entry.optionsText : ""
+            }))
+            .slice(0, 50)
+        : [],
       attributes:
         parsed.attributes && typeof parsed.attributes === "object" && !Array.isArray(parsed.attributes)
           ? Object.fromEntries(
@@ -100,6 +125,7 @@ function isMeaningfulDraft(draft: ProductDraft) {
       draft.categoryId ||
       draft.priceNaira.trim() ||
       draft.quantity.trim() !== EMPTY_PRODUCT.quantity ||
+      draft.variants.length > 0 ||
       draft.images.some((image) => image.url !== EMPTY_PRODUCT.images[0].url || image.alt !== EMPTY_PRODUCT.images[0].alt) ||
       Object.values(draft.attributes).some((value) => value.trim())
   );
@@ -259,6 +285,72 @@ export function SellerDashboard() {
     }
   }
 
+  function updateVariant(index: number, patch: Partial<VariantDraft>) {
+    setForm((current) => ({
+      ...current,
+      variants: current.variants.map((variant, position) =>
+        position === index ? { ...variant, ...patch } : variant
+      )
+    }));
+  }
+
+  function addVariant() {
+    setForm((current) => ({
+      ...current,
+      quantity: "0",
+      variants: [
+        ...current.variants,
+        { name: "", sku: "", priceNaira: "", stock: "0", isActive: true, optionsText: "" }
+      ]
+    }));
+  }
+
+  function removeVariant(index: number) {
+    setForm((current) => ({
+      ...current,
+      variants: current.variants.filter((_, position) => position !== index)
+    }));
+  }
+
+  function variantPayload(drafts: VariantDraft[]) {
+    const parsed = [];
+    const seen = new Set<string>();
+    for (const [index, draft] of drafts.entries()) {
+      const name = draft.name.trim();
+      const sku = draft.sku.trim().toUpperCase();
+      if (!name || !sku) throw new Error(`Variant ${index + 1} needs a name and SKU.`);
+      if (!/^[A-Z0-9][A-Z0-9_-]{1,63}$/.test(sku)) {
+        throw new Error(`Variant ${index + 1} SKU must be 2-64 uppercase letters, digits, "_" or "-".`);
+      }
+      if (seen.has(sku)) throw new Error(`Variant SKU ${sku} is repeated.`);
+      seen.add(sku);
+      const priceKobo = exactMinorUnits(draft.priceNaira);
+      if (priceKobo === null) throw new Error(`Variant ${index + 1} needs a valid price.`);
+      const stock = Number(draft.stock);
+      if (!Number.isInteger(stock) || stock < 0) throw new Error(`Variant ${index + 1} stock must be a whole number.`);
+      let attributes: Record<string, unknown> | null = null;
+      if (draft.optionsText.trim()) {
+        try {
+          const value = JSON.parse(draft.optionsText);
+          if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("not an object");
+          attributes = value as Record<string, unknown>;
+        } catch {
+          throw new Error(`Variant ${index + 1} options must be a JSON object, for example {"Colour":"Black"}.`);
+        }
+      }
+      parsed.push({
+        ...(draft.id ? { id: draft.id } : {}),
+        name,
+        sku,
+        priceKobo: String(priceKobo),
+        stock,
+        isActive: draft.isActive,
+        ...(attributes ? { attributes } : {})
+      });
+    }
+    return parsed;
+  }
+
   async function createProduct(event: React.FormEvent) {
     event.preventDefault();
     setError("");
@@ -277,9 +369,17 @@ export function SellerDashboard() {
       setError("Enter a valid price with at most two decimal places.");
       return;
     }
-    const quantity = Number(form.quantity);
+    const activeVariants = form.variants.filter((variant) => variant.isActive);
+    const quantity = activeVariants.length > 0 ? 0 : Number(form.quantity);
     if (!Number.isInteger(quantity) || quantity < 0) {
       setError("Stock must be a whole number of units.");
+      return;
+    }
+    let variants;
+    try {
+      variants = variantPayload(form.variants);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Variant details are invalid.");
       return;
     }
     const images = form.images
@@ -318,6 +418,7 @@ export function SellerDashboard() {
         categoryId: form.categoryId,
         priceKobo: String(priceKobo),
         quantity,
+        variants,
         attributes: attributePayload,
         images: images.map((image, index) => ({ ...image, order: index, primary: index === 0 }))
       };
@@ -405,6 +506,17 @@ export function SellerDashboard() {
               .map((image) => ({ url: image.url, alt: image.alt ?? "" }))
           : [{ url: "", alt: "" }],
       quantity: String(product.stock?.quantity ?? 0),
+      variants: (product.variants ?? []).map((variant) => ({
+        id: variant.id,
+        name: variant.name,
+        sku: variant.sku,
+        priceNaira: priceKoboToInput(variant.priceKobo),
+        stock: String(variant.stock),
+        isActive: variant.isActive,
+        optionsText: Object.keys(variant.attributes ?? {}).length
+          ? JSON.stringify(variant.attributes, null, 2)
+          : ""
+      })),
       attributes: Object.fromEntries(
         definitions.map((definition) => [
           definition.key,
@@ -712,15 +824,68 @@ export function SellerDashboard() {
               />
             </label>
             <label>
-              <span className="text-sm font-black">Stock</span>
+              <span className="text-sm font-black">Product-level stock</span>
               <input
                 required
                 inputMode="numeric"
-                value={form.quantity}
+                disabled={form.variants.some((variant) => variant.isActive)}
+                value={form.variants.some((variant) => variant.isActive) ? "0" : form.quantity}
                 onChange={(event) => setForm((c) => ({ ...c, quantity: event.target.value }))}
-                className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-canvas px-3 text-sm"
+                className="mt-1 min-h-10 w-full rounded-lg border border-border-soft bg-canvas px-3 text-sm disabled:opacity-60"
               />
+              {form.variants.some((variant) => variant.isActive) ? (
+                <span className="mt-1 block text-[11px] font-normal text-muted">
+                  Variant stock is authoritative. Product-level stock is fixed at zero.
+                </span>
+              ) : null}
             </label>
+            <fieldset className="sm:col-span-2 rounded-xl border border-border-soft p-3">
+              <legend className="px-1 text-sm font-black">Variants (optional)</legend>
+              <p className="text-[11px] leading-5 text-muted">
+                When any variant is active, the stock on each variant is the only inventory used by the cart and checkout.
+                Leave this empty to use product-level stock.
+              </p>
+              <div className="mt-2 space-y-3">
+                {form.variants.map((variant, index) => (
+                  <div key={variant.id ?? index} className="rounded-lg border border-border-soft p-2">
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <label>
+                        <span className="text-xs font-bold">Variant {index + 1} name</span>
+                        <input value={variant.name} onChange={(event) => updateVariant(index, { name: event.target.value })} className="mt-1 min-h-9 w-full rounded border border-border-soft bg-canvas px-2 text-sm" />
+                      </label>
+                      <label>
+                        <span className="text-xs font-bold">SKU (unique)</span>
+                        <input value={variant.sku} onChange={(event) => updateVariant(index, { sku: event.target.value.toUpperCase() })} className="mt-1 min-h-9 w-full rounded border border-border-soft bg-canvas px-2 text-sm" />
+                      </label>
+                      <label>
+                        <span className="text-xs font-bold">Price (naira)</span>
+                        <input inputMode="decimal" value={variant.priceNaira} onChange={(event) => updateVariant(index, { priceNaira: event.target.value })} className="mt-1 min-h-9 w-full rounded border border-border-soft bg-canvas px-2 text-sm" />
+                      </label>
+                      <label>
+                        <span className="text-xs font-bold">Stock</span>
+                        <input inputMode="numeric" value={variant.stock} onChange={(event) => updateVariant(index, { stock: event.target.value })} className="mt-1 min-h-9 w-full rounded border border-border-soft bg-canvas px-2 text-sm" />
+                      </label>
+                      <label className="md:col-span-2">
+                        <span className="text-xs font-bold">Options (JSON object, optional)</span>
+                        <textarea rows={2} value={variant.optionsText} onChange={(event) => updateVariant(index, { optionsText: event.target.value })} placeholder='{"Colour":"Black","Size":"M"}' className="mt-1 w-full rounded border border-border-soft bg-canvas px-2 py-1 text-sm" />
+                      </label>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <label className="flex items-center gap-2 text-xs font-bold">
+                        <input type="checkbox" checked={variant.isActive} onChange={(event) => updateVariant(index, { isActive: event.target.checked })} />
+                        Active
+                      </label>
+                      <button type="button" onClick={() => removeVariant(index)} className="text-xs font-bold text-[#B12704] underline">
+                        Remove variant
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <button type="button" onClick={addVariant} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-border-soft px-3 text-xs font-bold">
+                  <Plus className="h-3.5 w-3.5" aria-hidden /> Add variant
+                </button>
+              </div>
+            </fieldset>
             <label className="sm:col-span-2">
               <span className="text-sm font-black">Description</span>
               <textarea
@@ -943,8 +1108,13 @@ export function SellerDashboard() {
                   </td>
                   <td className="py-2 font-bold">{koboToNaira(product.priceKobo)}</td>
                   <td className="py-2">
-                    {product.variants && product.variants.length > 0 ? (
-                      <span>{product.variants.reduce((total, variant) => total + variant.stock, 0)} (variants)</span>
+                    {product.variants && product.variants.some((variant) => variant.isActive) ? (
+                      <span>
+                        {product.variants
+                          .filter((variant) => variant.isActive)
+                          .reduce((total, variant) => total + Math.max(variant.stock - variant.reserved, 0), 0)}{" "}
+                        available (variants)
+                      </span>
                     ) : (
                       <input
                         type="number"

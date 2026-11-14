@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { unstable_noStore as noStore } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { ProductDetailClient } from "@/components/functional/product-detail-client";
 import type { ProductAttributeDefinition } from "@/components/product-detail/types";
@@ -16,6 +16,16 @@ function visitorMarket() {
   const countryCode = (store.get("nd_country")?.value ?? "NG").toUpperCase().slice(0, 2);
   const cityCode = (store.get("nd_city")?.value ?? "").toLowerCase().slice(0, 40) || null;
   return { countryCode, cityCode };
+}
+
+/**
+ * Controlled REVIEW-only seam for proving related-rail failure isolation. It is
+ * unavailable to ordinary production builds and only used by the acceptance
+ * suite through the preview launcher's REVIEW_TEST_SEAMS flag.
+ */
+function relatedFailureRequested() {
+  if (process.env.REVIEW_TEST_SEAMS !== "1") return false;
+  return headers().get("x-nd-related-failure") === "1";
 }
 
 /**
@@ -110,6 +120,9 @@ export default async function ProductDetail({ params }: { params: { id: string }
     initialProduct = jsonSafe(product) as unknown as ApiProduct;
     attributeDefinitions = await loadAttributeDefinitions(product.categoryId);
     try {
+      if (relatedFailureRequested()) {
+        throw new Error("Controlled REVIEW related-products failure.");
+      }
       initialRelated = jsonSafe(
         await listRelatedProducts(product.category.slug, product.id, 4, {
           previewAuthorized,

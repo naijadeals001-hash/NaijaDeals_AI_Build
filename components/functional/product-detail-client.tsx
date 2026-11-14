@@ -62,6 +62,9 @@ export function ProductDetailClient({
       : null;
   const [product, setProduct] = useState<ShopProduct | null>(seededProduct);
   const [related, setRelated] = useState<ShopProduct[]>(seededProduct ? (initialRelated as ShopProduct[]) : []);
+  const [relatedStatus, setRelatedStatus] = useState<"idle" | "loading" | "ready" | "unavailable">(
+    seededProduct ? (initialRelatedUnavailable && initialRelated.length === 0 ? "loading" : "ready") : "idle"
+  );
   const [status, setStatus] = useState<DetailStatus>(seededProduct ? "ready" : initialError ? "error" : "loading");
   const [error, setError] = useState(initialError);
   const [reloadKey, setReloadKey] = useState(0);
@@ -117,15 +120,31 @@ export function ProductDetailClient({
   useEffect(() => {
     if (!seededProduct || !initialRelatedUnavailable) return;
     let active = true;
+    setRelatedStatus("loading");
     void loadRelated(seededProduct)
       .then((items) => {
-        if (active) setRelated(items);
+        if (!active) return;
+        setRelated(items);
+        setRelatedStatus("ready");
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (active) setRelatedStatus("unavailable");
+      });
     return () => {
       active = false;
     };
   }, [seededProduct, initialRelatedUnavailable]);
+
+  function retryRelated() {
+    if (!seededProduct) return;
+    setRelatedStatus("loading");
+    void loadRelated(seededProduct)
+      .then((items) => {
+        setRelated(items);
+        setRelatedStatus(items.length > 0 ? "ready" : "ready");
+      })
+      .catch(() => setRelatedStatus("unavailable"));
+  }
 
   const selectedVariant = useMemo(
     () => product?.variants?.find((variant) => variant.id === variantId) ?? null,
@@ -249,7 +268,10 @@ export function ProductDetailClient({
   const hasImages = images.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div
+      className="space-y-6"
+      data-related-initial-unavailable={initialRelatedUnavailable ? "true" : "false"}
+    >
       <nav aria-label="Breadcrumb" className="text-xs font-semibold text-muted sm:text-sm">
         <Link href="/naijashop" className="font-bold text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary">
           Shop
@@ -340,7 +362,12 @@ export function ProductDetailClient({
 
       <ProductSellerSection product={product} />
       <ProductReviews product={product} signedIn={signedIn} />
-      <RelatedProducts items={related} categoryName={product.category.name} />
+      <RelatedProducts
+        items={related}
+        categoryName={product.category.name}
+        status={relatedStatus}
+        onRetry={retryRelated}
+      />
     </div>
   );
 }

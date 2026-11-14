@@ -28,6 +28,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       status,
       quantity: body.quantity === undefined ? undefined : Number(body.quantity),
       lowStockLevel: body.lowStockLevel === undefined ? undefined : Number(body.lowStockLevel),
+      variants: Object.prototype.hasOwnProperty.call(body, "variants") ? body.variants : undefined,
       categoryId: optionalString(body.categoryId, 100) ?? undefined,
       attributes: body.attributes,
       imageUrl: typeof body.imageUrl === "string" ? body.imageUrl : undefined,

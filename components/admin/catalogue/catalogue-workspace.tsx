@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus } from "lucide-react";
 import { COUNTRIES } from "@/lib/config/commerce";
 
 type AttributeDefinition = {
@@ -54,7 +55,16 @@ type Product = {
   category: (Department & { attributes?: AttributeDefinition[] }) | null;
   attributes: Record<string, unknown> | null;
   images: Array<{ id?: string; url: string; alt: string | null; sortOrder: number; primary?: boolean }>;
-  variants: Array<{ id: string; name: string; sku: string; priceKobo: string; stock: number; reserved: number; isActive: boolean }>;
+  variants: Array<{
+    id: string;
+    name: string;
+    sku: string;
+    priceKobo: string;
+    stock: number;
+    reserved: number;
+    isActive: boolean;
+    attributes: Record<string, unknown> | null;
+  }>;
   stock: { quantity: number; reserved: number; lowStockLevel: number } | null;
   vendor?: SellerRecord | null;
 };
@@ -65,6 +75,15 @@ type Catalogue = {
   demoVendor: SellerRecord | null;
 };
 type ImageDraft = { url: string; alt: string };
+type VariantDraft = {
+  id?: string;
+  name: string;
+  sku: string;
+  price: string;
+  stock: string;
+  isActive: boolean;
+  optionsText: string;
+};
 type AttributeDraft = Record<string, string>;
 type ValidationState = {
   name: string;
@@ -108,7 +127,7 @@ const emptyProduct = {
   lowStockLevel: "3",
   images: [{ url: "", alt: "" }] as ImageDraft[],
   attributes: {} as AttributeDraft,
-  variants: [] as Product["variants"],
+  variants: [] as VariantDraft[],
   vendor: null as SellerRecord | null,
   isDemo: true
 };
@@ -158,8 +177,22 @@ function formatMoney(priceKobo: string | number | bigint, currency: string | nul
   return currency === "NGN" ? `₦${amount} NGN` : `${currency} ${amount}`;
 }
 
-function availableStock(stock: Product["stock"]) {
-  return stock ? Math.max(stock.quantity - stock.reserved, 0) : 0;
+function activeVariants(product: Product) {
+  return product.variants.filter((variant) => variant.isActive);
+}
+
+function availableStock(product: Product) {
+  const variants = activeVariants(product);
+  if (variants.length > 0) {
+    return variants.reduce((total, variant) => total + Math.max(variant.stock - variant.reserved, 0), 0);
+  }
+  return product.stock ? Math.max(product.stock.quantity - product.stock.reserved, 0) : 0;
+}
+
+function onHandStock(product: Product) {
+  const variants = activeVariants(product);
+  if (variants.length > 0) return variants.reduce((total, variant) => total + variant.stock, 0);
+  return product.stock?.quantity ?? 0;
 }
 
 export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; canRead: boolean }) {
@@ -282,6 +315,70 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
     if (saved) setDepartment({ ...emptyDepartment });
   }
 
+  function updateVariant(index: number, patch: Partial<VariantDraft>) {
+    setProduct((current) => ({
+      ...current,
+      variants: current.variants.map((variant, position) =>
+        position === index ? { ...variant, ...patch } : variant
+      )
+    }));
+  }
+
+  function addVariant() {
+    setProduct((current) => ({
+      ...current,
+      quantity: "0",
+      variants: [
+        ...current.variants,
+        { name: "", sku: "", price: "", stock: "0", isActive: true, optionsText: "" }
+      ]
+    }));
+  }
+
+  function removeVariant(index: number) {
+    setProduct((current) => ({
+      ...current,
+      variants: current.variants.filter((_, position) => position !== index)
+    }));
+  }
+
+  function variantPayload(drafts: VariantDraft[]) {
+    const seen = new Set<string>();
+    return drafts.map((draft, index) => {
+      const name = draft.name.trim();
+      const sku = draft.sku.trim().toUpperCase();
+      if (!name || !sku) throw new Error(`Variant ${index + 1} needs a name and SKU.`);
+      if (!/^[A-Z0-9][A-Z0-9_-]{1,63}$/.test(sku)) {
+        throw new Error(`Variant ${index + 1} SKU must be 2-64 uppercase letters, digits, "_" or "-".`);
+      }
+      if (seen.has(sku)) throw new Error(`Variant SKU ${sku} is repeated.`);
+      seen.add(sku);
+      const priceKobo = majorToMinor(draft.price);
+      if (priceKobo === null) throw new Error(`Variant ${index + 1} needs a valid price.`);
+      const stock = Number(draft.stock);
+      if (!Number.isInteger(stock) || stock < 0) throw new Error(`Variant ${index + 1} stock must be a whole number.`);
+      let attributes: Record<string, unknown> | null = null;
+      if (draft.optionsText.trim()) {
+        try {
+          const value = JSON.parse(draft.optionsText);
+          if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("not an object");
+          attributes = value as Record<string, unknown>;
+        } catch {
+          throw new Error(`Variant ${index + 1} options must be a JSON object, for example {"Colour":"Black"}.`);
+        }
+      }
+      return {
+        ...(draft.id ? { id: draft.id } : {}),
+        name,
+        sku,
+        priceKobo: String(priceKobo),
+        stock,
+        isActive: draft.isActive,
+        ...(attributes ? { attributes } : {})
+      };
+    });
+  }
+
   async function saveProduct() {
     if (!product.name.trim() || !product.description.trim() || !product.categoryId || !product.price.trim()) {
       setError("Product name, description, price and department are required.");
@@ -292,8 +389,20 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
       setError("Price must be a positive amount with at most two decimal places.");
       return;
     }
-    if (product.quantity === "" || !Number.isInteger(Number(product.quantity)) || Number(product.quantity) < 0) {
+    const activeVariants = product.variants.filter((variant) => variant.isActive);
+    if (activeVariants.length === 0 && (product.quantity === "" || !Number.isInteger(Number(product.quantity)) || Number(product.quantity) < 0)) {
       setError("Inventory quantity must be a non-negative whole number.");
+      return;
+    }
+    if (activeVariants.length > 0 && Number(product.quantity || 0) !== 0) {
+      setError("When variants are active, product-level inventory must be 0; enter stock on each variant.");
+      return;
+    }
+    let variants;
+    try {
+      variants = variantPayload(product.variants);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Variant details are invalid.");
       return;
     }
     if (product.lowStockLevel !== "" && (!Number.isInteger(Number(product.lowStockLevel)) || Number(product.lowStockLevel) < 0)) {
@@ -326,8 +435,9 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
       countryCode: product.countryCode,
       categoryId: product.categoryId,
       attributes: attributePayload(attributeDefinitions, product.attributes),
-      quantity: Number(product.quantity),
+      quantity: activeVariants.length > 0 ? 0 : Number(product.quantity),
       lowStockLevel: Number(product.lowStockLevel || 3),
+      variants,
       images: images.map((image, index) => ({ ...image, order: index, primary: index === 0 })),
       isDemo: product.isDemo
     };
@@ -421,7 +531,18 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
           attributeValueToInput(entry.attributes?.[definition.key])
         ])
       ),
-      variants: entry.variants ?? [],
+      variants: (entry.variants ?? []).map((variant) => ({
+        id: variant.id,
+        name: variant.name,
+        sku: variant.sku,
+        price: minorToMajorInput(variant.priceKobo),
+        stock: String(variant.stock),
+        isActive: variant.isActive,
+        optionsText:
+          variant.attributes && Object.keys(variant.attributes).length
+            ? JSON.stringify(variant.attributes, null, 2)
+            : ""
+      })),
       vendor: entry.vendor ?? null,
       isDemo: entry.isDemo
     });
@@ -776,14 +897,19 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
             </select>
           </label>
           <label className="text-xs font-bold">
-            Inventory quantity
+            Product-level inventory
             <input
-              value={product.quantity}
-              disabled={!canWrite}
+              value={product.variants.some((variant) => variant.isActive) ? "0" : product.quantity}
+              disabled={!canWrite || product.variants.some((variant) => variant.isActive)}
               inputMode="numeric"
               onChange={(event) => setProduct({ ...product, quantity: event.target.value })}
-              className="mt-1 min-h-10 w-full rounded-lg border border-[#30363D] bg-[#161B22] px-3 text-sm"
+              className="mt-1 min-h-10 w-full rounded-lg border border-[#30363D] bg-[#161B22] px-3 text-sm disabled:opacity-60"
             />
+            {product.variants.some((variant) => variant.isActive) ? (
+              <span className="mt-1 block text-[10px] font-normal text-[#8B949E]">
+                Variant stock is authoritative; product-level inventory is fixed at zero.
+              </span>
+            ) : null}
           </label>
           <label className="text-xs font-bold">
             Low stock level
@@ -815,6 +941,56 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
             Demonstration listing (DEMO)
           </label>
         </div>
+
+        <fieldset className="mt-4 rounded-xl border border-[#30363D] p-3">
+          <legend className="px-1 text-xs font-extrabold uppercase tracking-wide text-[#8B949E]">
+            Variants (optional)
+          </legend>
+          <p className="text-[11px] leading-5 text-[#8B949E]">
+            When any variant is active, variant stock is the sole inventory source for cart, checkout and validation.
+            The product-level quantity must remain zero. Send the full variant set; omitted rows are deactivated.
+          </p>
+          <div className="mt-2 space-y-3">
+            {product.variants.map((variant, index) => (
+              <div key={variant.id ?? index} className="rounded-lg border border-[#30363D] p-2">
+                <div className="grid gap-2 md:grid-cols-2">
+                  <label className="text-xs font-bold">
+                    Variant {index + 1} name
+                    <input value={variant.name} disabled={!canWrite} onChange={(event) => updateVariant(index, { name: event.target.value })} className="mt-1 min-h-9 w-full rounded border border-[#30363D] bg-[#161B22] px-2 text-sm" />
+                  </label>
+                  <label className="text-xs font-bold">
+                    SKU (unique)
+                    <input value={variant.sku} disabled={!canWrite} onChange={(event) => updateVariant(index, { sku: event.target.value.toUpperCase() })} className="mt-1 min-h-9 w-full rounded border border-[#30363D] bg-[#161B22] px-2 text-sm" />
+                  </label>
+                  <label className="text-xs font-bold">
+                    Price ({product.currency})
+                    <input value={variant.price} disabled={!canWrite} inputMode="decimal" onChange={(event) => updateVariant(index, { price: event.target.value })} className="mt-1 min-h-9 w-full rounded border border-[#30363D] bg-[#161B22] px-2 text-sm" />
+                  </label>
+                  <label className="text-xs font-bold">
+                    Stock
+                    <input value={variant.stock} disabled={!canWrite} inputMode="numeric" onChange={(event) => updateVariant(index, { stock: event.target.value })} className="mt-1 min-h-9 w-full rounded border border-[#30363D] bg-[#161B22] px-2 text-sm" />
+                  </label>
+                  <label className="text-xs font-bold md:col-span-2">
+                    Options (JSON object, optional)
+                    <textarea rows={2} value={variant.optionsText} disabled={!canWrite} onChange={(event) => updateVariant(index, { optionsText: event.target.value })} placeholder='{"Colour":"Black","Size":"M"}' className="mt-1 w-full rounded border border-[#30363D] bg-[#161B22] px-2 py-1 text-sm" />
+                  </label>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <label className="flex items-center gap-2 text-xs font-bold">
+                    <input type="checkbox" checked={variant.isActive} disabled={!canWrite} onChange={(event) => updateVariant(index, { isActive: event.target.checked })} />
+                    Active
+                  </label>
+                  <button type="button" disabled={!canWrite} onClick={() => removeVariant(index)} className="text-xs font-bold text-[#F85149] underline">
+                    Remove variant
+                  </button>
+                </div>
+              </div>
+            ))}
+            <button type="button" disabled={!canWrite} onClick={addVariant} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-[#30363D] px-3 text-xs font-bold">
+              <Plus className="h-3.5 w-3.5" aria-hidden /> Add variant
+            </button>
+          </div>
+        </fieldset>
 
         <fieldset className="mt-4 rounded-xl border border-[#30363D] p-3">
           <legend className="px-1 text-xs font-extrabold uppercase tracking-wide text-[#8B949E]">
@@ -1042,9 +1218,9 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
             </p>
           )}
           <p className="mt-2 text-[10px] text-[#8B949E]">
-            Variants are {product.id ? `${product.variants.length} read-only row(s)` : "created only through an existing product record"}.
-            The schema supports ProductVariant, but this editor has no create/edit contract for variants yet.
-            Related products are selected by department from active listings; no curated bundle rule is stored.
+            Variants are {product.variants.length} configured row(s). Active variant stock is authoritative; product-level
+            inventory stays at zero. Related products are selected by department from active listings; no curated bundle
+            rule is stored.
           </p>
         </section>
 
@@ -1134,7 +1310,8 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
               </p>
               <p className="mt-1 font-bold">
                 {formatMoney(preview.priceKobo, preview.currency)} ·{" "}
-                {availableStock(preview.stock)} available of {preview.stock?.quantity ?? 0}
+                {availableStock(preview)} available of {onHandStock(preview)}{" "}
+                {activeVariants(preview).length > 0 ? "across variants" : "on hand"}
               </p>
               <p className="mt-1 text-xs text-[#8B949E]">
                 {preview.status === "ACTIVE"
@@ -1218,8 +1395,10 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
                   </td>
                   <td className="pr-3 font-bold">{formatMoney(entry.priceKobo, entry.currency)}</td>
                   <td className="pr-3">
-                    <span className="font-bold">{availableStock(entry.stock)}</span>
-                    <span className="text-xs text-[#8B949E]"> / {entry.stock?.quantity ?? 0} on hand</span>
+                    <span className="font-bold">{availableStock(entry)}</span>
+                    <span className="text-xs text-[#8B949E]">
+                      {" "}/ {onHandStock(entry)} {activeVariants(entry).length > 0 ? "across variants" : "on hand"}
+                    </span>
                   </td>
                   <td className="py-2 text-right">
                     <div className="flex flex-wrap justify-end gap-2 text-xs font-bold">

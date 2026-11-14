@@ -14,6 +14,13 @@ import {
   type AttributeDefinition
 } from "@/lib/services/taxonomy/eligibility";
 import { recordAudit } from "./audit.service";
+import {
+  activeVariantStock,
+  assertProductQuantityAllowed,
+  parseVariantsPayload,
+  syncProductVariants,
+  variantSnapshot
+} from "./variant-contract";
 
 const DEMO_VENDOR_SLUG = "demo-catalogue-review";
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -389,7 +396,8 @@ export async function listCatalogue(actor: SessionUser) {
             priceKobo: true,
             stock: true,
             reserved: true,
-            isActive: true
+            isActive: true,
+            attributes: true
           },
           orderBy: [{ createdAt: "asc" }, { id: "asc" }]
         },
@@ -488,6 +496,7 @@ export type CatalogueProductPreview = {
     stock: number;
     reserved: number;
     isActive: boolean;
+    attributes: Record<string, unknown> | null;
   }>;
   stock: { quantity: number; reserved: number; lowStockLevel: number } | null;
   available: number;
@@ -539,7 +548,16 @@ export async function getCatalogueProductPreview(actor: SessionUser, id: string)
       },
       images: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
       variants: {
-        select: { id: true, name: true, sku: true, priceKobo: true, stock: true, reserved: true, isActive: true },
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          priceKobo: true,
+          stock: true,
+          reserved: true,
+          isActive: true,
+          attributes: true
+        },
         orderBy: [{ createdAt: "asc" }, { id: "asc" }]
       },
       stock: { select: { quantity: true, reserved: true, lowStockLevel: true } }
@@ -583,12 +601,14 @@ export async function getCatalogueProductPreview(actor: SessionUser, id: string)
       sortOrder: image.sortOrder,
       primary: index === 0
     })),
-    variants: product.variants.map((variant) => ({
-      ...variant,
-      priceKobo: variant.priceKobo.toString()
-    })),
+    variants: product.variants.map((variant) => variantSnapshot(variant)),
     stock: product.stock,
-    available: product.stock ? Math.max(product.stock.quantity - product.stock.reserved, 0) : 0,
+    available:
+      product.variants.some((variant) => variant.isActive)
+        ? activeVariantStock(product.variants).available
+        : product.stock
+          ? Math.max(product.stock.quantity - product.stock.reserved, 0)
+          : 0,
     validation: { valid: validation.valid, issues: validation.issues }
   };
 }
@@ -727,6 +747,7 @@ export async function createProduct(input: {
   attributes?: unknown;
   quantity?: unknown;
   lowStockLevel?: unknown;
+  variants?: unknown;
   images?: CatalogueImageInput[];
   imageUrl?: string;
   imageAlt?: string;
@@ -746,6 +767,14 @@ export async function createProduct(input: {
   const quantity = input.quantity === undefined ? 0 : integer(input.quantity, "Inventory quantity", 0, 1_000_000);
   const lowStockLevel =
     input.lowStockLevel === undefined ? 3 : integer(input.lowStockLevel, "Low stock level", 0, 1_000_000);
+  const variants = parseVariantsPayload(input.variants);
+  if (variants && variants.some((variant) => variant.isActive) && quantity !== 0) {
+    throw new ApiError(
+      400,
+      "variant_stock_conflict",
+      "A variant product uses variant stock. Set product-level quantity to 0 and enter stock on each variant."
+    );
+  }
   const isDemo = Boolean(input.isDemo);
   const vendor = await chooseVendor(input.actor, countryCode, isDemo);
   const slug = input.slug?.trim()
@@ -771,7 +800,7 @@ export async function createProduct(input: {
           images: images.length
             ? { create: images.map((image, index) => ({ url: image.url, alt: image.alt, sortOrder: index })) }
             : undefined,
-          stock: { create: { quantity, lowStockLevel } }
+          stock: { create: { quantity: variants && variants.some((variant) => variant.isActive) ? 0 : quantity, lowStockLevel } }
         },
         include: {
           category: { select: { id: true, name: true, slug: true } },
@@ -792,6 +821,15 @@ export async function createProduct(input: {
           stock: true
         }
       });
+      const variantState =
+        variants !== undefined
+          ? await syncProductVariants({
+              tx,
+              productId: created.id,
+              productCurrency: COUNTRIES[created.countryCode]?.currency ?? "NGN",
+              variants
+            })
+          : null;
       await recordAudit({
         tx,
         actorId: input.actor.id,
@@ -801,6 +839,7 @@ export async function createProduct(input: {
         metadata: {
           before: null,
           after: productAuditSnapshot(created),
+          variants: variantState ? { before: variantState.before, after: variantState.after } : null,
           seller: vendorSnapshot(vendor),
           department: eligible.category.name,
           attributes: attributes ?? null,
@@ -809,7 +848,30 @@ export async function createProduct(input: {
           isDemo
         }
       });
-      return created;
+      return variants !== undefined
+        ? tx.product.findUniqueOrThrow({
+            where: { id: created.id },
+            include: {
+              category: { select: { id: true, name: true, slug: true } },
+              vendor: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  status: true,
+                  market: true,
+                  countryCode: true,
+                  pickupAddress: true,
+                  pickupPhone: true,
+                  commissionBps: true
+                }
+              },
+              images: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+              stock: true,
+              variants: true
+            }
+          })
+        : created;
     });
     await markProductForSearchSync(product.id);
     return product;
@@ -845,6 +907,7 @@ export async function updateProduct(input: {
   attributes?: unknown;
   quantity?: unknown;
   lowStockLevel?: unknown;
+  variants?: unknown;
   images?: CatalogueImageInput[];
   imageUrl?: string;
   imageAlt?: string;
@@ -925,6 +988,7 @@ export async function updateProduct(input: {
   const quantity =
     input.quantity === undefined ? undefined : integer(input.quantity, "Inventory quantity", 0, 1_000_000);
   if (quantity !== undefined) await assertStockNotBelowReserved(existing.id, quantity);
+  const variants = parseVariantsPayload(input.variants);
   const lowStockLevel =
     input.lowStockLevel === undefined ? undefined : integer(input.lowStockLevel, "Low stock level", 0, 1_000_000);
   if (slug !== existing.slug) await assertUniqueProductSlug(slug, existing.id);
@@ -951,6 +1015,16 @@ export async function updateProduct(input: {
           });
         }
       }
+      const variantState =
+        variants !== undefined
+          ? await syncProductVariants({
+              tx,
+              productId: existing.id,
+              productCurrency: COUNTRIES[existing.countryCode]?.currency ?? "NGN",
+              variants
+            })
+          : null;
+      if (quantity !== undefined) await assertProductQuantityAllowed(tx, existing.id, quantity);
       if (quantity !== undefined || lowStockLevel !== undefined) {
         if (quantity !== undefined) {
           // The pre-check above is only a fast failure. Reservation writes take
@@ -999,7 +1073,8 @@ export async function updateProduct(input: {
             }
           },
           images: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
-          stock: true
+          stock: true,
+          variants: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }
         }
       });
       await recordAudit({
@@ -1014,10 +1089,11 @@ export async function updateProduct(input: {
           department: eligible.category.name,
           imageCount: fresh.images.length,
           quantity: fresh.stock?.quantity ?? null,
-          isDemo: fresh.isDemo
+          isDemo: fresh.isDemo,
+          variants: variantState ? { before: variantState.before, after: variantState.after } : null
         }
       });
-      return updated;
+      return fresh;
     });
     await markProductForSearchSync(product.id);
     return product;
@@ -1035,7 +1111,7 @@ export async function validateProduct(actor: SessionUser, id: string) {
   if (!id) throw new ApiError(400, "validation_error", "Product id is required.");
   const product = await prisma.product.findUnique({
     where: { id },
-    include: { images: true, category: true, vendor: true, stock: true }
+    include: { images: true, category: true, vendor: true, stock: true, variants: true }
   });
   if (!product) throw new ApiError(404, "product_not_found", "Product not found.");
   assertRegion(actor, { countryCode: product.countryCode });
@@ -1110,11 +1186,36 @@ export async function validateProduct(actor: SessionUser, id: string) {
       message: `The seller operates in ${product.vendor.countryCode} but the listing fulfils from ${product.countryCode}.`
     });
   }
-  const available = product.stock ? Math.max(product.stock.quantity - product.stock.reserved, 0) : 0;
-  if (!product.stock) {
-    issues.push({ field: "quantity", message: "Add inventory before publishing." });
-  } else if (available <= 0) {
-    issues.push({ field: "quantity", message: "Available inventory is zero. Add stock before publishing." });
+  const activeVariants = product.variants.filter((variant) => variant.isActive);
+  const variantStock = activeVariantStock(product.variants);
+  if (activeVariants.length > 0) {
+    if (product.stock && product.stock.quantity !== 0) {
+      issues.push({
+        field: "quantity",
+        message: "Variant products must keep product-level inventory at zero; use variant quantities."
+      });
+    }
+    if (variantStock.available <= 0) {
+      issues.push({ field: "variants", message: "Add available stock to at least one active variant before publishing." });
+    }
+    for (const variant of activeVariants) {
+      if (!variant.name.trim() || !variant.sku.trim()) {
+        issues.push({ field: "variants", message: "Every active variant needs a name and SKU." });
+      }
+      if (variant.priceKobo <= BigInt(0)) {
+        issues.push({ field: "variants", message: `Variant ${variant.name} has no positive price.` });
+      }
+      if (variant.stock < variant.reserved) {
+        issues.push({ field: "variants", message: `Variant ${variant.name} stock is below its reservations.` });
+      }
+    }
+  } else {
+    const available = product.stock ? Math.max(product.stock.quantity - product.stock.reserved, 0) : 0;
+    if (!product.stock) {
+      issues.push({ field: "quantity", message: "Add inventory before publishing." });
+    } else if (available <= 0) {
+      issues.push({ field: "quantity", message: "Available inventory is zero. Add stock before publishing." });
+    }
   }
 
   return {
@@ -1128,9 +1229,9 @@ export async function validateProduct(actor: SessionUser, id: string) {
       priceKobo: product.priceKobo.toString(),
       currency: country?.currency ?? null,
       countryCode: product.countryCode,
-      quantity: product.stock?.quantity ?? null,
-      reserved: product.stock?.reserved ?? null,
-      available,
+      quantity: activeVariants.length > 0 ? null : product.stock?.quantity ?? null,
+      reserved: activeVariants.length > 0 ? null : product.stock?.reserved ?? null,
+      available: activeVariants.length > 0 ? variantStock.available : product.stock ? Math.max(product.stock.quantity - product.stock.reserved, 0) : 0,
       imageCount: product.images.length,
       isDemo: product.isDemo,
       departmentActive: product.category.isActive

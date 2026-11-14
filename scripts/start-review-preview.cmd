@@ -12,6 +12,7 @@ if "%REVIEW_EXPECTED_DATABASE%"=="" (
 )
 set DATABASE_URL=%REVIEW_DATABASE_URL%
 set NEXT_PUBLIC_REVIEW_CATALOGUE=1
+set REVIEW_TEST_SEAMS=1
 set NEXT_DIST_DIR=.next-programme
 call npx tsx scripts/review-preview-guard.ts
 if errorlevel 1 (

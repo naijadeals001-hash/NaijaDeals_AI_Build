@@ -573,29 +573,37 @@ async function main() {
     }
 
     /* ------------------------------------------------------------------ */
-    /* D. Related-products failure isolation (route abort)                 */
+    /* D. Server-side related failure → unavailable/retry state             */
     /* ------------------------------------------------------------------ */
     try {
-      const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        extraHTTPHeaders: { "x-nd-related-failure": "1" }
+      });
       const page = await context.newPage();
       page.setDefaultTimeout(60000);
       let relatedRequests = 0;
-      await page.route("**/api/products*", (route) => {
+      const abortRelated = async (route) => {
         relatedRequests += 1;
-        return route.abort();
-      });
-      await page.goto(`${BASE}/product/${galleryProduct.slug}`, { waitUntil: "networkidle", timeout: 90000 });
+        await route.abort();
+      };
+      await page.route("**/api/products?*", abortRelated);
+      const response = await page.goto(`${BASE}/product/${galleryProduct.slug}`, { waitUntil: "networkidle", timeout: 90000 });
       await page.locator('[data-testid="product-title"]').waitFor();
-      check("aborted related API leaves the product title", (await page.locator('[data-testid="product-title"]').innerText()).includes("PDG Gallery quantity probe"), "");
-      check("aborted related API leaves price and purchase panel", (await page.locator('[data-testid="product-price"]').count()) === 1 && (await page.locator('[data-testid="purchase-panel"]').count()) === 1, "");
-      const visibleAlerts = await page.getByRole("alert").evaluateAll((nodes) => nodes.map((node) => (node.textContent || "").trim()).filter(Boolean));
-      check("aborted related API does not surface an error state", visibleAlerts.length === 0, `relatedRequests=${relatedRequests} alerts=${JSON.stringify(visibleAlerts)}`);
-      await shot(page, "related-abort-page");
-      results.push({
-        name: "related failure injection detail",
-        ok: true,
-        detail: `server-rendered related rail is seeded on first HTML; client related retry is only requested when the server marks it unavailable (requests=${relatedRequests})`
-      });
+      check("server related failure leaves the product page 200", response?.status() === 200, `status=${response?.status()}`);
+      check("server related failure is marked on the rendered page", (await page.locator('[data-related-initial-unavailable="true"]').count()) === 1, "");
+      check("server related failure leaves no seeded related rail", (await page.locator('[data-testid="related-products"]').count()) === 0, "");
+      check("product title/price/purchase survive the server related failure", (await page.locator('[data-testid="product-price"]').count()) === 1 && (await page.locator('[data-testid="purchase-panel"]').count()) === 1, "");
+      await page.locator('[data-testid="related-products-unavailable"]').waitFor({ timeout: 60000 });
+      check("failed client retry shows the unavailable state", (await page.getByText("Related listings could not be loaded").count()) === 1 && relatedRequests > 0, `requests=${relatedRequests}`);
+      const retryButton = page.getByRole("button", { name: "Try related listings again" });
+      check("unavailable state offers a retry control", (await retryButton.count()) === 1, "");
+      await shot(page, "related-server-failure-unavailable");
+      await page.unroute("**/api/products?*", abortRelated);
+      await retryButton.click();
+      await page.locator('[data-testid="related-products"]').waitFor({ timeout: 60000 });
+      check("retry restores the related rail", (await page.locator('[data-testid="related-products"]').count()) === 1, "");
+      await shot(page, "related-retry-restored");
       await context.close();
     } catch (error) {
       check("related failure isolation section completed", false, error.message);
@@ -673,8 +681,7 @@ async function main() {
           { url: IMAGE_B.url, alt: IMAGE_B.alt, order: 1 },
           { url: IMAGE_C.url, alt: IMAGE_C.alt, order: 2 }
         ],
-        isDemo: true,
-        variants: [{ name: "Ignored variant payload", sku: `${runId}-IGNORED`.toUpperCase(), priceKobo: 999900, stock: 1 }]
+        isDemo: true
       });
       fixture.adminProductId = created.body?.id ?? null;
       fixture.adminProductSlug = adminSlug;
@@ -745,9 +752,7 @@ async function main() {
       const listed = (catalogue.body?.products || []).find((entry) => entry.id === fixture.adminProductId);
       check("catalogue API returns stored gallery order and alt", listed && listed.images.length === 3 && listed.images[0].url === IMAGE_A.url && listed.images[1].alt === IMAGE_B.alt, JSON.stringify(listed?.images?.map((image) => ({ url: image.url, alt: image.alt, sortOrder: image.sortOrder }))));
       check("catalogue API reports category attributes", listed && listed.attributes?.material === "Stainless steel" && listed.attributes?.piece_count === 2, JSON.stringify(listed?.attributes));
-      check("admin variant payload is ignored (no write contract)", listed && Array.isArray(listed.variants) && listed.variants.length === 0, `variants=${listed?.variants?.length}`);
-      const noteText = await page.locator('h3:has-text("Seller record and pickup information")').locator("xpath=..").innerText();
-      check("admin states variant management is absent", noteText.includes("no create/edit contract for variants yet"), "");
+      check("simple admin fixture has no variants", listed && Array.isArray(listed.variants) && listed.variants.length === 0, `variants=${listed?.variants?.length}`);
 
       const publicPage = await context.newPage();
       const published = await publicPage.goto(`${BASE}/product/${adminSlug}`, { waitUntil: "networkidle", timeout: 90000 });
@@ -825,13 +830,12 @@ async function main() {
           { url: IMAGE_A.url, alt: `${IMAGE_A.alt} seller one` },
           { url: IMAGE_B.url, alt: `${IMAGE_B.alt} seller two` },
           { url: IMAGE_C.url, alt: `${IMAGE_C.alt} seller three` }
-        ],
-        variants: [{ name: "Seller ignored variant", sku: `${runId}-SELLER-IGNORED`.toUpperCase(), priceKobo: 300000, stock: 2 }]
+        ]
       });
       fixture.sellerProductId = create.body?.id ?? null;
       fixture.sellerProductSlug = create.body?.slug ?? null;
       check("seller creates a draft", create.status === 201 && create.body?.status === "DRAFT", `status=${create.status} code=${create.body?.code ?? ""}`);
-      check("seller variant payload is not stored", (create.body?.variants?.length ?? 0) === 0, `variants=${create.body?.variants?.length ?? "absent"}`);
+      check("simple seller fixture has no variants", (create.body?.variants?.length ?? 0) === 0, `variants=${create.body?.variants?.length ?? "absent"}`);
 
       const sellerEdit = await api(sellerContext, "PATCH", `/api/seller/products/${fixture.sellerProductId}`, {
         priceKobo: 275000,
@@ -848,7 +852,7 @@ async function main() {
       const sellerProduct = (overview.body?.products || []).find((entry) => entry.id === fixture.sellerProductId);
       check("seller overview stores edited gallery order", sellerProduct && sellerProduct.images[0]?.url === IMAGE_B.url && sellerProduct.images[0]?.alt === `${IMAGE_B.alt} seller primary now`, JSON.stringify(sellerProduct?.images?.map((image) => ({ url: image.url, alt: image.alt, sortOrder: image.sortOrder }))));
       check("seller overview stores edited attributes", sellerProduct?.attributes?.material === "Aluminium" && sellerProduct?.attributes?.piece_count === 6, JSON.stringify(sellerProduct?.attributes));
-      check("seller has no variant management contract", Array.isArray(sellerProduct?.variants) && sellerProduct.variants.length === 0, `variants=${sellerProduct?.variants?.length}`);
+      check("simple seller fixture still has no variants", Array.isArray(sellerProduct?.variants) && sellerProduct.variants.length === 0, `variants=${sellerProduct?.variants?.length}`);
 
       const sellerPublish = await api(sellerContext, "PATCH", `/api/seller/products/${fixture.sellerProductId}`, { status: "ACTIVE" });
       check("seller cannot publish without the Control Center", sellerPublish.status === 403 && sellerPublish.body?.code === "admin_publication_required", `status=${sellerPublish.status} code=${sellerPublish.body?.code}`);

@@ -44,6 +44,7 @@ export async function POST(request: Request) {
       images: Array.isArray(body.images) ? (body.images as Array<Record<string, unknown>>) : undefined,
       quantity,
       lowStockLevel: body.lowStockLevel ? Number(body.lowStockLevel) : 3,
+      variants: Object.prototype.hasOwnProperty.call(body, "variants") ? body.variants : undefined,
       attributes: body.attributes,
       status: "DRAFT"
     });
