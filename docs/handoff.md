@@ -4994,7 +4994,7 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 
 ## 2026-11-14 — Discover Africa, country by country
 
-**Serviced build:** `7IG8kK-LfbSxNPo47lu7X` (`NEXT_DIST_DIR=.next-programme`, REVIEW catalogue) on
+**Serviced build:** `M-aAuXMpbOpkLQfCn_WiH` (`NEXT_DIST_DIR=.next-programme`, REVIEW catalogue) on
 `http://localhost:3047`, database `naijadeals_review` (REVIEW). Source commits are `7630ca9`
 (the slice), `85f5382` (imagery review fixes) and `c2b370c` (Mauritania Arabic label and seed guard), all on `naijashop-marketplace`. No production
 deployment, live charge, payout or provider charge occurred.
@@ -5049,15 +5049,17 @@ deployment, live charge, payout or provider charge occurred.
 - `scripts/country-discovery-acceptance.cjs`: **34/34** on the frozen build, including 54 pages,
   six labels per page, directory coverage, 404 cases, delivery-cookie preservation, scoped/ordinary
   admin refusals, drift gates, audit/origin scope, unpublish → public 404 → authorized preview 200 →
-  republish 200. Log: `qa-artifacts/visual/discover-africa/acceptance-final8.log`.
-- 324/324 theme image URLs resolve on disk; 70 distinct assets; 324/324 alt; 101 GENERATED,
-  127 APPROVED_EXISTING, 96 ILLUSTRATION. No null images.
+  republish 200. Log: `qa-artifacts/visual/discover-africa/acceptance-final9.log`.
+- 324/324 theme image URLs resolve on disk; 82 distinct assets; 324/324 alt; 122 GENERATED,
+  127 APPROVED_EXISTING, 75 ILLUSTRATION. No null images.
 - Automated axe WCAG 2.0/2.1 A+AA checks: directory, Ghana landing and storefront at 390 and 1440
   reported 0 violations; `/admin/countries` at 390 and 1440 reported 0 after making the audit-history
   scroll region keyboard-focusable. Evidence: `qa-artifacts/visual/discover-africa/axe.json` and
   `axe-admin-final.json`.
-- Kie: 12 generated WebP, 72 credits, model `gpt-image-2-5-flare-text-to-image`, tasks recorded in
-  `docs/countries/imagery-manifest.md`. Further host approvals timed out; no REST bypass, no top-up.
+- Kie: 24 generated WebP, 144 credits, model `gpt-image-2-5-flare-text-to-image`, tasks recorded in
+  `docs/countries/imagery-manifest.md`. The second batch replaced the generic mineral illustration with
+  specific diamonds/copper/iron/bauxite/uranium/coal/salt/aluminium/phosphate/soda-ash/lithium/rutile
+  photography. No REST bypass, no top-up.
 - Visual evidence under `qa-artifacts/visual/discover-africa/` (390/768/1440 directory, row, landing,
   admin; reviewer folders).
 

@@ -2,7 +2,7 @@
 
 Date: 2026-11-14. Model: `gpt-image-2-5-flare-text-to-image` via the connected Kie.ai MCP, `flare`, `1K`, `1:1`. Price recorded by the MCP plan: **6 credits per image** (rate card `2026-10-28`; USD conversion shown by the tool was $0.03 at the tool's published $0.005/credit basis). **No credits were purchased and no top-up was performed.**
 
-## Generated photography (12 images, 72 credits)
+## Generated photography (24 images, 144 credits)
 
 Every prompt excluded baked-in text, logos, flags, landmarks, brands and people. Assets were downloaded from the provider result URL, resized/cropped to 900×900 and encoded as WebP (quality 82). Each is illustrative editorial imagery; none is evidence of actual NaijaDeals stock or a specific country's product.
 
@@ -20,14 +20,26 @@ Every prompt excluded baked-in text, logos, flags, landmarks, brands and people.
 | `public/generated/countries/theme-gum-resin.webp` | Gum arabic / frankincense | `48782fae4e460f11876c26e4c213db37` | 6 | Amber resin lumps in a wooden bowl | Accepted |
 | `public/generated/countries/theme-cattle.webp` | Livestock / beef | `7fbfc398332a57b34d70fed90daa75e9` | 6 | Small cattle herd on dry grassland | Accepted; no people/brands |
 | `public/generated/countries/theme-figs-dates.webp` | Figs / dates | `1336d109ba1fc457ce6a594e167de8a1` | 6 | Figs and dates in a ceramic bowl | Accepted |
+| `public/generated/countries/theme-diamonds.webp` | Diamonds / jewellery | `67432c8fc405817560ef05beeba6f422` | 6 | Rough diamond crystals in a dark dish | Accepted |
+| `public/generated/countries/theme-copper.webp` | Copper | `3573cae909da636f552ae05369cfbd25` | 6 | Copper ore and cathode sheet | Accepted |
+| `public/generated/countries/theme-iron-ore.webp` | Iron ore | `2f4673047c1cad118d372b1deaf2ff16` | 6 | Iron ore rocks | Accepted |
+| `public/generated/countries/theme-bauxite.webp` | Bauxite | `912a5ae89c0d9ca492061528db0c47a3` | 6 | Reddish bauxite ore | Accepted |
+| `public/generated/countries/theme-uranium.webp` | Uranium | `8b4093aacb05078772393e3362757020` | 6 | Uranium ore samples, no radiation symbols | Accepted |
+| `public/generated/countries/theme-coal.webp` | Coal | `eb6aafe645b9c01918c27cb6aa415fc4` | 6 | Black coal lumps | Accepted |
+| `public/generated/countries/theme-salt.webp` | Salt | `cd64c41ec300958481521dcae0512ce5` | 6 | Coarse white salt crystals | Accepted |
+| `public/generated/countries/theme-aluminium.webp` | Aluminium | `42a5895005a690a630c6c60778ccf270` | 6 | Stacked aluminium ingots | Accepted |
+| `public/generated/countries/theme-phosphate.webp` | Phosphate | `036f4dad48d8158f44683e0ce1ac7b56` | 6 | Phosphate rock | Accepted |
+| `public/generated/countries/theme-soda-ash.webp` | Soda ash | `817da062c4a98a1f044961c582fc0a97` | 6 | White soda ash powder | Accepted |
+| `public/generated/countries/theme-lithium.webp` | Lithium | `6c616984a5281e2e483b29e84584de5d` | 6 | Pale lithium-bearing ore | Accepted |
+| `public/generated/countries/theme-rutile.webp` | Rutile | `469662cd0cfd1b405d2d74a1113ad571` | 6 | Dark rutile mineral sand | Accepted |
 
-**Actual Discover Africa spend: 72 credits.** 12 provider tasks completed successfully; all 12 assets are integrated.
+**Actual Discover Africa spend: 144 credits.** 24 provider tasks completed successfully; all 24 assets are integrated.
 
 The host approval path for further `prepare_media_generation` calls timed out and returned no plan; no provider task was created for those attempts, so no additional credits were consumed. The implementation does **not** bypass that approval through another interface. Themes without an accurate generated photograph use approved existing project photography or an original code-native vector illustration.
 
 ## Reused approved assets
 
-127 tiles use approved existing project photography and 96 use original vector illustrations. Of the 324 tiles, 101 use the 12 generated photographs (all 12 are now referenced). Matching is explicit in `scripts/seed-country-discovery.ts`; examples: cocoa, vanilla, cloves, cashew, shea, rice, maize, millet, plantain, cassava, avocado, mango, citrus, pineapple, fish, poultry, spices, textiles, baskets and solar. These are illustrative project assets; they are not country-specific product photography and do not assert origin.
+127 tiles use approved existing project photography and 75 use original vector illustrations. Of the 324 tiles, 122 use the 24 generated photographs (all 24 are now referenced). Matching is explicit in `scripts/seed-country-discovery.ts`; examples: cocoa, vanilla, cloves, cashew, shea, rice, maize, millet, plantain, cassava, avocado, mango, citrus, pineapple, fish, poultry, spices, textiles, baskets and solar. These are illustrative project assets; they are not country-specific product photography and do not assert origin.
 
 ## Original vector illustrations (25 assets, 0 credits)
 
