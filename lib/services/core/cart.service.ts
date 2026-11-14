@@ -1,5 +1,7 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
+import { availabilityProjection } from "./availability";
 import { listPublicEligibleProductIds } from "./catalog.service";
 
 const cartInclude = {
@@ -9,7 +11,14 @@ const cartInclude = {
         include: {
           vendor: true,
           stock: true,
-          images: { orderBy: { sortOrder: "asc" as const }, take: 1 }
+          images: { orderBy: { sortOrder: "asc" as const }, take: 1 },
+          // Only active variants matter for cart availability: an inactive
+          // option is not purchasable, and a product-level line on a product
+          // that now sells by variant must ask for a choice.
+          variants: {
+            where: { isActive: true },
+            select: { id: true, isActive: true, stock: true, reserved: true }
+          }
         }
       },
       variant: true
@@ -18,18 +27,126 @@ const cartInclude = {
   }
 };
 
-export async function getOrCreateActiveCart(userId: string) {
-  const existing = await prisma.cart.findFirst({
-    where: { userId, status: "ACTIVE" },
-    include: cartInclude
-  });
-  if (existing) return existing;
-  return prisma.cart.create({ data: { userId }, include: cartInclude });
+type CartWithItems = Prisma.CartGetPayload<{ include: typeof cartInclude }>;
+type CartItemWithRelations = CartWithItems["items"][number];
+
+export type CartLineAvailability = {
+  /** Units a customer can add or move to the active cart now. */
+  available: number;
+  purchasable: boolean;
+  reason: "product_unavailable" | "vendor_unavailable" | "variant_unavailable" | "variant_required" | "out_of_stock" | null;
+};
+
+/**
+ * Server-authoritative availability for one cart line.
+ *
+ * Saved-for-later lines are deliberately included: deactivating a variant is
+ * allowed while an unrelated customer has it saved, and that saved line must
+ * then report itself unavailable (with the option to remove or choose another
+ * option) instead of silently failing at checkout.
+ */
+function cartLineAvailability(item: CartItemWithRelations): CartLineAvailability {
+  if (item.product.status !== "ACTIVE") {
+    return { available: 0, purchasable: false, reason: "product_unavailable" };
+  }
+  if (item.product.vendor.status !== "VERIFIED") {
+    return { available: 0, purchasable: false, reason: "vendor_unavailable" };
+  }
+  if (item.variant) {
+    if (!item.variant.isActive) {
+      return { available: 0, purchasable: false, reason: "variant_unavailable" };
+    }
+    const available = availabilityProjection({ variants: [item.variant] }).available;
+    return {
+      available,
+      purchasable: available > 0,
+      reason: available > 0 ? null : "out_of_stock"
+    };
+  }
+  if (item.product.variants.length > 0) {
+    // Variant stock and product-level stock are separate pools. A line that
+    // did not choose an option is not fulfilling an active variant product.
+    return { available: 0, purchasable: false, reason: "variant_required" };
+  }
+  const available = availabilityProjection({ stock: item.product.stock }).available;
+  return {
+    available,
+    purchasable: available > 0,
+    reason: available > 0 ? null : "out_of_stock"
+  };
 }
 
-function availableStock(item: { variant?: { stock: number; reserved: number } | null; product: { stock: { quantity: number; reserved: number } | null } }) {
-  if (item.variant) return item.variant.stock - item.variant.reserved;
-  return item.product.stock ? item.product.stock.quantity - item.product.stock.reserved : 0;
+function decorateCart(cart: CartWithItems) {
+  return {
+    ...cart,
+    items: cart.items.map((item) => ({ ...item, availability: cartLineAvailability(item) }))
+  };
+}
+
+export type DecoratedCart = ReturnType<typeof decorateCart>;
+
+/**
+ * Serialise every write for one customer's cart.
+ *
+ * The user row lock makes cart creation single-writer (there is no unique
+ * constraint on one ACTIVE cart per user), and taking it before the cart row
+ * keeps the lock order identical to checkout: user -> cart -> stock/variant.
+ */
+async function lockUserCart(tx: Prisma.TransactionClient, userId: string) {
+  await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+}
+
+async function activeCartIdForUpdate(tx: Prisma.TransactionClient, userId: string) {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM "Cart"
+    WHERE "userId" = ${userId} AND status = 'ACTIVE'
+    ORDER BY "createdAt" DESC, id DESC
+    FOR UPDATE
+  `;
+  if (rows[0]) return rows[0].id;
+  const created = await tx.cart.create({ data: { userId }, select: { id: true } });
+  return created.id;
+}
+
+async function loadCart(tx: Prisma.TransactionClient, cartId: string) {
+  return tx.cart.findUniqueOrThrow({ where: { id: cartId }, include: cartInclude });
+}
+
+/**
+ * The customer's active cart, newest first (the same cart checkout claims).
+ * Creation is serialised on the user row so two first-time requests cannot
+ * leave two ACTIVE carts behind.
+ */
+export async function getOrCreateActiveCart(userId: string): Promise<DecoratedCart> {
+  return prisma.$transaction(async (tx) => {
+    await lockUserCart(tx, userId);
+    const cartId = await activeCartIdForUpdate(tx, userId);
+    return decorateCart(await loadCart(tx, cartId));
+  });
+}
+
+type LockedVariant = { id: string; isActive: boolean; stock: number; reserved: number };
+type LockedStock = { quantity: number; reserved: number };
+
+async function lockProductVariant(
+  tx: Prisma.TransactionClient,
+  productId: string,
+  variantId: string
+): Promise<LockedVariant | null> {
+  const rows = await tx.$queryRaw<LockedVariant[]>`
+    SELECT id, "isActive", stock, reserved
+    FROM "ProductVariant"
+    WHERE id = ${variantId} AND "productId" = ${productId}
+    FOR UPDATE
+  `;
+  return rows[0] ?? null;
+}
+
+async function lockProductStock(tx: Prisma.TransactionClient, productId: string): Promise<LockedStock | null> {
+  const rows = await tx.$queryRaw<LockedStock[]>`
+    SELECT "quantity", "reserved" FROM "InventoryStock" WHERE "productId" = ${productId} FOR UPDATE
+  `;
+  return rows[0] ?? null;
 }
 
 /**
@@ -41,6 +158,11 @@ function availableStock(item: { variant?: { stock: number; reserved: number } | 
  * the product's own fulfilment country, which still enforces the public
  * category/regulated rules rather than skipping them. Preview authorization is
  * forwarded to the activation gate only; it never bypasses product eligibility.
+ *
+ * The stock/variant row is locked before the quantity check, so a concurrent
+ * checkout reservation, seller quantity edit or variant deactivation cannot
+ * interleave between the read and the cart write. Variant lines and product
+ * lines use the same lock the transition/quantity guards use.
  */
 export async function addCartItem(input: {
   userId: string;
@@ -91,9 +213,9 @@ export async function addCartItem(input: {
     );
   }
 
-  let variant = null;
-  if (input.variantId) {
-    variant = product.variants.find((candidate) => candidate.id === input.variantId && candidate.isActive) ?? null;
+  const variantId = input.variantId ?? null;
+  if (variantId) {
+    const variant = product.variants.find((candidate) => candidate.id === variantId && candidate.isActive);
     if (!variant) throw new ApiError(400, "variant_unavailable", "The selected option is not available.");
   } else if (product.variants.some((candidate) => candidate.isActive)) {
     // Variant stock and product-level stock are separate pools. Never sell the
@@ -101,60 +223,150 @@ export async function addCartItem(input: {
     throw new ApiError(400, "variant_required", "Choose a product option before adding this item to the cart.");
   }
 
-  const cart = await getOrCreateActiveCart(input.userId);
-  const existing = cart.items.find(
-    (item) => item.productId === input.productId && (item.variantId ?? null) === (input.variantId ?? null)
-  );
-  const desired = (existing?.quantity ?? 0) + quantity;
-  const stock = variant ? variant.stock - variant.reserved : product.stock ? product.stock.quantity - product.stock.reserved : 0;
-  if (desired > stock) throw new ApiError(409, "insufficient_stock", `Only ${Math.max(stock, 0)} unit(s) available.`);
+  return prisma.$transaction(async (tx) => {
+    await lockUserCart(tx, input.userId);
+    const cartId = await activeCartIdForUpdate(tx, input.userId);
 
-  if (existing) {
-    await prisma.cartItem.update({ where: { id: existing.id }, data: { quantity: desired } });
-  } else {
-    await prisma.cartItem.create({
-      data: {
-        cartId: cart.id,
-        productId: input.productId,
-        variantId: input.variantId ?? null,
-        quantity
+    let available: number;
+    if (variantId) {
+      const locked = await lockProductVariant(tx, product.id, variantId);
+      if (!locked || !locked.isActive) {
+        throw new ApiError(400, "variant_unavailable", "The selected option is not available.");
       }
+      available = availabilityProjection({ variants: [locked] }).available;
+    } else {
+      // Locking the stock row serialises this add with a seller quantity edit
+      // and with `syncProductVariants`, which takes the same row first.
+      const locked = await lockProductStock(tx, product.id);
+      const activeVariants = await tx.productVariant.count({ where: { productId: product.id, isActive: true } });
+      if (activeVariants > 0) {
+        throw new ApiError(400, "variant_required", "Choose a product option before adding this item to the cart.");
+      }
+      available = availabilityProjection({ stock: locked }).available;
+    }
+
+    const existing = await tx.cartItem.findFirst({
+      where: { cartId, productId: input.productId, variantId }
     });
-  }
-  return getOrCreateActiveCart(input.userId);
+    const desired = (existing?.quantity ?? 0) + quantity;
+    if (desired > available) {
+      throw new ApiError(409, "insufficient_stock", `Only ${Math.max(available, 0)} unit(s) available.`);
+    }
+
+    if (existing) {
+      await tx.cartItem.update({ where: { id: existing.id }, data: { quantity: desired } });
+    } else {
+      await tx.cartItem.create({
+        data: {
+          cartId,
+          productId: input.productId,
+          variantId,
+          quantity
+        }
+      });
+    }
+    return decorateCart(await loadCart(tx, cartId));
+  });
 }
 
-export async function updateCartItem(input: { userId: string; itemId: string; quantity: number; savedForLater?: boolean }) {
-  const cart = await getOrCreateActiveCart(input.userId);
-  const item = cart.items.find((candidate) => candidate.id === input.itemId);
-  if (!item) throw new ApiError(404, "cart_item_not_found", "Cart item not found.");
-  if (input.quantity <= 0) {
-    await prisma.cartItem.delete({ where: { id: item.id } });
-    return getOrCreateActiveCart(input.userId);
-  }
-  const quantity = Math.trunc(input.quantity);
-  if (!Number.isInteger(quantity) || quantity > 10) {
+export async function updateCartItem(input: {
+  userId: string;
+  itemId: string;
+  quantity: number;
+  savedForLater?: boolean;
+}) {
+  const requestedQuantity = Math.trunc(input.quantity);
+  if (!Number.isInteger(requestedQuantity) || requestedQuantity > 10) {
     throw new ApiError(400, "validation_error", "Quantity must be between 1 and 10.");
   }
-  if (!input.savedForLater && quantity > availableStock(item)) {
-    throw new ApiError(409, "insufficient_stock", `Only ${Math.max(availableStock(item), 0)} unit(s) available.`);
-  }
-  await prisma.cartItem.update({
-    where: { id: item.id },
-    data: { quantity, ...(input.savedForLater === undefined ? {} : { savedForLater: input.savedForLater }) }
+
+  return prisma.$transaction(async (tx) => {
+    await lockUserCart(tx, input.userId);
+    const cartId = await activeCartIdForUpdate(tx, input.userId);
+    const item = await tx.cartItem.findFirst({
+      where: { id: input.itemId, cartId },
+      include: {
+        variant: true,
+        product: {
+          include: {
+            stock: true,
+            variants: { where: { isActive: true }, select: { id: true, isActive: true, stock: true, reserved: true } }
+          }
+        }
+      }
+    });
+    if (!item) throw new ApiError(404, "cart_item_not_found", "Cart item not found.");
+
+    if (requestedQuantity <= 0) {
+      await tx.cartItem.delete({ where: { id: item.id } });
+      return decorateCart(await loadCart(tx, cartId));
+    }
+
+    // `savedForLater` is a display state, not a reservation. Only a line that
+    // will be inside the active cart needs current stock.
+    const willBeActive = input.savedForLater === undefined ? !item.savedForLater : !input.savedForLater;
+    if (!willBeActive) {
+      await tx.cartItem.update({
+        where: { id: item.id },
+        data: { quantity: requestedQuantity, ...(input.savedForLater === undefined ? {} : { savedForLater: true }) }
+      });
+      return decorateCart(await loadCart(tx, cartId));
+    }
+
+    let available: number;
+    if (item.variantId) {
+      // Re-read the variant under its row lock: a concurrent deactivation takes
+      // this lock, then counts live cart lines. A saved line may be deactivated
+      // while saved; moving it back to the cart must therefore fail cleanly.
+      const locked = await lockProductVariant(tx, item.productId, item.variantId);
+      if (!locked || !locked.isActive) {
+        throw new ApiError(
+          409,
+          "variant_unavailable",
+          "This option is no longer available. Remove the saved item or choose another option."
+        );
+      }
+      available = availabilityProjection({ variants: [locked] }).available;
+    } else {
+      const locked = await lockProductStock(tx, item.productId);
+      const activeVariants = await tx.productVariant.count({ where: { productId: item.productId, isActive: true } });
+      if (activeVariants > 0) {
+        throw new ApiError(
+          409,
+          "variant_required",
+          "This listing now sells by option. Remove the saved item or choose another option."
+        );
+      }
+      available = availabilityProjection({ stock: locked }).available;
+    }
+
+    if (item.product.status !== "ACTIVE") {
+      throw new ApiError(409, "product_unavailable", "This listing is no longer available. Remove it from your cart.");
+    }
+    if (requestedQuantity > available) {
+      throw new ApiError(409, "insufficient_stock", `Only ${Math.max(available, 0)} unit(s) available.`);
+    }
+
+    await tx.cartItem.update({
+      where: { id: item.id },
+      data: { quantity: requestedQuantity, ...(input.savedForLater === undefined ? {} : { savedForLater: false }) }
+    });
+    return decorateCart(await loadCart(tx, cartId));
   });
-  return getOrCreateActiveCart(input.userId);
 }
 
 export async function deleteCartItem(input: { userId: string; itemId: string }) {
-  const cart = await getOrCreateActiveCart(input.userId);
-  const item = cart.items.find((candidate) => candidate.id === input.itemId);
-  if (!item) throw new ApiError(404, "cart_item_not_found", "Cart item not found.");
-  await prisma.cartItem.delete({ where: { id: item.id } });
-  return getOrCreateActiveCart(input.userId);
+  return prisma.$transaction(async (tx) => {
+    await lockUserCart(tx, input.userId);
+    const cartId = await activeCartIdForUpdate(tx, input.userId);
+    const item = await tx.cartItem.findFirst({ where: { id: input.itemId, cartId }, select: { id: true } });
+    if (!item) throw new ApiError(404, "cart_item_not_found", "Cart item not found.");
+    await tx.cartItem.delete({ where: { id: item.id } });
+    return decorateCart(await loadCart(tx, cartId));
+  });
 }
 
-export function cartTotals(cart: Awaited<ReturnType<typeof getOrCreateActiveCart>>) {
+export function cartTotals(cart: DecoratedCart) {
   const active = cart.items.filter((item) => !item.savedForLater);
   const subtotalKobo = active.reduce((total, item) => {
     const unit = item.variant ? item.variant.priceKobo : item.product.priceKobo;

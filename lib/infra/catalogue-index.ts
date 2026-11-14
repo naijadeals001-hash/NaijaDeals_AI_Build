@@ -1,8 +1,8 @@
 import {
-  availableQuantity,
   isFixtureListing,
   listProducts
 } from "@/lib/services/core/catalog.service";
+import { availabilityProjection } from "@/lib/services/core/availability";
 import { cacheSetJson, cached } from "./cache";
 import {
   deleteProducts,
@@ -35,7 +35,9 @@ function toDocument(product: CatalogueRow): ProductDocument {
     category: product.category?.name ?? null,
     // Meilisearch stores numbers; kobo values stay integers so no rounding occurs.
     priceKobo: Number(product.priceKobo),
-    inStock: availableQuantity(product) > 0,
+    // One shared projection: variant stock wins and product stock is never
+    // added to it. The storefront and search therefore agree on availability.
+    inStock: availabilityProjection({ variants: product.variants, stock: product.stock }).available > 0,
     href: `/product/${product.id}`,
     updatedAt: product.updatedAt.toISOString()
   };

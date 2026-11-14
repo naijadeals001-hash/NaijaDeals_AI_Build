@@ -169,6 +169,11 @@ export async function checkout(input: {
   const created = await prisma
     .$transaction(
       async (tx) => {
+        // Serialise cart creation/claiming for this customer with the cart
+        // service (user -> cart -> stock/variant). Without it a concurrent
+        // `GET /api/cart` could create a second ACTIVE cart while the saved
+        // lines are being moved after this cart is claimed.
+        await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${input.userId} FOR UPDATE`;
         await lockActiveCart(tx, input.userId);
 
         const cart = await tx.cart.findFirst({
@@ -214,14 +219,29 @@ export async function checkout(input: {
           }
           throw new ApiError(400, "empty_cart", "Your cart is empty.");
         }
-        if (cart.items.length === 0) throw new ApiError(400, "empty_cart", "Your cart is empty.");
 
-        const demoItem = cart.items.find((item) => item.product.isSample);
+        // `savedForLater` lines are not reservations and must never be
+        // purchased by a checkout the customer started from the active cart.
+        // They are preserved by moving them into a fresh ACTIVE cart under the
+        // same lock when the current cart is claimed.
+        const savedItems = cart.items.filter((item) => item.savedForLater);
+        const items = cart.items.filter((item) => !item.savedForLater);
+        if (items.length === 0) {
+          throw new ApiError(
+            400,
+            "empty_cart",
+            savedItems.length > 0
+              ? "Your cart has no active items. Move a saved item to your cart before checking out."
+              : "Your cart is empty."
+          );
+        }
+
+        const demoItem = items.find((item) => item.product.isSample);
         if (demoItem) {
           throw new ApiError(409, "demo_inventory", "Demo inventory is for visual review only and cannot be purchased. Remove demo items before checking out.");
         }
 
-        const unavailable = cart.items.find(
+        const unavailable = items.find(
           (item) =>
             item.product.status !== "ACTIVE" ||
             item.product.vendor.status !== "VERIFIED" ||
@@ -235,7 +255,7 @@ export async function checkout(input: {
         // The selected market is the delivery market. A cart row listed for
         // another country cannot be converted into an order here, even when it
         // was added before the customer changed location.
-        const crossMarket = cart.items.find(
+        const crossMarket = items.find(
           (item) => item.product.countryCode.trim().toUpperCase() !== country.code
         );
         if (crossMarket) {
@@ -255,9 +275,9 @@ export async function checkout(input: {
           countryCode: country.code,
           cityCode: input.address.city,
           previewAuthorized: input.previewAuthorized,
-          productIds: cart.items.map((item) => item.productId)
+          productIds: items.map((item) => item.productId)
         });
-        const ineligible = cart.items.find((item) => !eligibleProductIds.has(item.productId));
+        const ineligible = items.find((item) => !eligibleProductIds.has(item.productId));
         if (ineligible) {
           throw new ApiError(
             409,
@@ -266,8 +286,8 @@ export async function checkout(input: {
           );
         }
 
-        const byVendor = new Map<string, typeof cart.items>();
-        for (const item of cart.items) {
+        const byVendor = new Map<string, typeof items>();
+        for (const item of items) {
           const group = byVendor.get(item.product.vendorId) ?? [];
           group.push(item);
           byVendor.set(item.product.vendorId, group);
@@ -285,6 +305,29 @@ export async function checkout(input: {
             "checkout_conflict",
             "Another checkout claimed this cart. Reload your orders before retrying."
           );
+        }
+
+        if (savedItems.length > 0) {
+          // There should be no other ACTIVE cart for this customer (the user
+          // row lock above serialises creation), but a pre-existing duplicate is
+          // merged into rather than leaving two active carts behind.
+          const existingActive = await tx.cart.findFirst({
+            where: { userId: input.userId, status: "ACTIVE" },
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+            select: { id: true }
+          });
+          const nextCartId =
+            existingActive?.id ??
+            (
+              await tx.cart.create({
+                data: { userId: input.userId, status: "ACTIVE" },
+                select: { id: true }
+              })
+            ).id;
+          await tx.cartItem.updateMany({
+            where: { cartId: cart.id, id: { in: savedItems.map((item) => item.id) } },
+            data: { cartId: nextCartId }
+          });
         }
 
         const orders: CheckoutOrderSummary[] = [];

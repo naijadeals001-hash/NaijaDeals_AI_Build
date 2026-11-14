@@ -17,6 +17,14 @@ variant payloads.
   variants exist are refused with `409 variant_stock_managed`.
 - Product publication validation uses the same rule. A variant product needs at
   least one active, priced variant with available stock.
+- Quantity edits and variant transitions take the same `InventoryStock` row lock;
+  absolute quantity cannot fall below reserved units. Refund, cancellation and
+  return restocking uses a durable order-level marker and restores the variant
+  source exactly once; a product-level order item whose listing later became
+  variant-managed is suppressed rather than credited to `InventoryStock`.
+- Saved items, the Control Center preview/list, the homepage rail and both search
+  index writers use the shared availability projection. A variant-managed saved
+  item offers "Choose options"; no surface renders "N available of 0 on hand".
 
 ## Payload and validation
 
@@ -30,8 +38,11 @@ may carry `id` (ownership is checked), `name`, `sku`, `priceKobo`, `stock`,
 listing country currency).
 
 Existing variants omitted from a replacement set are deactivated, not deleted.
-Deactivation is refused while the variant has reserved units or live cart lines.
-Historical order items keep their variant reference. Sellers still cannot
+Deactivation is refused while the variant has reserved units or an unsaved line in
+an ACTIVE cart. Saved-for-later lines do not reserve stock and do not block
+deactivation; they remain readable and become unavailable with a "choose
+options" path. Historical CHECKED_OUT cart rows and order items keep their
+variant reference and never block deactivation. Sellers still cannot
 publish; the Control Center remains the publisher, and every create/update
 writes before/after audit metadata including variants.
 

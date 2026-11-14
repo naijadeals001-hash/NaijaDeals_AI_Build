@@ -16,8 +16,23 @@
  */
 import { prisma } from "../lib/prisma";
 import { createSellerProduct, updateSellerProduct } from "../lib/services/core/seller.service";
+import { publishProduct } from "../lib/services/core/catalogue-admin.service";
+import type { SessionUser } from "../lib/auth/session";
 
 const OWNER = process.argv.find((arg) => arg.startsWith("--owner="))?.slice(8) ?? "seller@naijadeals.local";
+// Publication now goes through the Control Center moderation workflow, so the
+// script needs a real staff actor with catalogue moderation permission. The
+// seller service itself cannot publish (admin_publication_required).
+const ADMIN_EMAIL = process.argv.find((arg) => arg.startsWith("--admin="))?.slice(8) ?? "admin@naijadeals.local";
+
+async function adminActor(): Promise<SessionUser> {
+  const admin = await prisma.user.findUnique({
+    where: { email: ADMIN_EMAIL },
+    include: { roles: { include: { role: true } }, vendors: true }
+  });
+  if (!admin) throw new Error(`Admin ${ADMIN_EMAIL} not found; cannot publish listings through moderation.`);
+  return admin as SessionUser;
+}
 
 type Listing = {
   name: string;
@@ -72,6 +87,7 @@ const LISTINGS: Listing[] = [
 async function main() {
   const owner = await prisma.user.findUnique({ where: { email: OWNER }, select: { id: true, name: true } });
   if (!owner) throw new Error(`Seller ${OWNER} not found.`);
+  const actor = await adminActor();
 
   const categories = await prisma.category.findMany({ select: { id: true, slug: true } });
   const categoryId = (slug: string) => {
@@ -87,12 +103,15 @@ async function main() {
   for (const listing of LISTINGS) {
     const existing = await prisma.product.findFirst({
       where: { name: listing.name, vendor: { is: { owner: { email: OWNER } } } },
-      select: { id: true, isSample: true }
+      select: { id: true, isSample: true, status: true }
     });
     if (existing) {
       if (existing.isSample) skipped.push(`${listing.name} (sample row with the same name exists)`);
       // Keep price and stock aligned with this list on re-runs.
       await updateSellerProduct(owner.id, existing.id, { priceKobo: listing.priceKobo, quantity: listing.quantity });
+      // Seller edits cannot publish; an existing draft is published through the
+      // same Control Center moderation workflow used for new listings below.
+      if (existing.status !== "ACTIVE") await publishProduct({ actor, id: existing.id });
       updated += 1;
       continue;
     }
@@ -110,6 +129,9 @@ async function main() {
     // createSellerProduct generates a random slug suffix; give the listing its
     // stable, human-readable slug and declare the rights for physical goods.
     await prisma.product.update({ where: { id: product.id }, data: { slug: listing.slug } });
+    // The seller service only creates DRAFT rows now. Publication is a Control
+    // Center moderation action with validation and audit.
+    await publishProduct({ actor, id: product.id });
     created += 1;
   }
 

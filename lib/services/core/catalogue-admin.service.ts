@@ -14,6 +14,7 @@ import {
   type AttributeDefinition
 } from "@/lib/services/taxonomy/eligibility";
 import { recordAudit } from "./audit.service";
+import { availabilityProjection } from "./availability";
 import {
   activeVariantStock,
   assertProductQuantityAllowed,
@@ -606,12 +607,7 @@ export async function getCatalogueProductPreview(actor: SessionUser, id: string)
     })),
     variants: product.variants.map((variant) => variantSnapshot(variant)),
     stock: product.stock,
-    available:
-      product.variants.some((variant) => variant.isActive)
-        ? activeVariantStock(product.variants).available
-        : product.stock
-          ? Math.max(product.stock.quantity - product.stock.reserved, 0)
-          : 0,
+    available: availabilityProjection({ variants: product.variants, stock: product.stock }).available,
     validation: { valid: validation.valid, issues: validation.issues }
   };
 }
@@ -844,7 +840,9 @@ export async function createProduct(input: {
         metadata: {
           before: null,
           after: productAuditSnapshot(created),
-          variants: variantState ? { before: variantState.before, after: variantState.after } : null,
+          // A create without a variants payload has an actual empty variant
+          // set; record that state rather than null.
+          variants: variantState ? { before: variantState.before, after: variantState.after } : { before: [], after: [] },
           seller: vendorSnapshot(vendor),
           department: eligible.category.name,
           attributes: attributes ?? null,
@@ -888,13 +886,28 @@ export async function createProduct(input: {
   }
 }
 
-async function assertStockNotBelowReserved(productId: string, quantity: number) {
-  const stock = await prisma.inventoryStock.findUnique({ where: { productId }, select: { reserved: true } });
-  if (stock && quantity < stock.reserved) {
+/**
+ * The authoritative reserved-stock guard.
+ *
+ * It runs inside the caller's transaction after locking the stock row, so a
+ * concurrent reservation either commits before this check (and is seen) or
+ * waits until the catalogue write finishes. The check is not repeated outside
+ * the transaction because a pre-check cannot be authoritative.
+ */
+async function assertStockNotBelowReserved(
+  tx: Prisma.TransactionClient,
+  productId: string,
+  quantity: number
+) {
+  const locked = await tx.$queryRaw<Array<{ reserved: number }>>`
+    SELECT "reserved" FROM "InventoryStock" WHERE "productId" = ${productId} FOR UPDATE
+  `;
+  const reserved = locked[0]?.reserved ?? 0;
+  if (quantity < reserved) {
     throw new ApiError(
       409,
       "stock_below_reserved",
-      `Inventory cannot be set to ${quantity} while ${stock.reserved} units are reserved by open orders.`
+      `Inventory cannot be set to ${quantity} while ${reserved} units are reserved by open orders.`
     );
   }
 }
@@ -992,7 +1005,6 @@ export async function updateProduct(input: {
     : null;
   const quantity =
     input.quantity === undefined ? undefined : integer(input.quantity, "Inventory quantity", 0, 1_000_000);
-  if (quantity !== undefined) await assertStockNotBelowReserved(existing.id, quantity);
   const variants = parseVariantsPayload(input.variants);
   const lowStockLevel =
     input.lowStockLevel === undefined ? undefined : integer(input.lowStockLevel, "Low stock level", 0, 1_000_000);
@@ -1000,6 +1012,16 @@ export async function updateProduct(input: {
 
   try {
     const product = await prisma.$transaction(async (tx) => {
+      // A request that omits `variants` leaves the rows untouched. Read the
+      // actual preserved rows inside the transaction so the audit records them
+      // instead of null/empty arrays.
+      const preservedVariantsBefore =
+        variants === undefined
+          ? await tx.productVariant.findMany({
+              where: { productId: existing.id },
+              orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+            })
+          : null;
       const updated = await tx.product.update({
         where: { id: existing.id },
         data: {
@@ -1030,24 +1052,13 @@ export async function updateProduct(input: {
               allowZeroProductStock: quantity === 0
             })
           : null;
-      if (quantity !== undefined) await assertProductQuantityAllowed(tx, existing.id, quantity);
+      if (quantity !== undefined) {
+        await assertProductQuantityAllowed(tx, existing.id, quantity);
+        // Reservation writes take the same row lock, so the absolute quantity
+        // cannot drop below units already promised to open orders.
+        await assertStockNotBelowReserved(tx, existing.id, quantity);
+      }
       if (quantity !== undefined || lowStockLevel !== undefined) {
-        if (quantity !== undefined) {
-          // The pre-check above is only a fast failure. Reservation writes take
-          // the same row lock, so re-read it inside the transaction before the
-          // absolute quantity can drop below units already promised to orders.
-          const locked = await tx.$queryRaw<Array<{ reserved: number }>>`
-            SELECT "reserved" FROM "InventoryStock" WHERE "productId" = ${existing.id} FOR UPDATE
-          `;
-          const reserved = locked[0]?.reserved ?? 0;
-          if (quantity < reserved) {
-            throw new ApiError(
-              409,
-              "stock_below_reserved",
-              `Inventory cannot be set to ${quantity} while ${reserved} units are reserved by open orders.`
-            );
-          }
-        }
         await tx.inventoryStock.upsert({
           where: { productId: existing.id },
           create: {
@@ -1096,7 +1107,14 @@ export async function updateProduct(input: {
           imageCount: fresh.images.length,
           quantity: fresh.stock?.quantity ?? null,
           isDemo: fresh.isDemo,
-          variants: variantState ? { before: variantState.before, after: variantState.after } : null
+          // When the request omits `variants` the rows are untouched. Audit the
+          // actual preserved rows so the trail never claims null/empty variants.
+          variants: variantState
+            ? { before: variantState.before, after: variantState.after }
+            : {
+                before: (preservedVariantsBefore ?? []).map(variantSnapshot),
+                after: fresh.variants.map(variantSnapshot)
+              }
         }
       });
       return fresh;
@@ -1237,7 +1255,7 @@ export async function validateProduct(actor: SessionUser, id: string) {
       countryCode: product.countryCode,
       quantity: activeVariants.length > 0 ? null : product.stock?.quantity ?? null,
       reserved: activeVariants.length > 0 ? null : product.stock?.reserved ?? null,
-      available: activeVariants.length > 0 ? variantStock.available : product.stock ? Math.max(product.stock.quantity - product.stock.reserved, 0) : 0,
+      available: availabilityProjection({ variants: product.variants, stock: product.stock }).available,
       imageCount: product.images.length,
       isDemo: product.isDemo,
       departmentActive: product.category.isActive

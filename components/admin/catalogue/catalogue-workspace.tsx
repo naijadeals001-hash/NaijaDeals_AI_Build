@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { COUNTRIES } from "@/lib/config/commerce";
+import { availabilityProjection } from "@/lib/services/core/availability";
 
 type AttributeDefinition = {
   key: string;
@@ -179,22 +180,25 @@ function formatMoney(priceKobo: string | number | bigint, currency: string | nul
   return currency === "NGN" ? `₦${amount} NGN` : `${currency} ${amount}`;
 }
 
-function activeVariants(product: Product) {
-  return product.variants.filter((variant) => variant.isActive);
-}
-
-function availableStock(product: Product) {
-  const variants = activeVariants(product);
-  if (variants.length > 0) {
-    return variants.reduce((total, variant) => total + Math.max(variant.stock - variant.reserved, 0), 0);
+/**
+ * The single stock sentence shown in the Control Center list and preview.
+ *
+ * The shared projection decides which source is authoritative. A product with
+ * no inventory record is reported as unavailable instead of "0 on hand", and a
+ * variant-managed product never pairs an available count with a zero on-hand
+ * total from a different source.
+ */
+export function catalogueStockSentence(input: {
+  variants?: Array<{ isActive?: boolean | null; stock: number; reserved: number }> | null;
+  stock?: { quantity: number; reserved: number } | null;
+}) {
+  const projection = availabilityProjection(input);
+  if (!projection.known) return "Stock unavailable — no inventory record";
+  if (projection.variantManaged) {
+    const label = projection.activeVariants === 1 ? "active variant" : "active variants";
+    return `${projection.available} available across ${projection.activeVariants} ${label} · ${projection.onHand} on hand`;
   }
-  return product.stock ? Math.max(product.stock.quantity - product.stock.reserved, 0) : 0;
-}
-
-function onHandStock(product: Product) {
-  const variants = activeVariants(product);
-  if (variants.length > 0) return variants.reduce((total, variant) => total + variant.stock, 0);
-  return product.stock?.quantity ?? 0;
+  return `${projection.available} available · ${projection.onHand} on hand`;
 }
 
 export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; canRead: boolean }) {
@@ -1321,10 +1325,8 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
               <p className="mt-1 text-[#8B949E]">
                 {preview.category?.name ?? "No department"} · /product/{preview.slug}
               </p>
-              <p className="mt-1 font-bold">
-                {formatMoney(preview.priceKobo, preview.currency)} ·{" "}
-                {availableStock(preview)} available of {onHandStock(preview)}{" "}
-                {activeVariants(preview).length > 0 ? "across variants" : "on hand"}
+              <p className="mt-1 font-bold" data-testid="catalogue-preview-stock">
+                {formatMoney(preview.priceKobo, preview.currency)} · {catalogueStockSentence(preview)}
               </p>
               <p className="mt-1 text-xs text-[#8B949E]">
                 {preview.status === "ACTIVE"
@@ -1408,10 +1410,7 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
                   </td>
                   <td className="pr-3 font-bold">{formatMoney(entry.priceKobo, entry.currency)}</td>
                   <td className="pr-3">
-                    <span className="font-bold">{availableStock(entry)}</span>
-                    <span className="text-xs text-[#8B949E]">
-                      {" "}/ {onHandStock(entry)} {activeVariants(entry).length > 0 ? "across variants" : "on hand"}
-                    </span>
+                    <span className="font-bold">{catalogueStockSentence(entry)}</span>
                   </td>
                   <td className="py-2 text-right">
                     <div className="flex flex-wrap justify-end gap-2 text-xs font-bold">

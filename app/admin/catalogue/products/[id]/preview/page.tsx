@@ -6,6 +6,7 @@ import { hasAdminConsoleAccess } from "@/lib/auth/guard";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getSessionUser } from "@/lib/auth/session";
 import { getCatalogueProductPreview } from "@/lib/services/core/catalogue-admin.service";
+import { availabilityProjection } from "@/lib/services/core/availability";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -87,10 +88,12 @@ export default async function CatalogueProductPreviewPage({ params }: { params: 
   }
 
   const status = statusCopy(product.status);
-  const activeVariants = product.variants.filter((variant) => variant.isActive);
-  const onHandStock = activeVariants.length > 0
-    ? activeVariants.reduce((total, variant) => total + variant.stock, 0)
-    : product.stock?.quantity ?? 0;
+  const stock = availabilityProjection({ variants: product.variants, stock: product.stock });
+  const stockLabel = !stock.known
+    ? "Stock unavailable — no inventory record"
+    : stock.variantManaged
+      ? `${stock.available} available across ${stock.activeVariants} ${stock.activeVariants === 1 ? "active variant" : "active variants"} · ${stock.onHand} on hand`
+      : `${stock.available} available · ${stock.onHand} on hand`;
   const cover = product.images[0] ?? null;
 
   return (
@@ -218,10 +221,8 @@ export default async function CatalogueProductPreviewPage({ params }: { params: 
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="text-[#8B949E]">Inventory</dt>
                 <dd className="text-right font-bold">
-                  {product.stock || activeVariants.length > 0
-                    ? `${product.available} available of ${onHandStock} ${activeVariants.length > 0 ? "across variants" : "on hand"}`
-                    : "No stock record"}
-                  {product.stock && product.stock.reserved > 0 && activeVariants.length === 0 ? (
+                  {stockLabel}
+                  {product.stock && product.stock.reserved > 0 && !stock.variantManaged ? (
                     <span className="block text-[10px] font-normal text-[#8B949E]">
                       {product.stock.reserved} reserved by open orders
                     </span>
@@ -375,7 +376,7 @@ export default async function CatalogueProductPreviewPage({ params }: { params: 
             Variants (read-only)
           </h2>
           <p className="mt-1 text-xs text-[#8B949E]">
-            The schema supports ProductVariant, but the catalogue editor has no create/edit contract for variants yet.
+            Variant rows are read-only here. Use the catalogue editor to change options, stock or activation.
           </p>
           <ul className="mt-2 divide-y divide-[#21262D] text-sm">
             {product.variants.map((variant) => (

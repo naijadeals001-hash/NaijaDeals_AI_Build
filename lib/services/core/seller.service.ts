@@ -7,7 +7,8 @@ import { COUNTRIES } from "@/lib/config/commerce";
 import {
   assertProductQuantityAllowed,
   parseVariantsPayload,
-  syncProductVariants
+  syncProductVariants,
+  variantSnapshot
 } from "./variant-contract";
 import {
   assertNoBlockingRefundObligation,
@@ -15,7 +16,7 @@ import {
   lockOrderRow,
   updateOrderStatus
 } from "./order.service";
-import { refundPayment } from "@/lib/payments/service";
+import { refundPayment, restockOrderItemsOnce } from "@/lib/payments/service";
 import { recordAudit } from "./audit.service";
 import { recordSystemEvent } from "./event.service";
 import { assertShopAccess } from "./vertical-activation.service";
@@ -166,13 +167,27 @@ export async function createSellerProduct(userId: string, input: {
   variants?: unknown;
   /** Validated against the category's CategoryAttribute rows inside the transaction. */
   attributes?: unknown;
-  /** The seller API defaults new listings to DRAFT; direct callers keep ACTIVE. */
-  status?: "DRAFT" | "ACTIVE";
+  /**
+   * New listings are always created as DRAFT. Publication belongs to the
+   * Control Center moderation workflow (`publishProduct`), so an explicit
+   * ACTIVE request is refused here rather than silently honoured.
+   */
+  status?: "DRAFT";
   /** Only an authenticated Control Center caller may write during PREVIEW. */
   previewAuthorized?: boolean;
 }) {
   const vendor = await getVendorForUser(userId);
   if (vendor.status !== "VERIFIED") throw new ApiError(403, "seller_not_verified", "Only verified sellers can publish products.");
+  if ((input.status as string | undefined) === "ACTIVE") {
+    throw new ApiError(
+      403,
+      "admin_publication_required",
+      "Only the Control Center can publish a listing. Save it as a draft and submit it for moderation."
+    );
+  }
+  if (input.status !== undefined && input.status !== "DRAFT") {
+    throw new ApiError(400, "validation_error", 'status must be "DRAFT".');
+  }
   // New Shop listings are a public-facing commitment: refuse them while the
   // vertical is DISABLED (and during PREVIEW unless the caller is authorized
   // staff). Existing listings, orders and payouts remain manageable.
@@ -187,11 +202,21 @@ export async function createSellerProduct(userId: string, input: {
   if (!Number.isInteger(input.quantity) || input.quantity < 0) throw new ApiError(400, "validation_error", "Stock must be a non-negative integer.");
   const variants = parseVariantsPayload(input.variants);
   if (variants && variants.some((variant) => variant.isActive) && input.quantity !== 0) {
-    throw new ApiError(
+    const error = new ApiError(
       400,
       "variant_stock_conflict",
-      "A variant product uses variant stock. Set product-level quantity to 0 and enter stock on each variant."
+      "A variant product uses variant stock. Set product-level quantity to 0 and enter stock on each variant.",
+      { productName: input.name, quantity: input.quantity, activeVariantsRequested: variants.filter((variant) => variant.isActive).length }
     );
+    await recordBlockedVariantTransition({
+      actorId: userId,
+      vendorId: vendor.id,
+      productId: null,
+      productName: input.name,
+      source: "seller.create",
+      error
+    });
+    throw error;
   }
   const images = normaliseSellerImages(input.images, input.imageUrl, input.imageAlt ?? input.name);
 
@@ -202,8 +227,9 @@ export async function createSellerProduct(userId: string, input: {
     .slice(0, 60) || "product";
   const slug = `${slugBase}-${Math.random().toString(36).slice(2, 7)}`;
 
-  return prisma.$transaction(async (tx) => {
-    const resolved = await resolveSellerProductCategory({
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const resolved = await resolveSellerProductCategory({
       db: tx,
       categoryId: input.categoryId,
       countryCode: vendor.countryCode,
@@ -221,7 +247,7 @@ export async function createSellerProduct(userId: string, input: {
         priceKobo: input.priceKobo,
         compareAtKobo: input.compareAtKobo ?? null,
         weightGrams: input.weightGrams ?? 500,
-        status: input.status ?? "ACTIVE",
+        status: "DRAFT",
         attributes: resolved.attributes ? (resolved.attributes as Prisma.InputJsonValue) : undefined,
         images: {
           create: images.map((image, index) => ({ url: image.url, alt: image.alt, sortOrder: index }))
@@ -257,7 +283,7 @@ export async function createSellerProduct(userId: string, input: {
         status: product.status,
         attributes: resolved.attributes ?? null,
         images: images.map((image, index) => ({ ...image, sortOrder: index, primary: index === 0 })),
-        variants: variantState ? { before: variantState.before, after: variantState.after } : null,
+        variants: variantState ? { before: variantState.before, after: variantState.after } : { before: [], after: [] },
         before: null,
         after: {
           status: product.status,
@@ -274,14 +300,26 @@ export async function createSellerProduct(userId: string, input: {
           include: { images: true, stock: true, variants: true }
         })
       : product;
-  });
+    });
+  } catch (error) {
+    await recordBlockedVariantTransition({
+      actorId: userId,
+      vendorId: vendor.id,
+      productId: null,
+      productName: input.name,
+      source: "seller.create",
+      error
+    });
+    throw error;
+  }
 }
 
 export async function updateSellerProduct(userId: string, productId: string, input: {
   name?: string;
   description?: string;
   priceKobo?: bigint;
-  status?: "DRAFT" | "ACTIVE" | "ARCHIVED";
+  /** Publication is refused here; the Control Center owns publish/reactivate. */
+  status?: "DRAFT" | "ARCHIVED";
   quantity?: number;
   lowStockLevel?: number;
   categoryId?: string;
@@ -304,20 +342,18 @@ export async function updateSellerProduct(userId: string, productId: string, inp
   });
   if (!product) throw new ApiError(404, "product_not_found", "Product not found.");
   if (product.vendorId !== vendor.id) throw new ApiError(403, "forbidden", "This product belongs to another seller.");
-  // Republishing a draft/archived listing is a new public commitment. Editing
-  // an already-ACTIVE listing, drafts, orders, returns and payouts stays
-  // available while Shop is DISABLED.
-  if (input.status === "ACTIVE" && product.status !== "ACTIVE") {
-    await assertShopAccess({
-      countryCode: vendor.countryCode,
-      previewAuthorized: input.previewAuthorized,
-      statusCode: 409,
-      message:
-        "Shop is not accepting new listings in this market yet. Drafts, existing listings, orders and payouts remain manageable."
-    });
+  if ((input.status as string | undefined) === "ACTIVE") {
+    throw new ApiError(
+      403,
+      "admin_publication_required",
+      "Only the Control Center can publish or reactivate a listing."
+    );
   }
   if (input.priceKobo !== undefined && input.priceKobo <= BigInt(0)) {
     throw new ApiError(400, "validation_error", "Price must be greater than zero.");
+  }
+  if (input.quantity !== undefined && (!Number.isInteger(input.quantity) || input.quantity < 0)) {
+    throw new ApiError(400, "validation_error", "Stock must be a non-negative integer.");
   }
   const images =
     input.images !== undefined || input.imageUrl !== undefined || input.imageAlt !== undefined
@@ -328,124 +364,161 @@ export async function updateSellerProduct(userId: string, productId: string, inp
   // Republishing is a taxonomy-sensitive action: the destination category must
   // still be live and publishable for the seller's country, and the stored (or
   // newly supplied) attributes must satisfy its definitions.
-  const taxonomyTouched =
-    input.categoryId !== undefined || input.attributes !== undefined || input.status === "ACTIVE";
+  const taxonomyTouched = input.categoryId !== undefined || input.attributes !== undefined;
 
-  return prisma.$transaction(async (tx) => {
-    let categoryId: string | undefined;
-    let attributesUpdate: Prisma.InputJsonValue | typeof Prisma.DbNull | undefined;
-    if (taxonomyTouched) {
-      const resolved = await resolveSellerProductCategory({
-        db: tx,
-        categoryId: input.categoryId ?? product.categoryId,
-        countryCode: vendor.countryCode,
-        attributes: input.attributes !== undefined ? input.attributes : product.attributes
+  try {
+    return await prisma.$transaction(async (tx) => {
+      // Snapshot variants even when the payload omits them: an unchanged variant
+      // state must be recorded as the real before/after rows, not null/[].
+      const beforeVariants = await tx.productVariant.findMany({
+        where: { productId: product.id },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }]
       });
-      categoryId = resolved.category.id;
-      if (input.attributes !== undefined) {
-        attributesUpdate = resolved.attributes
-          ? (resolved.attributes as Prisma.InputJsonValue)
-          : Prisma.DbNull;
-      }
-    }
 
-    const updated = await tx.product.update({
-      where: { id: product.id },
-      data: {
-        ...(input.name ? { name: input.name } : {}),
-        ...(input.description ? { description: input.description } : {}),
-        ...(input.priceKobo !== undefined ? { priceKobo: input.priceKobo } : {}),
-        ...(input.status ? { status: input.status } : {}),
-        ...(categoryId !== undefined ? { categoryId } : {}),
-        ...(attributesUpdate !== undefined ? { attributes: attributesUpdate } : {})
-      }
-    });
-    if (images) {
-      await tx.productImage.deleteMany({ where: { productId: product.id } });
-      await tx.productImage.createMany({
-        data: images.map((image, index) => ({ productId: product.id, url: image.url, alt: image.alt, sortOrder: index }))
-      });
-    }
-    const variantState =
-      variants !== undefined
-        ? await syncProductVariants({
-            tx,
-            productId: product.id,
-            productCurrency: COUNTRIES[product.countryCode]?.currency ?? "NGN",
-            variants,
-            allowZeroProductStock: input.quantity === 0
-          })
-        : null;
-    if (input.quantity !== undefined) {
-      await assertProductQuantityAllowed(tx, product.id, input.quantity);
-      if (!Number.isInteger(input.quantity) || input.quantity < 0) {
-        throw new ApiError(400, "validation_error", "Stock must be a non-negative integer.");
-      }
-      const lockedStock = await tx.$queryRaw<Array<{ reserved: number }>>`
-        SELECT "reserved" FROM "InventoryStock" WHERE "productId" = ${product.id} FOR UPDATE
-      `;
-      const reserved = lockedStock[0]?.reserved ?? 0;
-      if (input.quantity < reserved) {
-        throw new ApiError(
-          409,
-          "stock_below_reserved",
-          `Inventory cannot be set to ${input.quantity} while ${reserved} units are reserved by open orders.`
-        );
-      }
-      if (product.stock) {
-        await tx.inventoryStock.update({
-          where: { productId: product.id },
-          data: { quantity: input.quantity, ...(input.lowStockLevel !== undefined ? { lowStockLevel: input.lowStockLevel } : {}) }
+      let categoryId: string | undefined;
+      let attributesUpdate: Prisma.InputJsonValue | typeof Prisma.DbNull | undefined;
+      if (taxonomyTouched) {
+        const resolved = await resolveSellerProductCategory({
+          db: tx,
+          categoryId: input.categoryId ?? product.categoryId,
+          countryCode: vendor.countryCode,
+          attributes: input.attributes !== undefined ? input.attributes : product.attributes
         });
-      } else {
-        await tx.inventoryStock.create({
-          data: { productId: product.id, quantity: input.quantity, lowStockLevel: input.lowStockLevel ?? 3 }
+        categoryId = resolved.category.id;
+        if (input.attributes !== undefined) {
+          attributesUpdate = resolved.attributes
+            ? (resolved.attributes as Prisma.InputJsonValue)
+            : Prisma.DbNull;
+        }
+      }
+
+      const updated = await tx.product.update({
+        where: { id: product.id },
+        data: {
+          ...(input.name ? { name: input.name } : {}),
+          ...(input.description ? { description: input.description } : {}),
+          ...(input.priceKobo !== undefined ? { priceKobo: input.priceKobo } : {}),
+          ...(input.status ? { status: input.status } : {}),
+          ...(categoryId !== undefined ? { categoryId } : {}),
+          ...(attributesUpdate !== undefined ? { attributes: attributesUpdate } : {})
+        }
+      });
+      if (images) {
+        await tx.productImage.deleteMany({ where: { productId: product.id } });
+        await tx.productImage.createMany({
+          data: images.map((image, index) => ({ productId: product.id, url: image.url, alt: image.alt, sortOrder: index }))
         });
       }
-    }
-    const freshImages = await tx.productImage.findMany({
-      where: { productId: product.id },
-      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-      select: { url: true, alt: true, sortOrder: true }
+      const variantState =
+        variants !== undefined
+          ? await syncProductVariants({
+              tx,
+              productId: product.id,
+              productCurrency: COUNTRIES[product.countryCode]?.currency ?? "NGN",
+              variants,
+              allowZeroProductStock: input.quantity === 0
+            })
+          : null;
+      if (input.quantity !== undefined) {
+        // One transaction-scoped guard: locks InventoryStock, re-checks that no
+        // active variant owns the stock source, then refuses a quantity below
+        // the units already reserved by open orders.
+        await assertProductQuantityAllowed(tx, product.id, input.quantity);
+        if (product.stock) {
+          await tx.inventoryStock.update({
+            where: { productId: product.id },
+            data: { quantity: input.quantity, ...(input.lowStockLevel !== undefined ? { lowStockLevel: input.lowStockLevel } : {}) }
+          });
+        } else {
+          await tx.inventoryStock.create({
+            data: { productId: product.id, quantity: input.quantity, lowStockLevel: input.lowStockLevel ?? 3 }
+          });
+        }
+      }
+      const freshImages = await tx.productImage.findMany({
+        where: { productId: product.id },
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+        select: { url: true, alt: true, sortOrder: true }
+      });
+      const freshProduct = await tx.product.findUniqueOrThrow({
+        where: { id: product.id },
+        include: { images: true, stock: true, variants: true }
+      });
+      const afterVariants = await tx.productVariant.findMany({
+        where: { productId: product.id },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+      });
+      const variantAudit =
+        variantState !== null
+          ? { before: variantState.before, after: variantState.after, active: variantState.active }
+          : {
+              before: beforeVariants.map(variantSnapshot),
+              after: afterVariants.map(variantSnapshot),
+              active: afterVariants.filter((variant) => variant.isActive).length
+            };
+      const productBefore = {
+        name: product.name,
+        description: product.description,
+        priceKobo: product.priceKobo.toString(),
+        status: product.status,
+        quantity: product.stock?.quantity ?? null,
+        reserved: product.stock?.reserved ?? null,
+        lowStockLevel: product.stock?.lowStockLevel ?? null,
+        categoryId: product.categoryId,
+        attributes: product.attributes ?? null,
+        images: product.images.map((image, index) => ({
+          url: image.url,
+          alt: image.alt,
+          sortOrder: image.sortOrder,
+          primary: index === 0
+        })),
+        variants: variantAudit.before
+      };
+      const productAfter = {
+        name: updated.name,
+        description: updated.description,
+        priceKobo: updated.priceKobo.toString(),
+        status: updated.status,
+        quantity: freshProduct.stock?.quantity ?? null,
+        reserved: freshProduct.stock?.reserved ?? null,
+        lowStockLevel: freshProduct.stock?.lowStockLevel ?? null,
+        categoryId: updated.categoryId,
+        attributes: updated.attributes ?? null,
+        images: freshImages.map((image, index) => ({
+          url: image.url,
+          alt: image.alt,
+          sortOrder: image.sortOrder,
+          primary: index === 0
+        })),
+        variants: variantAudit.after
+      };
+      await recordAudit({
+        tx,
+        actorId: userId,
+        action: "product.updated",
+        entity: "Product",
+        entityId: product.id,
+        metadata: {
+          vendorId: vendor.id,
+          before: productBefore,
+          after: productAfter,
+          variants: { before: variantAudit.before, after: variantAudit.after, active: variantAudit.active },
+          variantsSupplied: variants !== undefined
+        }
+      });
+      return freshProduct;
     });
-    const freshProduct = await tx.product.findUniqueOrThrow({
-      where: { id: product.id },
-      include: { images: true, stock: true, variants: true }
-    });
-    await recordAudit({
-      tx,
+  } catch (error) {
+    await recordBlockedVariantTransition({
       actorId: userId,
-      action: "product.updated",
-      entity: "Product",
-      entityId: product.id,
-      metadata: {
-        vendorId: vendor.id,
-        before: {
-          categoryId: product.categoryId,
-          attributes: product.attributes ?? null,
-          images: product.images.map((image, index) => ({
-            url: image.url,
-            alt: image.alt,
-            sortOrder: image.sortOrder,
-            primary: index === 0
-          }))
-        },
-        after: {
-          categoryId: updated.categoryId,
-          attributes: updated.attributes ?? null,
-          images: freshImages.map((image, index) => ({
-            url: image.url,
-            alt: image.alt,
-            sortOrder: image.sortOrder,
-            primary: index === 0
-          })),
-          ...(variantState ? { variants: variantState.after } : {})
-        },
-        ...(variantState ? { variants: { before: variantState.before, after: variantState.after } } : {})
-      }
+      vendorId: vendor.id,
+      productId: product.id,
+      productName: product.name,
+      source: "seller.update",
+      error
     });
-    return freshProduct;
-  });
+    throw error;
+  }
 }
 
 export async function listSellerOrders(userId: string) {
@@ -486,6 +559,44 @@ export async function advanceSellerOrder(userId: string, orderId: string, status
       note: note || `Seller marked order ${status}.`
     })
   );
+}
+
+/**
+ * Record an unsafe catalogue variant transition after its transaction rolled
+ * back. The refusal stays a stable API error; this is durable evidence for the
+ * Control Center that the requested quantity/variant change was rejected
+ * because of reserved or live-cart state.
+ */
+async function recordBlockedVariantTransition(input: {
+  actorId: string;
+  vendorId: string;
+  productId: string | null;
+  productName?: string | null;
+  source: "seller.create" | "seller.update";
+  error: unknown;
+}) {
+  if (!(input.error instanceof ApiError)) return;
+  const codes = ["variant_stock_conflict", "variant_in_use", "variant_stock_below_reserved", "stock_below_reserved", "variant_stock_managed"];
+  if (!codes.includes(input.error.code)) return;
+  try {
+    await recordSystemEvent({
+      type: "product.variant_transition_blocked",
+      actorId: input.actorId,
+      entity: "Product",
+      entityId: input.productId,
+      payload: {
+        source: input.source,
+        vendorId: input.vendorId,
+        productId: input.productId,
+        productName: input.productName ?? null,
+        code: input.error.code,
+        message: input.error.message,
+        details: (input.error.details ?? null) as Prisma.InputJsonValue
+      }
+    });
+  } catch {
+    // Evidence must never mask the authoritative refusal.
+  }
 }
 
 const RETURN_REFUND_INTENT = "return.refund_intent";
@@ -546,18 +657,23 @@ async function recordReturnIntent(
   });
 }
 
-async function restockReturnedItems(tx: Prisma.TransactionClient, orderId: string) {
-  const items = await tx.orderItem.findMany({ where: { orderId } });
-  for (const item of items) {
-    if (item.variantId) {
-      await tx.productVariant.update({ where: { id: item.variantId }, data: { stock: { increment: item.quantity } } });
-    } else {
-      await tx.inventoryStock.update({
-        where: { productId: item.productId },
-        data: { quantity: { increment: item.quantity } }
-      });
-    }
-  }
+/**
+ * Legacy helper retained for the receipt path. The order-level marker in
+ * `restockOrderItemsOnce` is what makes the restore exactly-once across a
+ * seller receipt, a full refund and a retry.
+ */
+async function restockReturnedItems(
+  tx: Prisma.TransactionClient,
+  orderId: string,
+  actorId: string,
+  options: { recordOnly?: boolean } = {}
+) {
+  return restockOrderItemsOnce(tx, orderId, {
+    actorId,
+    source: "return",
+    reason: "Seller received returned items",
+    recordOnly: options.recordOnly
+  });
 }
 
 /**
@@ -683,6 +799,7 @@ export async function resolveReturn(userId: string, returnId: string, action: "a
     }
 
     let restockedNow = false;
+    let restockOutcome: Awaited<ReturnType<typeof restockReturnedItems>> | null = null;
     if (!request.restocked) {
       const claimed = await tx.returnRequest.updateMany({
         // RECEIVED with restocked=false is a legacy/interrupted receipt: the
@@ -691,16 +808,26 @@ export async function resolveReturn(userId: string, returnId: string, action: "a
         data: { status: "RECEIVED", restocked: true, resolvedAt: new Date() }
       });
       if (claimed.count === 1) {
-        // The physical units are back with the seller: restore them exactly once.
-        await restockReturnedItems(tx, request.orderId);
-        restockedNow = true;
+        // The physical units are back with the seller. The order-level marker
+        // inside restockOrderItemsOnce makes this restore exactly-once even if
+        // the order was already fully refunded with a restock request.
+        restockOutcome = await restockReturnedItems(tx, request.orderId, userId);
+        restockedNow = restockOutcome.restored;
         await recordAudit({
           tx,
           actorId: userId,
           action: "return.received",
           entity: "ReturnRequest",
           entityId: request.id,
-          metadata: { orderId: request.orderId, restocked: true, before: { status: request.status }, after: { status: "RECEIVED" } }
+          metadata: {
+            orderId: request.orderId,
+            restocked: true,
+            stockRestored: restockOutcome.restored,
+            alreadyRestocked: restockOutcome.alreadyRestocked,
+            suppressedItems: restockOutcome.suppressedItems,
+            before: { status: request.status },
+            after: { status: "RECEIVED" }
+          }
         });
       }
     }
@@ -708,6 +835,13 @@ export async function resolveReturn(userId: string, returnId: string, action: "a
     // Re-read after the conditional claim so concurrent receivers agree on the
     // stored status and restock flag.
     const fresh = await tx.returnRequest.findUniqueOrThrow({ where: { id: request.id } });
+    if (!restockedNow) {
+      // Two cases reach this point: a retry whose marker already exists (no-op),
+      // or a legacy receipt that stored `restocked=true` before the order-level
+      // marker existed. Writing the marker without touching stock stops a later
+      // refund from restoring the same units a second time.
+      restockOutcome = await restockReturnedItems(tx, request.orderId, userId, { recordOnly: true });
+    }
 
     const latest = await loadLatestReturnIntent(tx, request.id);
     let intent: ReturnRefundIntent;

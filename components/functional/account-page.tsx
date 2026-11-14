@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Headphones, Loader2, LogOut, MapPin, PackageCheck, RotateCcw, Store, UserCircle, Wallet } from "lucide-react";
 import { ApiRequestError, apiClient, koboToNaira, type ApiProduct } from "@/lib/api-client";
+import { availabilityProjection } from "@/lib/services/core/availability";
 
 type Address = {
   id: string;
@@ -33,6 +34,74 @@ type Account = {
 };
 
 const emptyAddress = { label: "Home", countryCode: "NG", state: "Lagos", city: "Ikeja", line1: "", line2: "", phone: "", postalCode: "" };
+
+/**
+ * One saved-item card.
+ *
+ * Variant-managed products never auto-select a variant here: the customer is
+ * sent to the product page to choose an option. Stock copy comes from the
+ * shared availability projection so a missing stock record is reported as
+ * unavailable rather than as zero units.
+ */
+export function SavedItemCard({
+  item,
+  busy,
+  onAdd,
+  onRemove
+}: {
+  item: { id: string; product: ApiProduct };
+  busy: boolean;
+  onAdd: (product: ApiProduct) => void;
+  onRemove: (productId: string) => void;
+}) {
+  const product = item.product;
+  const availability = availabilityProjection({ variants: product.variants, stock: product.stock });
+  const stockLabel = !availability.known
+    ? "Availability unavailable"
+    : availability.available > 0
+      ? "In stock"
+      : "Out of stock";
+  return (
+    <div className="rounded-xl bg-surface-low p-3">
+      <Link href={`/product/${product.slug}`} className="flex gap-3">
+        <img src={product.images[0]?.url} alt="" className="h-16 w-16 rounded-lg object-cover" />
+        <div>
+          <p className="line-clamp-2 text-sm font-bold">{product.name}</p>
+          <p className="text-sm font-black text-primary">{koboToNaira(product.priceKobo)}</p>
+          <p className="text-[11px] text-muted">{stockLabel}</p>
+        </div>
+      </Link>
+      <div className="mt-2 flex gap-3 text-xs font-bold">
+        {availability.requiresVariantSelection ? (
+          <Link
+            href={`/product/${product.slug}`}
+            className="text-primary underline"
+            aria-label={`Choose options for ${product.name}`}
+          >
+            Choose options
+          </Link>
+        ) : (
+          <button
+            type="button"
+            disabled={busy || !availability.known || availability.available <= 0}
+            onClick={() => onAdd(product)}
+            className="text-primary underline disabled:opacity-50"
+          >
+            Add to cart
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onRemove(product.id)}
+          className="text-crimson underline disabled:opacity-50"
+        >
+          Remove
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function AccountPage() {
   const router = useRouter();
@@ -143,21 +212,16 @@ export function AccountPage() {
     finally { setAddressBusy(""); }
   }
 
-  function savedAvailability(product: ApiProduct) {
-    const variants = (product.variants ?? []).filter((variant) => variant.isActive);
-    if (variants.length > 0) {
-      return variants.reduce((total, variant) => total + Math.max(variant.stock - variant.reserved, 0), 0);
-    }
-    return Math.max((product.stock?.quantity ?? 0) - (product.stock?.reserved ?? 0), 0);
-  }
-
   async function moveSavedToCart(product: ApiProduct) {
     setError(""); setAddressBusy(product.id);
     try {
-      const variants = (product.variants ?? []).filter((variant) => variant.isActive);
-      const variant = variants.find((entry) => entry.stock - entry.reserved > 0) ?? null;
-      if (variants.length > 0 && !variant) throw new Error("This saved item has no available variant.");
-      await apiClient.addCartItem(product.id, 1, variant?.id ?? null);
+      const availability = availabilityProjection({ variants: product.variants, stock: product.stock });
+      if (!availability.known) throw new Error("Availability is unavailable for this saved item.");
+      if (availability.requiresVariantSelection) {
+        throw new Error("Choose an option on the product page before adding this saved item.");
+      }
+      if (availability.available <= 0) throw new Error("This saved item is out of stock.");
+      await apiClient.addCartItem(product.id, 1, null);
       setNotice("Added to cart.");
     } catch (err) { setError(err instanceof Error ? err.message : "Could not add saved item to cart."); }
     finally { setAddressBusy(""); }
@@ -391,20 +455,13 @@ export function AccountPage() {
         ) : (
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {saved.map((item) => (
-              <div key={item.id} className="rounded-xl bg-surface-low p-3">
-                <Link href={`/product/${item.product.slug}`} className="flex gap-3">
-                  <img src={item.product.images[0]?.url} alt="" className="h-16 w-16 rounded-lg object-cover" />
-                  <div>
-                    <p className="line-clamp-2 text-sm font-bold">{item.product.name}</p>
-                    <p className="text-sm font-black text-primary">{koboToNaira(item.product.priceKobo)}</p>
-                    <p className="text-[11px] text-muted">{savedAvailability(item.product) > 0 ? "In stock" : "Out of stock"}</p>
-                  </div>
-                </Link>
-                <div className="mt-2 flex gap-3 text-xs font-bold">
-                  <button type="button" disabled={addressBusy === item.product.id || savedAvailability(item.product) <= 0} onClick={() => void moveSavedToCart(item.product)} className="text-primary underline disabled:opacity-50">Add to cart</button>
-                  <button type="button" disabled={addressBusy === item.product.id} onClick={() => void removeSaved(item.product.id)} className="text-crimson underline disabled:opacity-50">Remove</button>
-                </div>
-              </div>
+              <SavedItemCard
+                key={item.id}
+                item={item}
+                busy={addressBusy === item.product.id}
+                onAdd={(product) => void moveSavedToCart(product)}
+                onRemove={(productId) => void removeSaved(productId)}
+              />
             ))}
           </div>
         )}

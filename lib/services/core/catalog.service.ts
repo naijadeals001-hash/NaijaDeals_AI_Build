@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/auth/api-error";
 import { effectivePublishRule, isReachable, sortCategoryRows } from "@/lib/services/taxonomy/shared";
 import { verticalAccess } from "./vertical-activation.service";
 import { listReviews } from "./account.service";
+import { availabilityProjection } from "./availability";
 
 /**
  * Shop activation gate for reads.
@@ -458,14 +459,18 @@ export function ratingSummary(reviews: Array<{ rating: number }>) {
   return { average: Math.round((total / reviews.length) * 10) / 10, count: reviews.length };
 }
 
+/**
+ * Public availability for one product.
+ *
+ * Delegates to the shared `availabilityProjection` so the catalogue endpoint,
+ * cart lines and search writers cannot drift: variant stock is authoritative
+ * whenever active variants exist, and product-level stock is never added to it.
+ */
 export function availableQuantity(product: {
   stock: { quantity: number; reserved: number } | null;
-  variants: Array<{ stock: number; reserved: number }>;
+  variants: Array<{ stock: number; reserved: number; isActive?: boolean | null }>;
 }) {
-  if (product.variants.length > 0) {
-    return product.variants.reduce((total, variant) => total + Math.max(variant.stock - variant.reserved, 0), 0);
-  }
-  return product.stock ? Math.max(product.stock.quantity - product.stock.reserved, 0) : 0;
+  return availabilityProjection({ stock: product.stock, variants: product.variants }).available;
 }
 
 

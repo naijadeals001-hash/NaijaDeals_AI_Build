@@ -253,22 +253,148 @@ export async function releaseReservedStock(tx: Db, orderId: string) {
   }
 }
 
-/** Put committed units back on sale after a paid order is cancelled or returned. */
-async function restockOrderItems(tx: Db, orderId: string) {
-  const items = await tx.orderItem.findMany({ where: { orderId } });
-  for (const item of items) {
-    if (item.variantId) {
-      await tx.productVariant.update({
-        where: { id: item.variantId },
-        data: { stock: { increment: item.quantity } }
-      });
-    } else {
-      await tx.inventoryStock.update({
-        where: { productId: item.productId },
-        data: { quantity: { increment: item.quantity } }
-      });
-    }
+/** Durable marker that an order's physical units were put back exactly once. */
+export const ORDER_RESTOCK_EVENT = "order.stock_restocked";
+
+export type OrderRestockResult = {
+  /** True only when this call performed the restore. */
+  restored: boolean;
+  /** True when an earlier receipt/refund already restored these units. */
+  alreadyRestocked: boolean;
+  /** Set when the caller only needed the marker (legacy `restocked` receipt). */
+  recordedOnly: boolean;
+  restoredItems: Array<{ orderItemId: string; productId: string; variantId: string | null; quantity: number }>;
+  suppressedItems: Array<{ orderItemId: string; productId: string; quantity: number; reason: string }>;
+};
+
+/**
+ * Restore the authoritative stock source for an order exactly once.
+ *
+ * The order row lock is taken here (re-entrant inside the refund/return
+ * transaction that already holds it). The `SystemEvent`/`AuditLog` pair written
+ * in the same transaction is the durable idempotency marker, so a refund, a
+ * seller return receipt and a retry cannot each increment stock for the same
+ * order.
+ *
+ * `OrderItem.variantId` decides the source. A product-level order item whose
+ * listing has since become variant-managed is never incremented back into
+ * `InventoryStock` (that pool is not on sale any more); the suppression is
+ * recorded instead. Variant units always return to their variant row, even if
+ * that variant is now inactive.
+ *
+ * `recordOnly` marks a legacy return that was received before this contract
+ * existed without touching stock, so a later refund cannot double-restore it.
+ */
+export async function restockOrderItemsOnce(
+  tx: Db,
+  orderId: string,
+  input: { actorId?: string | null; source: "refund" | "return" | "manual"; reason?: string; recordOnly?: boolean }
+): Promise<OrderRestockResult> {
+  await lockOrderRow(tx, orderId);
+  const existing = await tx.systemEvent.findFirst({
+    where: { type: ORDER_RESTOCK_EVENT, entity: "Order", entityId: orderId },
+    select: { id: true }
+  });
+  if (existing) {
+    return {
+      restored: false,
+      alreadyRestocked: true,
+      recordedOnly: false,
+      restoredItems: [],
+      suppressedItems: []
+    };
   }
+
+  const items = await tx.orderItem.findMany({ where: { orderId }, orderBy: { id: "asc" } });
+  const result: OrderRestockResult = {
+    restored: false,
+    alreadyRestocked: false,
+    recordedOnly: Boolean(input.recordOnly),
+    restoredItems: [],
+    suppressedItems: []
+  };
+
+  if (!input.recordOnly) {
+    for (const item of items) {
+      if (item.variantId) {
+        const updated = await tx.productVariant.updateMany({
+          where: { id: item.variantId },
+          data: { stock: { increment: item.quantity } }
+        });
+        if (updated.count === 0) {
+          result.suppressedItems.push({
+            orderItemId: item.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            reason: "variant_missing"
+          });
+          continue;
+        }
+        result.restoredItems.push({
+          orderItemId: item.id,
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity
+        });
+      } else {
+        // Lock the product-level row before deciding: `syncProductVariants`
+        // takes the same lock before zeroing/adding variants, so a concurrent
+        // transition cannot make this increment unsafe.
+        const stock = await tx.$queryRaw<Array<{ quantity: number; reserved: number }>>`
+          SELECT "quantity", "reserved" FROM "InventoryStock" WHERE "productId" = ${item.productId} FOR UPDATE
+        `;
+        const activeVariants = await tx.productVariant.count({
+          where: { productId: item.productId, isActive: true }
+        });
+        if (activeVariants > 0) {
+          result.suppressedItems.push({
+            orderItemId: item.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            reason: "variant_managed"
+          });
+          continue;
+        }
+        if (stock.length === 0) {
+          result.suppressedItems.push({
+            orderItemId: item.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            reason: "stock_row_missing"
+          });
+          continue;
+        }
+        await tx.inventoryStock.update({
+          where: { productId: item.productId },
+          data: { quantity: { increment: item.quantity } }
+        });
+        result.restoredItems.push({
+          orderItemId: item.id,
+          productId: item.productId,
+          variantId: null,
+          quantity: item.quantity
+        });
+      }
+    }
+    result.restored = result.restoredItems.length > 0;
+  }
+
+  await recordAudit({
+    tx,
+    actorId: input.actorId ?? null,
+    action: ORDER_RESTOCK_EVENT,
+    entity: "Order",
+    entityId: orderId,
+    metadata: {
+      orderId,
+      source: input.source,
+      reason: input.reason ?? null,
+      recordOnly: result.recordedOnly,
+      restoredItems: result.restoredItems,
+      suppressedItems: result.suppressedItems
+    }
+  });
+  return result;
 }
 
 /**
@@ -1102,8 +1228,15 @@ async function settleRefund(
       reason: `Order refunded in full: ${input.reason}`,
       refundId: refund.id
     });
-    stockRestored = Boolean(input.restock) && custody.restockable;
-    if (stockRestored) await restockOrderItems(tx, order.id);
+    const restockOutcome =
+      Boolean(input.restock) && custody.restockable
+        ? await restockOrderItemsOnce(tx, order.id, {
+            actorId: refund.actorId,
+            source: "refund",
+            reason: input.reason
+          })
+        : null;
+    stockRestored = Boolean(restockOutcome?.restored);
 
     await updateOrderStatus({
       tx,

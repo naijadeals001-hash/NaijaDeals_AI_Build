@@ -1,6 +1,7 @@
 import type { SearchEntityType, SearchSyncOp } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { availableQuantity, isFixtureListing } from "@/lib/services/core/catalog.service";
+import { availabilityProjection } from "@/lib/services/core/availability";
+import { isFixtureListing } from "@/lib/services/core/catalog.service";
 import { deleteProducts, indexProducts, type ProductDocument } from "./search";
 import { log } from "./logger";
 import { QUEUE_NAMES, enqueue, isQueueConfigured } from "./queue";
@@ -69,12 +70,7 @@ function productDocument(product: {
   if (!["VERIFIED", "PENDING"].includes(product.vendor.status)) return null;
   if (isFixtureListing(product as never)) return null;
 
-  const available =
-    product.variants && product.variants.length > 0
-      ? product.variants.reduce((total, variant) => total + Math.max(variant.stock - variant.reserved, 0), 0)
-      : product.stock
-        ? Math.max(product.stock.quantity - product.stock.reserved, 0)
-        : 0;
+  const available = availabilityProjection({ variants: product.variants, stock: product.stock }).available;
   return {
     id: product.id,
     title: product.name,
@@ -173,5 +169,3 @@ export async function requestProductSync(productId: string): Promise<void> {
     });
   }
 }
-
-export { availableQuantity };

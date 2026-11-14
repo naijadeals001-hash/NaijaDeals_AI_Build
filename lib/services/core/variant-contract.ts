@@ -240,6 +240,63 @@ export function variantSnapshot(variant: {
   };
 }
 
+export type LockedStockRow = { quantity: number; reserved: number };
+
+/**
+ * Lock the product-level inventory row for the rest of the caller's
+ * transaction.
+ *
+ * Every writer that compares an absolute quantity with reservations must use
+ * this (not a pre-transaction read): a concurrent checkout reservation or a
+ * variant transition takes the same row lock, so the check and the write are
+ * serialised. Returns null when the product has no stock row yet.
+ */
+export async function lockInventoryStock(
+  tx: Prisma.TransactionClient,
+  productId: string
+): Promise<LockedStockRow | null> {
+  const rows = await tx.$queryRaw<LockedStockRow[]>`
+    SELECT "quantity", "reserved" FROM "InventoryStock" WHERE "productId" = ${productId} FOR UPDATE
+  `;
+  return rows[0] ?? null;
+}
+
+/**
+ * The single quantity-vs-reserved contract for product-level inventory.
+ *
+ * Must run while `lockInventoryStock` holds the row. Variant-managed products
+ * cannot accept a non-zero product quantity at all; any product quantity below
+ * the units already promised to open orders is refused.
+ */
+export async function assertLockedProductQuantity(
+  tx: Prisma.TransactionClient,
+  input: { productId: string; quantity: number }
+): Promise<LockedStockRow | null> {
+  const stock = await lockInventoryStock(tx, input.productId);
+  // Re-read active variants under the stock lock: a concurrent variant
+  // transition also takes this lock first, so the two cannot interleave.
+  const activeVariants = await tx.productVariant.count({
+    where: { productId: input.productId, isActive: true }
+  });
+  if (activeVariants > 0 && input.quantity !== 0) {
+    throw new ApiError(
+      409,
+      "variant_stock_managed",
+      "This product uses variant stock. Edit variant quantities instead of the product-level inventory."
+    );
+  }
+  const reserved = stock?.reserved ?? 0;
+  if (input.quantity < reserved) {
+    throw new ApiError(
+      409,
+      "stock_below_reserved",
+      `Inventory cannot be set to ${input.quantity} while ${reserved} units are reserved by open orders.`,
+      { productId: input.productId, quantity: input.quantity, reserved }
+    );
+  }
+  return stock;
+}
+
 /**
  * Reconcile the submitted variant set inside the caller's transaction.
  *
@@ -256,10 +313,7 @@ export async function syncProductVariants(input: {
   allowZeroProductStock?: boolean;
 }): Promise<{ before: VariantSnapshot[]; after: VariantSnapshot[]; active: number }> {
   const { tx, productId, productCurrency } = input;
-  const stock = await tx.$queryRaw<Array<{ quantity: number; reserved: number }>>`
-    SELECT "quantity", "reserved" FROM "InventoryStock" WHERE "productId" = ${productId} FOR UPDATE
-  `;
-  const stockRow = stock[0] ?? null;
+  const stockRow = await lockInventoryStock(tx, productId);
   await tx.$queryRaw`
     SELECT id FROM "ProductVariant" WHERE "productId" = ${productId} ORDER BY id FOR UPDATE
   `;
@@ -279,7 +333,14 @@ export async function syncProductVariants(input: {
       throw new ApiError(
         409,
         "variant_stock_conflict",
-        "A variant product's product-level inventory must be zero. Set the product quantity to 0 before adding variants."
+        "A variant product's product-level inventory must be zero. Set the product quantity to 0 before adding variants.",
+        {
+          productId,
+          quantity: stockRow.quantity,
+          reserved: stockRow.reserved,
+          allowZeroProductStock: Boolean(input.allowZeroProductStock),
+          activeVariantsRequested: targetActive.length
+        }
       );
     }
     // Atomic one-save transition: the request explicitly sets product-level
@@ -383,31 +444,38 @@ async function assertVariantCanDeactivate(
   tx: Prisma.TransactionClient,
   variant: { id: string; name: string; reserved: number }
 ) {
-  const cartRows = await tx.cartItem.count({
-    where: { variantId: variant.id, cart: { status: "ACTIVE" } }
+  // Only lines the customer can actually check out are live commitments.
+  // `savedForLater` rows stay readable (and become unavailable in the cart) but
+  // are not reservations, so they do not keep a variant on sale. Historical
+  // CHECKED_OUT carts and order items are already excluded by `status` and are
+  // never deleted or rewritten by deactivation.
+  const liveCartLines = await tx.cartItem.count({
+    where: {
+      variantId: variant.id,
+      savedForLater: false,
+      cart: { status: "ACTIVE" }
+    }
   });
-  if (variant.reserved > 0 || cartRows > 0) {
+  if (variant.reserved > 0 || liveCartLines > 0) {
     throw new ApiError(
       409,
       "variant_in_use",
-      `${variant.name} is reserved by an order or present in a live cart and cannot be deactivated.`
+      `${variant.name} is reserved by an order or in a live cart and cannot be deactivated.`,
+      { variantId: variant.id, reserved: variant.reserved, liveCartLines }
     );
   }
 }
 
-/** Refuse a product-level quantity write while variant stock is authoritative. */
+/**
+ * Refuse a product-level quantity write while variant stock is authoritative.
+ * Locks the inventory row and re-checks both invariants, so it is safe to use
+ * as the transaction-scoped guard from every seller/admin quantity path.
+ */
 export async function assertProductQuantityAllowed(
   tx: Prisma.TransactionClient,
   productId: string,
   quantity: number | undefined
 ) {
   if (quantity === undefined) return;
-  const active = await tx.productVariant.count({ where: { productId, isActive: true } });
-  if (active > 0 && quantity !== 0) {
-    throw new ApiError(
-      409,
-      "variant_stock_managed",
-      "This product uses variant stock. Edit variant quantities instead of the product-level inventory."
-    );
-  }
+  await assertLockedProductQuantity(tx, { productId, quantity });
 }
