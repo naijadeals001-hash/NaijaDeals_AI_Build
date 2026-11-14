@@ -4882,3 +4882,48 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   from the prior round (idle-session hang); variant create/edit is NOT IMPLEMENTED; Control Center
   has no dedicated image-remediation queue; GitHub preservation remains BLOCKED by the rejected
   credential; no production deployment or paid provider call was made.
+
+## Variant management, related-failure seam and activation integration (2026-11-14)
+
+- Served build **`_pFIZzvayM1qBvcZCXuwb`** on **http://localhost:3047** through the guarded
+  REVIEW launcher; app-code commit **`fad6295`**; database `naijadeals_review` REVIEW. Accepted
+  catalogue: **253 products / 57 ACTIVE / 11 DRAFT / 185 ARCHIVED**, 37 browsing categories,
+  0 ProductVariant and 0 VerticalActivation rows after acceptance cleanup.
+- **Variant audit and contract:** REVIEW had no variant rows before this work. The audit found
+  product-level and variant-level stock as independent writable numbers, seller/admin APIs
+  silently ignoring `variants`, and publication validation reading only product stock. The new
+  shared contract (`lib/services/core/variant-contract.ts`, `docs/taxonomy/variant-inventory-contract.md`)
+  makes active variants authoritative; product-level stock must be 0; product stock writes while
+  variants are active fail `409 variant_stock_managed`; adding variants over stock fails
+  `409 variant_stock_conflict` unless the same request explicitly sets quantity 0 and nothing is
+  reserved. SKU/options/price/stock/currency/ownership validation, reservation-safe deactivation,
+  replacement-set semantics and before/after audit are implemented for seller and admin APIs.
+  Seller create remains DRAFT; only Control Center publishes. Both seller and admin editors expose
+  the same variant fields, and a stocked product can transition to variant stock in one explicit
+  save. A product-level cart line is refused at checkout after such a transition (low residual).
+- **Related-products failure:** a REVIEW-only seam (`REVIEW_TEST_SEAMS=1` + request header
+  `x-nd-related-failure: 1`) forces the server related query to fail. Product detail still renders;
+  the client shows “Related listings could not be loaded” with a retry control and recovers when
+  the request succeeds. Product-detail suite **99/99**.
+- **Activation:** `app/page.tsx` resolves `previewAuthorizationForRequest` + `verticalAccess`
+  before querying Shop products and passes no Shop product list to the client while public
+  DISABLED/PREVIEW; `app/naijashop/layout.tsx` resolves availability server-side. Public initial
+  HTML/cache is private/no-store; authorized PREVIEW still sees preview content. Activation suite
+  **30/30**, independent homepage probe **17/17**. Only Shop is enforced; Control Center labels
+  other verticals NOT WIRED — no ecosystem-wide activation claim.
+- **Acceptance on the frozen build:** storefront landing **95/95**, rail **150/150**, taxonomy
+  market **11/11**, visibility **16/16**, variant contract **26/26**, product detail **99/99**,
+  basket **10/10**, activation **30/30**, financial refusal **46/46**. Admin/seller variant
+  create→edit→validate→preview→publish and variant cart selection were exercised.
+- **Independent reviewers:** browser `agent_7e2aa299-9136-4d60-b9fc-b54d4a9c704b`
+  (full 78/78 + variant workflows + final focused 19/19 PASS) and contract reviewer
+  `agent_f2d4500b-8640-4713-a274-c6eeb085609e` (all prior findings CLOSED, no new high severity;
+  two LOW residuals: stock-row-absent transition race, and product-level cart lines becoming
+  unfulfillable after a stocked→variant conversion, refused at checkout).
+- Screenshots: `qa-artifacts/visual/final-variant-acceptance/` (landing/rail/detail, seller/admin
+  variant editors, preview/final cart, activation, saved-item variant) and
+  `qa-artifacts/visual/product-detail-gap/related-server-failure-unavailable.png` /
+  `related-retry-restored.png`.
+- Not implemented/claimed: variant row deletion (rows are deactivated), per-variant imagery,
+  marketplace-wide product-management parity beyond this contract. GitHub preservation remains
+  blocked by the rejected credential; no production deployment, live payment or paid provider call.

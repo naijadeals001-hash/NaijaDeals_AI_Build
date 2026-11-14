@@ -649,3 +649,7 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Seller publication policy | Seller POST/PATCH ACTIVE rejected 403 admin_publication_required; Control Center publishes | VERIFIED |
 | Six new department banners | All six 1600x900 assets 200 and decoded/rendered on canonical 3047 | VERIFIED |
 | Variant management | Public selection works; no authorized create/edit contract | NOT IMPLEMENTED |
+
+| Variant inventory contract | Active variants authoritative; product stock 0; validation, SKU/options/price/stock/currency/ownership, audit, seller/admin editors, publish-only Control Center; suite 26/26 | VERIFIED |
+| Related-products controlled failure | REVIEW-only server seam; product detail survives, unavailable/retry recovers; 99/99 | VERIFIED |
+| Variant/activation integrated acceptance | Landing 95/95, rail 150/150, market 11/11, visibility 16/16, variant 26/26, detail 99/99, basket 10/10, activation 30/30, financial 46/46; 57 ACTIVE restored | VERIFIED |
