@@ -5176,3 +5176,60 @@ category links were removed.
   thumbnail beside H1, 7 products begin earlier, no blurred banner/overflow, and the Electronics &
   Technology wide department banner remains 1400x144 / 366x112.
 - No paid promotions, fabricated imagery or unrelated sections were introduced. No push/deployment.
+
+## 2026-11-14 — Service-worker navigation race and department banner
+
+**Baseline preserved:** accepted D1 checkpoint build `o4jEJVzz0uZG7KYL_Ewfe` / commit `906415b`
+was not reset, squashed or rebuilt over. Work continues on the later accepted tree.
+
+**Final served build:** `19WXXfPlQymTaiKXBOVuh` on `naijadeals_review` (REVIEW), canonical 3047.
+
+### Root causes and fixes
+
+1. **First-load service-worker reload / navigation race**
+   - `public/sw.js` called `self.skipWaiting()` inside `install`, so a new worker activated
+     immediately.
+   - `PlatformProvider` reloaded on every `controllerchange`, including the first-install
+     `clients.claim()`, guarded only by a `sessionStorage` one-shot. An immediate home → Shop click
+     could be aborted by that reload.
+   - Fix: install now only precaches; a replacement worker waits for the user's explicit
+     `SKIP_WAITING`. The provider records whether a controller existed before registration, requires
+     `updateRequestedRef`, and uses an in-memory one-shot before reloading. Fresh install claims the
+     page without reloading; ordinary returning sessions do not reload; accepting an update reloads
+     exactly once; no loops. `sessionStorage` reload flags removed.
+2. **Department banner crop**
+   - Old: `h-28 w-full object-cover sm:h-36` forced 1600×900 artwork into a 1400×144 strip.
+   - Fix: centered bounded `max-w-[900px] aspect-video object-contain` panel. Rendered dimensions:
+     366×206 at 390, 728×410 at 768, 900×506 at 1440. Important subjects remain visible; alt text
+     preserved; compact level-1 category thumbnails unchanged.
+
+### Agents
+
+- Implementation: `agent_fc52b70d-b45a-4115-964a-0d66ea4a7938`.
+- Independent reviewer: `agent_0d5d5be8-2be5-411f-96fa-eea0c473e324` — independently reproduced the
+  full SW lifecycle and 10/10 immediate navigations, ran the official activation suite and visually
+  inspected banner screenshots; PASS for all four areas.
+
+### Verification (actual)
+
+- Implementation isolated SW suite: **37/37**; independent SW harness: **27/27** plus **10/10** race
+  trials and **3/3** direct-origin trials; update waits, one reload on accept, no loop; offline
+  fallback/recovery; keyboard Update now.
+- Official `scripts/vertical-activation-tests.ts` unchanged on canonical 3047:
+  **30/30 PASS**, DB `naijadeals_review (REVIEW)`, fixtures/activation rows restored (orders 0,
+  VerticalActivation 0, Shop LIVE).
+- Department banner independent harness: **38/38 PASS**, 390/768/1440 no overflow and no console/page
+  errors. Evidence under `qa-artifacts/visual/department-banner/` and
+  `qa-artifacts/visual/sw-race-independent/`.
+- `npx tsc --noEmit`: clean.
+
+### Residual limitations
+
+- Update lifecycle was exercised through a controlled same-origin proxy because changed worker bytes
+  are required; the base `/sw.js` is byte-identical and direct-origin race trials passed.
+- Chrome/headless only; no iOS Safari, Firefox, physical Android, real radio loss, multi-tab update
+  acceptance or worker-installed-while-page-closed banner test.
+- Cold-cache offline page chunks and the fixed static cache version (`naijadeals-v1`) are
+  pre-existing limitations; non-hashed `/generated` and `/icons` assets can remain cache-first across
+  worker updates until the version is bumped.
+- No commit, push or deployment at the time of this review; GitHub preservation remains blocked.

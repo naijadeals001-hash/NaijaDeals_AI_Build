@@ -27,9 +27,11 @@ const PRECACHE = [
 const PRIVATE_PREFIXES = ["/api/", "/admin", "/super-admin", "/wallet", "/checkout", "/pay", "/login", "/register", "/account", "/seller", "/driver", "/courier"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting())
-  );
+  // Precache only. A worker that replaces an existing one stays in `waiting`
+  // until the page posts SKIP_WAITING (the user accepts the update banner), so
+  // a background update never interrupts an in-flight navigation. A first
+  // install has no active worker, so it activates and claims normally.
+  event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE)));
 });
 
 self.addEventListener("activate", (event) => {

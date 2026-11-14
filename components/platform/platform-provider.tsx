@@ -35,6 +35,10 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   const [serviceWorkerActive, setServiceWorkerActive] = useState(false);
   const promptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
+  /** Set when the user accepts an update; only that replacement reloads the page. */
+  const updateRequestedRef = useRef(false);
+  /** In-memory one-shot so a controllerchange can never start a reload loop. */
+  const reloadedForUpdateRef = useRef(false);
 
   useEffect(() => {
     setCapabilities(detectCapabilities());
@@ -59,39 +63,63 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("appinstalled", onInstalled);
 
+    let disposed = false;
+    let registered: ServiceWorkerRegistration | null = null;
+    let updateFoundHandler: (() => void) | null = null;
+    let controllerChangeHandler: (() => void) | null = null;
+
     if ("serviceWorker" in navigator && window.isSecureContext && process.env.NODE_ENV === "production") {
+      // Whether this page was already controlled *before* we register. A first
+      // install claims the page through clients.claim(), which fires
+      // controllerchange but replaces nothing the user was already using.
+      let controllerWasPresent = Boolean(navigator.serviceWorker.controller);
+
+      const onControllerChange = () => {
+        const replacedExistingController = controllerWasPresent;
+        controllerWasPresent = Boolean(navigator.serviceWorker.controller);
+        setUpdateReady(false);
+        // Reload only when the user-applied update replaced a controller this
+        // page was already using. A first-install claim must not reload: that
+        // aborts an in-flight navigation (for example an immediate home -> Shop
+        // click). The in-memory one-shot stops any reload loop.
+        if (!replacedExistingController || !updateRequestedRef.current || reloadedForUpdateRef.current) return;
+        reloadedForUpdateRef.current = true;
+        window.location.reload();
+      };
+      controllerChangeHandler = onControllerChange;
+      navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
         .then((registration) => {
+          if (disposed) return;
+          registered = registration;
           registrationRef.current = registration;
           setServiceWorkerActive(true);
+          // A worker installed while this page was closed is already waiting.
           if (registration.waiting) setUpdateReady(true);
-          registration.addEventListener("updatefound", () => {
+          updateFoundHandler = () => {
             const installing = registration.installing;
             installing?.addEventListener("statechange", () => {
-              // A new worker that finished installing while an old one controls the page.
+              if (disposed) return;
+              // Installed while an old worker still controls the page: it waits
+              // for the user, who sees the update banner.
               if (installing.state === "installed" && navigator.serviceWorker.controller) setUpdateReady(true);
             });
-          });
+          };
+          registration.addEventListener("updatefound", updateFoundHandler);
         })
         .catch(() => setServiceWorkerActive(false));
-
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        setUpdateReady(false);
-        // Reload once the new worker takes control so the user sees the new build.
-        const key = "naijadeals:sw-reloaded";
-        if (!sessionStorage.getItem(key)) {
-          sessionStorage.setItem(key, "1");
-          window.location.reload();
-        }
-      });
     }
 
     return () => {
+      disposed = true;
       window.removeEventListener("online", goOnline);
       window.removeEventListener("offline", goOffline);
       window.removeEventListener("beforeinstallprompt", onPrompt);
       window.removeEventListener("appinstalled", onInstalled);
+      if (controllerChangeHandler) navigator.serviceWorker.removeEventListener("controllerchange", controllerChangeHandler);
+      if (registered && updateFoundHandler) registered.removeEventListener("updatefound", updateFoundHandler);
     };
   }, []);
 
@@ -106,7 +134,12 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const applyUpdate = useCallback(() => {
-    registrationRef.current?.waiting?.postMessage("SKIP_WAITING");
+    const waiting = registrationRef.current?.waiting;
+    // Nothing to activate: the worker may already have activated in another tab.
+    if (!waiting) return;
+    // Mark the replacement as user-requested so controllerchange reloads once.
+    updateRequestedRef.current = true;
+    waiting.postMessage("SKIP_WAITING");
   }, []);
 
   const value = useMemo(

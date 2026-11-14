@@ -255,11 +255,19 @@ export function CategoryBrowse({
         const node = knownCategory;
         if (!node?.imageUrl || node.level !== 0) return null;
         return (
-          <div className="mt-3 overflow-hidden rounded-xl ring-1 ring-[#e3e6e6]">
-            {/* Department banners are authored wide; a full-width cover is
-                appropriate and does not crop a square category subject. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={node.imageUrl} alt={node.imageAlt || `${node.name} department`} className="h-28 w-full object-cover sm:h-36" />
+          <div className="mt-3 flex justify-center">
+            <div className="w-full max-w-[900px] overflow-hidden rounded-xl bg-[#f7f8f8] ring-1 ring-[#e3e6e6]">
+              {/* Department artwork is authored 16:9 (1600x900). Keep the whole
+                  subject inside a bounded video-shaped panel instead of cropping
+                  it into a wide strip; compact category thumbnails below keep
+                  their own square crop. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={node.imageUrl}
+                alt={node.imageAlt || `${node.name} department`}
+                className="aspect-video w-full object-contain"
+              />
+            </div>
           </div>
         );
       })()}
