@@ -5668,3 +5668,27 @@ their correct leaves; accepted catalogue delta is exactly the six planned rows.
 8. TEST-only side effect: SYSTEM wallet moved from -91,000,000 to -97,000,000 kobo through balanced
    journals; no REVIEW financial rows or provider calls.
 9. No push or deployment.
+
+
+## 2026-11-14 — Paused Shop presentation and server availability
+
+**Artifact:** application commit `3052d07`, build `9GdPgANsxDE6ujX7hE5bI`, canonical 3047.
+Shop presentation was already committed at `873aa37`; this slice removes redundant first-paint
+availability probes.
+
+- Server layout/page resolves effective Shop activation and passes it to the Shop header,
+  storefront and homepage. When supplied, the first client effect reuses it (0 probes on LIVE);
+  a market switch still re-probes.
+- LIVE: shelves render, no paused panel, 0 initial availability requests, 0px overflow at 390.
+- Paused panel keeps existing orders, receipts, cart/saved items, returns/disputes/wallet payments
+  for existing orders and support; it advertises no new order, cart addition or seller listing.
+- Activation suite 30/30 covers LIVE, anonymous PREVIEW, authorized PREVIEW, DISABLED, navigation,
+  cart-add, checkout and catalogue refusal, and restores the exact prior snapshot (0 rows).
+  Exclusive review lease is acquired/released; no activation rows or snapshots remain.
+- **NOT_WIRED audit preserved:** Food, Groceries, Drive, Deliveries, Services, Music, Wallet and Aura
+  remain NOT_WIRED. Stay is already ENFORCED but **hold expiry has no scheduler invocation**;
+  Stream **media recovery (`recoverPendingJobs`) is not called at boot/worker**. No new vertical is
+  marked ENFORCED and no vertical rebuild is started.
+- Open Shop blockers remain the variant concurrency follow-ups (legacy variant image exposure,
+  DB CHECK constraints, test-doc env, activation recovery TOCTOU/audit, saved-item status,
+  refund/restock suppression, paused homepage RSC recheck).

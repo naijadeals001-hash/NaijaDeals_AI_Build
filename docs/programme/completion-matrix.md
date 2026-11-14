@@ -676,3 +676,27 @@ and needs supply, onboarding and payout work rather than a rebuild.
 | Stay activation | Stay discovery/search/stays/destinations/property pages paused; new holds and host listings 409 vertical_unavailable; bookings/cancel/review/host tools/help preserved; public and authorized PREVIEW verified | VERIFIED |
 | Variant image + locking | ProductVariant.imageUrl validated against product gallery; selected-variant gallery switch; variant row locks serialize edits with reservations; contract 30/30, concurrency 100/100 | VERIFIED |
 | Catalogue coverage 2026-11-14 | 11 departments / 37 categories / 117 leaves; 57 ACTIVE products all on leaves; 35/100 populated, 65 gaps; 68/68 images | VERIFIED (population batch blocked on assets) |
+
+
+## Activation enforcement audit — 2026-11-14 (Shop-only changes)
+
+This audit adds no runtime enforcement to any new vertical. Shop presentation and probe behaviour
+changed; Stay remains ENFORCED from its accepted slice. Every other vertical remains **NOT_WIRED**
+(a saved activation row has no runtime effect).
+
+| Vertical | State | Audit note |
+|---|---|---|
+| Shop | ENFORCED | Catalogue, detail, new cart additions, checkout, seller listings and availability probe. Server-resolved state now seeds the first paint; the LIVE page made 0 client availability probes. |
+| Stay | ENFORCED | Existing discovery/hold/host gates. **Gap:** `releaseExpiredHolds()` exists but has no scheduler/worker invocation; expired holds are released only when that function is called. |
+| Food (eats) | NOT_WIRED | No route/service consults activation. |
+| Groceries (fresh) | NOT_WIRED | No route/service consults activation. |
+| Drive | NOT_WIRED | No route/service consults activation. |
+| Deliveries (send) | NOT_WIRED | No route/service consults activation. |
+| Services (gigs) | NOT_WIRED | No route/service consults activation. |
+| Music (stream) | NOT_WIRED | No route/service consults activation. **Gap:** `recoverPendingJobs()` exists but is not invoked at boot or by the infrastructure worker, so media processing can remain PENDING/PROCESSING after restart. |
+| Wallet | NOT_WIRED | Shared ledger serves accepted Shop/Plus/affiliate flows; do not pause it with this batch. |
+| Aura | NOT_WIRED | Per-capability gating and paid-provider policy unresolved. |
+
+The paused Shop panel keeps existing orders, receipts, cart/saved items, returns, disputes, wallet
+payments for existing orders and support links. It advertises no new catalogue, cart addition,
+checkout, seller listing or order. Backend activation remains authoritative.
