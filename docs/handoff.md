@@ -5468,3 +5468,74 @@ taxonomy seed, no deployment.
   ran it 30/30 on the final build.
 - No push/deployment. The clean worktree is retained for inspection; GitHub remains blocked by the
   rejected preservation credential.
+
+
+## 2026-11-14 — Variant inventory integrity remediation
+
+**Frozen artifact:** canonical 3047 from clean worktree
+`C:/Users/User/naijadeals-clean-20261114-135010`, app commit **`0797a19`**, build
+**`AxG-9cZ8JY249TxWAUEbE`**, PID 42368. Previous build absent; REVIEW DB unchanged.
+
+### Completed
+
+- Variant deactivation now blocks only unsaved lines in an ACTIVE cart plus
+  reserved units. Saved-for-later lines and historical CHECKED_OUT cart/order
+  references do not block; saved lines become unavailable rather than
+  purchasable.
+- Seller and admin quantity edits and variant transitions share a
+  transaction-scoped `InventoryStock` row lock; quantity below reserved and
+  unsafe transitions are refused under that lock.
+- Refund/cancellation/return restock restores the authoritative variant source
+  exactly once through a durable order marker. Variant-managed products never
+  increment product-level stock; conversion suppression is recorded.
+- `availabilityProjection` is the single source for saved items, admin preview
+  page/list, homepage rail, catalogue and both search writers. Saved variant
+  items offer Choose options; unknown stock is unavailable, never “N available
+  of 0 on hand”.
+- Seller/admin audit records real unchanged variant before/after snapshots when
+  a variants payload is omitted; seller creation records its actual variant set.
+- Seller service always creates DRAFT and refuses ACTIVE create/update; the
+  Control Center publish workflow remains the only publication path.
+- Paused Shop resolves activation before selection; anonymous PREVIEW/DISABLED
+  HTML/RSC carried no product payload with a deliberately non-empty run-owned
+  rail.
+
+### Verification
+
+- `variant-management-tests.cjs` **30/30**; artifact
+  `qa-artifacts/visual/variant-inventory/variant-management-final-AxG.log`.
+- `variant-concurrency-tests.cjs --db-fixtures` **94 passed / 0 failed / 5
+  environment-blocked**, 253/57/0 catalogue restored.
+- `variant-inventory-focus-tests.ts` 23/23; `variant-restock-idempotency-tests.ts`
+  24/24 on TEST-classified `naijadeals_checkout_refund_test`; saved/admin/homepage
+  view tests 14/14; availability review 13/13; admin stock/audit 9/9.
+- Activation 30/30, landing 95/95, market 19/19, basket 10/10, financial refusal
+  46/46 (0 provider calls), `tsc --noEmit` clean on the committed clean worktree.
+- Independent reviewer `agent_4125ed51-0844-4b48-a0fb-abd769036fa1`: PASS for
+  build/commit, deactivation, reserved stock, restock, availability, audit,
+  publication boundary and paused-Shop privacy. No critical/high/medium defect.
+
+### Agents
+
+- Inventory/variant: `agent_169e3e15-f194-40d8-85d5-2cd9d6828e4b`.
+- Account/admin/audit: `agent_204f5c4c-9cc4-4b4f-b728-2e704d507ea3`.
+- Independent reviewer: `agent_4125ed51-0844-4b48-a0fb-abd769036fa1`.
+
+### Remaining defects / limitations
+
+- Low: cart-page presentation does not yet consume the new per-line
+  `availability` field; server-side cart/checkout still refuses unavailable
+  lines.
+- Informational: the older `/api/admin/products/[id]/moderate` publication
+  route remains a separate permissioned path with lighter validation; it was not
+  introduced here.
+- Informational: `availabilityProjection` treats a missing `isActive` variant
+  flag as active; all current callers supplying variants provide the flag.
+- Informational: products with no `InventoryStock` row do not acquire the stock
+  lock, though existing variants still serialise transitions.
+- TEST-only side effect: the shared SYSTEM wallet in
+  `naijadeals_checkout_refund_test` moved from -73,000,000 to -79,000,000 kobo
+  through balanced test top-up/refund journals; REVIEW money was untouched.
+- Five variant-concurrency public-route checks remain environment-blocked in
+  degraded mode; the same behaviour was covered by focus/API probes.
+- No push or deployment.
