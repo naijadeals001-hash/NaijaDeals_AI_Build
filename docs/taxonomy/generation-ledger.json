@@ -1305,7 +1305,7 @@
         "/generated/shop/product-led-monitor.webp",
         "/generated/shop/product-coffee-maker.webp"
       ],
-      "compositor": "sharp 1024x1024 + 1024x576 → 1600x900 WebP quality 88",
+      "compositor": "sharp 1024x1024 + 1024x576 \u2192 1600x900 WebP quality 88",
       "pngPath": null,
       "webpPath": "/generated/taxonomy/category-electronics-appliances.webp",
       "alt": "Slim LED monitor on a stand beside a black drip coffee maker with a glass carafe",
@@ -1675,7 +1675,7 @@
       {
         "id": "cmwf6y0u000cnv4gobf9kpr3e",
         "slug": "demo-compact-first-aid-kit-42-pieces-5x8ln",
-        "name": "DEMO — Compact first-aid kit, 42 pieces",
+        "name": "DEMO \u2014 Compact first-aid kit, 42 pieces",
         "leafKey": "first-aid-supplies",
         "priceKobo": "850000",
         "stock": 12,
@@ -1685,7 +1685,7 @@
       {
         "id": "cmwf6y0ya00ddv4goh2u87vra",
         "slug": "demo-glass-baby-bottles-2-240ml-vz8lq",
-        "name": "DEMO — Glass baby bottles, 2 × 240ml",
+        "name": "DEMO \u2014 Glass baby bottles, 2 \u00d7 240ml",
         "leafKey": "bottles-teats-sterilisers",
         "priceKobo": "780000",
         "stock": 15,
@@ -1695,7 +1695,7 @@
       {
         "id": "cmwf6y11o00e3v4gomp4cvpln",
         "slug": "demo-size-5-match-football-2tldo",
-        "name": "DEMO — Size 5 match football",
+        "name": "DEMO \u2014 Size 5 match football",
         "leafKey": "football-basketball-equipment",
         "priceKobo": "950000",
         "stock": 20,
@@ -1705,7 +1705,7 @@
       {
         "id": "cmwf6y16500etv4go2cri35gl",
         "slug": "demo-car-wash-and-microfibre-care-kit-nfey8",
-        "name": "DEMO — Car wash and microfibre care kit",
+        "name": "DEMO \u2014 Car wash and microfibre care kit",
         "leafKey": "car-care-cleaning",
         "priceKobo": "1200000",
         "stock": 14,
@@ -1715,7 +1715,7 @@
       {
         "id": "cmwf6y19400fjv4goi5q39a9g",
         "slug": "demo-cordless-drill-and-bit-set-18v-dlbqn",
-        "name": "DEMO — Cordless drill and bit set, 18V",
+        "name": "DEMO \u2014 Cordless drill and bit set, 18V",
         "leafKey": "drills-drivers",
         "priceKobo": "4800000",
         "stock": 8,
@@ -1725,7 +1725,7 @@
       {
         "id": "cmwf6y1c800g9v4go8uicfz2s",
         "slug": "demo-a5-exercise-books-pack-of-10-m3ss1",
-        "name": "DEMO — A5 exercise books, pack of 10",
+        "name": "DEMO \u2014 A5 exercise books, pack of 10",
         "leafKey": "notebooks-paper",
         "priceKobo": "480000",
         "stock": 30,
@@ -1735,7 +1735,7 @@
       {
         "id": "cmwf6y1g400gzv4gooqflw9t1",
         "slug": "demo-garri-cassava-flakes-1kg-3cwop",
-        "name": "DEMO — Garri (cassava flakes), 1kg",
+        "name": "DEMO \u2014 Garri (cassava flakes), 1kg",
         "leafKey": "cassava-products",
         "priceKobo": "220000",
         "stock": 25,
@@ -1745,7 +1745,7 @@
       {
         "id": "cmwf6y1kh00hpv4go6mkc8305",
         "slug": "demo-handwoven-raffia-tote-bag-y57pg",
-        "name": "DEMO — Handwoven raffia tote bag",
+        "name": "DEMO \u2014 Handwoven raffia tote bag",
         "leafKey": "bags-accessories",
         "priceKobo": "1500000",
         "stock": 10,
@@ -1781,56 +1781,62 @@
       {
         "id": "cmwgvdgdk000av4a04s42azpi",
         "slug": "demo-long-grain-white-rice-5kg-hd49g",
-        "name": "DEMO — Long-grain white rice, 5kg",
+        "name": "DEMO \u2014 Long-grain white rice, 5kg",
         "leafKey": "rice-grains",
         "priceKobo": "950000",
         "stock": 24,
-        "image": "/generated/taxonomy/long-grain-rice.webp"
+        "image": "/generated/taxonomy/long-grain-rice.webp",
+        "alt": "Open jute sack of long-grain white rice beside a carved wooden bowl of rice"
       },
       {
         "id": "cmwgvdgh1000zv4a0t81d2xiy",
         "slug": "demo-red-palm-oil-1-litre-rn11s",
-        "name": "DEMO — Red palm oil, 1 litre",
+        "name": "DEMO \u2014 Red palm oil, 1 litre",
         "leafKey": "palm-cooking-oils",
         "priceKobo": "480000",
         "stock": 18,
-        "image": "/generated/taxonomy/red-palm-oil.webp"
+        "image": "/generated/taxonomy/red-palm-oil.webp",
+        "alt": "Clear glass bottle of red palm oil with fresh palm fruits and kernels"
       },
       {
         "id": "cmwgvdgjz001ov4a0mscnxcro",
         "slug": "demo-household-cleaning-set-leqbm",
-        "name": "DEMO — Household cleaning set",
+        "name": "DEMO \u2014 Household cleaning set",
         "leafKey": "cleaning-supplies",
         "priceKobo": "850000",
         "stock": 16,
-        "image": "/generated/taxonomy/household-cleaning-set.webp"
+        "image": "/generated/taxonomy/household-cleaning-set.webp",
+        "alt": "Cleaning bucket, blank spray bottle, folded microfibre cloths and sponges"
       },
       {
         "id": "cmwgvdgmo002dv4a0gjm10k4l",
         "slug": "demo-pen-pencil-and-ruler-set-q4g44",
-        "name": "DEMO — Pen, pencil and ruler set",
+        "name": "DEMO \u2014 Pen, pencil and ruler set",
         "leafKey": "writing-drawing-instruments",
         "priceKobo": "320000",
         "stock": 40,
-        "image": "/generated/taxonomy/stationery-writing-set.webp"
+        "image": "/generated/taxonomy/stationery-writing-set.webp",
+        "alt": "Ballpoint pens, wooden pencils, plain wooden ruler and white eraser"
       },
       {
         "id": "cmwgvdgpi0032v4a0f9ebosxv",
         "slug": "demo-wooden-stacking-toy-with-soft-ball-uz6wu",
-        "name": "DEMO — Wooden stacking toy with soft ball",
+        "name": "DEMO \u2014 Wooden stacking toy with soft ball",
         "leafKey": "baby-toddler-toys",
-        "priceKobo": "420000",
-        "stock": 30,
-        "image": "/generated/taxonomy/wooden-stacking-toy.webp"
+        "priceKobo": "750000",
+        "stock": 14,
+        "image": "/generated/taxonomy/wooden-stacking-toy.webp",
+        "alt": "Wooden stacking-ring toy and soft fabric ball on a neutral surface"
       },
       {
         "id": "cmwgvdgsa003rv4a0756m8lif",
         "slug": "demo-yoga-mat-cork-block-and-resistance-band-set-x55et",
-        "name": "DEMO — Yoga mat, cork block and resistance band set",
+        "name": "DEMO \u2014 Yoga mat, cork block and resistance band set",
         "leafKey": "yoga-fitness-accessories",
-        "priceKobo": "760000",
-        "stock": 20,
-        "image": "/generated/taxonomy/yoga-mat-set.webp"
+        "priceKobo": "1450000",
+        "stock": 12,
+        "image": "/generated/taxonomy/yoga-mat-set.webp",
+        "alt": "Rolled yoga mat, cork block and resistance band on a neutral surface"
       }
     ]
   }

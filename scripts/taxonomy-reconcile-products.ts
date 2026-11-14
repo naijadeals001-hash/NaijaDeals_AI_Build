@@ -4,7 +4,7 @@
  *
  * Proves the reviewed arithmetic:
  *   63 active = 31 accepted baseline + 6 Batch A + 4 Batch B + 8 taxonomy batch
- *              + 8 Batch 2
+ *              + 8 Batch 2 + 6 Batch 3
  *
  * The script opens an explicit READ ONLY transaction, prints every active
  * product with its id, creation time (UTC and local), department, category and
