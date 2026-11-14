@@ -15,10 +15,13 @@ import type { GalleryImage } from "./types";
 export function ProductGallery({
   name,
   images,
+  preferredUrl = null,
   demo = false
 }: {
   name: string;
   images: GalleryImage[];
+  /** Selected variant image to focus when the option changes. */
+  preferredUrl?: string | null;
   demo?: boolean;
 }) {
   const [brokenUrls, setBrokenUrls] = useState<Set<string>>(() => new Set());
@@ -34,6 +37,13 @@ export function ProductGallery({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!preferredUrl) return;
+    if (images.some((image) => image.url === preferredUrl) && !brokenUrls.has(preferredUrl)) {
+      setActiveUrl(preferredUrl);
+    }
+  }, [preferredUrl, images, brokenUrls]);
 
   const usable = images.filter((image) => !brokenUrls.has(image.url));
   const selected = usable.find((image) => image.url === activeUrl) ?? usable[0] ?? null;

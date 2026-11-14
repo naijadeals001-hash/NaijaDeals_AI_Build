@@ -315,7 +315,12 @@ export function ProductDetailClient({
 
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:gap-6">
         <div className="order-2 min-w-0 xl:order-1 xl:w-[390px] xl:shrink-0">
-          <ProductGallery name={product.name} images={images} demo={demo} />
+          <ProductGallery
+            name={product.name}
+            images={images}
+            preferredUrl={selectedVariant?.imageUrl ?? null}
+            demo={demo}
+          />
         </div>
 
         <div className="contents xl:order-2 xl:flex xl:min-w-0 xl:flex-1 xl:flex-col xl:gap-5">

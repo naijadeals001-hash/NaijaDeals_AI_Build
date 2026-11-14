@@ -354,10 +354,10 @@ async function main() {
   fixture.variantProductSlug = variantProduct.slug;
   const variants = await prisma.$transaction([
     prisma.productVariant.create({
-      data: { productId: variantProduct.id, name: "Standard set", sku: `${runId}-std`.toUpperCase(), priceKobo: 1250000n, stock: 5 }
+      data: { productId: variantProduct.id, name: "Standard set", sku: `${runId}-std`.toUpperCase(), priceKobo: 1250000n, stock: 5, imageUrl: IMAGE_A.url }
     }),
     prisma.productVariant.create({
-      data: { productId: variantProduct.id, name: "Large set", sku: `${runId}-large`.toUpperCase(), priceKobo: 1800000n, stock: 2 }
+      data: { productId: variantProduct.id, name: "Large set", sku: `${runId}-large`.toUpperCase(), priceKobo: 1800000n, stock: 2, imageUrl: IMAGE_B.url }
     }),
     prisma.productVariant.create({
       data: { productId: variantProduct.id, name: "Sold out set", sku: `${runId}-sold`.toUpperCase(), priceKobo: 2100000n, stock: 0 }
@@ -432,6 +432,18 @@ async function main() {
       check("switching variant changes stock", /5 units shown for demonstration|5 available/.test(standardAvailability), standardAvailability);
       const quantityCountStandard = await page.locator('[data-testid="product-quantity"] option').count();
       check("quantity cap updates with variant stock", quantityCountStandard === 5, `options=${quantityCountStandard}`);
+      check(
+        "selected variant switches the gallery image",
+        (await page.locator('[data-testid="product-main-image"]').getAttribute("src")) === IMAGE_A.url,
+        await page.locator('[data-testid="product-main-image"]').getAttribute("src")
+      );
+      await page.locator('[data-testid="product-variant"]').selectOption(fixture.variantIds.large);
+      await page.waitForTimeout(300);
+      check(
+        "switching to a variant with its own image updates the main image",
+        (await page.locator('[data-testid="product-main-image"]').getAttribute("src")) === IMAGE_B.url,
+        await page.locator('[data-testid="product-main-image"]').getAttribute("src")
+      );
 
       const sectionText = await page.locator('[data-testid="purchase-panel"]').innerText();
       const sellerText = await page.locator('section[aria-labelledby="seller-heading"]').innerText();
