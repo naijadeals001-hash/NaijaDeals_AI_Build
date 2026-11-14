@@ -217,10 +217,16 @@ export const VERTICAL_ENFORCEMENT: Record<string, VerticalEnforcement> = {
     points: []
   },
   stay: {
-    wired: false,
-    state: "NOT_WIRED",
-    summary: "Stay routes and services do not consult activation yet. A saved row has no runtime effect.",
-    points: []
+    wired: true,
+    state: "ENFORCED",
+    summary: "Stay discovery, new holds and new host listings consult activation; existing holds, bookings, cancellation, reviews and support remain available.",
+    points: [
+      "/naijastay discovery, search, destinations and property pages (server-rendered pause state)",
+      "POST /api/stay/hold (new reservations only)",
+      "POST /api/stay/host and PUT /api/stay/host (new host applications/listings only)",
+      "Existing holds can still be paid/cancelled through the accepted reservation flow",
+      "Existing /naijastay/bookings, cancellation, review, host dashboard and help routes remain available"
+    ]
   },
   stream: {
     wired: false,

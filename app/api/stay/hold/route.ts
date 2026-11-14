@@ -3,6 +3,8 @@ import { assertSameOrigin, jsonError, readJson, requireUser } from "@/lib/auth/g
 import { jsonSafe } from "@/lib/services/core/serialize";
 import { ApiError } from "@/lib/auth/api-error";
 import { createHold } from "@/lib/services/stay/reservations";
+import { readLocale } from "@/lib/i18n/server";
+import { assertVerticalAccess, previewAuthorizationForRequest } from "@/lib/services/core/vertical-activation.service";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,15 @@ export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
     const user = await requireUser();
+    const { country, city } = readLocale();
+    const { previewAuthorized } = await previewAuthorizationForRequest();
+    await assertVerticalAccess("stay", {
+      countryCode: country,
+      cityCode: city,
+      previewAuthorized,
+      statusCode: 409,
+      message: "Stays are not accepting new reservations in this market right now. Existing bookings and support remain available."
+    });
     const body = await readJson<Record<string, unknown>>(request);
     const propertyId = String(body.propertyId ?? "");
     const checkIn = String(body.checkIn ?? "");

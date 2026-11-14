@@ -31,6 +31,21 @@ type StorefrontConfig = {
   shelfLimit?: number;
 };
 
+/**
+ * The same effective-activation signal the Shop header reads.
+ *
+ * `available` is the server's access decision for this request: PREVIEW is
+ * `true` only for an authorized Control Center account, so a public visitor in
+ * PREVIEW receives the paused treatment as well. `message` is the public
+ * refusal text and never contains the operator's internal reason.
+ */
+type ShopAvailability = {
+  status: "LIVE" | "PREVIEW" | "DISABLED";
+  available: boolean;
+  preview?: boolean;
+  message?: string | null;
+};
+
 /** The published tree already carries every taxonomy field the shelves use. */
 type Department = PublicTaxonomyNode;
 
@@ -254,7 +269,11 @@ function pickExplore(
  * pricing. Demonstration listings are labelled on every card, and bulk buying
  * still starts with a producer quote and independent freight.
  */
-export function NaijaDealsMarketplace() {
+export function NaijaDealsMarketplace({
+  initialShopAvailability = null
+}: {
+  initialShopAvailability?: ShopAvailability | null;
+} = {}) {
   const { country, city } = useLocale();
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -268,9 +287,34 @@ export function NaijaDealsMarketplace() {
   const [addedId, setAddedId] = useState("");
   const [notice, setNotice] = useState<Notice>(null);
   const [config, setConfig] = useState<StorefrontConfig>({});
+  const [shopAvailability, setShopAvailability] = useState<ShopAvailability | null>(initialShopAvailability);
   const [missingArt, setMissingArt] = useState<Record<string, boolean>>({});
 
   const markMissing = (key: string) => setMissingArt((current) => (current[key] ? current : { ...current, [key]: true }));
+
+  // Shop availability is the same resolver the catalogue/cart/checkout routes
+  // enforce. It is fetched with no-store and never cached, so a paused market
+  // cannot be re-served from a stale response. A failed probe leaves the state
+  // unresolved: the page then relies on the protected catalogue response rather
+  // than claiming the marketplace is open.
+  useEffect(() => {
+    let active = true;
+    const params = new URLSearchParams({ country: country || "NG" });
+    if (city) params.set("city", city);
+    fetch(`/api/products/availability?${params.toString()}`, { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((value: ShopAvailability | null) => {
+        if (active && value && typeof value.available === "boolean" && typeof value.status === "string") {
+          setShopAvailability(value);
+        }
+      })
+      .catch(() => {
+        /* Keep the catalogue response as the authority instead of guessing. */
+      });
+    return () => {
+      active = false;
+    };
+  }, [country, city]);
 
   useEffect(() => {
     let active = true;
@@ -340,6 +384,20 @@ export function NaijaDealsMarketplace() {
   const showHero = config.showHero !== false;
   const showShelves = config.showShelves !== false;
   const shelfLimit = Math.min(Math.max(config.shelfLimit && config.shelfLimit > 0 ? config.shelfLimit : 4, 1), 8);
+
+  // Three states drive the whole page:
+  // - paused: the resolver explicitly refused this request (DISABLED public, or
+  //   PREVIEW for a visitor without Control Center access);
+  // - open: access is confirmed either by the availability probe or by a
+  //   successful protected catalogue response, which cannot be fetched while
+  //   the resolver refuses;
+  // - unresolved: nothing has confirmed access yet, so no commerce action or
+  //   listing count is shown until it is.
+  const shopPaused = shopAvailability?.available === false;
+  const shopOpen =
+    !shopPaused &&
+    (shopAvailability?.available === true || (shopAvailability === null && status === "ready"));
+  const shopPreview = shopAvailability?.status === "PREVIEW" && shopAvailability.available === true;
 
   // The market-scoped published taxonomy is the navigation source. If it is
   // unavailable, derive departments from the already market-scoped product
@@ -499,9 +557,12 @@ export function NaijaDealsMarketplace() {
   };
 
   return (
-    <div className="w-full max-w-full bg-[#f4f7f2] text-[#14241b]">
+    <div
+      className="w-full max-w-full bg-[#f4f7f2] text-[#14241b]"
+      data-storefront-availability={shopAvailability?.status ?? "loading"}
+    >
       <div className="mx-auto w-full max-w-[1440px] px-3 pb-10 pt-1 sm:px-6 lg:px-8">
-        {notice ? (
+        {notice && shopOpen ? (
           <div
             role={notice.tone === "error" ? "alert" : "status"}
             className={`mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-4 py-3 text-[12px] font-semibold ${
@@ -524,101 +585,143 @@ export function NaijaDealsMarketplace() {
           </div>
         ) : null}
 
-        {/* Compact, full-width retail entrance. Wholesale no longer shares this row. */}
-        <section
-          aria-labelledby="marketplace-hero-heading"
-          data-storefront-hero
-          className={`mt-4 overflow-hidden rounded-[24px] ${
-            showHero ? "relative bg-[#07351f]" : "border border-[#e1e8de] bg-white"
-          }`}
-        >
-          {showHero ? (
-            <>
-              {!missingArt["/generated/shop/hero-desktop.webp"] ? (
-                <img
-                  src="/generated/shop/hero-desktop.webp"
-                  alt=""
-                  fetchPriority="high"
-                  onError={() => markMissing("/generated/shop/hero-desktop.webp")}
-                  className="absolute inset-0 h-full w-full object-cover object-[72%_center] sm:object-[66%_center]"
-                />
-              ) : null}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#041f12] via-[#041f12]/90 to-[#041f12]/10" aria-hidden />
-              <div className="relative flex flex-col justify-between gap-5 px-5 py-5 sm:px-8 sm:py-8 lg:px-10 lg:py-9">
-                <div className="max-w-[36rem]">
-                  <p className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#f5b52e] ring-1 ring-white/15">
-                    <Store className="h-3 w-3" aria-hidden />
-                    Retail marketplace
-                  </p>
-                  <h1
-                    id="marketplace-hero-heading"
-                    className="mt-3 font-display text-[28px] font-extrabold leading-[1.08] tracking-[-0.02em] text-white sm:text-[36px] lg:text-[42px]"
-                  >
+        {/* A paused market never renders the retail hero: its calls to action
+            would promise browsing and checkout the resolver refuses. */}
+        {shopPaused ? (
+          <StorefrontPaused message={shopAvailability?.message ?? null} />
+        ) : (
+          <section
+            aria-labelledby="marketplace-hero-heading"
+            data-storefront-hero
+            className={`mt-4 overflow-hidden rounded-[24px] ${
+              showHero ? "relative bg-[#07351f]" : "border border-[#e1e8de] bg-white"
+            }`}
+          >
+            {showHero ? (
+              <>
+                {!missingArt["/generated/shop/hero-desktop.webp"] ? (
+                  <img
+                    src="/generated/shop/hero-desktop.webp"
+                    alt=""
+                    fetchPriority="high"
+                    onError={() => markMissing("/generated/shop/hero-desktop.webp")}
+                    className="absolute inset-0 h-full w-full object-cover object-[72%_center] sm:object-[66%_center]"
+                  />
+                ) : null}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#041f12] via-[#041f12]/90 to-[#041f12]/10" aria-hidden />
+                <div className="relative flex flex-col justify-between gap-5 px-5 py-5 sm:px-8 sm:py-8 lg:px-10 lg:py-9">
+                  <div className="max-w-[36rem]">
+                    <p className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#f5b52e] ring-1 ring-white/15">
+                      <Store className="h-3 w-3" aria-hidden />
+                      Retail marketplace
+                    </p>
+                    <h1
+                      id="marketplace-hero-heading"
+                      className="mt-3 font-display text-[28px] font-extrabold leading-[1.08] tracking-[-0.02em] text-white sm:text-[36px] lg:text-[42px]"
+                    >
+                      Everyday retail, from sellers you can check.
+                    </h1>
+                    <p className="mt-2.5 max-w-lg text-[12px] leading-5 text-white/80 sm:text-[13px] sm:leading-6">
+                      Shop phones, fashion, home, groceries and more. Demonstration listings are labelled, and checkout uses your
+                      NaijaDeals account.
+                    </p>
+                    {shopOpen ? (
+                      <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                        <Link
+                          href="/naijashop/categories"
+                          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-[#f5b52e] px-2 text-[11px] font-extrabold text-[#14241b] transition hover:bg-[#ffd15e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#07351f] sm:gap-2 sm:px-5 sm:text-[12px]"
+                        >
+                          Browse departments
+                          <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+                        </Link>
+                        <Link
+                          href="/naijashop/help"
+                          className="inline-flex h-11 items-center justify-center rounded-full border border-white/30 bg-white/5 px-2 text-[11px] font-bold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:px-5 sm:text-[12px]"
+                        >
+                          How buying works
+                        </Link>
+                      </div>
+                    ) : (
+                      <p
+                        role="status"
+                        className="mt-4 inline-flex min-h-11 items-center rounded-full border border-white/25 bg-white/5 px-4 text-[11px] font-bold text-white/85"
+                      >
+                        Checking Shop availability…
+                      </p>
+                    )}
+                  </div>
+                  <ul className="mt-4 hidden flex-wrap gap-x-4 gap-y-2 text-[10px] font-semibold text-white/85 sm:flex sm:text-[10.5px]">
+                    <li className="flex items-center gap-1.5">
+                      <BadgeCheck className="h-3.5 w-3.5 text-[#8ed14b]" aria-hidden />
+                      Demonstration listings labelled
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <ShieldCheck className="h-3.5 w-3.5 text-[#8ed14b]" aria-hidden />
+                      Escrow-protected checkout
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <Truck className="h-3.5 w-3.5 text-[#8ed14b]" aria-hidden />
+                      Tracked delivery
+                    </li>
+                  </ul>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col gap-3 px-5 py-6 sm:px-8 sm:py-8 lg:flex-row lg:items-center lg:justify-between">
+                <div className="max-w-2xl">
+                  <p className="text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">NaijaDeals Marketplace</p>
+                  <h1 id="marketplace-hero-heading" className="mt-2 font-display text-[28px] font-extrabold leading-tight tracking-tight text-[#14241b] sm:text-[36px]">
                     Everyday retail, from sellers you can check.
                   </h1>
-                  <p className="mt-2.5 max-w-lg text-[12px] leading-5 text-white/80 sm:text-[13px] sm:leading-6">
-                    Shop phones, fashion, home, groceries and more. Demonstration listings are labelled, and checkout uses your
+                  <p className="mt-2 text-[12.5px] leading-6 text-[#4b5b51]">
+                    Browse published seller listings by department. Demonstration inventory is labelled and checkout uses your
                     NaijaDeals account.
                   </p>
-                  <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                    <Link
-                      href="/naijashop/categories"
-                      className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-[#f5b52e] px-2 text-[11px] font-extrabold text-[#14241b] transition hover:bg-[#ffd15e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#07351f] sm:gap-2 sm:px-5 sm:text-[12px]"
-                    >
-                      Browse departments
-                      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+                </div>
+                {shopOpen ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Link href="/naijashop/categories" className="inline-flex h-11 items-center gap-2 rounded-full bg-[#07351f] px-5 text-[12px] font-extrabold text-white">
+                      Browse departments <ArrowRight className="h-4 w-4" aria-hidden />
                     </Link>
-                    <Link
-                      href="/naijashop/help"
-                      className="inline-flex h-11 items-center justify-center rounded-full border border-white/30 bg-white/5 px-2 text-[11px] font-bold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:px-5 sm:text-[12px]"
-                    >
+                    <Link href="/naijashop/help" className="inline-flex h-11 items-center rounded-full border border-[#b9cbb4] px-5 text-[12px] font-extrabold text-[#0b5c33]">
                       How buying works
                     </Link>
                   </div>
-                </div>
-                <ul className="mt-4 hidden flex-wrap gap-x-4 gap-y-2 text-[10px] font-semibold text-white/85 sm:flex sm:text-[10.5px]">
-                  <li className="flex items-center gap-1.5">
-                    <BadgeCheck className="h-3.5 w-3.5 text-[#8ed14b]" aria-hidden />
-                    Demonstration listings labelled
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <ShieldCheck className="h-3.5 w-3.5 text-[#8ed14b]" aria-hidden />
-                    Escrow-protected checkout
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <Truck className="h-3.5 w-3.5 text-[#8ed14b]" aria-hidden />
-                    Tracked delivery
-                  </li>
-                </ul>
+                ) : (
+                  <p role="status" className="inline-flex min-h-11 items-center rounded-full border border-[#e1d6b4] bg-[#fbf4e4] px-4 text-[11.5px] font-bold text-[#7a4c00]">
+                    Checking Shop availability…
+                  </p>
+                )}
               </div>
-            </>
-          ) : (
-            <div className="flex flex-col gap-3 px-5 py-6 sm:px-8 sm:py-8 lg:flex-row lg:items-center lg:justify-between">
-              <div className="max-w-2xl">
-                <p className="text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">NaijaDeals Marketplace</p>
-                <h1 id="marketplace-hero-heading" className="mt-2 font-display text-[28px] font-extrabold leading-tight tracking-tight text-[#14241b] sm:text-[36px]">
-                  Everyday retail, from sellers you can check.
-                </h1>
-                <p className="mt-2 text-[12.5px] leading-6 text-[#4b5b51]">
-                  Browse published seller listings by department. Demonstration inventory is labelled and checkout uses your
-                  NaijaDeals account.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Link href="/naijashop/categories" className="inline-flex h-11 items-center gap-2 rounded-full bg-[#07351f] px-5 text-[12px] font-extrabold text-white">
-                  Browse departments <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
-                <Link href="/naijashop/help" className="inline-flex h-11 items-center rounded-full border border-[#b9cbb4] px-5 text-[12px] font-extrabold text-[#0b5c33]">
-                  How buying works
-                </Link>
-              </div>
-            </div>
-          )}
-        </section>
+            )}
+          </section>
+        )}
 
-        {status === "loading" ? <MarketplaceSkeleton /> : null}
+        {/* Authorized PREVIEW is a staff-only view of a marketplace the public
+            cannot use yet. The notice states that boundary instead of letting a
+            preview session look like a public launch. */}
+        {shopPreview ? (
+          <section
+            data-storefront-preview
+            role="status"
+            aria-labelledby="storefront-preview-heading"
+            className="mt-4 rounded-2xl border border-[#bfe0c8] bg-[#f2f9f2] px-4 py-3.5 sm:px-5"
+          >
+            <h2 id="storefront-preview-heading" className="flex items-center gap-1.5 text-[12px] font-extrabold text-[#0b5c33]">
+              <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden />
+              Preview mode
+            </h2>
+            <p className="mt-1 max-w-3xl text-[11.5px] leading-5 text-[#3f5a47]">
+              You are signed in with an authorized Control Center account, so the catalogue, cart and checkout respond for this
+              session. Visitors without that access still see Shop as paused and receive no listings until the service is set to
+              LIVE.
+            </p>
+          </section>
+        ) : null}
 
-        {status === "error" ? (
+        {status === "loading" && !shopPaused ? <MarketplaceSkeleton /> : null}
+
+        {status === "error" && !shopPaused ? (
           <div role="alert" className="mt-6 rounded-3xl border border-[#f0c8c2] bg-[#fdf2f0] p-6">
             <AlertCircle className="h-6 w-6 text-[#b42318]" aria-hidden />
             <h2 className="mt-2 font-display text-[20px] font-extrabold text-[#7a1c12]">We couldn&apos;t load the listings</h2>
@@ -641,7 +744,7 @@ export function NaijaDealsMarketplace() {
           </div>
         ) : null}
 
-        {status === "ready" && products.length === 0 ? (
+        {shopOpen && status === "ready" && products.length === 0 ? (
           <div className="mt-6 rounded-3xl border border-[#dfe8dc] bg-white px-5 py-10 text-center">
             <Store className="mx-auto h-8 w-8 text-[#7a9c80]" aria-hidden />
             <h2 className="mt-3 font-display text-[22px] font-extrabold text-[#14241b]">No published seller listings yet</h2>
@@ -660,7 +763,7 @@ export function NaijaDealsMarketplace() {
           </div>
         ) : null}
 
-        {status === "ready" && showShelves && discovery.exploreItems.length > 0 ? (
+        {shopOpen && status === "ready" && showShelves && discovery.exploreItems.length > 0 ? (
           <ProductShelf
             shelf={exploreShelf}
             items={discovery.exploreItems}
@@ -670,12 +773,14 @@ export function NaijaDealsMarketplace() {
           />
         ) : null}
 
-        {/* Compact taxonomy rail; the full hierarchy stays in All departments. */}
-        {levelOneStatus === "ready" ? (
+        {/* Compact taxonomy rail; the full hierarchy stays in All departments.
+            A paused market shows no category counts: they describe a catalogue
+            the resolver will not serve. */}
+        {shopOpen && levelOneStatus === "ready" ? (
           <CategoryRail entries={railEntries} countsStatus="ready" summary={railSummary} />
         ) : null}
 
-        {levelOneStatus === "loading" ? (
+        {shopOpen && levelOneStatus === "loading" ? (
           <section aria-busy="true" aria-label="Loading shop categories" className="mt-4 min-w-0">
             <div className="h-6 w-40 animate-pulse rounded-full bg-[#e3ebdf]" />
             <div className="mt-2 h-3 w-64 animate-pulse rounded-full bg-[#e3ebdf]" />
@@ -691,7 +796,7 @@ export function NaijaDealsMarketplace() {
           </section>
         ) : null}
 
-        {levelOneStatus === "error" ? (
+        {shopOpen && levelOneStatus === "error" ? (
           <p role="status" className="mt-3 rounded-xl border border-[#eadfc6] bg-[#fbf4e4] px-3 py-2 text-[11px] leading-5 text-[#7a4c00]">
             The browsing category list could not be loaded for {country}, so the category rail is hidden.
             {taxonomyStatus === "ready"
@@ -700,17 +805,17 @@ export function NaijaDealsMarketplace() {
           </p>
         ) : null}
 
-        {status === "ready" && showShelves
+        {shopOpen && status === "ready" && showShelves
           ? discovery.shelves.map(({ shelf, items }) => (
               <ProductShelf key={shelf.id} shelf={shelf} items={items} onAdd={addToCart} addingId={addingId} addedId={addedId} />
             ))
           : null}
 
-        {status === "ready" && discovery.african.length > 0 ? (
+        {shopOpen && status === "ready" && discovery.african.length > 0 ? (
           <AfricanDiscovery items={discovery.african} />
         ) : null}
 
-        {status !== "loading" ? (
+        {shopOpen && status !== "loading" ? (
           <section data-storefront-wholesale aria-labelledby="bulk-heading" className="mt-8 overflow-hidden rounded-[28px] bg-[#07351f] text-white">
             <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-7 p-5 sm:p-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-10 lg:p-10">
               <div className="min-w-0">
@@ -813,29 +918,121 @@ export function NaijaDealsMarketplace() {
           </section>
         ) : null}
 
-        {/* Seller invitation is deliberately subordinate to retail discovery. */}
-        <section data-seller-invite aria-labelledby="seller-invite-heading" className="mt-4 rounded-2xl border border-[#e1e8de] bg-white px-4 py-4 sm:px-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">For sellers</p>
-              <h2 id="seller-invite-heading" className="mt-1 font-display text-[18px] font-extrabold tracking-tight text-[#14241b]">
-                Have stock to sell?
-              </h2>
-              <p className="mt-1 max-w-2xl text-[11px] leading-5 text-[#566359]">
-                Apply for a seller account to publish eligible stock on the marketplace.
-              </p>
+        {/* Seller invitation is deliberately subordinate to retail discovery and
+            is withheld entirely while new listings are refused. Existing seller
+            commitments are linked from the paused panel instead. */}
+        {shopOpen ? (
+          <section data-seller-invite aria-labelledby="seller-invite-heading" className="mt-4 rounded-2xl border border-[#e1e8de] bg-white px-4 py-4 sm:px-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">For sellers</p>
+                <h2 id="seller-invite-heading" className="mt-1 font-display text-[18px] font-extrabold tracking-tight text-[#14241b]">
+                  Have stock to sell?
+                </h2>
+                <p className="mt-1 max-w-2xl text-[11px] leading-5 text-[#566359]">
+                  Apply for a seller account to publish eligible stock on the marketplace.
+                </p>
+              </div>
+              <Link
+                href="/sell"
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[#b9cbb4] px-4 text-[11.5px] font-extrabold text-[#0b5c33] transition hover:bg-[#eef5eb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
+              >
+                Open a seller account
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+              </Link>
             </div>
-            <Link
-              href="/sell"
-              className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[#b9cbb4] px-4 text-[11.5px] font-extrabold text-[#0b5c33] transition hover:bg-[#eef5eb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
-            >
-              Open a seller account
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-            </Link>
-          </div>
-        </section>
+          </section>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * Paused Shop entrance.
+ *
+ * Replaces the retail hero and every commerce action for the effective state
+ * the resolver refused. It deliberately shows no catalogue counts, shelves or
+ * seller calls to action, and keeps the paths that still work reachable:
+ * existing orders and receipts, cart management, seller commitments and
+ * support. The message is the public refusal text produced server-side.
+ */
+function StorefrontPaused({ message }: { message: string | null }) {
+  return (
+    <section
+      data-storefront-paused
+      aria-labelledby="storefront-paused-heading"
+      className="mt-4 w-full max-w-full overflow-hidden rounded-[24px] border border-[#e7dcbb] bg-white"
+    >
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 p-5 sm:p-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-10">
+        <div className="min-w-0">
+          <p className="inline-flex items-center gap-1.5 rounded-full bg-[#fdf3dc] px-3 py-1 text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#7a4c00] ring-1 ring-[#ecd9a7]">
+            <AlertCircle className="h-3 w-3 shrink-0" aria-hidden />
+            Shop paused
+          </p>
+          <h1
+            id="storefront-paused-heading"
+            className="mt-3 break-words font-display text-[26px] font-extrabold leading-[1.1] tracking-[-0.02em] text-[#14241b] sm:text-[34px]"
+          >
+            Shop is paused in this market.
+          </h1>
+          <p role="status" className="mt-2.5 max-w-xl text-[12.5px] leading-6 text-[#4b5b51] sm:text-[13px]">
+            {message ??
+              "Shop is not available in this market yet. New orders, cart additions and new seller listings are on hold."}
+          </p>
+          <p className="mt-2 max-w-xl text-[12px] leading-6 text-[#4b5b51]">
+            Browsing new listings, adding to cart and checkout are unavailable while Shop is paused, so no catalogue or
+            stock counts are shown here.
+          </p>
+          <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <li className="min-w-0">
+              <Link
+                href="/orders"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[#07351f] px-3 text-[11.5px] font-extrabold text-white transition hover:bg-[#0b4a2c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
+              >
+                View orders
+                <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              </Link>
+            </li>
+            <li className="min-w-0">
+              <Link
+                href="/cart"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[#b9cbb4] px-3 text-[11.5px] font-extrabold text-[#0b5c33] transition hover:bg-[#eef5eb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
+              >
+                View cart
+              </Link>
+            </li>
+            <li className="min-w-0">
+              <Link
+                href="/naijashop/help"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[#b9cbb4] px-3 text-[11.5px] font-extrabold text-[#0b5c33] transition hover:bg-[#eef5eb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
+              >
+                Help &amp; support
+              </Link>
+            </li>
+          </ul>
+          <p className="mt-3 text-[11px] leading-5 text-[#566359]">
+            Existing orders, receipts, returns, disputes, cart contents and support stay available. Seller applications
+            and new listings are paused with Shop; <Link href="/naijashop/help" className="font-bold text-[#0b5c33] underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]">get seller help</Link>.
+          </p>
+        </div>
+        <div className="min-w-0 rounded-2xl border border-[#e1e8de] bg-[#f7faf4] p-4 sm:p-5">
+          <h2 className="flex items-center gap-1.5 text-[12px] font-extrabold text-[#14241b]">
+            <ShieldCheck className="h-4 w-4 shrink-0 text-[#0f7a4a]" aria-hidden />
+            What stays available
+          </h2>
+          <ul className="mt-3 space-y-2.5 text-[11.5px] leading-5 text-[#3f5a47]">
+            <li>Order history, receipts and order status</li>
+            <li>Your cart and saved items</li>
+            <li>Returns, disputes and customer support</li>
+            <li>Wallet and payments for existing orders</li>
+          </ul>
+          <p className="mt-3 text-[10px] leading-4 text-[#6b7a6f]">
+            This page does not accept new orders or publish new seller listings while Shop is paused.
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 

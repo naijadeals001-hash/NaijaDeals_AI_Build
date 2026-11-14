@@ -297,6 +297,25 @@ export const TAXONOMY_NODES: TaxonomyNode[] = [
       select("connectivity", "Connectivity", ["Wi-Fi", "Wi-Fi + Cellular"], true)
     ]
   }),
+  node({
+    key: "smartwatches-wearables",
+    parentKey: "phones-tablets",
+    name: "Smartwatches & Wearables",
+    slug: "smartwatches-wearables",
+    description:
+      "Smartwatches, fitness trackers and smart bands with companion apps. Excludes traditional watches and complete smartphones.",
+    level: 2,
+    isSelectable: true,
+    showOnHomepage: false,
+    sortOrder: 40,
+    aliases: [alias("smartwatch"), alias("smart watch"), alias("fitness tracker"), alias("smart band")],
+    attributes: [
+      select("device_type", "Device type", ["Smartwatch", "Fitness tracker", "Smart band", "Other"], true),
+      number("display_size_inches", "Display size (inches)"),
+      text("strap_material", "Strap material"),
+      text("water_resistance", "Water resistance")
+    ]
+  }),
   existing("computers", "Computers", "computers", "electronics", 20),
   node({
     key: "laptops",
@@ -501,6 +520,43 @@ export const TAXONOMY_NODES: TaxonomyNode[] = [
       ),
       number("screen_size_inches", "Screen size (inches)"),
       number("power_watts", "Power (W)")
+    ]
+  }),
+  node({
+    key: "headphones-personal-audio",
+    parentKey: "electronics-appliances",
+    name: "Headphones & Personal Audio",
+    slug: "headphones-personal-audio",
+    description:
+      "Over-ear and in-ear headphones, earbuds, portable speakers and personal audio players. Excludes televisions, home theatre systems and phone accessories.",
+    level: 2,
+    isSelectable: true,
+    showOnHomepage: false,
+    sortOrder: 40,
+    aliases: [alias("headphone"), alias("earphones"), alias("earbuds"), alias("portable speaker")],
+    attributes: [
+      select("product_type", "Product type", ["Headphones", "Earphones", "Portable speaker", "Player"], true),
+      select("connectivity", "Connectivity", ["Bluetooth", "Wired", "Wireless", "Other"], true),
+      number("battery_life_hours", "Battery life (hours)")
+    ]
+  }),
+  node({
+    key: "cameras-photography",
+    parentKey: "electronics-appliances",
+    name: "Cameras & Photography",
+    slug: "cameras-photography",
+    description:
+      "Digital cameras, lenses, tripods and photography accessories. Excludes camera phones, dash cameras and security cameras.",
+    level: 2,
+    isSelectable: true,
+    showOnHomepage: false,
+    sortOrder: 50,
+    aliases: [alias("camera"), alias("DSLR"), alias("mirrorless"), alias("lens"), alias("tripod")],
+    attributes: [
+      select("camera_type", "Camera type", ["DSLR", "Mirrorless", "Compact", "Action", "Other"], true),
+      text("sensor_type", "Sensor type"),
+      number("megapixels", "Megapixels"),
+      text("lens_mount", "Lens mount")
     ]
   }),
   node({
@@ -1199,6 +1255,25 @@ export const TAXONOMY_NODES: TaxonomyNode[] = [
         true
       ),
       number("volume_ml", "Volume (ml)")
+    ]
+  }),
+  node({
+    key: "fragrance-perfume",
+    parentKey: "beauty-personal-care",
+    name: "Fragrance & Perfume",
+    slug: "fragrance-perfume",
+    description:
+      "Perfume, eau de parfum, cologne, attar and fragrance gift sets. Excludes body lotions and medicated products.",
+    level: 2,
+    isSelectable: true,
+    showOnHomepage: false,
+    sortOrder: 40,
+    aliases: [alias("perfume"), alias("fragrance"), alias("eau de parfum"), alias("cologne"), alias("attar")],
+    attributes: [
+      select("fragrance_family", "Fragrance family", ["Floral", "Woody", "Oriental", "Fresh", "Citrus", "Other"], false),
+      select("concentration", "Concentration", ["Eau de toilette", "Eau de parfum", "Parfum", "Cologne", "Attar", "Other"], false),
+      number("volume_ml", "Volume (ml)"),
+      select("target_gender", "Target", ["Women", "Men", "Unisex"], false)
     ]
   }),
   node({

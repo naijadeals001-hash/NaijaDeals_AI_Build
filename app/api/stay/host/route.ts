@@ -4,6 +4,8 @@ import { jsonSafe } from "@/lib/services/core/serialize";
 import { ApiError } from "@/lib/auth/api-error";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/services/core/audit.service";
+import { readLocale } from "@/lib/i18n/server";
+import { assertVerticalAccess, previewAuthorizationForRequest } from "@/lib/services/core/vertical-activation.service";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,15 @@ export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
     const user = await requireUser();
+    const { country, city } = readLocale();
+    const { previewAuthorized } = await previewAuthorizationForRequest();
+    await assertVerticalAccess("stay", {
+      countryCode: country,
+      cityCode: city,
+      previewAuthorized,
+      statusCode: 409,
+      message: "Stays are not accepting new host applications in this market right now. Existing host tools and support remain available."
+    });
     const body = await readJson<Record<string, unknown>>(request);
     const existing = await prisma.stayHost.findUnique({ where: { ownerId: user.id }, select: { id: true } });
     if (existing) throw new ApiError(409, "host_exists", "This account is already registered as a host.");
@@ -45,6 +56,15 @@ export async function PUT(request: Request) {
   try {
     assertSameOrigin(request);
     const user = await requireUser();
+    const { country, city } = readLocale();
+    const { previewAuthorized } = await previewAuthorizationForRequest();
+    await assertVerticalAccess("stay", {
+      countryCode: country,
+      cityCode: city,
+      previewAuthorized,
+      statusCode: 409,
+      message: "Stays are not accepting new listings in this market right now. Existing listings and host tools remain available."
+    });
     const host = await prisma.stayHost.findUnique({ where: { ownerId: user.id }, select: { id: true, status: true } });
     if (!host) throw new ApiError(404, "host_missing", "Apply to host first.");
     if (host.status !== "verified") throw new ApiError(403, "host_unverified", "Your host account is awaiting verification, so new listings cannot be submitted yet.");

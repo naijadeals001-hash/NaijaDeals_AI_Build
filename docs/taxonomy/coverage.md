@@ -6,16 +6,20 @@
 > --expect-db=naijadeals_review --images`. The verified values on 2026-11-13 are:
 >
 > - **161 active taxonomy nodes: 11 departments / 37 categories / 113 selectable leaves.**
-> - **96 publishable leaves; 17 NG-regulated leaves; 30 populated publishable leaves
->   (30/96); 66 publishable leaves empty.**
-> - **57 ACTIVE products: 50 on selectable leaves, 7 retained on level-1 categories
->   pending classification (ambiguous), 0 active acceptance fixtures.**
-> - **34 audited `Product.categoryId` moves applied; 16 products already on their leaf;
->   7 ambiguous. Seven moves were re-applied after a revert and all seven now sit on
->   their audited leaves.**
-> - **`CategoryRequest`: 3 APPROVED / 1 REJECTED; 0 CRF category or request names.**
-> - **62 image URLs audited (57 active products + 5 department banners): 62 HEAD 200
->   and Chromium `naturalWidth > 0`; 6 departments have no approved banner art.**
+> - **96 publishable leaves; 17 NG-regulated leaves; 31 populated publishable leaves
+>   (31/96); 65 publishable leaves empty.**
+> - **57 ACTIVE products: 52 on selectable leaves, 5 retained on level-1 categories
+>   pending four requested leaves (ambiguous), 0 active acceptance fixtures.**
+> - **36 audited `Product.categoryId` moves applied; 16 products already on their leaf;
+>   5 ambiguous. Seven moves were re-applied after a revert and all seven now sit on
+>   their audited leaves. The two 2026-11-13 ambiguous-resolution moves (wired gaming
+>   mouse, portable solar battery charging station) were applied by
+>   `scripts/taxonomy-resolve-ambiguous.ts` under run `TAXAMB-20261113`.**
+> - **`CategoryRequest`: 3 APPROVED / 4 PENDING / 1 REJECTED; 0 CRF category or request
+>   names. The four PENDING rows are the reviewed leaf requests for headphones, fragrance,
+>   cameras and smartwatches.**
+> - **68 image URLs audited (57 active product images + 11 department banners): 68 HEAD 200
+>   and Chromium `naturalWidth > 0`; 0 departments lack approved banner art.**
 >
 > The 16 example areas used to size the first taxonomy batch are illustrative coverage
 > targets, **not the full requested marketplace scope**. The taxonomy remains a reviewed

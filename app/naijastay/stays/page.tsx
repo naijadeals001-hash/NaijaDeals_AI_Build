@@ -4,12 +4,16 @@ import { StayBottomNav, StayHeader } from "@/components/stay/stay-shell";
 import { StayFooter, PropertyCard, StayRail } from "@/components/stay/stay-home";
 import { DESTINATIONS, searchStay } from "@/lib/services/stay/discovery";
 import { stayImage } from "@/lib/services/stay/images";
+import { StayPaused } from "@/components/stay/stay-paused";
+import { stayPageAccess } from "@/lib/services/stay/access";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Stays & accommodation — NaijaStay", alternates: { canonical: "/naijastay/stays" } };
 
 export default async function StaysPage({ searchParams }: { searchParams?: { q?: string; guests?: string } }) {
+  const access = await stayPageAccess();
+  if (!access.accessible) return <StayPaused message={access.message} />;
   const q = searchParams?.q?.trim() || undefined;
   const guests = Number(searchParams?.guests ?? 0) || undefined;
   const listings = await searchStay({ q, guests, take: 60 });

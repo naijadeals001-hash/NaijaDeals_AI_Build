@@ -5,12 +5,16 @@ import { StayBottomNav, StayHeader } from "@/components/stay/stay-shell";
 import { StayFooter } from "@/components/stay/stay-home";
 import { DESTINATIONS } from "@/lib/services/stay/discovery";
 import { stayImage } from "@/lib/services/stay/images";
+import { StayPaused } from "@/components/stay/stay-paused";
+import { stayPageAccess } from "@/lib/services/stay/access";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Destinations — NaijaStay", alternates: { canonical: "/naijastay/destinations" } };
 
 export default async function DestinationsPage() {
+  const access = await stayPageAccess();
+  if (!access.accessible) return <StayPaused message={access.message} />;
   // Only cities with published inventory are shown as bookable.
   const counts = await prisma.stayProperty.groupBy({ by: ["city"], where: { status: "published" }, _count: { _all: true } });
   const byCity = new Map(counts.map((c) => [c.city.toLowerCase(), c._count._all]));

@@ -4,19 +4,19 @@
   "database": "naijadeals_review",
   "reviewOnly": true,
   "applied": true,
-  "note": "Applied in audited batches by scripts/taxonomy-apply-mapping.ts; 34 products currently in their proposed leaves, 7 ambiguous retained, 16 kept.",
+  "note": "Applied in audited batches by scripts/taxonomy-apply-mapping.ts; 34 products currently in their proposed leaves, 7 ambiguous retained, 16 kept. On 2026-11-13 the reviewed ambiguous resolution (docs/taxonomy/ambiguous-resolution-2026-11-13.json, run TAXAMB-20261113, applied by scripts/taxonomy-resolve-ambiguous.ts) moved the wired gaming mouse to Gaming Accessories and the portable solar battery charging station to Generators & Backup Power, leaving 5 products on selectable level-1 categories pending four requested leaves.",
   "summary": {
     "total": 57,
-    "mapped": 34,
-    "ambiguous": 7,
+    "mapped": 41,
+    "ambiguous": 0,
     "alreadyOnProposedLeaf": 8,
-    "proposedMoves": 34,
+    "proposedMoves": 41,
     "kept": 16
   },
   "products": [
     {
       "productId": "cmwdyexl50005v4s0txgo7qfa",
-      "name": "DEMO \u2014 10-inch Android tablet",
+      "name": "DEMO — 10-inch Android tablet",
       "currentCategory": {
         "key": "phones-tablets",
         "slug": "phones-tablets",
@@ -35,7 +35,7 @@
     },
     {
       "productId": "cmwdyexlb000bv4s0ap4xt4ti",
-      "name": "DEMO \u2014 Android smartphone, 6-inch display",
+      "name": "DEMO — Android smartphone, 6-inch display",
       "currentCategory": {
         "key": "phones-tablets",
         "slug": "phones-tablets",
@@ -54,7 +54,7 @@
     },
     {
       "productId": "cmwdyexle000iv4s0hijvnav5",
-      "name": "DEMO \u2014 14-inch business laptop",
+      "name": "DEMO — 14-inch business laptop",
       "currentCategory": {
         "key": "computers",
         "slug": "computers",
@@ -73,7 +73,7 @@
     },
     {
       "productId": "cmwdyexlg000ov4s025pxj9yx",
-      "name": "DEMO \u2014 Mechanical keyboard",
+      "name": "DEMO — Mechanical keyboard",
       "currentCategory": {
         "key": "computers",
         "slug": "computers",
@@ -92,7 +92,7 @@
     },
     {
       "productId": "cmwdyexlj000vv4s0mat8d6kk",
-      "name": "DEMO \u2014 5.5L air fryer",
+      "name": "DEMO — 5.5L air fryer",
       "currentCategory": {
         "key": "home-kitchen",
         "slug": "home-kitchen",
@@ -111,7 +111,7 @@
     },
     {
       "productId": "cmwdyexll0011v4s0civw2edm",
-      "name": "DEMO \u2014 Stainless steel cookware set",
+      "name": "DEMO — Stainless steel cookware set",
       "currentCategory": {
         "key": "home-kitchen",
         "slug": "home-kitchen",
@@ -130,22 +130,26 @@
     },
     {
       "productId": "cmwdynxdd0018v4q00rd1lw3x",
-      "name": "DEMO \u2014 Over-ear headphones",
+      "name": "DEMO — Over-ear headphones",
       "currentCategory": {
         "key": "electronics-appliances",
         "slug": "electronics-appliances",
         "name": "Electronics & Appliances",
         "path": "Electronics & Technology / Electronics & Appliances"
       },
-      "proposedLeaf": null,
-      "action": "review",
-      "confidence": "medium",
-      "ambiguous": true,
-      "reason": "Over-ear headphones have no personal-audio leaf: TVs & Home Audio covers speakers and home theatre, not headphones. Flagged for a future Audio leaf."
+      "proposedLeaf": {
+        "key": "headphones-personal-audio",
+        "slug": "headphones-personal-audio",
+        "path": "Electronics & Technology / Electronics & Appliances / Headphones & Personal Audio"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Reviewed leaf Headphones & Personal Audio explicitly covers this product; mapped after source and database leaf creation."
     },
     {
       "productId": "cmwdynxdg001ev4q0aay20n41",
-      "name": "DEMO \u2014 2-slice toaster",
+      "name": "DEMO — 2-slice toaster",
       "currentCategory": {
         "key": "electronics-appliances",
         "slug": "electronics-appliances",
@@ -164,7 +168,7 @@
     },
     {
       "productId": "cmwdynxdh001kv4q0zsxxx7r0",
-      "name": "DEMO \u2014 Retro kitchen blender",
+      "name": "DEMO — Retro kitchen blender",
       "currentCategory": {
         "key": "electronics-appliances",
         "slug": "electronics-appliances",
@@ -183,7 +187,7 @@
     },
     {
       "productId": "cmwdynxdj001qv4q0vkrulgmu",
-      "name": "DEMO \u2014 LED monitor",
+      "name": "DEMO — LED monitor",
       "currentCategory": {
         "key": "electronics-appliances",
         "slug": "electronics-appliances",
@@ -202,7 +206,7 @@
     },
     {
       "productId": "cmwdynxdm001xv4q0qeq2r1fb",
-      "name": "DEMO \u2014 Running shoes",
+      "name": "DEMO — Running shoes",
       "currentCategory": {
         "key": "fashion-accessories",
         "slug": "fashion-accessories",
@@ -221,7 +225,7 @@
     },
     {
       "productId": "cmwdynxdo0023v4q0afcz2f2b",
-      "name": "DEMO \u2014 Leather handbag",
+      "name": "DEMO — Leather handbag",
       "currentCategory": {
         "key": "fashion-accessories",
         "slug": "fashion-accessories",
@@ -240,7 +244,7 @@
     },
     {
       "productId": "cmwdynxdq0029v4q0ple4660k",
-      "name": "DEMO \u2014 Automatic wristwatch",
+      "name": "DEMO — Automatic wristwatch",
       "currentCategory": {
         "key": "fashion-accessories",
         "slug": "fashion-accessories",
@@ -259,22 +263,26 @@
     },
     {
       "productId": "cmwdynxds002fv4q0puj39gxq",
-      "name": "DEMO \u2014 Eau de parfum, 50ml",
+      "name": "DEMO — Eau de parfum, 50ml",
       "currentCategory": {
         "key": "beauty-personal-care",
         "slug": "beauty-personal-care",
         "name": "Beauty & Personal Care",
         "path": "Fashion & Beauty / Beauty & Personal Care"
       },
-      "proposedLeaf": null,
-      "action": "review",
-      "confidence": "medium",
-      "ambiguous": true,
-      "reason": "No fragrance leaf exists; Skincare, Hair Care and Bath & Body do not cover perfume. Flagged for a Fragrance leaf."
+      "proposedLeaf": {
+        "key": "fragrance-perfume",
+        "slug": "fragrance-perfume",
+        "path": "Fashion & Beauty / Beauty & Personal Care / Fragrance & Perfume"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Reviewed leaf Fragrance & Perfume explicitly covers this product; mapped after source and database leaf creation."
     },
     {
       "productId": "cmwdynxdu002mv4q0rx83vc4f",
-      "name": "DEMO \u2014 Shampoo bars",
+      "name": "DEMO — Shampoo bars",
       "currentCategory": {
         "key": "beauty-personal-care",
         "slug": "beauty-personal-care",
@@ -293,7 +301,7 @@
     },
     {
       "productId": "cmwdynxdw002sv4q0jkmbobl6",
-      "name": "DEMO \u2014 Moisturiser, 100ml",
+      "name": "DEMO — Moisturiser, 100ml",
       "currentCategory": {
         "key": "beauty-personal-care",
         "slug": "beauty-personal-care",
@@ -312,22 +320,26 @@
     },
     {
       "productId": "cmwdynxdy002yv4q0n19qj5vm",
-      "name": "DEMO \u2014 Perfume gift set",
+      "name": "DEMO — Perfume gift set",
       "currentCategory": {
         "key": "beauty-personal-care",
         "slug": "beauty-personal-care",
         "name": "Beauty & Personal Care",
         "path": "Fashion & Beauty / Beauty & Personal Care"
       },
-      "proposedLeaf": null,
-      "action": "review",
-      "confidence": "medium",
-      "ambiguous": true,
-      "reason": "Perfume gift set has no fragrance leaf. Same gap as the eau de parfum."
+      "proposedLeaf": {
+        "key": "fragrance-perfume",
+        "slug": "fragrance-perfume",
+        "path": "Fashion & Beauty / Beauty & Personal Care / Fragrance & Perfume"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Reviewed leaf Fragrance & Perfume explicitly covers this product; mapped after source and database leaf creation."
     },
     {
       "productId": "cmwdynxe2003av4q0dr57u791",
-      "name": "DEMO \u2014 Portable power bank",
+      "name": "DEMO — Portable power bank",
       "currentCategory": {
         "key": "phones-tablets",
         "slug": "phones-tablets",
@@ -346,7 +358,7 @@
     },
     {
       "productId": "cmwdynxe4003gv4q0n2q8f7bs",
-      "name": "DEMO \u2014 Smartphone on desk",
+      "name": "DEMO — Smartphone on desk",
       "currentCategory": {
         "key": "phones-tablets",
         "slug": "phones-tablets",
@@ -365,22 +377,26 @@
     },
     {
       "productId": "cmwdynxe6003mv4q0y9hwt5ha",
-      "name": "DEMO \u2014 Wired gaming mouse",
+      "name": "DEMO — Wired gaming mouse",
       "currentCategory": {
         "key": "computers",
         "slug": "computers",
         "name": "Computers",
         "path": "Electronics & Technology / Computers"
       },
-      "proposedLeaf": null,
-      "action": "review",
-      "confidence": "medium",
-      "ambiguous": true,
-      "reason": "Wired gaming mouse fits both Computer Accessories (Mouse) and Gaming Accessories (Gaming mouse); the listing does not settle the primary use. Flagged."
+      "proposedLeaf": {
+        "key": "gaming-accessories",
+        "slug": "gaming-accessories",
+        "path": "Electronics & Technology / Gaming / Gaming Accessories"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Resolved 2026-11-13 under run TAXAMB-20261113. The Gaming Accessories leaf is defined as 'Controllers, headsets, gaming mice and keyboards, chairs and streaming accessories. Excludes consoles and games.' and its accessory_type attribute enumerates 'Gaming mouse', so the leaf covers the item directly."
     },
     {
       "productId": "cmwdynxe8003sv4q01d98wnuj",
-      "name": "DEMO \u2014 15.6-inch laptop",
+      "name": "DEMO — 15.6-inch laptop",
       "currentCategory": {
         "key": "computers",
         "slug": "computers",
@@ -399,7 +415,7 @@
     },
     {
       "productId": "cmwdynxea003yv4q0q422vs0c",
-      "name": "DEMO \u2014 Coffee maker",
+      "name": "DEMO — Coffee maker",
       "currentCategory": {
         "key": "home-kitchen",
         "slug": "home-kitchen",
@@ -418,7 +434,7 @@
     },
     {
       "productId": "cmwdynxed0044v4q0vylviitf",
-      "name": "DEMO \u2014 Fresh tomatoes, 1kg",
+      "name": "DEMO — Fresh tomatoes, 1kg",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -437,7 +453,7 @@
     },
     {
       "productId": "cmwe3jlwu00hpv4u0v6jb5nox",
-      "name": "DEMO \u2014 Diced onions, 500g",
+      "name": "DEMO — Diced onions, 500g",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -456,7 +472,7 @@
     },
     {
       "productId": "cmwe3jlxp00i3v4u0tk3mmez1",
-      "name": "DEMO \u2014 Red bell peppers, 500g",
+      "name": "DEMO — Red bell peppers, 500g",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -475,7 +491,7 @@
     },
     {
       "productId": "cmwe3jlyi00ihv4u003yfo8g7",
-      "name": "DEMO \u2014 Green beans, 500g",
+      "name": "DEMO — Green beans, 500g",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -494,7 +510,7 @@
     },
     {
       "productId": "cmwe3jlzg00ivv4u0z3ta3mge",
-      "name": "DEMO \u2014 Rooftop solar panel array with mounting frame",
+      "name": "DEMO — Rooftop solar panel array with mounting frame",
       "currentCategory": {
         "key": "power-solar",
         "slug": "power-solar",
@@ -513,22 +529,26 @@
     },
     {
       "productId": "cmwe3jm0b00j9v4u0e5zzgkjw",
-      "name": "DEMO \u2014 Portable solar battery charging station",
+      "name": "DEMO — Portable solar battery charging station",
       "currentCategory": {
         "key": "power-solar",
         "slug": "power-solar",
         "name": "Power & Solar",
         "path": "Home & Living / Power & Solar"
       },
-      "proposedLeaf": null,
-      "action": "review",
-      "confidence": "low",
-      "ambiguous": true,
-      "reason": "Portable solar battery charging station could be an Inverters & Batteries product or a Generators & Backup Power portable power station. Flagged until the specification is checked."
+      "proposedLeaf": {
+        "key": "generators-backup-power",
+        "slug": "generators-backup-power",
+        "path": "Home & Living / Power & Solar / Generators & Backup Power"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Resolved 2026-11-13 under run TAXAMB-20261113. The Generators & Backup Power leaf is defined as 'Petrol, diesel and gas generators, portable power stations and small backup systems. Excludes solar panels and data-centre UPS installations.', carries the alias 'power station' and enumerates the product_type option 'Portable power station'."
     },
     {
       "productId": "cmwe3jm1800jnv4u02w2ungg7",
-      "name": "DEMO \u2014 Solar power inverter",
+      "name": "DEMO — Solar power inverter",
       "currentCategory": {
         "key": "power-solar",
         "slug": "power-solar",
@@ -547,7 +567,7 @@
     },
     {
       "productId": "cmwe3jm2400k1v4u04h9m2lv5",
-      "name": "DEMO \u2014 Wireless game controllers, black and white pair",
+      "name": "DEMO — Wireless game controllers, black and white pair",
       "currentCategory": {
         "key": "gaming",
         "slug": "gaming",
@@ -566,7 +586,7 @@
     },
     {
       "productId": "cmwe3jm2z00kfv4u07pml13ql",
-      "name": "DEMO \u2014 Game controller with coloured buttons",
+      "name": "DEMO — Game controller with coloured buttons",
       "currentCategory": {
         "key": "gaming",
         "slug": "gaming",
@@ -585,7 +605,7 @@
     },
     {
       "productId": "cmwf0qnp3006sv4awq7ihsyt4",
-      "name": "DEMO \u2014 Apple iPhone 5s, gold",
+      "name": "DEMO — Apple iPhone 5s, gold",
       "currentCategory": {
         "key": "phones-tablets",
         "slug": "phones-tablets",
@@ -604,7 +624,7 @@
     },
     {
       "productId": "cmwf0qnqf0076v4awuzap37j6",
-      "name": "DEMO \u2014 Apple iPhone 6, silver",
+      "name": "DEMO — Apple iPhone 6, silver",
       "currentCategory": {
         "key": "phones-tablets",
         "slug": "phones-tablets",
@@ -623,7 +643,7 @@
     },
     {
       "productId": "cmwf0qnro007kv4aw1n6mals8",
-      "name": "DEMO \u2014 EIZO FORIS FG2421 gaming monitor, 24-inch",
+      "name": "DEMO — EIZO FORIS FG2421 gaming monitor, 24-inch",
       "currentCategory": {
         "key": "computers",
         "slug": "computers",
@@ -642,37 +662,45 @@
     },
     {
       "productId": "cmwf0qnsr007yv4aw6ym23yet",
-      "name": "DEMO \u2014 Digital SLR camera with zoom lens",
+      "name": "DEMO — Digital SLR camera with zoom lens",
       "currentCategory": {
         "key": "electronics-appliances",
         "slug": "electronics-appliances",
         "name": "Electronics & Appliances",
         "path": "Electronics & Technology / Electronics & Appliances"
       },
-      "proposedLeaf": null,
-      "action": "review",
-      "confidence": "medium",
-      "ambiguous": true,
-      "reason": "Digital SLR with zoom lens has no cameras leaf; no existing leaf covers interchangeable-lens cameras. Flagged."
+      "proposedLeaf": {
+        "key": "cameras-photography",
+        "slug": "cameras-photography",
+        "path": "Electronics & Technology / Electronics & Appliances / Cameras & Photography"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Reviewed leaf Cameras & Photography explicitly covers this product; mapped after source and database leaf creation."
     },
     {
       "productId": "cmwf0qnto008cv4awngcofj2x",
-      "name": "DEMO \u2014 Smartwatch with black silicone strap",
+      "name": "DEMO — Smartwatch with black silicone strap",
       "currentCategory": {
         "key": "electronics-appliances",
         "slug": "electronics-appliances",
         "name": "Electronics & Appliances",
         "path": "Electronics & Technology / Electronics & Appliances"
       },
-      "proposedLeaf": null,
-      "action": "review",
-      "confidence": "medium",
-      "ambiguous": true,
-      "reason": "Smartwatch is excluded from Smartphones and has no wearables leaf. Flagged."
+      "proposedLeaf": {
+        "key": "smartwatches-wearables",
+        "slug": "smartwatches-wearables",
+        "path": "Electronics & Technology / Phones & Tablets / Smartwatches & Wearables"
+      },
+      "action": "map",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Reviewed leaf Smartwatches & Wearables explicitly covers this product; mapped after source and database leaf creation."
     },
     {
       "productId": "cmwf0qnum008qv4awn6sdh85d",
-      "name": "DEMO \u2014 Red patent leather baby shoes",
+      "name": "DEMO — Red patent leather baby shoes",
       "currentCategory": {
         "key": "fashion-accessories",
         "slug": "fashion-accessories",
@@ -691,7 +719,7 @@
     },
     {
       "productId": "cmwf116ps00b8v4awo58tomzh",
-      "name": "DEMO \u2014 Fresh cabbage, 1 head",
+      "name": "DEMO — Fresh cabbage, 1 head",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -710,7 +738,7 @@
     },
     {
       "productId": "cmwf116qw00bmv4awz8f2ijmd",
-      "name": "DEMO \u2014 Fresh carrots, 1kg",
+      "name": "DEMO — Fresh carrots, 1kg",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -729,7 +757,7 @@
     },
     {
       "productId": "cmwf116rz00c0v4awo0l7hfo9",
-      "name": "DEMO \u2014 Fresh cucumbers, 1kg",
+      "name": "DEMO — Fresh cucumbers, 1kg",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -748,7 +776,7 @@
     },
     {
       "productId": "cmwf116sy00cev4awcywzzy68",
-      "name": "DEMO \u2014 Apple mangoes, 1kg",
+      "name": "DEMO — Apple mangoes, 1kg",
       "currentCategory": {
         "key": "groceries-household",
         "slug": "groceries-household",
@@ -767,7 +795,7 @@
     },
     {
       "productId": "cmwf3oluu000ev4rckkr70d9h",
-      "name": "DEMO \u2014 Teff flour, 1kg",
+      "name": "DEMO — Teff flour, 1kg",
       "currentCategory": {
         "key": "teff-flour",
         "slug": "teff-flour",
@@ -786,7 +814,7 @@
     },
     {
       "productId": "cmwf3sz24000gv40ouine4ame",
-      "name": "DEMO \u2014 African-print cotton fabric, 6 yards",
+      "name": "DEMO — African-print cotton fabric, 6 yards",
       "currentCategory": {
         "key": "african-print-fabrics",
         "slug": "african-print-fabrics",
@@ -805,7 +833,7 @@
     },
     {
       "productId": "cmwf3vzej000kv40wxnreatav",
-      "name": "DEMO \u2014 Handwoven kente-style cloth, 2 yards",
+      "name": "DEMO — Handwoven kente-style cloth, 2 yards",
       "currentCategory": {
         "key": "handwoven-dyed-fabrics",
         "slug": "handwoven-dyed-fabrics",
@@ -824,7 +852,7 @@
     },
     {
       "productId": "cmwf3vzg20013v40w95prnyu6",
-      "name": "DEMO \u2014 Raw shea butter, 500g",
+      "name": "DEMO — Raw shea butter, 500g",
       "currentCategory": {
         "key": "shea-natural-butters",
         "slug": "shea-natural-butters",
@@ -843,7 +871,7 @@
     },
     {
       "productId": "cmwf3vzgw001mv40wqbihwfzr",
-      "name": "DEMO \u2014 African black soap bar, 300g",
+      "name": "DEMO — African black soap bar, 300g",
       "currentCategory": {
         "key": "traditional-cleansers-black-soap",
         "slug": "traditional-cleansers-black-soap",
@@ -862,7 +890,7 @@
     },
     {
       "productId": "cmwf3vzhn0025v40w1qxh63gs",
-      "name": "DEMO \u2014 Electric cassava grater",
+      "name": "DEMO — Electric cassava grater",
       "currentCategory": {
         "key": "cassava-processing-equipment",
         "slug": "cassava-processing-equipment",
@@ -881,7 +909,7 @@
     },
     {
       "productId": "cmwf3vzig002ov40wtbfi9w1d",
-      "name": "DEMO \u2014 Fine white maize meal, 5kg",
+      "name": "DEMO — Fine white maize meal, 5kg",
       "currentCategory": {
         "key": "maize-meal-porridge",
         "slug": "maize-meal-porridge",
@@ -900,7 +928,7 @@
     },
     {
       "productId": "cmwf3vzj80037v40whlmkv6fb",
-      "name": "DEMO \u2014 Woven storage baskets, set of three",
+      "name": "DEMO — Woven storage baskets, set of three",
       "currentCategory": {
         "key": "storage-organisation",
         "slug": "storage-organisation",
@@ -919,7 +947,7 @@
     },
     {
       "productId": "cmwf6y19400fjv4goi5q39a9g",
-      "name": "DEMO \u2014 Cordless drill and bit set, 18V",
+      "name": "DEMO — Cordless drill and bit set, 18V",
       "currentCategory": {
         "key": "drills-drivers",
         "slug": "drills-drivers",
@@ -939,7 +967,7 @@
     },
     {
       "productId": "cmwf6y0ya00ddv4goh2u87vra",
-      "name": "DEMO \u2014 Glass baby bottles, 2 \u00d7 240ml",
+      "name": "DEMO — Glass baby bottles, 2 × 240ml",
       "currentCategory": {
         "key": "bottles-teats-sterilisers",
         "slug": "bottles-teats-sterilisers",
@@ -959,7 +987,7 @@
     },
     {
       "productId": "cmwf6y1c800g9v4go8uicfz2s",
-      "name": "DEMO \u2014 A5 exercise books, pack of 10",
+      "name": "DEMO — A5 exercise books, pack of 10",
       "currentCategory": {
         "key": "notebooks-paper",
         "slug": "notebooks-paper",
@@ -979,7 +1007,7 @@
     },
     {
       "productId": "cmwf6y1kh00hpv4go6mkc8305",
-      "name": "DEMO \u2014 Handwoven raffia tote bag",
+      "name": "DEMO — Handwoven raffia tote bag",
       "currentCategory": {
         "key": "bags-accessories",
         "slug": "bags-accessories",
@@ -999,7 +1027,7 @@
     },
     {
       "productId": "cmwf6y11o00e3v4gomp4cvpln",
-      "name": "DEMO \u2014 Size 5 match football",
+      "name": "DEMO — Size 5 match football",
       "currentCategory": {
         "key": "football-basketball-equipment",
         "slug": "football-basketball-equipment",
@@ -1019,7 +1047,7 @@
     },
     {
       "productId": "cmwf6y0u000cnv4gobf9kpr3e",
-      "name": "DEMO \u2014 Compact first-aid kit, 42 pieces",
+      "name": "DEMO — Compact first-aid kit, 42 pieces",
       "currentCategory": {
         "key": "first-aid-supplies",
         "slug": "first-aid-supplies",
@@ -1039,7 +1067,7 @@
     },
     {
       "productId": "cmwf6y1g400gzv4gooqflw9t1",
-      "name": "DEMO \u2014 Garri (cassava flakes), 1kg",
+      "name": "DEMO — Garri (cassava flakes), 1kg",
       "currentCategory": {
         "key": "cassava-products",
         "slug": "cassava-products",
@@ -1059,7 +1087,7 @@
     },
     {
       "productId": "cmwf6y16500etv4go2cri35gl",
-      "name": "DEMO \u2014 Car wash and microfibre care kit",
+      "name": "DEMO — Car wash and microfibre care kit",
       "currentCategory": {
         "key": "car-care-cleaning",
         "slug": "car-care-cleaning",

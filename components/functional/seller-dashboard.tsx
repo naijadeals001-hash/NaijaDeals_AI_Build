@@ -33,6 +33,7 @@ type VariantDraft = {
   stock: string;
   isActive: boolean;
   optionsText: string;
+  imageUrl: string;
 };
 
 type ProductDraft = {
@@ -100,7 +101,8 @@ function readSavedDraft(): ProductDraft | null {
               priceNaira: typeof entry.priceNaira === "string" ? entry.priceNaira : "",
               stock: typeof entry.stock === "string" ? entry.stock : "0",
               isActive: entry.isActive !== false,
-              optionsText: typeof entry.optionsText === "string" ? entry.optionsText : ""
+              optionsText: typeof entry.optionsText === "string" ? entry.optionsText : "",
+              imageUrl: typeof entry.imageUrl === "string" ? entry.imageUrl : ""
             }))
             .slice(0, 50)
         : [],
@@ -300,7 +302,7 @@ export function SellerDashboard() {
       quantity: "0",
       variants: [
         ...current.variants,
-        { name: "", sku: "", priceNaira: "", stock: "0", isActive: true, optionsText: "" }
+        { name: "", sku: "", priceNaira: "", stock: "0", isActive: true, optionsText: "", imageUrl: "" }
       ]
     }));
   }
@@ -345,7 +347,8 @@ export function SellerDashboard() {
         priceKobo: String(priceKobo),
         stock,
         isActive: draft.isActive,
-        ...(attributes ? { attributes } : {})
+        ...(attributes ? { attributes } : {}),
+        imageUrl: draft.imageUrl || null
       });
     }
     return parsed;
@@ -515,7 +518,8 @@ export function SellerDashboard() {
         isActive: variant.isActive,
         optionsText: Object.keys(variant.attributes ?? {}).length
           ? JSON.stringify(variant.attributes, null, 2)
-          : ""
+          : "",
+        imageUrl: variant.imageUrl ?? ""
       })),
       attributes: Object.fromEntries(
         definitions.map((definition) => [
@@ -864,6 +868,15 @@ export function SellerDashboard() {
                       <label>
                         <span className="text-xs font-bold">Stock</span>
                         <input inputMode="numeric" value={variant.stock} onChange={(event) => updateVariant(index, { stock: event.target.value })} className="mt-1 min-h-9 w-full rounded border border-border-soft bg-canvas px-2 text-sm" />
+                      </label>
+                      <label className="md:col-span-2">
+                        <span className="text-xs font-bold">Matching image (optional)</span>
+                        <select value={variant.imageUrl} onChange={(event) => updateVariant(index, { imageUrl: event.target.value })} className="mt-1 min-h-9 w-full rounded border border-border-soft bg-canvas px-2 text-sm">
+                          <option value="">Use the product cover</option>
+                          {form.images.filter((image) => image.url.trim()).map((image) => (
+                            <option key={image.url} value={image.url}>{image.url}</option>
+                          ))}
+                        </select>
                       </label>
                       <label className="md:col-span-2">
                         <span className="text-xs font-bold">Options (JSON object, optional)</span>

@@ -341,7 +341,7 @@ export async function checkout(input: {
                 totalKobo: unit * BigInt(item.quantity),
                 productName: item.product.name,
                 variantName: item.variant?.name ?? null,
-                imageUrl: item.product.images[0]?.url ?? null
+                imageUrl: item.variant?.imageUrl ?? item.product.images[0]?.url ?? null
               };
             })
           },

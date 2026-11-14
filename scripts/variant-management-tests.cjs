@@ -185,6 +185,24 @@ async function main() {
       `status=${conflict.status} code=${conflict.body?.code}`
     );
 
+    const invalidImage = variantsFixture("BADIMAGE", 100000, 1);
+    invalidImage[0].imageUrl = "https://example.invalid/not-a-product.webp";
+    const badImage = await createAdminProduct(adminCookie, "badimage", 100000, 0, invalidImage, 0);
+    check(
+      "admin rejects a variant image outside the product gallery",
+      badImage.status === 400 && badImage.body?.code === "variant_image_invalid",
+      `status=${badImage.status} code=${badImage.body?.code}`
+    );
+
+    const unsupported = variantsFixture("UNSUPPORTED", 100000, 1);
+    unsupported[0].imageId = "some-image-id";
+    const unsupportedField = await createAdminProduct(adminCookie, "unsupported", 100000, 0, unsupported, 0);
+    check(
+      "admin rejects unsupported variant fields",
+      unsupportedField.status === 400 && unsupportedField.body?.code === "unsupported_variant_field",
+      `status=${unsupportedField.status} code=${unsupportedField.body?.code}`
+    );
+
     const duplicate = variantsFixture("DUP", 100000, 2);
     duplicate[1].sku = duplicate[0].sku;
     const duplicateSku = await createAdminProduct(adminCookie, "duplicate", 100000, 0, duplicate, 0);
@@ -216,6 +234,7 @@ async function main() {
 
     /* ---------------- admin create → preview → publish ---------------- */
     const adminVariants = variantsFixture("ADMIN", 125000, 4);
+    adminVariants[0].imageUrl = "/generated/shop/product-stainless-steel-cookware-set.webp";
     const adminCreate = await createAdminProduct(adminCookie, "main", 125000, 0, adminVariants, 0);
     const adminId = adminCreate.body?.id ?? null;
     if (adminId) created.productIds.push(adminId);
@@ -226,6 +245,7 @@ async function main() {
     const adminRow = (adminList.body?.products || []).find((entry) => entry.id === adminId);
     check("admin catalogue returns the created variants", adminRow?.variants?.length === 2, `variants=${adminRow?.variants?.length}`);
     check("admin catalogue returns variant options", adminRow?.variants?.[0]?.attributes?.Size === "Small", JSON.stringify(adminRow?.variants?.[0]?.attributes));
+    check("admin catalogue returns the matching variant image", adminRow?.variants?.[0]?.imageUrl === "/generated/shop/product-stainless-steel-cookware-set.webp", String(adminRow?.variants?.[0]?.imageUrl));
     check("variant product keeps product-level stock at zero", adminRow?.stock?.quantity === 0, `quantity=${adminRow?.stock?.quantity}`);
 
     const preview = await api(adminCookie, "GET", `/admin/catalogue/products/${adminId}/preview`);
@@ -235,7 +255,7 @@ async function main() {
       id: adminId,
       quantity: 0,
       variants: [
-        { id: adminRow.variants[0].id, name: "Admin Small revised", sku: adminRow.variants[0].sku, priceKobo: "135000", stock: 6, isActive: true, attributes: { Size: "Small" } },
+        { id: adminRow.variants[0].id, name: "Admin Small revised", sku: adminRow.variants[0].sku, priceKobo: "135000", stock: 6, isActive: true, attributes: { Size: "Small" }, imageUrl: adminRow.variants[0].imageUrl },
         { id: adminRow.variants[1].id, name: "Admin Large revised", sku: adminRow.variants[1].sku, priceKobo: "155000", stock: 3, isActive: true, attributes: { Size: "Large" } },
         { name: "Admin Medium", sku: `${runId}-ADMIN-M`, priceKobo: "145000", stock: 2, isActive: true, attributes: { Size: "Medium" } }
       ]
@@ -259,6 +279,7 @@ async function main() {
     check("public detail exposes active variants", publicDetail.status === 200 && publicDetail.body?.variants?.length === 3, `status=${publicDetail.status} variants=${publicDetail.body?.variants?.length}`);
     const publicVariant = publicDetail.body?.variants?.find((variant) => variant.name === "Admin Small revised");
     check("public variant price/stock comes from the variant", publicVariant?.priceKobo === "135000" && publicVariant?.stock === 6, JSON.stringify(publicVariant));
+    check("public variant carries its matching image", publicVariant?.imageUrl === "/generated/shop/product-stainless-steel-cookware-set.webp", String(publicVariant?.imageUrl));
 
     const cart = await api(customerCookie, "POST", "/api/cart/items", { productId: adminId, variantId: publicVariant?.id, quantity: 1 });
     check("cart accepts the selected variant", cart.status === 201 && cart.body?.items?.some((item) => item.variantId === publicVariant?.id), `status=${cart.status} code=${cart.body?.code ?? ""}`);

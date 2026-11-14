@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { NaijaDealsMarketplace } from "@/components/shop/storefront";
+import { readLocale } from "@/lib/i18n/server";
+import {
+  previewAuthorizationForRequest,
+  unavailableMessage,
+  verticalAccess,
+  verticalDefinition
+} from "@/lib/services/core/vertical-activation.service";
 
 export const metadata: Metadata = {
   title: "NaijaDeals Marketplace — shop everyday retail",
@@ -8,7 +15,23 @@ export const metadata: Metadata = {
     "Browse retail shelves for phones, computing, home, fashion, groceries, power, beauty and gaming from sellers across Africa. Demonstration listings are labelled; bulk buying and freight stay available through NaijaDeals."
 };
 
-export default function Page() {
+export default async function Page() {
+  const { country, city } = readLocale();
+  const { previewAuthorized } = await previewAuthorizationForRequest();
+  const shop = await verticalAccess("shop", {
+    countryCode: country,
+    cityCode: city,
+    previewAuthorized
+  }).catch(() => null);
+  const initialShopAvailability = shop
+    ? {
+        available: shop.accessible,
+        status: shop.effective.status,
+        message: shop.accessible
+          ? null
+          : unavailableMessage(verticalDefinition("shop"), shop.effective)
+      }
+    : null;
   return (
     <>
       <Suspense
@@ -21,7 +44,7 @@ export default function Page() {
           </div>
         }
       >
-        <NaijaDealsMarketplace />
+        <NaijaDealsMarketplace initialShopAvailability={initialShopAvailability} />
       </Suspense>
     </>
   );

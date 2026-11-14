@@ -99,11 +99,9 @@ export function EcosystemHome2026({ products = [], initialShopAvailability = nul
 
   return (
     <div className="bg-white text-ink" data-shop-availability={shopAvailability?.status ?? "loading"}>
-      <Hero />
-      <ServiceDirectory services={services} />
-      <ProducerSection />
+      <Hero shopPaused={shopAvailability?.available === false} />
       {shopAvailability?.status === "PREVIEW" && shopAvailability.available ? (
-        <section aria-labelledby="shop-preview-heading" className="border-t border-border-soft/60 bg-[#f2f7ef]">
+        <section aria-labelledby="shop-preview-heading" className="border-y border-border-soft/60 bg-[#f2f7ef]">
           <div className="mx-auto max-w-[1240px] px-5 py-5 sm:px-8">
             <h2 id="shop-preview-heading" className="font-display text-base font-extrabold text-ink">
               Shop preview
@@ -112,11 +110,18 @@ export function EcosystemHome2026({ products = [], initialShopAvailability = nul
               Shop is visible to authorized Control Center accounts only. Public customers still receive an
               unavailable response until the service is set to LIVE.
             </p>
+            <Link
+              href="/naijashop"
+              className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border-soft bg-white px-4 text-[12px] font-extrabold text-ink transition hover:border-primary/40 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              Open the Shop preview
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
           </div>
         </section>
       ) : null}
       {shopAvailability && !shopAvailability.available ? (
-        <section aria-labelledby="shop-unavailable-heading" className="border-t border-border-soft/60 bg-surface-low">
+        <section aria-labelledby="shop-unavailable-heading" className="border-y border-border-soft/60 bg-surface-low">
           <div className="mx-auto max-w-[1240px] px-5 py-6 sm:px-8">
             <h2 id="shop-unavailable-heading" className="font-display text-base font-extrabold text-ink">
               Shop is paused
@@ -125,11 +130,37 @@ export function EcosystemHome2026({ products = [], initialShopAvailability = nul
               {shopAvailability.message ??
                 "Shop is not available right now. Existing orders, receipts and support remain available."}
             </p>
+            <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-muted">
+              New orders, cart additions and seller listings are on hold. You can still review existing orders,
+              manage your cart and reach support.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link
+                href="/orders"
+                className="inline-flex min-h-10 items-center rounded-full bg-primary px-4 text-[12px] font-extrabold text-white transition hover:bg-[#005c30] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                View orders
+              </Link>
+              <Link
+                href="/cart"
+                className="inline-flex min-h-10 items-center rounded-full border border-border-soft bg-white px-4 text-[12px] font-extrabold text-ink transition hover:border-primary/40 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                View cart
+              </Link>
+              <Link
+                href="/naijashop/help"
+                className="inline-flex min-h-10 items-center rounded-full border border-border-soft bg-white px-4 text-[12px] font-extrabold text-ink transition hover:border-primary/40 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                Help &amp; support
+              </Link>
+            </div>
           </div>
         </section>
       ) : null}
+      <ServiceDirectory services={services} shopPaused={shopAvailability?.available === false} />
+      <ProducerSection shopPaused={shopAvailability?.available === false} />
       {products.length && (!shopAvailability || shopAvailability.available) ? <AvailableNow products={products} /> : null}
-      <PartnerSection />
+      <PartnerSection shopPaused={shopAvailability?.available === false} />
     </div>
   );
 }
@@ -149,7 +180,12 @@ const LAGOS_EXAMPLES = [
   { from: drivePlaceLabel("ikeja-city-mall"), to: drivePlaceLabel("mmia"), detail: "Airport run" }
 ] as const;
 
-function Hero() {
+/**
+ * The entrance never advertises a paused Shop. The mobility action and the
+ * remaining services keep their normal presentation; only the shopping clause
+ * is removed, and the paused notice further down the page carries the status.
+ */
+function Hero({ shopPaused }: { shopPaused: boolean }) {
   return (
     <section className="relative overflow-hidden bg-[#f6f6f2]">
       <div
@@ -168,8 +204,9 @@ function Hero() {
             <span className="text-primary">one app.</span>
           </h1>
           <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-muted sm:text-base">
-            From Wuse II to Wuse Market, or Maitama to the airport — book a ride, order food, shop sellers
-            across Africa, send a parcel or find a place to stay from one NaijaDeals account.
+            {shopPaused
+              ? "From Wuse II to Wuse Market, or Maitama to the airport — book a ride, order food, send a parcel or find a place to stay from one NaijaDeals account."
+              : "From Wuse II to Wuse Market, or Maitama to the airport — book a ride, order food, shop sellers across Africa, send a parcel or find a place to stay from one NaijaDeals account."}
           </p>
 
           <RideQuickStart />
@@ -357,7 +394,7 @@ function RideQuickStart() {
   );
 }
 
-function ServiceDirectory({ services }: { services: PublicService[] }) {
+function ServiceDirectory({ services, shopPaused }: { services: PublicService[]; shopPaused: boolean }) {
   return (
     <section id="services" aria-labelledby="services-heading" className="scroll-mt-24 border-t border-border-soft/60 bg-white">
       <div className="mx-auto max-w-[1240px] px-5 py-16 sm:px-8 lg:py-24">
@@ -371,7 +408,9 @@ function ServiceDirectory({ services }: { services: PublicService[] }) {
               One app. {services.length} ways to use it.
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-[15px]">
-              Shop, move, eat, send, hire, stay, listen and pay — every service uses the same NaijaDeals account.
+              {shopPaused
+                ? "Move, eat, send, hire, stay, listen and pay — every service uses the same NaijaDeals account."
+                : "Shop, move, eat, send, hire, stay, listen and pay — every service uses the same NaijaDeals account."}
             </p>
           </div>
           <Link
@@ -455,7 +494,7 @@ function ServiceCard({ service }: { service: PublicService }) {
   );
 }
 
-function ProducerSection() {
+function ProducerSection({ shopPaused }: { shopPaused: boolean }) {
   return (
     <section aria-labelledby="producer-heading" className="bg-[#f2f5ef]">
       <div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-14 lg:py-24">
@@ -484,8 +523,9 @@ function ProducerSection() {
             Closer to the people who grow and make.
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-muted sm:text-[15px]">
-            Groceries on NaijaDeals connects customers with produce from supported markets and vendors. If you grow,
-            cook, make or sell, NaijaDeals gives your business a direct route to customers.
+            {shopPaused
+              ? "Groceries on NaijaDeals connects customers with produce from supported markets and vendors."
+              : "Groceries on NaijaDeals connects customers with produce from supported markets and vendors. If you grow, cook, make or sell, NaijaDeals gives your business a direct route to customers."}
           </p>
 
           <ul className="mt-6 space-y-3 text-sm">
@@ -511,12 +551,18 @@ function ProducerSection() {
               Shop groceries
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
-            <Link
-              href="/sell"
-              className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-border-soft bg-white px-5 text-sm font-extrabold text-ink transition hover:border-primary/40 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              Start selling
-            </Link>
+            {shopPaused ? (
+              <span className="inline-flex min-h-12 items-center rounded-xl border border-border-soft bg-white px-5 text-sm font-extrabold text-muted">
+                Seller listings resume with Shop
+              </span>
+            ) : (
+              <Link
+                href="/sell"
+                className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-border-soft bg-white px-5 text-sm font-extrabold text-ink transition hover:border-primary/40 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                Start selling
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -582,7 +628,7 @@ function AvailableNow({ products }: { products: HomeProduct[] }) {
   );
 }
 
-function PartnerSection() {
+function PartnerSection({ shopPaused }: { shopPaused: boolean }) {
   return (
     <section data-forced-colors="preserve" className="bg-[#0b1a13] text-white">
       <div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-14 lg:py-24">
@@ -592,15 +638,27 @@ function PartnerSection() {
             Turn what you already do into income.
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-white/70 sm:text-[15px]">
-            Sell products, offer a service, host guests or refer customers. Manage the work and your earnings from the
-            same NaijaDeals account.
+            {shopPaused
+              ? "Offer a service, host guests or refer customers. New Shop seller listings are paused, and existing sellers keep their tools and support."
+              : "Sell products, offer a service, host guests or refer customers. Manage the work and your earnings from the same NaijaDeals account."}
           </p>
 
           <ul className="mt-7 grid gap-2 sm:grid-cols-2">
-            <PartnerLink href="/sell" icon={Store} label="Sell on NaijaDeals" body="List products for verified buyers." />
-            <PartnerLink href="/affiliate" icon={BadgeDollarSign} label="Refer and earn" body="Share links to completed orders." />
-            <PartnerLink href="/naijagigs" icon={Wrench} label="Offer a service" body="Find work with verified customers." />
-            <PartnerLink href="/business/shop" icon={Building2} label="Business tools" body="Manage orders, stock and payouts." />
+            {shopPaused ? (
+              <>
+                <PartnerLink href="/affiliate" icon={BadgeDollarSign} label="Refer and earn" body="Share links to completed orders." />
+                <PartnerLink href="/naijagigs" icon={Wrench} label="Offer a service" body="Find work with verified customers." />
+                <PartnerLink href="/seller" icon={Store} label="Existing seller tools" body="Manage current listings and orders." />
+                <PartnerLink href="/naijashop/help" icon={Building2} label="Seller support" body="Get help while new listings are paused." />
+              </>
+            ) : (
+              <>
+                <PartnerLink href="/sell" icon={Store} label="Sell on NaijaDeals" body="List products for verified buyers." />
+                <PartnerLink href="/affiliate" icon={BadgeDollarSign} label="Refer and earn" body="Share links to completed orders." />
+                <PartnerLink href="/naijagigs" icon={Wrench} label="Offer a service" body="Find work with verified customers." />
+                <PartnerLink href="/business/shop" icon={Building2} label="Business tools" body="Manage orders, stock and payouts." />
+              </>
+            )}
           </ul>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/15 bg-white/[0.04] px-4 py-3">

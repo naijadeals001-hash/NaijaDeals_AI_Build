@@ -160,16 +160,23 @@ export function ProductDetailClient({
   }, [available]);
 
   const attributes = useMemo(() => (product ? displayAttributes(product, attributeDefinitions) : []), [product, attributeDefinitions]);
-  const images: GalleryImage[] = useMemo(
-    () =>
-      (product?.images ?? []).map((image) => ({
-        id: image.id,
-        url: image.url,
-        alt: image.alt,
-        sortOrder: image.sortOrder
-      })),
-    [product]
-  );
+  const images: GalleryImage[] = useMemo(() => {
+    const gallery = (product?.images ?? []).map((image) => ({
+      id: image.id,
+      url: image.url,
+      alt: image.alt,
+      sortOrder: image.sortOrder
+    }));
+    if (selectedVariant?.imageUrl) {
+      gallery.unshift({
+        id: `variant-${selectedVariant.id}`,
+        url: selectedVariant.imageUrl,
+        alt: `${product?.name ?? "Product"} — ${selectedVariant.name}`,
+        sortOrder: -1
+      });
+    }
+    return gallery;
+  }, [product, selectedVariant]);
 
   async function addToCart(thenCheckout = false) {
     if (!product || isSampleListing(product) || isContactListing(product)) return;

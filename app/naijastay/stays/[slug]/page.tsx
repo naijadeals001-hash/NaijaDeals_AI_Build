@@ -10,10 +10,14 @@ import { SaveProperty } from "@/components/stay/save-property";
 import { getSessionUser } from "@/lib/auth/session";
 import { categoryLabel } from "@/lib/services/stay/discovery";
 import { unavailableDates } from "@/lib/services/stay/reservations";
+import { StayPaused } from "@/components/stay/stay-paused";
+import { stayPageAccess } from "@/lib/services/stay/access";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const access = await stayPageAccess();
+  if (!access.accessible) return { title: "Stays are paused in this market — NaijaStay" };
   const property = await prisma.stayProperty.findUnique({ where: { slug: params.slug }, select: { title: true, city: true, country: true } });
   return property
     ? { title: `${property.title} — NaijaStay`, description: `${property.title} in ${property.city}, ${property.country}.` }
@@ -21,6 +25,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function StayPropertyPage({ params }: { params: { slug: string } }) {
+  const access = await stayPageAccess();
+  if (!access.accessible) return <StayPaused message={access.message} />;
   const property = await prisma.stayProperty.findUnique({
     where: { slug: params.slug },
     include: {

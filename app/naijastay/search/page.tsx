@@ -4,6 +4,8 @@ import { Search } from "lucide-react";
 import { StayBottomNav, StayHeader } from "@/components/stay/stay-shell";
 import { PropertyCard, StayFooter } from "@/components/stay/stay-home";
 import { STAY_CATEGORIES, searchStay } from "@/lib/services/stay/discovery";
+import { StayPaused } from "@/components/stay/stay-paused";
+import { stayPageAccess } from "@/lib/services/stay/access";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,8 @@ export const metadata: Metadata = { title: "Search stays — NaijaStay", alterna
 const TYPE_LABEL: Record<string, string> = { stay: "Stays", rent: "For rent", sale: "For sale", land: "Land" };
 
 export default async function StaySearchPage({ searchParams }: { searchParams?: { q?: string; type?: string; category?: string; guests?: string; checkIn?: string; checkOut?: string } }) {
+  const access = await stayPageAccess();
+  if (!access.accessible) return <StayPaused message={access.message} />;
   const q = searchParams?.q?.trim() || undefined;
   const type = searchParams?.type;
   const category = searchParams?.category;

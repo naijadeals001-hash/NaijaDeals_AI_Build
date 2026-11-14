@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "database": "naijadeals_review",
+  "reviewOnly": true,
+  "runToken": "TAXAMB-20261113",
+  "reviewedAt": "2026-11-13",
+  "reviewedBy": "catalogue/imagery specialist — NaijaDeals Shop increment",
+  "note": "Reviewed resolution of the seven ambiguous legacy products recorded in docs/taxonomy/coverage-gaps.md §4. Two products have an existing selectable leaf whose own description covers them; they are mapped with audited Product.categoryId writes. Four new leaves are needed for the other five products; because lib/data/taxonomy.ts (the taxonomy source of truth used by scripts/taxonomy-seed.ts and scripts/taxonomy-coverage-report.ts) is outside this slice's file ownership, those are filed as PENDING seller category requests through the existing category-request workflow and the products stay on their current selectable level-1 categories. No product name, slug, price, image, stock or isDemo flag is changed.",
+  "mappings": [
+    {
+      "productId": "cmwdynxe6003mv4q0y9hwt5ha",
+      "name": "DEMO — Wired gaming mouse",
+      "slug": "demo-wired-gaming-mouse",
+      "currentCategoryKey": "computers",
+      "targetLeafKey": "gaming-accessories",
+      "action": "map",
+      "confidence": "high",
+      "reason": "The Gaming Accessories leaf is defined in lib/data/taxonomy.ts as 'Controllers, headsets, gaming mice and keyboards, chairs and streaming accessories. Excludes consoles and games.' and its accessory_type attribute enumerates 'Gaming mouse'. The item is a wired gaming mouse, so the leaf covers it directly and the earlier Computer Accessories/Gaming Accessories ambiguity is settled by primary use.",
+      "evidence": [
+        "lib/data/taxonomy.ts key gaming-accessories description and accessory_type options",
+        "Product name: 'DEMO — Wired gaming mouse'"
+      ]
+    },
+    {
+      "productId": "cmwe3jm0b00j9v4u0e5zzgkjw",
+      "name": "DEMO — Portable solar battery charging station",
+      "slug": "demo-portable-solar-charging-station",
+      "currentCategoryKey": "power-solar",
+      "targetLeafKey": "generators-backup-power",
+      "action": "map",
+      "confidence": "high",
+      "reason": "The Generators & Backup Power leaf is defined as 'Petrol, diesel and gas generators, portable power stations and small backup systems. Excludes solar panels and data-centre UPS installations.', carries the alias 'power station' and enumerates the product_type option 'Portable power station'. The listing is a portable solar battery charging station, i.e. a portable power station, not a bare inverter, battery or solar panel.",
+      "evidence": [
+        "lib/data/taxonomy.ts key generators-backup-power description, alias and product_type options",
+        "Product name: 'DEMO — Portable solar battery charging station'"
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "suggestedName": "Headphones & Personal Audio",
+      "proposedKey": "headphones-personal-audio",
+      "proposedSlug": "headphones-personal-audio",
+      "parentKey": "electronics-appliances",
+      "covers": ["cmwdynxdd0018v4q00rd1lw3x"],
+      "description": "Run TAXAMB-20261113 — reviewed taxonomy gap. Over-ear headphones currently have no selectable leaf: TVs & Home Audio covers televisions, soundbars, speakers and home theatre receivers only, and Smartphones/Phone Accessories exclude audio equipment. Proposed selectable level-2 leaf 'Headphones & Personal Audio' under Electronics & Appliances covering headphones, earphones, portable speakers and personal audio players, with aliases (headphone, headphones, earphones, earbuds, casque, fone de ouvido, vipokea sauti, سماعات) and attributes product_type/connectivity/battery_life. Creating this leaf requires adding the node to lib/data/taxonomy.ts and re-running scripts/taxonomy-seed.ts; approving this request without that source change would create a category missing from the taxonomy source of truth."
+    },
+    {
+      "suggestedName": "Fragrance & Perfume",
+      "proposedKey": "fragrance-perfume",
+      "proposedSlug": "fragrance-perfume",
+      "parentKey": "beauty-personal-care",
+      "covers": ["cmwdynxds002fv4q0puj39gxq", "cmwdynxdy002yv4q0n19qj5vm"],
+      "description": "Run TAXAMB-20261113 — reviewed taxonomy gap. Perfume has no selectable leaf: Skincare covers cleansers/moisturisers/serums, Hair Care covers hair products and Bath & Body covers body wash/lotions/deodorants. Proposed selectable level-2 leaf 'Fragrance & Perfume' under Beauty & Personal Care covering eau de parfum, eau de toilette, cologne, attar and fragrance gift sets, with aliases (perfume, fragrance, eau de parfum, cologne, parfum, attar, manukato) and attributes fragrance_family/concentration/volume_ml/target_gender. Requires the taxonomy source change (lib/data/taxonomy.ts) plus scripts/taxonomy-seed.ts before approval."
+    },
+    {
+      "suggestedName": "Cameras & Photography",
+      "proposedKey": "cameras-photography",
+      "proposedSlug": "cameras-photography",
+      "parentKey": "electronics-appliances",
+      "covers": ["cmwf0qnsr007yv4aw6ym23yet"],
+      "description": "Run TAXAMB-20261113 — reviewed taxonomy gap. Cameras have no selectable leaf in any department; Electronics & Appliances has no photography node and Computer Accessories excludes cameras. Proposed selectable level-2 leaf 'Cameras & Photography' under Electronics & Appliances covering DSLR, mirrorless, compact and instant cameras, lenses and tripods, with aliases (camera, DSLR, mirrorless, appareil photo, câmera fotográfica, kamera, كاميرا) and attributes camera_type/sensor_type/megapixels/lens_mount. Requires the taxonomy source change (lib/data/taxonomy.ts) plus scripts/taxonomy-seed.ts before approval."
+    },
+    {
+      "suggestedName": "Smartwatches & Wearables",
+      "proposedKey": "smartwatches-wearables",
+      "proposedSlug": "smartwatches-wearables",
+      "parentKey": "phones-tablets",
+      "covers": ["cmwf0qnto008cv4awngcofj2x"],
+      "description": "Run TAXAMB-20261113 — reviewed taxonomy gap. Smartwatches are explicitly excluded from Smartphones ('Excludes tablets, smartwatches, phone accessories') and Phone Accessories covers only cases, chargers, cables, protectors, mounts and power banks. Proposed selectable level-2 leaf 'Smartwatches & Wearables' under Phones & Tablets covering smartwatches, fitness trackers and smart bands, with aliases (smartwatch, smart watch, fitness tracker, montre connectée, relógio inteligente, saa mahiri, ساعة ذكية) and attributes device_type/display_size/strap_material/water_resistance. Requires the taxonomy source change (lib/data/taxonomy.ts) plus scripts/taxonomy-seed.ts before approval."
+    }
+  ],
+  "blockedProducts": [
+    {
+      "productId": "cmwdynxdd0018v4q00rd1lw3x",
+      "name": "DEMO — Over-ear headphones",
+      "reason": "No selectable leaf covers headphones; retained on selectable level-1 Electronics & Appliances pending the headphones-personal-audio leaf."
+    },
+    {
+      "productId": "cmwdynxds002fv4q0puj39gxq",
+      "name": "DEMO — Eau de parfum, 50ml",
+      "reason": "No selectable leaf covers fragrance; retained on selectable level-1 Beauty & Personal Care pending the fragrance-perfume leaf."
+    },
+    {
+      "productId": "cmwdynxdy002yv4q0n19qj5vm",
+      "name": "DEMO — Perfume gift set",
+      "reason": "No selectable leaf covers fragrance; retained on selectable level-1 Beauty & Personal Care pending the fragrance-perfume leaf."
+    },
+    {
+      "productId": "cmwf0qnsr007yv4aw6ym23yet",
+      "name": "DEMO — Digital SLR camera with zoom lens",
+      "reason": "No selectable leaf covers cameras; retained on selectable level-1 Electronics & Appliances pending the cameras-photography leaf."
+    },
+    {
+      "productId": "cmwf0qnto008cv4awngcofj2x",
+      "name": "DEMO — Smartwatch with black silicone strap",
+      "reason": "No selectable leaf covers wearables; retained on selectable level-1 Electronics & Appliances pending the smartwatches-wearables leaf."
+    }
+  ]
+}

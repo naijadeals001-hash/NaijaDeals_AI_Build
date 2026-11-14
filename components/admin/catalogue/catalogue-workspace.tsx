@@ -64,6 +64,7 @@ type Product = {
     reserved: number;
     isActive: boolean;
     attributes: Record<string, unknown> | null;
+    imageUrl: string | null;
   }>;
   stock: { quantity: number; reserved: number; lowStockLevel: number } | null;
   vendor?: SellerRecord | null;
@@ -83,6 +84,7 @@ type VariantDraft = {
   stock: string;
   isActive: boolean;
   optionsText: string;
+  imageUrl: string;
 };
 type AttributeDraft = Record<string, string>;
 type ValidationState = {
@@ -330,7 +332,7 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
       quantity: "0",
       variants: [
         ...current.variants,
-        { name: "", sku: "", price: "", stock: "0", isActive: true, optionsText: "" }
+        { name: "", sku: "", price: "", stock: "0", isActive: true, optionsText: "", imageUrl: "" }
       ]
     }));
   }
@@ -374,7 +376,8 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
         priceKobo: String(priceKobo),
         stock,
         isActive: draft.isActive,
-        ...(attributes ? { attributes } : {})
+        ...(attributes ? { attributes } : {}),
+        imageUrl: draft.imageUrl || null
       };
     });
   }
@@ -541,7 +544,8 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
         optionsText:
           variant.attributes && Object.keys(variant.attributes).length
             ? JSON.stringify(variant.attributes, null, 2)
-            : ""
+            : "",
+        imageUrl: variant.imageUrl ?? ""
       })),
       vendor: entry.vendor ?? null,
       isDemo: entry.isDemo
@@ -969,6 +973,15 @@ export function CatalogueWorkspace({ canWrite, canRead }: { canWrite: boolean; c
                   <label className="text-xs font-bold">
                     Stock
                     <input value={variant.stock} disabled={!canWrite} inputMode="numeric" onChange={(event) => updateVariant(index, { stock: event.target.value })} className="mt-1 min-h-9 w-full rounded border border-[#30363D] bg-[#161B22] px-2 text-sm" />
+                  </label>
+                  <label className="text-xs font-bold md:col-span-2">
+                    Matching image (optional)
+                    <select value={variant.imageUrl} disabled={!canWrite} onChange={(event) => updateVariant(index, { imageUrl: event.target.value })} className="mt-1 min-h-9 w-full rounded border border-[#30363D] bg-[#161B22] px-2 text-sm">
+                      <option value="">Use the product cover</option>
+                      {product.images.filter((image) => image.url.trim()).map((image) => (
+                        <option key={image.url} value={image.url}>{image.url}</option>
+                      ))}
+                    </select>
                   </label>
                   <label className="text-xs font-bold md:col-span-2">
                     Options (JSON object, optional)

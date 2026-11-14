@@ -5,6 +5,8 @@ import { FeaturedProperties, SuccessStories, type FeaturedItem } from "@/compone
 import { StayHeroCarousel } from "@/components/stay/stay-hero-carousel";
 import { DESTINATIONS, STAY_CATEGORIES, searchStay } from "@/lib/services/stay/discovery";
 import { categoryImage, stayImage } from "@/lib/services/stay/images";
+import { StayPaused } from "@/components/stay/stay-paused";
+import { stayPageAccess } from "@/lib/services/stay/access";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,8 @@ export const metadata: Metadata = {
 };
 
 export default async function NaijaStayHomePage() {
+  const access = await stayPageAccess();
+  if (!access.accessible) return <StayPaused message={access.message} />;
   const listings = await searchStay({ take: 40 });
   const featured: FeaturedItem[] = listings.map((item) => ({
     id: item.id,

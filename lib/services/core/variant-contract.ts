@@ -23,6 +23,7 @@ export type VariantInput = {
   priceKobo: bigint;
   stock: number;
   attributes: VariantAttributes | null;
+  imageUrl?: string | null;
   isActive: boolean;
   currency: string | null;
 };
@@ -36,12 +37,26 @@ export type VariantSnapshot = {
   reserved: number;
   isActive: boolean;
   attributes: VariantAttributes | null;
+  imageUrl: string | null;
 };
 
 const MAX_VARIANTS = 50;
 const MAX_VARIANT_STOCK = 1_000_000;
 const SKU_PATTERN = /^[A-Z0-9][A-Z0-9_-]{1,63}$/;
 const ATTRIBUTE_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/;
+const VARIANT_FIELDS = new Set([
+  "id",
+  "name",
+  "sku",
+  "priceKobo",
+  "price",
+  "stock",
+  "attributes",
+  "options",
+  "imageUrl",
+  "currency",
+  "isActive"
+]);
 
 function fail(message: string, code = "invalid_variants", details?: Record<string, unknown>): never {
   throw new ApiError(400, code, message, details);
@@ -61,6 +76,25 @@ function readStock(value: unknown, field: string): number {
     fail(`${field} must be a whole number between 0 and ${MAX_VARIANT_STOCK}.`, "invalid_variant_stock");
   }
   return parsed;
+}
+
+function readVariantImage(value: unknown, field: string): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== "string") fail(`${field} must be an image URL or null.`, "invalid_variant_image");
+  const image = value.trim();
+  if (!image) return null;
+  if (image.length > 500) fail(`${field} is too long.`, "invalid_variant_image");
+  if (image.startsWith("/")) {
+    if (image.startsWith("//") || image.includes("\\") || image.split("/").includes("..")) {
+      fail(`${field} must stay inside the project's public assets.`, "invalid_variant_image");
+    }
+    return image;
+  }
+  if (!/^https:\/\//i.test(image)) {
+    fail(`${field} must be an HTTPS URL or a project path starting with "/".`, "invalid_variant_image");
+  }
+  return image;
 }
 
 function readAttributes(value: unknown, field: string): VariantAttributes | null {
@@ -111,6 +145,11 @@ export function parseVariantsPayload(value: unknown, field = "variants"): Varian
       fail(`${field}[${index}] must be a variant object.`, "invalid_variants");
     }
     const row = raw as Record<string, unknown>;
+    for (const key of Object.keys(row)) {
+      if (!VARIANT_FIELDS.has(key)) {
+        fail(`${field}[${index}] has unsupported field "${key}".`, "unsupported_variant_field");
+      }
+    }
     const id =
       row.id === undefined || row.id === null || row.id === ""
         ? null
@@ -151,6 +190,7 @@ export function parseVariantsPayload(value: unknown, field = "variants"): Varian
       priceKobo: readMinorUnits(row.priceKobo ?? row.price ?? null, `${field}[${index}].priceKobo`),
       stock: readStock(row.stock ?? 0, `${field}[${index}].stock`),
       attributes,
+      imageUrl: readVariantImage(row.imageUrl, `${field}[${index}].imageUrl`),
       isActive:
         row.isActive === undefined
           ? true
@@ -182,6 +222,7 @@ export function variantSnapshot(variant: {
   reserved: number;
   isActive: boolean;
   attributes: Prisma.JsonValue | null;
+  imageUrl?: string | null;
 }): VariantSnapshot & { attributes: VariantAttributes | null } {
   return {
     id: variant.id,
@@ -194,7 +235,8 @@ export function variantSnapshot(variant: {
     attributes:
       variant.attributes && typeof variant.attributes === "object" && !Array.isArray(variant.attributes)
         ? (variant.attributes as VariantAttributes)
-        : null
+        : null,
+    imageUrl: variant.imageUrl ?? null
   };
 }
 
@@ -218,10 +260,15 @@ export async function syncProductVariants(input: {
     SELECT "quantity", "reserved" FROM "InventoryStock" WHERE "productId" = ${productId} FOR UPDATE
   `;
   const stockRow = stock[0] ?? null;
+  await tx.$queryRaw`
+    SELECT id FROM "ProductVariant" WHERE "productId" = ${productId} ORDER BY id FOR UPDATE
+  `;
   const existing = await tx.productVariant.findMany({
     where: { productId },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }]
   });
+  const productImages = await tx.productImage.findMany({ where: { productId }, select: { url: true } });
+  const allowedImages = new Set(productImages.map((image) => image.url));
   const before = existing.map(variantSnapshot);
   const existingById = new Map(existing.map((variant) => [variant.id, variant]));
   const existingBySku = new Map(existing.map((variant) => [variant.sku, variant]));
@@ -255,6 +302,9 @@ export async function syncProductVariants(input: {
     if (variant.id && !matched) {
       throw new ApiError(403, "variant_ownership", `Variant ${variant.id} does not belong to this product.`);
     }
+    if (variant.imageUrl && !allowedImages.has(variant.imageUrl)) {
+      throw new ApiError(400, "variant_image_invalid", "Choose an image that belongs to this product.");
+    }
     if (!matched) {
       creates.push(variant);
       continue;
@@ -278,6 +328,7 @@ export async function syncProductVariants(input: {
         priceKobo: variant.priceKobo,
         stock: variant.stock,
         attributes: variant.attributes ? (variant.attributes as Prisma.InputJsonValue) : Prisma.DbNull,
+        ...(variant.imageUrl !== undefined ? { imageUrl: variant.imageUrl } : {}),
         isActive: variant.isActive
       }
     });
@@ -305,6 +356,7 @@ export async function syncProductVariants(input: {
           priceKobo: variant.priceKobo,
           stock: variant.stock,
           attributes: variant.attributes ? (variant.attributes as Prisma.InputJsonValue) : undefined,
+          imageUrl: variant.imageUrl ?? null,
           isActive: variant.isActive
         }
       });

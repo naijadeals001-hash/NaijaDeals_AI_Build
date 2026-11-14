@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ShopShell } from "@/components/shop/shop-header";
+import { readLocale } from "@/lib/i18n/server";
 import { previewAuthorizationForRequest, verticalAccess } from "@/lib/services/core/vertical-activation.service";
 
 /**
@@ -9,8 +10,9 @@ import { previewAuthorizationForRequest, verticalAccess } from "@/lib/services/c
  */
 export default async function NaijaShopLayout({ children }: { children: ReactNode }) {
   const reviewCatalogue = process.env.NEXT_PUBLIC_REVIEW_CATALOGUE === "1";
+  const { country, city } = readLocale();
   const { previewAuthorized } = await previewAuthorizationForRequest();
-  const shop = await verticalAccess("shop", { countryCode: "NG", previewAuthorized }).catch(() => null);
+  const shop = await verticalAccess("shop", { countryCode: country, cityCode: city, previewAuthorized }).catch(() => null);
   const initialShopAvailability = shop
     ? { available: shop.accessible, status: shop.effective.status }
     : null;

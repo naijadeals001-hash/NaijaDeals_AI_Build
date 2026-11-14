@@ -70,22 +70,41 @@ must add their own country review before any restricted leaf is enabled there.
 | Measure | Count |
 |---|---|
 | Active products covered | 57 |
-| On a most-specific selectable leaf (`map` + `keep`) | 50 |
-| — audited moves applied (`map`) | 34 |
+| On a most-specific selectable leaf (`map` + `keep`) | 52 |
+| — audited moves applied (`map`) | 36 |
 | — already on the proposed leaf (`keep`) | 16 |
-| Ambiguous, retained on selectable level-1 categories (`review`) | 7 |
-| Selectable leaves populated | 30 of 96 publishable |
-| `Product.categoryId` writes | **34 audited moves; 7 re-applied after a revert (41 audit rows)** |
+| Ambiguous, retained on selectable level-1 categories (`review`) | 5 |
+| Selectable leaves populated | 31 of 96 publishable |
+| `Product.categoryId` writes | **36 audited moves; 7 re-applied after a revert (43 audit rows)** |
 
-The 30 populated leaves hold 50 active products; the 7 ambiguous products are not counted
+The 31 populated leaves hold 52 active products; the 5 ambiguous products are not counted
 as leaf coverage. The seven re-applied products (diced onions, red bell peppers, green
 beans, rooftop solar panel array, solar inverter, wireless game controllers, coloured-button
 controller) are each on the leaf named in their latest `AuditLog`
 (`taxonomy.product.reclassified`) `afterCategoryId`; the coverage script verifies this from
 the database rather than a hardcoded list.
 
+### 3.1 Ambiguous resolution applied 2026-11-13 (run `TAXAMB-20261113`)
+
+Two of the seven ambiguous products have an existing selectable leaf whose own taxonomy
+definition covers them. Both were moved with audited `Product.categoryId` writes by
+`scripts/taxonomy-resolve-ambiguous.ts`; name, slug, price, description, `isDemo`, product
+image, stock and variants were fingerprinted before/after and are unchanged.
+
+| Product | From | To | Evidence |
+|---|---|---|---|
+| `cmwdynxe6003mv4q0y9hwt5ha` DEMO — Wired gaming mouse | Computers | Gaming Accessories | Leaf definition covers "gaming mice"; `accessory_type` enumerates "Gaming mouse" |
+| `cmwe3jm0b00j9v4u0e5zzgkjw` DEMO — Portable solar battery charging station | Power & Solar | Generators & Backup Power | Leaf definition names "portable power stations"; alias "power station"; `product_type` includes "Portable power station" |
+
+The remaining five products need leaves the taxonomy source does not define. Four new leaves
+were filed as durable **PENDING** seller `CategoryRequest` rows (run `TAXAMB-20261113`)
+through the existing category-request workflow; the products stay on their current
+selectable level-1 categories until the leaves exist in `lib/data/taxonomy.ts` and are
+seeded. Creating a database-only leaf was deliberately avoided: it would be missing from the
+taxonomy source and would fail the source-parity check in the coverage report.
+
 Populated leaves and their active-product counts, computed from `naijadeals_review` on
-2026-11-13 (30 leaves / 50 products; the 7 ambiguous products are excluded):
+2026-11-13 (31 leaves / 52 products; the 5 ambiguous products are excluded):
 
 | Populated leaf | Active products |
 |---|---:|
@@ -96,7 +115,7 @@ Populated leaves and their active-product counts, computed from `naijadeals_revi
 | Electronics & Technology / Computers / Computer Accessories | 3 |
 | Electronics & Technology / Computers / Laptops | 2 |
 | Electronics & Technology / Electronics & Appliances / Small Appliances | 4 |
-| Electronics & Technology / Gaming / Gaming Accessories | 2 |
+| Electronics & Technology / Gaming / Gaming Accessories | 3 |
 | Electronics & Technology / Phones & Tablets / Phone Accessories | 1 |
 | Electronics & Technology / Phones & Tablets / Smartphones | 4 |
 | Electronics & Technology / Phones & Tablets / Tablets | 1 |
@@ -115,75 +134,91 @@ Populated leaves and their active-product counts, computed from `naijadeals_revi
 | Health & Wellness / Medical Devices & Aids / First-Aid Supplies | 1 |
 | Home & Living / Home & Kitchen / Cookware & Bakeware | 1 |
 | Home & Living / Home & Kitchen / Storage & Organisation | 1 |
+| Home & Living / Power & Solar / Generators & Backup Power | 1 |
 | Home & Living / Power & Solar / Inverters & Batteries | 1 |
 | Home & Living / Power & Solar / Solar Panels | 1 |
 | Sports & Outdoors / Ball & Racquet Sports / Football & Basketball | 1 |
 | Tools & Building Materials / Power Tools / Drills & Drivers | 1 |
-| **Total** | **50** |
+| **Total** | **52** |
 
-## 4. Ambiguous products — classification review required
+## 4. Ambiguous products — five remain, leaves requested
 
-These keep their current category; no mapping is proposed.
+Five products keep their current selectable level-1 category. PENDING requests exist for
+each missing leaf; no product is moved to an inaccurate leaf to inflate coverage.
 
-| Product | Current category | Gap |
-|---|---|---|
-| `cmwdynxdd0018v4q00rd1lw3x` DEMO — Over-ear headphones | Electronics & Appliances | No personal-audio/headphone leaf |
-| `cmwdynxds002fv4q0puj39gxq` DEMO — Eau de parfum, 50ml | Beauty & Personal Care | No fragrance leaf |
-| `cmwdynxdy002yv4q0n19qj5vm` DEMO — Perfume gift set | Beauty & Personal Care | No fragrance leaf |
-| `cmwdynxe6003mv4q0y9hwt5ha` DEMO — Wired gaming mouse | Computers | Fits Computer Accessories (Mouse) and Gaming Accessories (Gaming mouse) |
-| `cmwe3jm0b00j9v4u0e5zzgkjw` DEMO — Portable solar battery charging station | Power & Solar | Inverters & Batteries vs Generators & Backup Power (low confidence) |
-| `cmwf0qnsr007yv4aw6ym23yet` DEMO — Digital SLR camera with zoom lens | Electronics & Appliances | No cameras/photography leaf |
-| `cmwf0qnto008cv4awngcofj2x` DEMO — Smartwatch with black silicone strap | Electronics & Appliances | No wearables leaf; Smartphones excludes smartwatches |
+| Product | Current category | Missing leaf | Request |
+|---|---|---|---|
+| `cmwdynxdd0018v4q00rd1lw3x` DEMO — Over-ear headphones | Electronics & Appliances | `headphones-personal-audio` | `db879dad-5af8-4759-afd6-b10257a21def` |
+| `cmwdynxds002fv4q0puj39gxq` DEMO — Eau de parfum, 50ml | Beauty & Personal Care | `fragrance-perfume` | `87c84dd6-6f41-42d1-b38c-056cc513b55d` |
+| `cmwdynxdy002yv4q0n19qj5vm` DEMO — Perfume gift set | Beauty & Personal Care | `fragrance-perfume` | `87c84dd6-6f41-42d1-b38c-056cc513b55d` |
+| `cmwf0qnsr007yv4aw6ym23yet` DEMO — Digital SLR camera with zoom lens | Electronics & Appliances | `cameras-photography` | `10d09232-1c56-4c27-b0f7-b5bbb9962834` |
+| `cmwf0qnto008cv4awngcofj2x` DEMO — Smartwatch with black silicone strap | Electronics & Appliances | `smartwatches-wearables` | `e8015aa5-acf8-4f03-9c39-3b9f7a33503d` |
 
-## 5. Missing leaves to add in a later authorised slice
+Resolved on 2026-11-13 (no longer ambiguous): the wired gaming mouse (Gaming Accessories)
+and the portable solar battery charging station (Generators & Backup Power).
 
-1. Personal audio / headphones (parent candidate: `electronics-appliances`).
-2. Fragrance / perfume (parent candidate: `beauty-personal-care`).
-3. Cameras and photography (parent candidate: `electronics-appliances`).
-4. Smartwatches and wearables (parent candidate: `phones-tablets`).
-5. Portable power stations, distinct from inverters/batteries (parent candidate: `power-solar`).
-6. A primary-use rule for peripherals that fit both Computer and Gaming Accessories
-   (no new leaf necessarily; a classification rule may suffice).
+## 5. Requested leaves — exact taxonomy-source spec
+
+Each request is PENDING in `CategoryRequest`. Approving a request creates only a database
+row; the node must also be added to `lib/data/taxonomy.ts` (outside the catalogue/imagery
+slice's file ownership) and seeded with `scripts/taxonomy-seed.ts`, otherwise the coverage
+report's source-parity check fails. The reviewed node spec:
+
+| Proposed key | Name | Parent key | Suggested sort | Aliases (en) | Attributes |
+|---|---|---|---|---:|---|
+| `headphones-personal-audio` | Headphones & Personal Audio | `electronics-appliances` | 20 | headphone, earphones, earbuds, portable speaker | `product_type` (Headphones, Earphones, Portable speaker, Player), `connectivity`, `battery_life_hours` |
+| `fragrance-perfume` | Fragrance & Perfume | `beauty-personal-care` | 40 | perfume, fragrance, eau de parfum, cologne, attar | `fragrance_family`, `concentration`, `volume_ml`, `target_gender` |
+| `cameras-photography` | Cameras & Photography | `electronics-appliances` | 30 | camera, DSLR, mirrorless, lens, tripod | `camera_type`, `sensor_type`, `megapixels`, `lens_mount` |
+| `smartwatches-wearables` | Smartwatches & Wearables | `phones-tablets` | 40 | smartwatch, smart watch, fitness tracker, smart band | `device_type`, `display_size_inches`, `strap_material`, `water_resistance` |
+
+`sortOrder` values must be checked against the sibling nodes in each parent before seeding.
+Until the four nodes exist in the source and the catalogue, the five products remain
+correctly classified at level 1 and `activeOnLevelOne = 5` is the expected state.
 
 ## 6. Exceptions and limits
 
-- The mapping has been applied. The 34 audited moves were applied on 2026-11-13 and the
-  seven reverted moves were re-applied; the computed state is **57 active products, 50 on
-  selectable leaves and 7 on selectable level-1 categories**. The live counts are derived
-  by `scripts/taxonomy-coverage-report.ts`, not asserted from this paragraph.
-- `CategoryRequest` is **4**, not 0: three APPROVED and one REJECTED run-tagged synthetic
-  requests created by the taxonomy review flows. Destructive cleanup was not authorised and
-  was not performed. CRF names in `Category.name` and `CategoryRequest.suggestedName`: 0.
-- Acceptance fixtures are not active: 2 fixture-like DRAFT rows and 80 fixture-like
+- The mapping has been applied. The 34 audited batch moves plus the two 2026-11-13
+  ambiguous-resolution moves were applied on 2026-11-13 and the seven reverted moves were
+  re-applied; the computed state is **57 active products, 52 on selectable leaves and 5 on
+  selectable level-1 categories**. The live counts are derived by
+  `scripts/taxonomy-coverage-report.ts`, not asserted from this paragraph.
+- `CategoryRequest` is **8**: three APPROVED, one REJECTED and four PENDING run-tagged
+  requests. The four PENDING rows are this run's reviewed leaf requests (run
+  `TAXAMB-20261113`), not residue; destructive cleanup was not authorised and was not
+  performed. CRF names in `Category.name` and `CategoryRequest.suggestedName`: 0.
+- Acceptance fixtures are not active: 2 fixture-like DRAFT rows and 126 fixture-like
   ARCHIVED rows (including acceptance lifecycle probes) remain excluded. ACTIVE
   fixture-like rows: 0. The archived count grows as the workflow archives its run-owned
-  fixtures instead of deleting them; the count above is the final 2026-11-13 check.
+  fixtures instead of deleting them; 185 ARCHIVED rows in total are reported separately by
+  `scripts/taxonomy-reconcile-products.ts`.
 - The taxonomy seed was not re-run in this slice. Its REVIEW expectations are re-baselined
   to the 57-active state, but the coverage report and reconciliation script are the current
   count authority. The seed does not move products.
-- 83 selectable leaves are empty: 66 publishable and 17 NG-regulated. Empty publishable
+- 82 selectable leaves are empty: 65 publishable and 17 NG-regulated. Empty publishable
   leaves render honest empty states and are deliberately not padded with duplicate
-  products. Populating them needs original imagery and reviewed listings.
-- Six departments have no approved banner art (`imageUrl = NULL`): Health & Wellness;
-  Baby, Kids & Toys; Sports & Outdoors; Automotive & Motorcycle; Tools & Building
-  Materials; Books & Stationery. No accurate approved asset exists for them, so no
-  unrelated image was substituted and none was generated in this slice.
+  products. Populating them needs original imagery and reviewed listings
+  (see `docs/taxonomy/population-asset-gap-2026-11-13.md`).
+- All 11 departments now have approved banner art, including the six that were previously
+  `imageUrl = NULL`; no unrelated image was substituted.
 
 ## 7. Verification commands
 
 ```bash
 REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-coverage-report.ts --expect-db=naijadeals_review --images
 REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-reconcile-products.ts --expect-db=naijadeals_review
-REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-apply-mapping.ts --expect-db=naijadeals_review --apply
+REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-resolve-ambiguous.ts --expect-db=naijadeals_review
+REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-resolve-ambiguous.ts --expect-db=naijadeals_review --apply
 npx tsc --noEmit
 ```
 
 The coverage report and reconciliation scripts open `BEGIN READ ONLY`, confirm
 `transaction_read_only = on`, and compare a `(Product.id, Product.categoryId)` fingerprint
 before and after their checks (`fingerprint stable: true`). The coverage report exits PASS
-with `57 active / 50 on leaves / 7 ambiguous / 30 of 96 populated / 66 gaps` and, with
+with `57 active / 52 on leaves / 5 ambiguous / 31 of 96 populated / 65 gaps` and, with
 `--images`, `62/62` image URLs passing HEAD 200 and Chromium `naturalWidth > 0`. The guarded
-apply script refuses to re-apply a plan already marked `applied: true`; that refusal is the
-expected double-apply protection, not a failed move. `scripts/taxonomy-product-mapping.ts`
-and `scripts/taxonomy-mapping-dry-run.ts` were written for the pre-apply plan and are not
-the post-apply count authority.
+apply script for the original batch plan refuses to re-apply a plan already marked
+`applied: true`; that refusal is the expected double-apply protection, not a failed move.
+`scripts/taxonomy-resolve-ambiguous.ts` is the guarded, idempotent, reversible resolver for
+the seven ambiguous products; re-running `--apply` reports `already-on-target` and writes
+nothing. `scripts/taxonomy-product-mapping.ts` and `scripts/taxonomy-mapping-dry-run.ts`
+were written for the pre-apply plan and are not the post-apply count authority.
