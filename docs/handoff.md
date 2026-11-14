@@ -5040,8 +5040,11 @@ deployment, live charge, payout or provider charge occurred.
 - Full independent 324-tile audit `agent_5bbd31f0-7bfd-4338-9a0a-85cabb897c43`: initially 205 PASS /
   117 BROAD / 2 MATERIAL (the automotive illustration read as a lifebuoy). The illustration was
   replaced with a multi-pin wiring harness and the two Botswana/Lesotho tiles passed a focused
-  recheck (PASS/PASS), giving a derived 207 PASS / 117 BROAD / 0 MATERIAL. Broad matches are recorded;
-  counts 101 GENERATED / 127 APPROVED_EXISTING / 96 ILLUSTRATION; all 12 generated files referenced.
+  recheck (PASS/PASS).
+- The 21 generic-mineral tiles were then replaced with 12 specific Kie photographs. Independent
+  focused audit: **21/21 PASS, 0 BROAD, 0 MATERIAL**. Derived full-audit totals are **228 PASS /
+  96 BROAD / 0 MATERIAL** (the non-mineral tiles were not re-audited in this focused pass).
+  Counts 122 GENERATED / 127 APPROVED_EXISTING / 75 ILLUSTRATION; all 24 generated files referenced.
 - Data/backend, public UI, Control Center and Kie integration were implemented by the coordinator;
   no separate implementation subagent was used. The final report must not claim otherwise.
 
