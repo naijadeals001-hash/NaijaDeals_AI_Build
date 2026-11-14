@@ -5139,8 +5139,12 @@ on `http://localhost:3047`, database `naijadeals_review` (REVIEW). Source branch
 - axe WCAG 2.0/2.1 A/AA: 0 violations on `/naijashop` at 390, 768 and 1440; evidence
   `qa-artifacts/visual/african-discovery/axe-final.json`.
 - Clean screenshots: `qa-artifacts/visual/african-discovery/final-oUH-1440.png`,
-  `final-accepted-768.png`, `final-delivery-390.png`, `admin-final-1440.png`; reviewer captures under
+  `final-oUH-768.png`, `final-oUH-390.png`, `admin-final-1440.png`; reviewer captures under
   `qa-artifacts/visual/african-discovery/reviewer/`.
+- Shop-wide density audit at 1440 found no other comparable empty pane: hero 368px, category rail
+  203px, each populated shelf 646px with four cards, wholesale 419px with its stock list, seller
+  invite 103px. At 390 the shelves are 910–934px because they show four cards in a readable 2×2
+  layout; no blank panel was found. No unrelated promotion was added.
 - `StorefrontConfig` row restored to 0 (published defaults); 253 products unchanged.
 
 **Known limits.**
