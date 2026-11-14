@@ -80,9 +80,16 @@ const images = {
   water: svg(`<circle cx="620" cy="270" r="100" fill="${c.gold}" opacity=".2"/><path d="M395 300 Q450 240 505 300 V390 Q570 440 570 550 V690 Q570 720 540 720 H360 Q330 720 330 690 V550 Q330 440 395 390Z" fill="#cfe7e2" stroke="${c.deep}" stroke-width="8"/>
     <rect x="395" y="300" width="110" height="55" rx="12" fill="${c.green}"/><rect x="365" y="520" width="170" height="120" rx="12" fill="${c.cream}" opacity=".9"/>
     <path d="M415 580 Q450 540 485 580 Q485 615 450 630 Q415 615 415 580Z" fill="#4d9a94"/>`),
-  auto: svg(`<circle cx="450" cy="470" r="190" fill="${c.deep}" opacity=".9"/><circle cx="450" cy="470" r="110" fill="${c.cream}"/><circle cx="450" cy="470" r="40" fill="${c.green}"/>
-    <g fill="${c.deep}"><rect x="440" y="270" width="20" height="50" rx="6"/><rect x="440" y="620" width="20" height="50" rx="6"/><rect x="250" y="460" width="50" height="20" rx="6"/><rect x="600" y="460" width="50" height="20" rx="6"/></g>
-    <path d="M160 720 Q260 660 390 700 T680 690" stroke="${c.rust}" stroke-width="16" fill="none" stroke-linecap="round"/>`),
+  auto: svg(`<rect x="115" y="320" width="185" height="260" rx="26" fill="${c.deep}"/><rect x="600" y="320" width="185" height="260" rx="26" fill="${c.deep}"/>
+    <g fill="${c.gold}"><circle cx="270" cy="365" r="15"/><circle cx="270" cy="410" r="15"/><circle cx="270" cy="455" r="15"/><circle cx="270" cy="500" r="15"/><circle cx="270" cy="545" r="15"/>
+    <circle cx="630" cy="365" r="15"/><circle cx="630" cy="410" r="15"/><circle cx="630" cy="455" r="15"/><circle cx="630" cy="500" r="15"/><circle cx="630" cy="545" r="15"/></g>
+    <path d="M270 365 C400 300 500 300 630 365" stroke="${c.rust}" stroke-width="22" fill="none" stroke-linecap="round"/>
+    <path d="M270 410 C410 350 490 350 630 410" stroke="${c.gold}" stroke-width="22" fill="none" stroke-linecap="round"/>
+    <path d="M270 455 C410 400 490 400 630 455" stroke="${c.green}" stroke-width="22" fill="none" stroke-linecap="round"/>
+    <path d="M270 500 C410 450 490 450 630 500" stroke="${c.ink}" stroke-width="22" fill="none" stroke-linecap="round"/>
+    <path d="M270 545 C400 620 500 620 630 545" stroke="${c.rust}" stroke-width="22" fill="none" stroke-linecap="round"/>
+    <path d="M390 680 H510 M430 640 V720 M470 640 V720" stroke="${c.deep}" stroke-width="16" stroke-linecap="round"/>
+    <rect x="350" y="610" width="200" height="36" rx="14" fill="${c.clay}"/>`),
   factory: svg(`<path d="M0 720 H900 V900 H0Z" fill="${c.sand}" opacity=".7"/><path d="M180 720 V430 L330 520 V430 L480 520 V430 L630 520 V720Z" fill="${c.deep}"/>
     <path d="M180 430 L330 520 L480 430 L630 520 L780 430 V720 H180Z" fill="${c.green}" opacity=".9"/>
     <rect x="245" y="570" width="80" height="70" rx="8" fill="${c.gold}" opacity=".8"/><rect x="390" y="570" width="80" height="70" rx="8" fill="${c.gold}" opacity=".8"/>
