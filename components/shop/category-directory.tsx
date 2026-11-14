@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, ArrowRight, LayoutGrid, RefreshCw } from "lucide-react";
-import { getPublicTaxonomy } from "@/lib/taxonomy-api";
-import { categoryCountLabel, deriveCategoryRail, type CategoryRailEntry, type CategoryRailNode } from "./category-rail";
+import { getPublicLevelOneCategories, taxonomyErrorMessage, type PublicCategoryLevel } from "@/lib/taxonomy-api";
+import { useLocale } from "@/lib/i18n/locale-provider";
+import { categoryCountLabel, categoryRailEntry, type CategoryRailEntry } from "./category-rail";
 
 /**
  * Full category directory.
@@ -21,41 +22,55 @@ import { categoryCountLabel, deriveCategoryRail, type CategoryRailEntry, type Ca
  * unavailable, never as zero and never as live stock.
  */
 export function CategoryDirectory() {
-  const [departments, setDepartments] = useState<CategoryRailNode[]>([]);
+  const { country, city } = useLocale();
+  const [categories, setCategories] = useState<PublicCategoryLevel[]>([]);
   const [taxonomyStatus, setTaxonomyStatus] = useState<"loading" | "ready" | "error">("loading");
   const [taxonomyError, setTaxonomyError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [brokenArt, setBrokenArt] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    let active = true;
+    const controller = new AbortController();
     setTaxonomyStatus("loading");
     setTaxonomyError("");
 
-    getPublicTaxonomy()
-      .then(({ departments: roots }) => {
-        if (!active) return;
-        setDepartments(Array.isArray(roots) ? roots : []);
+    getPublicLevelOneCategories({ country, city, signal: controller.signal })
+      .then(({ categories: rows }) => {
+        if (controller.signal.aborted) return;
+        setCategories(Array.isArray(rows) ? rows : []);
         setTaxonomyStatus("ready");
       })
       .catch((error) => {
-        if (!active) return;
-        setTaxonomyError(error instanceof Error ? error.message : "The published category directory could not be loaded.");
+        if (controller.signal.aborted) return;
+        setTaxonomyError(
+          taxonomyErrorMessage(error, {
+            missingEndpoint: "The published category directory is not enabled on this build."
+          })
+        );
         setTaxonomyStatus("error");
       });
 
-    return () => {
-      active = false;
-    };
-  }, [attempt]);
+    return () => controller.abort();
+  }, [attempt, country, city]);
 
-  const groups = useMemo(
-    () =>
-      departments
-        .map((department) => ({ department, entries: deriveCategoryRail([department]) }))
-        .filter((group) => group.entries.length > 0),
-    [departments]
-  );
+  const groups = useMemo(() => {
+    const byParent = new Map<string, { id: string; name: string; entries: CategoryRailEntry[] }>();
+    for (const node of categories) {
+      const entry = categoryRailEntry(node);
+      if (!entry) continue;
+      const id = node.parentId ?? "unassigned";
+      const group =
+        byParent.get(id) ??
+        ({
+          id,
+          name: node.parentName ?? "Other categories",
+          entries: []
+        } satisfies { id: string; name: string; entries: CategoryRailEntry[] });
+      group.entries.push(entry);
+      byParent.set(id, group);
+    }
+    return [...byParent.values()];
+  }, [categories]);
 
   const allEntries = useMemo<CategoryRailEntry[]>(() => groups.flatMap((group) => group.entries), [groups]);
   const countsMissing = allEntries.some((entry) => entry.count === null);
@@ -89,8 +104,8 @@ export function CategoryDirectory() {
                 All categories
               </h1>
               <p className="mt-1.5 max-w-2xl text-[11.5px] leading-5 text-[#566359]">
-                Every published category in the current directory, with the number of published listings in it and its
-                subcategories. The full department → category → subcategory tree stays in <strong>All departments</strong>.
+                Every category visible in browsing for your selected market, with the number of published listings in it
+                and its subcategories. The full department → category → subcategory tree stays in <strong>All departments</strong>.
               </p>
             </div>
             <Link
@@ -165,14 +180,14 @@ export function CategoryDirectory() {
 
         {taxonomyStatus === "ready" && groups.length > 0 ? (
           <div data-category-directory data-counts-status={directoryCountsStatus} className="mt-6 space-y-7">
-            {groups.map(({ department, entries }) => (
-              <section key={department.id} aria-labelledby={`directory-dept-${department.id}`}>
+            {groups.map(({ id, name, entries }) => (
+              <section key={id} aria-labelledby={`directory-dept-${id}`}>
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                   <h2
-                    id={`directory-dept-${department.id}`}
+                    id={`directory-dept-${id}`}
                     className="font-display text-[16px] font-extrabold tracking-tight text-[#14241b] sm:text-[18px]"
                   >
-                    {department.name}
+                    {name}
                   </h2>
                   <p className="text-[10px] font-semibold text-[#566359]">
                     {entries.length} {entries.length === 1 ? "category" : "categories"}

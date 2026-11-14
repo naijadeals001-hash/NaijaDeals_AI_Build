@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
-import { COUNTRY_CODE_PATTERN, effectivePublishRule, isReachable, sortCategoryRows } from "./shared";
+import {
+  COUNTRY_CODE_PATTERN,
+  effectivePublishRule,
+  isReachable,
+  sortCategoryRows,
+  type PublishRestrictionReason
+} from "./shared";
 
 /** Acceptance-suite rows are database categories, never public departments. */
 const CATEGORY_FIXTURE = /^(refund cat|test category|fixture category)\b|^ri-cat-/i;
@@ -38,6 +44,10 @@ export type PublicTaxonomyNode = {
   canPublish: boolean;
   /** Why publishing is restricted, or null when the node is publishable. */
   restrictionNote: string | null;
+  /** Machine-readable restriction cause (`country_rule` or unresolved regulated). */
+  restrictionReason: PublishRestrictionReason | null;
+  /** Regulated goods need an explicit country rule before publishing. */
+  isRegulated: boolean;
   /** Distinct public products attached directly to this node. */
   productCount: number;
   /** Distinct public products in this node and every live descendant. */
@@ -45,7 +55,14 @@ export type PublicTaxonomyNode = {
   children: PublicTaxonomyNode[];
 };
 
-export type PublicCategoryLevelNode = Omit<PublicTaxonomyNode, "children">;
+export type PublicCategoryLevel = Omit<PublicTaxonomyNode, "children"> & {
+  /** Level-0 department that groups this category in the directory. */
+  parentId: string | null;
+  parentName: string | null;
+};
+
+/** @deprecated Use PublicCategoryLevel. */
+export type PublicCategoryLevelNode = PublicCategoryLevel;
 
 type PublicCategoryRow = {
   id: string;
@@ -61,6 +78,7 @@ type PublicCategoryRow = {
   isSelectable: boolean;
   showOnHomepage: boolean;
   browsingVisible: boolean;
+  isRegulated: boolean;
   sortOrder: number;
   deprecatedAt: Date | null;
 };
@@ -74,13 +92,36 @@ function normaliseCountry(value: string | null | undefined): string {
   return country;
 }
 
+/**
+ * The city is market context for the client. Taxonomy availability and
+ * product counts are country-scoped today, so the value is validated and
+ * echoed rather than used to invent a city-level filter.
+ */
+function normaliseCity(value: string | null | undefined): string | null {
+  if (value === undefined || value === null) return null;
+  const city = value.trim();
+  if (!city) return null;
+  if (city.length > 80 || /[\u0000-\u001f\u007f]/.test(city)) {
+    throw new ApiError(400, "invalid_city", "city must be 80 characters or fewer of plain text.");
+  }
+  return city;
+}
+
+type PublishState = {
+  canPublish: boolean;
+  restrictionNote: string | null;
+  restrictionReason: PublishRestrictionReason | null;
+};
+
 type LoadedTaxonomy = {
   countryCode: string;
+  city: string | null;
   visibleRows: PublicCategoryRow[];
+  visibleById: Map<string, PublicCategoryRow>;
   childrenByParent: Map<string, PublicCategoryRow[]>;
   roots: PublicCategoryRow[];
   /** Every visible node's effective country publication state. */
-  publishState: Map<string, { canPublish: boolean; restrictionNote: string | null }>;
+  publishState: Map<string, PublishState>;
   /** Distinct public product ids attached to each eligible category. */
   productIdsByCategory: Map<string, Set<string>>;
 };
@@ -94,8 +135,12 @@ type LoadedTaxonomy = {
  * does not exist. Country rules never remove a node from this publication
  * tree; they only set `canPublish` and exclude its products from counts.
  */
-async function loadTaxonomy(countryInput: string | null | undefined): Promise<LoadedTaxonomy> {
+async function loadTaxonomy(
+  countryInput: string | null | undefined,
+  cityInput?: string | null
+): Promise<LoadedTaxonomy> {
   const countryCode = normaliseCountry(countryInput);
+  const city = normaliseCity(cityInput);
   const rows = await prisma.category.findMany({
     where: { isActive: true, deprecatedAt: null },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }, { id: "asc" }],
@@ -113,6 +158,7 @@ async function loadTaxonomy(countryInput: string | null | undefined): Promise<Lo
       isSelectable: true,
       showOnHomepage: true,
       browsingVisible: true,
+      isRegulated: true,
       sortOrder: true,
       deprecatedAt: true
     }
@@ -166,7 +212,7 @@ async function loadTaxonomy(countryInput: string | null | undefined): Promise<Lo
   ]);
 
   const ruleMap = new Map(rules.map((rule) => [`${rule.categoryId}:${countryCode}`, rule]));
-  const publishState = new Map<string, { canPublish: boolean; restrictionNote: string | null }>();
+  const publishState = new Map<string, PublishState>();
   for (const row of visibleRows) {
     const effective = effectivePublishRule({
       categoryId: row.id,
@@ -174,7 +220,11 @@ async function loadTaxonomy(countryInput: string | null | undefined): Promise<Lo
       rules: ruleMap,
       countryCode
     });
-    publishState.set(row.id, { canPublish: effective.canPublish, restrictionNote: effective.restrictionNote });
+    publishState.set(row.id, {
+      canPublish: effective.canPublish,
+      restrictionNote: effective.restrictionNote,
+      restrictionReason: effective.restrictionReason
+    });
   }
 
   const productIdsByCategory = new Map<string, Set<string>>();
@@ -187,7 +237,9 @@ async function loadTaxonomy(countryInput: string | null | undefined): Promise<Lo
 
   return {
     countryCode,
+    city,
     visibleRows,
+    visibleById,
     childrenByParent,
     roots: sortCategoryRows(visibleRows.filter((row) => !row.parentId)),
     publishState,
@@ -229,8 +281,12 @@ function toNodeFields(
   taxonomy: LoadedTaxonomy,
   counts: Map<string, NodeCount>,
   row: PublicCategoryRow
-): PublicCategoryLevelNode {
-  const publish = taxonomy.publishState.get(row.id) ?? { canPublish: true, restrictionNote: null };
+): PublicCategoryLevel {
+  const publish = taxonomy.publishState.get(row.id) ?? {
+    canPublish: false,
+    restrictionNote: null,
+    restrictionReason: null
+  };
   const count = counts.get(row.id) ?? { direct: 0, subtree: 0 };
   return {
     id: row.id,
@@ -247,8 +303,12 @@ function toNodeFields(
     browsingVisible: row.browsingVisible,
     canPublish: publish.canPublish,
     restrictionNote: publish.restrictionNote,
+    restrictionReason: publish.restrictionReason,
+    isRegulated: row.isRegulated,
     productCount: count.direct,
-    subtreeProductCount: count.subtree
+    subtreeProductCount: count.subtree,
+    parentId: row.parentId,
+    parentName: row.parentId ? taxonomy.visibleById.get(row.parentId)?.name ?? null : null
   };
 }
 
@@ -264,9 +324,9 @@ function toNode(taxonomy: LoadedTaxonomy, counts: Map<string, NodeCount>, row: P
  * here: hiding a node from the rail must not quietly unpublish it.
  */
 export async function getPublicTaxonomy(
-  options: { countryCode?: string | null } = {}
-): Promise<{ countryCode: string; departments: PublicTaxonomyNode[] }> {
-  const taxonomy = await loadTaxonomy(options.countryCode);
+  options: { countryCode?: string | null; city?: string | null } = {}
+): Promise<{ countryCode: string; city: string | null; departments: PublicTaxonomyNode[] }> {
+  const taxonomy = await loadTaxonomy(options.countryCode, options.city);
   const counts = countProducts(taxonomy);
   const build = (row: PublicCategoryRow, depth: number): PublicTaxonomyNode => {
     const node = toNode(taxonomy, counts, row);
@@ -278,6 +338,7 @@ export async function getPublicTaxonomy(
   };
   return {
     countryCode: taxonomy.countryCode,
+    city: taxonomy.city,
     departments: taxonomy.roots.map((root) => build(root, 0))
   };
 }
@@ -285,18 +346,28 @@ export async function getPublicTaxonomy(
 /**
  * Lightweight category-level projection for browsing rails.
  *
- * Returns every active, reachable level-1 category whose browsing flag is on,
- * in merchandising order, with its aggregated counts and imagery. The caller
- * does not have to flatten the full department/leaf tree. Departments and
- * level-2 leaves stay out of this list by contract.
+ * Returns every active, reachable level-1 category whose browsing flag is on
+ * and which is publishable in the selected market, in merchandising order, with
+ * its aggregated counts and imagery. The caller does not have to flatten the
+ * full department/leaf tree. Departments and level-2 leaves stay out of this
+ * list by contract, and an explicitly country-restricted category is not
+ * offered for browsing there.
  */
 export async function getPublicLevelOneCategories(
-  options: { countryCode?: string | null } = {}
-): Promise<{ countryCode: string; categories: PublicCategoryLevelNode[] }> {
-  const taxonomy = await loadTaxonomy(options.countryCode);
+  options: { countryCode?: string | null; city?: string | null } = {}
+): Promise<{ countryCode: string; city: string | null; categories: PublicCategoryLevel[] }> {
+  const taxonomy = await loadTaxonomy(options.countryCode, options.city);
   const counts = countProducts(taxonomy);
-  const categories = sortCategoryRows(taxonomy.visibleRows)
-    .filter((row) => row.level === 1 && row.browsingVisible)
-    .map((row) => toNodeFields(taxonomy, counts, row));
-  return { countryCode: taxonomy.countryCode, categories };
+  // Walk the published tree so the rail follows each department's curated
+  // merchandising order. Sorting all level-1 rows globally would interleave
+  // departments that intentionally share a sortOrder.
+  const categories: PublicCategoryLevel[] = [];
+  for (const root of taxonomy.roots) {
+    for (const row of taxonomy.childrenByParent.get(root.id) ?? []) {
+      if (row.level !== 1 || !row.browsingVisible) continue;
+      if (taxonomy.publishState.get(row.id)?.canPublish === false) continue;
+      categories.push(toNodeFields(taxonomy, counts, row));
+    }
+  }
+  return { countryCode: taxonomy.countryCode, city: taxonomy.city, categories };
 }

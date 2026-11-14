@@ -11,7 +11,8 @@ import {
   normaliseOptions,
   sortCategoryRows,
   type CategorySummary,
-  type CountryRuleRow
+  type CountryRuleRow,
+  type PublishRestrictionReason
 } from "./shared";
 
 export type TaxonomyDb = PrismaClient | Prisma.TransactionClient;
@@ -35,6 +36,10 @@ export type SellerCategoryOption = {
   attributes: AttributeDefinition[];
   canPublish: boolean;
   restrictionNote: string | null;
+  /** Machine-readable cause when publishing is blocked. */
+  restrictionReason: PublishRestrictionReason | null;
+  /** Regulated goods require an explicit rule for the seller's country. */
+  isRegulated: boolean;
 };
 
 export type CategorySuggestion = {
@@ -116,6 +121,7 @@ export async function listSellerCategories(countryCode: string): Promise<{ categ
         isSelectable: true,
         deprecatedAt: true,
         sortOrder: true,
+        isRegulated: true,
         attributes: {
           select: { key: true, label: true, type: true, required: true, options: true },
           orderBy: { key: "asc" }
@@ -144,7 +150,9 @@ export async function listSellerCategories(countryCode: string): Promise<{ categ
         isSelectable: row.isSelectable,
         attributes: definitions(row.attributes),
         canPublish: rule.canPublish,
-        restrictionNote: rule.restrictionNote
+        restrictionNote: rule.restrictionNote,
+        restrictionReason: rule.restrictionReason,
+        isRegulated: row.isRegulated === true
       } satisfies SellerCategoryOption;
     });
 
@@ -191,6 +199,7 @@ export async function suggestSellerCategories(input: {
         isSelectable: true,
         deprecatedAt: true,
         sortOrder: true,
+        isRegulated: true,
         aliases: { select: { alias: true, locale: true }, orderBy: { alias: "asc" } }
       }
     }),
@@ -436,7 +445,8 @@ export async function assertSellerCategoryEligibility(input: {
         isActive: true,
         isSelectable: true,
         deprecatedAt: true,
-        sortOrder: true
+        sortOrder: true,
+        isRegulated: true
       }
     }),
     db.categoryCountryRule.findMany({
@@ -470,7 +480,9 @@ export async function assertSellerCategoryEligibility(input: {
     throw new ApiError(403, "category_restricted", rule.restrictionNote ?? "Publishing in this category is restricted.", {
       categoryId: category.id,
       countryCode: country,
-      restrictedBy: rule.restrictedBy
+      restrictedBy: rule.restrictedBy,
+      reason: rule.restrictionReason,
+      isRegulated: category.isRegulated === true
     });
   }
 

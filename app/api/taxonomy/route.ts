@@ -18,7 +18,8 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     const country = request.nextUrl.searchParams.get("country");
-    return NextResponse.json(jsonSafe(await getPublicTaxonomy({ countryCode: country })));
+    const city = request.nextUrl.searchParams.get("city");
+    return NextResponse.json(jsonSafe(await getPublicTaxonomy({ countryCode: country, city })));
   } catch (error) {
     return jsonError(error);
   }

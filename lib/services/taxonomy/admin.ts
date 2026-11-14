@@ -37,6 +37,8 @@ export type AdminTaxonomyNode = {
   showOnHomepage: boolean;
   /** Browsing rail/directory visibility, independent of publication and merchandising. */
   browsingVisible: boolean;
+  /** Regulated goods need an explicit country rule before publishing. */
+  isRegulated: boolean;
   deprecatedAt: Date | null;
   isActive: boolean;
   isDemo: boolean;
@@ -96,6 +98,7 @@ function toAdminNode(record: AdminCategoryRecord, visibleCountry: string | null)
     isSelectable: record.isSelectable,
     showOnHomepage: record.showOnHomepage,
     browsingVisible: record.browsingVisible,
+    isRegulated: record.isRegulated,
     deprecatedAt: record.deprecatedAt,
     isActive: record.isActive,
     isDemo: record.isDemo,

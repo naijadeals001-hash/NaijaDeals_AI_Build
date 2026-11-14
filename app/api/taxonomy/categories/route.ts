@@ -8,17 +8,20 @@ export const dynamic = "force-dynamic";
 
 /**
  * Lightweight browsing-rail projection: every active, reachable level-1
- * category with `browsingVisible` on, in merchandising order, carrying its
- * image/alt, country publication state and aggregated product counts.
+ * category with `browsingVisible` on and publishable in the selected market, in
+ * merchandising order, carrying its image/alt, country publication state and
+ * aggregated product counts.
  *
- * Departments and level-2 leaves are intentionally absent so a client does not
- * have to flatten the full tree to render a category rail. `browsingVisible`
- * filters this endpoint only; `/api/taxonomy` keeps the same nodes published.
+ * Departments, level-2 leaves and country-restricted categories are absent so
+ * a client does not have to flatten the full tree to render a category rail.
+ * `browsingVisible` filters this endpoint only; `/api/taxonomy` keeps the same
+ * nodes published.
  */
 export async function GET(request: NextRequest) {
   try {
     const country = request.nextUrl.searchParams.get("country");
-    return NextResponse.json(jsonSafe(await getPublicLevelOneCategories({ countryCode: country })));
+    const city = request.nextUrl.searchParams.get("city");
+    return NextResponse.json(jsonSafe(await getPublicLevelOneCategories({ countryCode: country, city })));
   } catch (error) {
     return jsonError(error);
   }

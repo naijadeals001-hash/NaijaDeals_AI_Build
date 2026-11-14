@@ -26,6 +26,10 @@ export type TaxonomyCountryRule = {
   note?: string | null;
 };
 
+/** Machine-readable cause when publishing into a category is blocked. */
+export type PublishRestrictionReason = "country_rule" | "market_eligibility_unresolved";
+
+/** Shared shape of a published taxonomy node returned by `/api/taxonomy`. */
 export type PublicTaxonomyNode = {
   id: string;
   key?: string | null;
@@ -36,14 +40,56 @@ export type PublicTaxonomyNode = {
   imageAlt?: string | null;
   isSelectable?: boolean;
   showOnHomepage?: boolean;
+  /** 0 = department, 1 = category, 2 = selectable leaf. */
+  level: number;
+  sortOrder: number;
+  /**
+   * Browsing rail/directory visibility. False hides the node from browsing
+   * lists only; it remains published here and on its category page.
+   */
+  browsingVisible: boolean;
+  /** Whether sellers in the requested country may publish into this node. */
+  canPublish: boolean;
+  /** Why publishing is restricted, or null when publishable. */
+  restrictionNote: string | null;
+  restrictionReason: PublishRestrictionReason | null;
+  /** Regulated goods need an explicit country rule before publishing. */
+  isRegulated: boolean;
+  /** Server-reported public listing counts; null when the response omits it. */
+  productCount: number | null;
+  subtreeProductCount: number | null;
   children?: PublicTaxonomyNode[];
 };
 
-export type AdminTaxonomyNode = PublicTaxonomyNode & {
+/**
+ * Level-1 browsing projection returned by `/api/taxonomy/categories`. The
+ * service already filters to active, reachable, browsing-visible categories in
+ * merchandising order; parent fields let the directory group them.
+ */
+export type PublicCategoryLevel = Omit<PublicTaxonomyNode, "children"> & {
+  parentId: string | null;
+  parentName: string | null;
+};
+
+export type AdminTaxonomyNode = Omit<
+  PublicTaxonomyNode,
+  | "canPublish"
+  | "restrictionNote"
+  | "restrictionReason"
+  | "productCount"
+  | "subtreeProductCount"
+  | "level"
+  | "sortOrder"
+  | "browsingVisible"
+  | "isRegulated"
+  | "children"
+> & {
   parentId?: string | null;
   level?: number;
   isActive?: boolean;
   sortOrder?: number;
+  browsingVisible?: boolean;
+  isRegulated?: boolean;
   deprecatedAt?: string | null;
   productCount?: number;
   /** Some endpoints expose the Prisma relation count instead. */
@@ -63,6 +109,8 @@ export type SellerCategory = {
   isSelectable: boolean;
   canPublish: boolean;
   restrictionNote?: string | null;
+  restrictionReason?: PublishRestrictionReason | null;
+  isRegulated?: boolean;
   attributes: TaxonomyAttribute[];
   description?: string | null;
   examples: string[];
@@ -155,10 +203,45 @@ async function requestTaxonomy<T>(path: string, init?: RequestInit): Promise<T> 
   return (await response.json()) as T;
 }
 
-function normaliseNode(node: PublicTaxonomyNode): PublicTaxonomyNode {
+function finiteCount(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
+}
+
+function normaliseRestrictionReason(value: unknown): PublishRestrictionReason | null {
+  return value === "country_rule" || value === "market_eligibility_unresolved" ? value : null;
+}
+
+/**
+ * Display normalization for the published taxonomy contract. Browsing and
+ * publication flags default to the endpoint's published values, but counts stay
+ * null so the UI can say they are unavailable instead of inventing zero.
+ * Country publishing permission is always enforced server-side on mutation;
+ * the client flag only drives the browsing filter.
+ */
+function normalisePublicNode(node: PublicTaxonomyNode): PublicTaxonomyNode {
   return {
     ...node,
-    children: Array.isArray(node.children) ? node.children.map(normaliseNode) : []
+    level: typeof node.level === "number" ? node.level : 0,
+    sortOrder: typeof node.sortOrder === "number" ? node.sortOrder : 0,
+    browsingVisible: node.browsingVisible !== false,
+    canPublish: node.canPublish !== false,
+    restrictionNote: typeof node.restrictionNote === "string" ? node.restrictionNote : null,
+    restrictionReason: normaliseRestrictionReason(node.restrictionReason),
+    isRegulated: node.isRegulated === true,
+    productCount: finiteCount(node.productCount),
+    subtreeProductCount: finiteCount(node.subtreeProductCount),
+    children: Array.isArray(node.children) ? node.children.map(normalisePublicNode) : []
+  };
+}
+
+function normaliseCategoryLevel(node: PublicCategoryLevel): PublicCategoryLevel {
+  const normalised = normalisePublicNode({ ...node, children: [] });
+  const { children: _children, ...fields } = normalised;
+  void _children;
+  return {
+    ...fields,
+    parentId: typeof node.parentId === "string" ? node.parentId : null,
+    parentName: typeof node.parentName === "string" ? node.parentName : null
   };
 }
 
@@ -221,11 +304,56 @@ function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
+function taxonomyQuery(options: { country?: string | null; city?: string | null }): string {
+  const params = new URLSearchParams();
+  if (options.country) params.set("country", options.country);
+  if (options.city) params.set("city", options.city);
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+type PublicTaxonomyOptions = {
+  country?: string | null;
+  city?: string | null;
+  signal?: AbortSignal;
+};
+
 /** Public hierarchy. Throws a TaxonomyApiError when the endpoint is missing. */
-export async function getPublicTaxonomy(): Promise<{ departments: PublicTaxonomyNode[] }> {
-  const body = await requestTaxonomy<{ departments?: PublicTaxonomyNode[]; categories?: PublicTaxonomyNode[] }>("/api/taxonomy");
+export async function getPublicTaxonomy(
+  options: PublicTaxonomyOptions = {}
+): Promise<{ countryCode: string | null; city: string | null; departments: PublicTaxonomyNode[] }> {
+  const body = await requestTaxonomy<{
+    countryCode?: unknown;
+    city?: unknown;
+    departments?: PublicTaxonomyNode[];
+    categories?: PublicTaxonomyNode[];
+  }>(`/api/taxonomy${taxonomyQuery(options)}`, { signal: options.signal });
   const roots = Array.isArray(body?.departments) ? body.departments : asArray<PublicTaxonomyNode>(body?.categories);
-  return { departments: roots.map(normaliseNode) };
+  return {
+    countryCode: typeof body?.countryCode === "string" ? body.countryCode : null,
+    city: typeof body?.city === "string" ? body.city : null,
+    departments: roots.map(normalisePublicNode)
+  };
+}
+
+/**
+ * Level-1 browsing categories for the rail and directory. The server already
+ * applies active/reachable/browsingVisible filtering and merchandising order;
+ * the client maps and renders that response without inventing a count.
+ */
+export async function getPublicLevelOneCategories(
+  options: PublicTaxonomyOptions = {}
+): Promise<{ countryCode: string | null; city: string | null; categories: PublicCategoryLevel[] }> {
+  const body = await requestTaxonomy<{
+    countryCode?: unknown;
+    city?: unknown;
+    categories?: PublicCategoryLevel[];
+  }>(`/api/taxonomy/categories${taxonomyQuery(options)}`, { signal: options.signal });
+  return {
+    countryCode: typeof body?.countryCode === "string" ? body.countryCode : null,
+    city: typeof body?.city === "string" ? body.city : null,
+    categories: asArray<PublicCategoryLevel>(body?.categories).map(normaliseCategoryLevel)
+  };
 }
 
 /** Seller-publishable categories for the authenticated seller's market. */
@@ -240,6 +368,8 @@ export async function getSellerCategories(): Promise<SellerCategory[]> {
     isSelectable: entry.isSelectable !== false,
     canPublish: entry.canPublish !== false,
     restrictionNote: typeof entry.restrictionNote === "string" ? entry.restrictionNote : null,
+    restrictionReason: normaliseRestrictionReason(entry.restrictionReason),
+    isRegulated: entry.isRegulated === true,
     attributes: normaliseAttributes(entry.attributes),
     description: typeof entry.description === "string" ? entry.description : null,
     examples: Array.isArray(entry.examples)

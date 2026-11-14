@@ -315,6 +315,7 @@ async function main(): Promise<void> {
                 level: definition.level,
                 isSelectable: definition.isSelectable,
                 showOnHomepage: definition.showOnHomepage,
+                isRegulated: definition.reviewRequired,
                 sortOrder: definition.sortOrder,
                 isActive: true,
                 isDemo: false
@@ -344,6 +345,7 @@ async function main(): Promise<void> {
                   level: definition.level,
                   isSelectable: definition.isSelectable,
                   showOnHomepage: definition.showOnHomepage,
+                  isRegulated: definition.reviewRequired,
                   sortOrder: definition.sortOrder,
                   isActive: true,
                   deprecatedAt: null
@@ -362,6 +364,7 @@ async function main(): Promise<void> {
                   level: definition.level,
                   isSelectable: definition.isSelectable,
                   showOnHomepage: definition.showOnHomepage,
+                  isRegulated: definition.reviewRequired,
                   sortOrder: definition.sortOrder,
                   isActive: true,
                   deprecatedAt: null
@@ -461,7 +464,8 @@ async function main(): Promise<void> {
             isDemo: true,
             parentId: true,
             level: true,
-            isSelectable: true
+            isSelectable: true,
+            isRegulated: true
           }
         });
         const afterBySlug = new Map(categoriesAfter.map((entry) => [entry.slug, entry]));
@@ -576,6 +580,11 @@ async function main(): Promise<void> {
           if (saved.isSelectable !== definition.isSelectable) {
             throw new Error(
               `${definition.key}: saved isSelectable ${saved.isSelectable} != ${definition.isSelectable}`
+            );
+          }
+          if (saved.isRegulated !== definition.reviewRequired) {
+            throw new Error(
+              `${definition.key}: saved isRegulated ${saved.isRegulated} != reviewRequired ${definition.reviewRequired}`
             );
           }
           if (definition.parentKey) {

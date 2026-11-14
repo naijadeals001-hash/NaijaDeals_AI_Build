@@ -14,8 +14,14 @@ import {
   Truck
 } from "lucide-react";
 import { apiClient, type ApiCategory, type ApiProduct } from "@/lib/api-client";
-import { getPublicTaxonomy, type PublicTaxonomyNode } from "@/lib/taxonomy-api";
-import { CategoryRail, deriveCategoryRail, isStorefrontListing } from "./category-rail";
+import {
+  getPublicLevelOneCategories,
+  getPublicTaxonomy,
+  type PublicCategoryLevel,
+  type PublicTaxonomyNode
+} from "@/lib/taxonomy-api";
+import { useLocale } from "@/lib/i18n/locale-provider";
+import { CategoryRail, categoryRailEntries, isStorefrontListing } from "./category-rail";
 import { MarketplaceProductCard } from "./marketplace-card";
 import { announceShopCartCount } from "./shop-header";
 
@@ -25,59 +31,12 @@ type StorefrontConfig = {
   shelfLimit?: number;
 };
 
-type PublicTaxonomyNodeWithCounts = PublicTaxonomyNode & {
-  productCount?: unknown;
-  subtreeProductCount?: unknown;
-  descendantProductCount?: unknown;
-  browsingVisible?: unknown;
-  canPublish?: unknown;
-  level?: unknown;
-  sortOrder?: unknown;
-  restrictionNote?: unknown;
-};
-
 function finiteCount(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
 }
 
-type Department = {
-  id: string;
-  name: string;
-  slug: string;
-  imageUrl?: string | null;
-  description?: string | null;
-  isSelectable?: boolean;
-  showOnHomepage?: boolean;
-  level?: number;
-  sortOrder?: number;
-  browsingVisible?: boolean;
-  productCount?: number | null;
-  subtreeProductCount?: number | null;
-  canPublish?: boolean | null;
-  restrictionNote?: string | null;
-  children?: Department[];
-};
-
-function toDepartment(node: PublicTaxonomyNode): Department {
-  const extended = node as PublicTaxonomyNodeWithCounts;
-  return {
-    id: node.id,
-    name: node.name,
-    slug: node.slug,
-    imageUrl: node.imageUrl ?? null,
-    description: node.description ?? null,
-    isSelectable: node.isSelectable !== false,
-    showOnHomepage: node.showOnHomepage === true,
-    level: typeof extended.level === "number" ? extended.level : undefined,
-    sortOrder: typeof extended.sortOrder === "number" ? extended.sortOrder : undefined,
-    browsingVisible: typeof extended.browsingVisible === "boolean" ? extended.browsingVisible : undefined,
-    productCount: finiteCount(extended.productCount),
-    subtreeProductCount: finiteCount(extended.subtreeProductCount) ?? finiteCount(extended.descendantProductCount),
-    canPublish: typeof extended.canPublish === "boolean" ? extended.canPublish : null,
-    restrictionNote: typeof extended.restrictionNote === "string" ? extended.restrictionNote : null,
-    children: (node.children ?? []).map(toDepartment)
-  };
-}
+/** The published tree already carries every taxonomy field the shelves use. */
+type Department = PublicTaxonomyNode;
 
 /** Every node in the published tree, in publication order. */
 function flattenDepartments(nodes: Department[]): Department[] {
@@ -300,12 +259,15 @@ function pickExplore(
  * still starts with a producer quote and independent freight.
  */
 export function NaijaDealsMarketplace() {
+  const { country, city } = useLocale();
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [categoriesStatus, setCategoriesStatus] = useState<"loading" | "ready" | "error">("loading");
   const [taxonomyTree, setTaxonomyTree] = useState<Department[]>([]);
   const [taxonomyStatus, setTaxonomyStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [levelOneCategories, setLevelOneCategories] = useState<PublicCategoryLevel[]>([]);
+  const [levelOneStatus, setLevelOneStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const [addingId, setAddingId] = useState("");
@@ -349,16 +311,6 @@ export function NaijaDealsMarketplace() {
         setCategoriesStatus("error");
       });
 
-    getPublicTaxonomy()
-      .then(({ departments: roots }) => {
-        if (!active) return;
-        setTaxonomyTree(roots.map(toDepartment));
-        setTaxonomyStatus("ready");
-      })
-      .catch(() => {
-        if (active) setTaxonomyStatus("error");
-      });
-
     fetch("/api/storefront", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((value) => {
@@ -370,6 +322,38 @@ export function NaijaDealsMarketplace() {
       active = false;
     };
   }, [reloadKey]);
+
+  // Taxonomy is market-scoped, so both the published tree (shelves/navigation)
+  // and the level-1 browsing projection (rail/directory) refetch when the
+  // selected country or city changes. A superseded request is aborted before it
+  // can overwrite the current market.
+  useEffect(() => {
+    const controller = new AbortController();
+    setTaxonomyStatus("loading");
+    setLevelOneStatus("loading");
+
+    getPublicTaxonomy({ country, city, signal: controller.signal })
+      .then(({ departments: roots }) => {
+        if (controller.signal.aborted) return;
+        setTaxonomyTree(Array.isArray(roots) ? roots : []);
+        setTaxonomyStatus("ready");
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setTaxonomyStatus("error");
+      });
+
+    getPublicLevelOneCategories({ country, city, signal: controller.signal })
+      .then(({ categories: rows }) => {
+        if (controller.signal.aborted) return;
+        setLevelOneCategories(Array.isArray(rows) ? rows : []);
+        setLevelOneStatus("ready");
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLevelOneStatus("error");
+      });
+
+    return () => controller.abort();
+  }, [reloadKey, country, city]);
 
   const showHero = config.showHero !== false;
   const showShelves = config.showShelves !== false;
@@ -389,6 +373,13 @@ export function NaijaDealsMarketplace() {
           name: category.name,
           slug: category.slug,
           imageUrl: extended.imageUrl ?? null,
+          level: 0,
+          sortOrder: 0,
+          browsingVisible: true,
+          canPublish: true,
+          restrictionNote: null,
+          restrictionReason: null,
+          isRegulated: false,
           productCount: count,
           subtreeProductCount: count
         };
@@ -398,17 +389,31 @@ export function NaijaDealsMarketplace() {
     for (const product of products) {
       const category = product.category;
       if (!category || map.has(category.slug)) continue;
-      map.set(category.slug, { id: category.id, name: category.name, slug: category.slug, imageUrl: null });
+      map.set(category.slug, {
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        imageUrl: null,
+        level: 0,
+        sortOrder: 0,
+        browsingVisible: true,
+        canPublish: true,
+        restrictionNote: null,
+        restrictionReason: null,
+        isRegulated: false,
+        productCount: null,
+        subtreeProductCount: null
+      });
     }
     return [...map.values()];
   }, [taxonomyTree, categories, products]);
 
   const allDepartments = useMemo(() => flattenDepartments(departments), [departments]);
 
-  // Only the effective public taxonomy supplies rail entries. Counts, imagery,
-  // order, browsing visibility and country publication state all come from that
-  // response; `null` counts are reported honestly rather than as zero.
-  const railEntries = useMemo(() => deriveCategoryRail(taxonomyTree), [taxonomyTree]);
+  // Only the dedicated level-1 browsing projection supplies rail entries.
+  // Counts, imagery, order, browsing visibility and country publication state
+  // all come from that response; `null` counts are reported honestly.
+  const railEntries = useMemo(() => categoryRailEntries(levelOneCategories), [levelOneCategories]);
 
   const demoCount = useMemo(() => products.filter((product) => product.isDemo).length, [products]);
 
@@ -694,11 +699,11 @@ export function NaijaDealsMarketplace() {
         ) : null}
 
         {/* Compact taxonomy rail; the full hierarchy stays in All departments. */}
-        {taxonomyStatus === "ready" ? (
+        {levelOneStatus === "ready" ? (
           <CategoryRail entries={railEntries} countsStatus="ready" summary={listingFact} />
         ) : null}
 
-        {taxonomyStatus === "loading" ? (
+        {levelOneStatus === "loading" ? (
           <section aria-busy="true" aria-label="Loading shop categories" className="mt-4 min-w-0">
             <div className="h-6 w-40 animate-pulse rounded-full bg-[#e3ebdf]" />
             <div className="mt-2 h-3 w-64 animate-pulse rounded-full bg-[#e3ebdf]" />
@@ -714,10 +719,14 @@ export function NaijaDealsMarketplace() {
           </section>
         ) : null}
 
-        {taxonomyStatus === "error" ? (
+        {levelOneStatus === "error" ? (
           <p role="status" className="mt-3 rounded-xl border border-[#eadfc6] bg-[#fbf4e4] px-3 py-2 text-[11px] leading-5 text-[#7a4c00]">
-            The published category directory could not be loaded, so the category rail is hidden.
-            {categoriesStatus === "ready" ? " The fallback directory and All departments still work." : " The fallback directory could not be loaded either."}
+            The browsing category list could not be loaded for {country}, so the category rail is hidden.
+            {taxonomyStatus === "ready"
+              ? " The published department tree, All departments and category pages still work."
+              : categoriesStatus === "ready"
+                ? " The fallback directory and All departments still work."
+                : " The fallback directory could not be loaded either."}
           </p>
         ) : null}
 

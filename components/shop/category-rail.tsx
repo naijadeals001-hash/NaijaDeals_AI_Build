@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowLeft, ArrowRight, LayoutGrid } from "lucide-react";
+import type { PublicCategoryLevel, PublicTaxonomyNode } from "@/lib/taxonomy-api";
 
 /**
  * Shared catalogue helpers for the storefront category rail and the full
@@ -14,13 +15,13 @@ import { ArrowLeft, ArrowRight, LayoutGrid } from "lucide-react";
  *   - level 1 = category (the complete rail/directory set)
  *   - level 2 = leaf (reachable through its category, never a card)
  *
- * `/api/taxonomy` withholds inactive, deprecated and unreachable rows and now
- * carries `browsingVisible`, effective country publication state, imagery and
- * server-computed direct/subtree listing counts. We never invent a category, a
- * count or an image: a node without a server count stays `null` and says so.
- * Nodes hidden from browsing or not publishable in the browsing market stay out
- * of the rail/directory; the published hierarchy continues to show them in All
- * departments with their existing market-state labels.
+ * `/api/taxonomy/categories` returns the active, reachable, browsing-visible
+ * level-1 categories in the selected market's merchandising order, with
+ * imagery, effective country publication state and server-computed
+ * direct/subtree listing counts. We never invent a category, a count or an
+ * image: a node without a server count stays `null` and says so. Nodes hidden
+ * from browsing or not publishable in the browsing market stay out of the
+ * rail/directory; `/api/taxonomy` and category pages continue to publish them.
  */
 
 /**
@@ -44,26 +45,6 @@ export function isStorefrontListing(product: CategoryListingLike): boolean {
   return !FIXTURE_LISTING.test(product.name) && !FIXTURE_LISTING.test(product.slug ?? "");
 }
 
-export type CategoryRailNode = {
-  id: string;
-  name: string;
-  slug: string;
-  imageUrl?: string | null;
-  imageAlt?: string | null;
-  level?: number;
-  sortOrder?: number;
-  isSelectable?: boolean;
-  browsingVisible?: boolean | null;
-  /** Effective country publication state from the taxonomy response. */
-  canPublish?: boolean | null;
-  restrictionNote?: string | null;
-  /** Direct public listings attached to this node. */
-  productCount?: number | null;
-  /** Public listings in this node and its live descendants. */
-  subtreeProductCount?: number | null;
-  children?: CategoryRailNode[];
-};
-
 export type CategoryRailEntry = {
   id: string;
   name: string;
@@ -75,45 +56,65 @@ export type CategoryRailEntry = {
   count: number | null;
 };
 
-function visibleChildren(node: CategoryRailNode): CategoryRailNode[] {
-  return Array.isArray(node.children) ? node.children : [];
-}
-
 function finiteCount(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
 }
 
 /**
- * Flatten the eligible level-1 categories in published tree order.
+ * Map one taxonomy node to a rail entry.
  *
  * Eligibility is the taxonomy's own contract, not a local category list:
- *   - only the children of departments (level 1; roots/leaves are excluded)
+ *   - only level 1 (category); roots/leaves are excluded
  *   - `browsingVisible === false` stays out of browsing lists
  *   - `canPublish === false` is not offered in the browsing market
  *
  * Counts are the server's subtree product counts, which exclude fixtures,
- * non-public products and publish-restricted branches.
+ * non-public products and publish-restricted branches. A response without a
+ * count stays `null` and is rendered as unavailable, never as zero.
  */
-export function deriveCategoryRail(departments: CategoryRailNode[]): CategoryRailEntry[] {
+export function categoryRailEntry(node: PublicTaxonomyNode | PublicCategoryLevel): CategoryRailEntry | null {
+  if (!node || !node.id || !node.slug || !node.name) return null;
+  if (typeof node.level === "number" && node.level !== 1) return null;
+  if (node.browsingVisible === false) return null;
+  if (node.canPublish === false) return null;
+  return {
+    id: node.id,
+    name: node.name,
+    slug: node.slug,
+    imageUrl: node.imageUrl ?? null,
+    imageAlt: node.imageAlt ?? null,
+    isSelectable: node.isSelectable !== false,
+    count: finiteCount(node.subtreeProductCount) ?? finiteCount(node.productCount)
+  };
+}
+
+/** Map the `/api/taxonomy/categories` projection in the server's order. */
+export function categoryRailEntries(categories: PublicCategoryLevel[]): CategoryRailEntry[] {
+  const entries: CategoryRailEntry[] = [];
+  const seen = new Set<string>();
+  for (const node of categories ?? []) {
+    const entry = categoryRailEntry(node);
+    if (!entry || seen.has(entry.slug)) continue;
+    seen.add(entry.slug);
+    entries.push(entry);
+  }
+  return entries;
+}
+
+/**
+ * Flatten eligible level-1 categories from the full published tree. Kept for
+ * tree-based consumers; the storefront and directory use the dedicated
+ * `/api/taxonomy/categories` projection.
+ */
+export function deriveCategoryRail(departments: PublicTaxonomyNode[]): CategoryRailEntry[] {
   const entries: CategoryRailEntry[] = [];
   const seen = new Set<string>();
   for (const department of departments ?? []) {
-    for (const node of visibleChildren(department)) {
-      if (!node || !node.slug || !node.name) continue;
-      if (typeof node.level === "number" && node.level !== 1) continue;
-      if (node.browsingVisible === false) continue;
-      if (node.canPublish === false) continue;
-      if (seen.has(node.slug)) continue;
-      seen.add(node.slug);
-      entries.push({
-        id: node.id,
-        name: node.name,
-        slug: node.slug,
-        imageUrl: node.imageUrl ?? null,
-        imageAlt: node.imageAlt ?? null,
-        isSelectable: node.isSelectable !== false,
-        count: finiteCount(node.subtreeProductCount) ?? finiteCount(node.productCount)
-      });
+    for (const node of department.children ?? []) {
+      const entry = categoryRailEntry(node);
+      if (!entry || seen.has(entry.slug)) continue;
+      seen.add(entry.slug);
+      entries.push(entry);
     }
   }
   return entries;

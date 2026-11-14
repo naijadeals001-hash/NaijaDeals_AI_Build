@@ -25,6 +25,12 @@ export type CategorySummary = {
   isSelectable: boolean;
   deprecatedAt: Date | null;
   sortOrder: number;
+  /**
+   * Regulated nodes need an explicit country rule. Optional because a few
+   * read-only projections (public catalogue search) do not select the column;
+   * publishing gates select it and treat only an explicit `true` as regulated.
+   */
+  isRegulated?: boolean;
 };
 
 export type CountryRuleRow = {
@@ -165,9 +171,14 @@ export function isReachable(
   return true;
 }
 
+/** Stable machine reason for a publish restriction; UI can branch on it. */
+export type PublishRestrictionReason = "country_rule" | "market_eligibility_unresolved";
+
 export type EffectivePublishRule = {
   canPublish: boolean;
   restrictionNote: string | null;
+  /** Null when publishable; otherwise the machine-checkable cause. */
+  restrictionReason: PublishRestrictionReason | null;
   restrictedBy: string | null;
 };
 
@@ -176,6 +187,11 @@ export type EffectivePublishRule = {
  * disallowing rule on the node or any ancestor restricts the branch; the
  * nearest disallowing rule supplies the explanation. This keeps a market-level
  * switch meaningful without silently publishing into a disabled department.
+ *
+ * Regulated goods are fail-closed: an `isRegulated` node without an explicit
+ * rule for the requested country is not publishable. The absence of a rule is
+ * unresolved market eligibility, never permission, and only an explicit rule
+ * (allow or deny) resolves it. Rules on ancestors continue to apply.
  */
 export function effectivePublishRule(input: {
   categoryId: string;
@@ -190,17 +206,27 @@ export function effectivePublishRule(input: {
     if (seen.has(current.id)) break;
     seen.add(current.id);
     const rule = input.rules.get(`${current.id}:${countryCode}`);
-    if (rule && !rule.canPublish) {
+    if (rule) {
+      if (!rule.canPublish) {
+        return {
+          canPublish: false,
+          restrictionNote:
+            rule.note?.trim() || `Publishing into ${current.name} is currently restricted for ${countryCode}.`,
+          restrictionReason: "country_rule",
+          restrictedBy: current.id
+        };
+      }
+    } else if (current.isRegulated === true) {
       return {
         canPublish: false,
-        restrictionNote:
-          rule.note?.trim() || `Publishing into ${current.name} is currently restricted for ${countryCode}.`,
+        restrictionNote: `Publishing into ${current.name} is not approved for ${countryCode} yet; an explicit market rule is required.`,
+        restrictionReason: "market_eligibility_unresolved",
         restrictedBy: current.id
       };
     }
     current = current.parentId ? input.byId.get(current.parentId) : undefined;
   }
-  return { canPublish: true, restrictionNote: null, restrictedBy: null };
+  return { canPublish: true, restrictionNote: null, restrictionReason: null, restrictedBy: null };
 }
 
 export function isUniqueViolation(error: unknown): boolean {
