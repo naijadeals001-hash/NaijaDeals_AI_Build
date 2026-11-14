@@ -4808,3 +4808,27 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 - Cross-market checkout fails closed with `409 item_market_mismatch` when a cart line's country
   differs from the delivery address (verified by `scripts/cross-market-checkout-test.ts`, 0 orders
   created); no cross-border shipping policy is invented.
+
+### Final frozen build — storefront/taxonomy integration
+
+- Source HEAD `2704e2a`; served build `GN-opuHx19t_JA0Mf03GM` on `http://localhost:3047`
+  (`naijadeals_review`, REVIEW guard; 11 departments / 37 categories / 113 leaves, 57 active
+  DEMO products, 18 regulated categories, 18 NG rules, 0 activation rows).
+- Final verification on this build: landing 95/95, rail 150/150, market 11/11, visibility 16/16,
+  product detail 97/97, activation 30/30, financial refusal 46/46, six banners 6/6, cross-market
+  checkout refusal PASS with 0 orders. Migration `20261113230000_category_regulated_backfill`
+  is recorded complete in `_prisma_migrations` (applied_steps_count 1).
+- Independent delta acceptance on the equivalent UI build `lJep3v0mjIXSUEz7i1OKQ` / `a18ff9f`:
+  journey-tester `agent_4d83ce41-597d-4624-865e-930595fb5325` — GH search/category/Shop-bestsellers
+  zero products, GH product 404 vs NG 200, regulated copy, rail/keyboard/banners all PASS; its
+  audit scripts were not run in that round. Security reviewer
+  `agent_1379be1e-e1a6-4537-b24e-bac055e7cadd` — H2/M1/M2/M3/M4/L1 CLOSED; H1 was OPEN because the
+  migration was not recorded until `prisma migrate deploy` was run, now closed by the history row
+  above.
+- Canonical screenshots: `qa-artifacts/visual/final-acceptance/final-GN-opuHx19t/` (390/1440
+  storefront, GH storefront, six department banners); delta evidence in
+  `qa-artifacts/visual/final-acceptance/delta-a18ff9f/`.
+- The isolated checkout/refund suite `checkout-refund-delivery-acceptance.ts` was started against
+  `naijadeals_checkout_refund_test` but did not complete after 20+ minutes (idle DB sessions, no
+  output) and was stopped; it is not claimed as a pass on this build. The new checkout market
+  refusal was verified directly with a run-owned cart/product on REVIEW (0 orders).
