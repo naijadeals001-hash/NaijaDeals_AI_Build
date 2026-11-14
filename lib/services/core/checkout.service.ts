@@ -306,14 +306,22 @@ export async function checkout(input: {
         ].sort();
         const lockedVariantRows =
           lockedVariantIds.length > 0
-            ? await tx.$queryRaw<Array<{ id: string; isActive: boolean }>>`
-                SELECT id, "isActive" FROM "ProductVariant"
+            ? await tx.$queryRaw<Array<{ id: string; isActive: boolean; priceKobo: bigint }>>`
+                SELECT id, "isActive", "priceKobo" FROM "ProductVariant"
                 WHERE id IN (${Prisma.join(lockedVariantIds)})
                 ORDER BY id
                 FOR UPDATE
               `
             : [];
         const lockedVariantById = new Map(lockedVariantRows.map((variant) => [variant.id, variant]));
+        // Price is part of the locked state. A seller price edit that commits
+        // before these locks must be reflected in the order, not the earlier
+        // unlocked cart read.
+        for (const item of items) {
+          if (!item.variantId || !item.variant) continue;
+          const locked = lockedVariantById.get(item.variantId);
+          if (locked) item.variant.priceKobo = locked.priceKobo;
+        }
         const inactiveVariantLine = items.find(
           (item) => item.variantId && !lockedVariantById.get(item.variantId)?.isActive
         );

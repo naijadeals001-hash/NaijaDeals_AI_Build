@@ -582,7 +582,7 @@ async function recordBlockedVariantTransition(input: {
   error: unknown;
 }) {
   if (!(input.error instanceof ApiError)) return;
-  const codes = ["variant_stock_conflict", "variant_in_use", "variant_stock_below_reserved", "stock_below_reserved", "variant_stock_managed"];
+  const codes = ["variant_stock_conflict", "variant_in_use", "variant_stock_below_reserved", "stock_below_reserved", "variant_stock_managed", "product_in_live_cart"];
   if (!codes.includes(input.error.code)) return;
   try {
     await recordSystemEvent({
