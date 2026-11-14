@@ -3,9 +3,10 @@
  *
  * Verifies the fixed eight-shortcut block was replaced by the complete set of
  * eligible level-1 categories from the effective public taxonomy:
- *   - card set, order, names and images match `/api/taxonomy` (level-1 only)
- *   - the set equals the canonical `/api/taxonomy/categories` browsing
- *     projection; server subtree counts match both sources
+ *   - card/directory set and order match the published tree (level-1 only) and
+ *     the canonical `/api/taxonomy/categories` browsing projection; server
+ *     subtree counts match both sources
+ *   - NG and GH market responses are checked; the desktop viewport runs GH
  *   - `browsingVisible=false` and `canPublish=false` nodes stay out; a missing
  *     count says so instead of becoming zero; empty categories say "No listings
  *     yet"
@@ -16,8 +17,8 @@
  *   - no page-wide horizontal overflow at 390/768/1440
  *   - the compact rail precedes the product shelves, which precede wholesale
  *   - `/naijashop/categories` lists the same complete set with counts/images
- *   - loading, empty and error states are real (interception is limited to one
- *     isolated page visit; no database writes)
+ *   - loading, empty and error states are real; both taxonomy endpoints are
+ *     intercepted together (no database writes)
  *
  * Usage:
  *   BASE_URL=http://localhost:3053 node scripts/category-rail-audit.cjs
@@ -46,9 +47,11 @@ if (!CHROME) {
 }
 
 const VIEWPORTS = [
-  { width: 390, height: 844, touch: true, name: "mobile" },
-  { width: 768, height: 1024, touch: true, name: "tablet" },
-  { width: 1440, height: 900, touch: false, name: "desktop" }
+  { width: 390, height: 844, touch: true, name: "mobile", country: "NG", city: "Lagos" },
+  { width: 768, height: 1024, touch: true, name: "tablet", country: "NG", city: "Lagos" },
+  // The desktop pass exercises a non-default market so the locale-scoped
+  // rail/directory fetch is covered without adding a duplicate viewport set.
+  { width: 1440, height: 900, touch: false, name: "desktop", country: "GH", city: "Accra" }
 ];
 
 const checks = [];
@@ -56,6 +59,7 @@ const screenshots = [];
 const notes = [];
 const observedLinks = new Set();
 let lastPageEligible = null;
+let lastPageCountry = "NG";
 
 function check(name, ok, detail = "") {
   const entry = { name, ok: Boolean(ok), detail: detail ? String(detail) : "" };
@@ -125,8 +129,35 @@ function expectedFromPayload(taxonomyPayload) {
   };
 }
 
+/**
+ * The rail and directory consume the level-1 projection, which the service
+ * returns in published tree order. Keep the expected shape identical to the
+ * tree-derived entries so a projection-order regression is still detectable.
+ */
+function expectedFromProjection(projectionPayload) {
+  const rows = Array.isArray(projectionPayload?.categories) ? projectionPayload.categories : [];
+  const eligible = rows
+    .filter((node) => node && node.level === 1 && node.browsingVisible !== false && node.canPublish !== false)
+    .map((node) => ({
+      slug: node.slug,
+      name: node.name,
+      imageUrl: node.imageUrl ?? null,
+      count:
+        typeof node.subtreeProductCount === "number"
+          ? node.subtreeProductCount
+          : typeof node.productCount === "number"
+            ? node.productCount
+            : null
+    }));
+  return {
+    countryCode: typeof projectionPayload?.countryCode === "string" ? projectionPayload.countryCode : null,
+    city: typeof projectionPayload?.city === "string" ? projectionPayload.city : null,
+    eligible
+  };
+}
+
 function attachExpectationCapture(page) {
-  const captured = { taxonomy: null };
+  const captured = { taxonomy: null, projection: null };
   page.on("response", (response) => {
     let pathname = "";
     try {
@@ -142,9 +173,25 @@ function attachExpectationCapture(page) {
           captured.taxonomy = body;
         })
         .catch(() => undefined);
+    } else if (pathname === "/api/taxonomy/categories") {
+      response
+        .json()
+        .then((body) => {
+          captured.projection = body;
+        })
+        .catch(() => undefined);
     }
   });
   return captured;
+}
+
+async function applyLocale(context, country, city) {
+  if (!country || country === "NG") return;
+  const domain = new URL(BASE).hostname;
+  await context.addCookies([
+    { name: "nd_country", value: country, domain, path: "/" },
+    { name: "nd_city", value: city || "", domain, path: "/" }
+  ]);
 }
 
 async function setRailLeft(page, left) {
@@ -337,6 +384,7 @@ async function runViewport(browser, viewport, fallbackEligible) {
   const pageErrors = [];
   const captured = attachExpectationCapture(page);
   page.on("pageerror", (error) => pageErrors.push(String(error).slice(0, 200)));
+  await applyLocale(context, viewport.country, viewport.city);
 
   await page.goto(`${BASE}/naijashop`, { waitUntil: "load", timeout: 180000 });
   await waitForRail(page);
@@ -345,8 +393,12 @@ async function runViewport(browser, viewport, fallbackEligible) {
   await resetRail(page, "start");
   await page.waitForTimeout(300);
 
-  check(`${scope}: storefront received the public taxonomy`, Boolean(captured.taxonomy), captured.taxonomy ? "" : "response not observed");
-  const pageExpected = captured.taxonomy ? expectedFromPayload(captured.taxonomy) : { eligible: fallbackEligible };
+  check(
+    `${scope}: storefront received the browsing projection`,
+    Boolean(captured.projection),
+    captured.projection ? "" : "response not observed"
+  );
+  const pageExpected = captured.projection ? expectedFromProjection(captured.projection) : { eligible: fallbackEligible };
   const eligible = pageExpected.eligible;
   check(
     `${scope}: taxonomy carried server counts for every eligible category`,
@@ -537,16 +589,22 @@ async function runDirectory(browser, viewport, fallbackEligible) {
   const pageErrors = [];
   const captured = attachExpectationCapture(page);
   page.on("pageerror", (error) => pageErrors.push(String(error).slice(0, 200)));
+  await applyLocale(context, viewport.country, viewport.city);
 
   await page.goto(`${BASE}/naijashop/categories`, { waitUntil: "load", timeout: 180000 });
   await waitForDirectory(page);
   await page.waitForTimeout(600);
   await warmDirectory(page);
 
-  check(`${scope}: directory received the public taxonomy`, Boolean(captured.taxonomy), captured.taxonomy ? "" : "response not observed");
-  const pageExpected = captured.taxonomy ? expectedFromPayload(captured.taxonomy) : { eligible: fallbackEligible };
+  check(
+    `${scope}: directory received the browsing projection`,
+    Boolean(captured.projection),
+    captured.projection ? "" : "response not observed"
+  );
+  const pageExpected = captured.projection ? expectedFromProjection(captured.projection) : { eligible: fallbackEligible };
   const eligible = pageExpected.eligible;
   lastPageEligible = eligible;
+  lastPageCountry = viewport.country;
 
   const snapshot = await page.evaluate(() => {
     const cards = Array.from(document.querySelectorAll("[data-category-directory-card]"));
@@ -601,7 +659,11 @@ async function runDirectory(browser, viewport, fallbackEligible) {
   check(`${scope}: taxonomy images load; missing images use the fallback icon`, imageMismatch.length === 0, imageMismatch.slice(0, 4).map((card) => card.slug).join(", "));
 
   check(`${scope}: summary displays the eligible category count`, snapshot.summary.includes(`${eligible.length} categor`), snapshot.summary.slice(0, 160));
-  check(`${scope}: summary uses demonstration-inventory wording`, /demonstration/i.test(snapshot.summary) && !/departments with live stock/i.test(snapshot.summary), snapshot.summary.slice(0, 160));
+  const noEligibleListings = eligible.every((node) => node.count === 0);
+  const honestInventoryWording =
+    (/demonstration/i.test(snapshot.summary) || (noEligibleListings && /No published listings yet/i.test(snapshot.summary))) &&
+    !/departments with live stock/i.test(snapshot.summary);
+  check(`${scope}: summary uses honest inventory wording`, honestInventoryWording, snapshot.summary.slice(0, 160));
   check(`${scope}: no page-wide horizontal overflow`, snapshot.pageOverflow <= 1, `${snapshot.pageOverflow}px`);
   check(`${scope}: no page errors`, pageErrors.length === 0, pageErrors[0] ?? "");
 
@@ -673,14 +735,29 @@ async function runReducedMotion(browser, eligible) {
   await context.close();
 }
 
-async function runStateInterception(browser, eligible, taxonomy) {
-  // Storefront: taxonomy unavailable hides the rail and says so.
+async function routeTaxonomyPair(page, handler) {
+  await page.route("**/api/taxonomy", handler);
+  await page.route("**/api/taxonomy/categories**", handler);
+}
+
+function isCategoriesRequest(route) {
+  return new URL(route.request().url()).pathname === "/api/taxonomy/categories";
+}
+
+function emptyTaxonomyBody(route) {
+  return isCategoriesRequest(route)
+    ? { countryCode: "NG", city: null, categories: [] }
+    : { countryCode: "NG", city: null, departments: [] };
+}
+
+async function runStateInterception(browser, eligible, taxonomy, projection) {
+  // Storefront: both taxonomy endpoints unavailable hides the rail and says so.
   {
     const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
-    await page.route("**/api/taxonomy", (route) => route.abort());
+    await routeTaxonomyPair(page, (route) => route.abort());
     await page.goto(`${BASE}/naijashop`, { waitUntil: "load", timeout: 180000 });
-    const notice = page.getByText(/published category directory could not be loaded/i);
+    const notice = page.getByText(/browsing category list could not be loaded/i);
     const visible = await notice
       .first()
       .waitFor({ state: "visible", timeout: 90000 })
@@ -694,12 +771,16 @@ async function runStateInterception(browser, eligible, taxonomy) {
     await context.close();
   }
 
-  // Storefront: empty taxonomy renders the honest empty rail, not fixed tiles.
+  // Storefront: empty taxonomy endpoints render the honest empty rail.
   {
     const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
-    await page.route("**/api/taxonomy", (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ departments: [] }) })
+    await routeTaxonomyPair(page, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(emptyTaxonomyBody(route))
+      })
     );
     await page.goto(`${BASE}/naijashop`, { waitUntil: "load", timeout: 180000 });
     const emptySection = page.locator('[data-category-rail-section][data-counts-status="empty"]');
@@ -709,11 +790,11 @@ async function runStateInterception(browser, eligible, taxonomy) {
     await context.close();
   }
 
-  // Directory: taxonomy unavailable is an explicit error with retry, no cards.
+  // Directory: both endpoints unavailable is an explicit error with retry.
   {
     const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
-    await page.route("**/api/taxonomy", (route) => route.abort());
+    await routeTaxonomyPair(page, (route) => route.abort());
     await page.goto(`${BASE}/naijashop/categories`, { waitUntil: "load", timeout: 180000 });
     const alert = page.getByRole("alert");
     const visible = await alert.first().waitFor({ state: "visible", timeout: 90000 }).then(() => true).catch(() => false);
@@ -726,12 +807,16 @@ async function runStateInterception(browser, eligible, taxonomy) {
     await context.close();
   }
 
-  // Directory: empty taxonomy renders the empty directory state.
+  // Directory: empty taxonomy endpoints render the empty directory state.
   {
     const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
-    await page.route("**/api/taxonomy", (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ departments: [] }) })
+    await routeTaxonomyPair(page, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(emptyTaxonomyBody(route))
+      })
     );
     await page.goto(`${BASE}/naijashop/categories`, { waitUntil: "load", timeout: 180000 });
     const visible = await page
@@ -791,21 +876,30 @@ async function runStateInterception(browser, eligible, taxonomy) {
   }
 
   // Storefront: browsingVisible=false and canPublish=false nodes stay out of
-  // the rail, exactly as the effective taxonomy states.
-  if (taxonomy && eligible.length >= 3) {
+  // the rail, with both taxonomy responses carrying the same flags.
+  if (taxonomy && projection && eligible.length >= 3) {
     const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
     const hiddenBrowsing = eligible[0].slug;
     const hiddenCountry = eligible[1].slug;
-    const mutated = structuredClone(taxonomy);
-    for (const department of mutated.departments ?? []) {
+    const mutatedTaxonomy = structuredClone(taxonomy);
+    for (const department of mutatedTaxonomy.departments ?? []) {
       for (const node of department.children ?? []) {
         if (node.slug === hiddenBrowsing) node.browsingVisible = false;
         if (node.slug === hiddenCountry) node.canPublish = false;
       }
     }
-    await page.route("**/api/taxonomy", (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mutated) })
+    const mutatedProjection = structuredClone(projection);
+    for (const node of mutatedProjection.categories ?? []) {
+      if (node.slug === hiddenBrowsing) node.browsingVisible = false;
+      if (node.slug === hiddenCountry) node.canPublish = false;
+    }
+    await routeTaxonomyPair(page, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(isCategoriesRequest(route) ? mutatedProjection : mutatedTaxonomy)
+      })
     );
     await page.goto(`${BASE}/naijashop`, { waitUntil: "load", timeout: 180000 });
     await waitForRail(page);
@@ -813,7 +907,9 @@ async function runStateInterception(browser, eligible, taxonomy) {
       const cards = Array.from(document.querySelectorAll("[data-category-card]"));
       return { count: cards.length, slugs: cards.map((card) => card.getAttribute("data-category-slug")) };
     });
-    const expectedSlugs = eligible.filter((node) => node.slug !== hiddenBrowsing && node.slug !== hiddenCountry).map((node) => node.slug);
+    const expectedSlugs = eligible
+      .filter((node) => node.slug !== hiddenBrowsing && node.slug !== hiddenCountry)
+      .map((node) => node.slug);
     const exactOrder = state.count === expectedSlugs.length && state.slugs.every((slug, index) => slug === expectedSlugs[index]);
     check(
       "visibility flags: browsingVisible=false and canPublish=false are excluded",
@@ -823,23 +919,34 @@ async function runStateInterception(browser, eligible, taxonomy) {
     await context.close();
   }
 
-  // Directory: a taxonomy without counts says so instead of inventing zero.
-  {
+  // Directory: a projection without counts says so instead of inventing zero.
+  if (projection) {
     const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
-    const noCounts = structuredClone(taxonomy);
+    const noCountsProjection = structuredClone(projection);
+    const noCountsTaxonomy = structuredClone(taxonomy || {});
     let removed = false;
-    for (const department of noCounts.departments ?? []) {
+    for (const node of noCountsProjection.categories ?? []) {
+      if (removed) break;
+      delete node.productCount;
+      delete node.subtreeProductCount;
+      removed = true;
+    }
+    let removedTree = false;
+    for (const department of noCountsTaxonomy.departments ?? []) {
       for (const node of department.children ?? []) {
-        if (!removed) {
-          delete node.productCount;
-          delete node.subtreeProductCount;
-          removed = true;
-        }
+        if (removedTree) break;
+        delete node.productCount;
+        delete node.subtreeProductCount;
+        removedTree = true;
       }
     }
-    await page.route("**/api/taxonomy", (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(noCounts) })
+    await routeTaxonomyPair(page, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(isCategoriesRequest(route) ? noCountsProjection : noCountsTaxonomy)
+      })
     );
     await page.goto(`${BASE}/naijashop/categories`, { waitUntil: "load", timeout: 180000 });
     const cardsReady = await page
@@ -861,60 +968,97 @@ async function runStateInterception(browser, eligible, taxonomy) {
 (async () => {
   if (!CHROME) throw new Error("Chromium executable missing");
   console.log(`Category rail audit against ${BASE}`);
-  const [taxonomy, projection] = await Promise.all([
-    fetchJson("/api/taxonomy"),
-    fetchJson("/api/taxonomy/categories?country=NG")
-  ]);
+  const MARKETS = ["NG", "GH"];
+  const marketData = {};
+  for (const country of MARKETS) {
+    const [tree, projection] = await Promise.all([
+      fetchJson(`/api/taxonomy?country=${country}`),
+      fetchJson(`/api/taxonomy/categories?country=${country}`)
+    ]);
+    const eligibleLevel = eligibleLevelOne(tree.departments);
+    const rows = Array.isArray(projection.categories) ? projection.categories : [];
+    marketData[country] = {
+      tree,
+      projection,
+      eligible: eligibleLevel,
+      projectionRows: rows,
+      projectionEligible: rows.filter(
+        (node) => node.level === 1 && node.browsingVisible !== false && node.canPublish !== false
+      )
+    };
+  }
+  const taxonomy = marketData.NG.tree;
+  const projection = marketData.NG.projection;
+  const eligible = marketData.NG.eligible;
   const departments = Array.isArray(taxonomy.departments) ? taxonomy.departments : [];
-  const eligible = eligibleLevelOne(departments);
-  const projectionRows = Array.isArray(projection.categories) ? projection.categories : [];
-  const projectionEligible = projectionRows.filter(
-    (node) => node.level === 1 && node.browsingVisible !== false && node.canPublish !== false
-  );
+  notes.push("Market coverage: mobile/tablet use NG (Lagos) and desktop uses GH (Accra); API parity is checked for both.");
 
-  check("taxonomy response is available", departments.length > 0, `${departments.length} departments`);
   check(
-    "level-1 browsing projection is level 1 and browsing-visible",
-    projectionRows.length > 0 && projectionRows.every((node) => node.level === 1 && node.browsingVisible === true),
-    `${projectionRows.length} projected`
+    "taxonomy response is available for NG and GH",
+    MARKETS.every((country) => (marketData[country].tree.departments ?? []).length > 0),
+    MARKETS.map((country) => `${country}:${(marketData[country].tree.departments ?? []).length}`).join(", ")
   );
   check(
-    "tree and /api/taxonomy/categories agree on the eligible level-1 set",
-    eligible.length === projectionEligible.length &&
-      eligible.every((node) => projectionEligible.some((projected) => projected.slug === node.slug)),
-    `${eligible.length} tree vs ${projectionEligible.length} projection`
+    "level-1 browsing projection is level 1 and browsing-visible in each market",
+    MARKETS.every(
+      (country) =>
+        marketData[country].projectionRows.length > 0 &&
+        marketData[country].projectionRows.every((node) => node.level === 1 && node.browsingVisible === true)
+    ),
+    MARKETS.map((country) => `${country}:${marketData[country].projectionRows.length}`).join(", ")
+  );
+  check(
+    "tree and /api/taxonomy/categories agree on the eligible level-1 set and tree order",
+    MARKETS.every((country) => {
+      const treeRows = marketData[country].eligible;
+      const projectedRows = marketData[country].projectionEligible;
+      return (
+        treeRows.length === projectedRows.length &&
+        treeRows.every((node, index) => projectedRows[index]?.slug === node.slug)
+      );
+    }),
+    MARKETS.map(
+      (country) => `${country}:${marketData[country].eligible.length} tree vs ${marketData[country].projectionEligible.length}`
+    ).join(", ")
   );
   check(
     "tree and /api/taxonomy/categories agree on each server count",
-    eligible.every((node) => {
-      const projected = projectionEligible.find((entry) => entry.slug === node.slug);
-      return Boolean(projected) && projected.subtreeProductCount === node.count;
-    }),
-    eligible
-      .filter((node) => projectionEligible.find((entry) => entry.slug === node.slug)?.subtreeProductCount !== node.count)
-      .slice(0, 3)
-      .map((node) => node.slug)
-      .join(", ")
+    MARKETS.every((country) =>
+      marketData[country].eligible.every((node) => {
+        const projected = marketData[country].projectionEligible.find((entry) => entry.slug === node.slug);
+        return Boolean(projected) && projected.subtreeProductCount === node.count;
+      })
+    ),
+    MARKETS.flatMap((country) =>
+      marketData[country].eligible
+        .filter((node) => marketData[country].projectionEligible.find((entry) => entry.slug === node.slug)?.subtreeProductCount !== node.count)
+        .slice(0, 2)
+        .map((node) => `${country}:${node.slug}`)
+    ).join(", ")
   );
   check(
     "eligible level-1 categories are derived, not fixed",
     eligible.length > 8 && new Set(eligible.map((node) => node.slug)).size === eligible.length,
     `${eligible.length} categories`
   );
-  check("every eligible category has a name and slug", eligible.every((node) => node.name && node.slug), "");
+  check(
+    "every eligible category has a name and slug in each market",
+    MARKETS.every((country) => marketData[country].eligible.every((node) => node.name && node.slug)),
+    ""
+  );
 
   const browser = await chromium.launch({ executablePath: CHROME });
   const pageErrorResults = [];
   try {
     for (const viewport of VIEWPORTS) {
-      pageErrorResults.push(await runViewport(browser, viewport, eligible));
+      pageErrorResults.push(await runViewport(browser, viewport, marketData[viewport.country].eligible));
     }
     for (const viewport of VIEWPORTS) {
-      await runDirectory(browser, viewport, eligible);
+      await runDirectory(browser, viewport, marketData[viewport.country].eligible);
     }
     await checkAllCategoryLinks(browser, [...observedLinks]);
     await runReducedMotion(browser, eligible);
-    await runStateInterception(browser, eligible, taxonomy);
+    await runStateInterception(browser, eligible, taxonomy, projection);
   } finally {
     await browser.close();
   }
@@ -922,7 +1066,7 @@ async function runStateInterception(browser, eligible, taxonomy) {
   const reportEligible = lastPageEligible ?? eligible;
   let finalEligible = null;
   try {
-    finalEligible = expectedFromPayload(await fetchJson("/api/taxonomy")).eligible;
+    finalEligible = expectedFromPayload(await fetchJson(`/api/taxonomy?country=${lastPageCountry}`)).eligible;
   } catch {
     finalEligible = null;
   }

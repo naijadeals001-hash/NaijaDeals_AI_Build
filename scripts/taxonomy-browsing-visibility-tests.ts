@@ -11,8 +11,11 @@
  *   - counts exclude drafts, archived rows, sample/fixture listings,
  *     non-selectable nodes, country-ineligible products and restricted
  *     subtrees, and count every eligible product exactly once;
- *   - `/api/taxonomy/categories` returns level-1 browsing categories only and
- *     hides browsingVisible=false while `/api/taxonomy` keeps publishing it;
+ *   - `/api/taxonomy/categories` returns level-1 browsing categories only, in
+ *     published tree merchandising order, and hides browsingVisible=false while
+ *     `/api/taxonomy` keeps publishing it;
+ *   - regulated nodes fail closed per market (`market_eligibility_unresolved`
+ *     without an explicit country rule); explicit GH deny/allow resolves them;
  *   - hiding a category from browsing does not unpublish it or remove its
  *     products;
  *   - admin edits validate browsingVisible, write before/after audit evidence,
@@ -43,6 +46,7 @@ type CategoryRow = {
   isSelectable: boolean;
   showOnHomepage: boolean;
   browsingVisible: boolean;
+  isRegulated: boolean;
   deprecatedAt: Date | null;
   sortOrder: number;
 };
@@ -215,6 +219,8 @@ type NodeLike = {
   sortOrder: number;
   canPublish: boolean;
   restrictionNote: string | null;
+  restrictionReason: string | null;
+  isRegulated: boolean;
   productCount: number;
   subtreeProductCount: number;
   children: NodeLike[];
@@ -371,6 +377,7 @@ async function main(): Promise<void> {
   const http = baseUrl ? new Http(baseUrl) : null;
   const created = {
     categoryId: null as string | null,
+    regulatedFixtureId: null as string | null,
     productIds: [] as string[],
     sessionIds: [] as string[],
     // Unique typed identifier so a crashed run can be found deterministically.
@@ -397,10 +404,16 @@ async function main(): Promise<void> {
 
     const categories = await client.query<CategoryRow>(
       `select id, key, name, slug, "parentId", level, "isActive", "isSelectable", "showOnHomepage",
-              "browsingVisible", "deprecatedAt", "sortOrder"
+              "browsingVisible", "isRegulated", "deprecatedAt", "sortOrder"
          from "Category"`
     );
     const categoryById = new Map(categories.rows.map((row) => [row.id, row]));
+    created.regulatedFixtureId =
+      categories.rows.find((row) => row.slug === "otc-medicines-treatments")?.id ?? null;
+    const ghRules = await client.query<{ categoryId: string; canPublish: boolean; note: string | null }>(
+      `select "categoryId", "canPublish", note from "CategoryCountryRule" where "countryCode" = 'GH'`
+    );
+    const ghRuleByCategory = new Map(ghRules.rows.map((rule) => [rule.categoryId, rule]));
     const canonicalRows = categories.rows.filter((row) => CANONICAL_SLUGS.includes(row.slug));
 
     await step("canonical taxonomy is 11 departments / 37 level-1 / 113 leaves", async () => {
@@ -434,6 +447,7 @@ async function main(): Promise<void> {
     // ---- service level (no HTTP required) -------------------------------
     process.env.DATABASE_URL = reviewUrl;
     const publicService = await import("../lib/services/taxonomy/public");
+    const eligibilityService = await import("../lib/services/taxonomy/eligibility");
 
     const ngCountsRoot = await expectedCounts(client, COUNTRY, "root");
     const ngCountsLevelOne = await expectedCounts(client, COUNTRY, "level1");
@@ -474,7 +488,7 @@ async function main(): Promise<void> {
       assert(directSum <= total, `level-1 direct count sum ${directSum} exceeds distinct total ${total}`);
     });
 
-    await step("NG counts are country-aware and restricted nodes stay published", async () => {
+    await step("NG counts are country-aware and GH regulated nodes fail closed", async () => {
       assert(ngTree, "NG tree missing");
       const restrictedSlug = "brake-system-parts";
       const restricted = findNode(ngTree.departments, restrictedSlug);
@@ -482,20 +496,107 @@ async function main(): Promise<void> {
       assert(restricted.canPublish === false, `${restrictedSlug} should be publish-restricted for NG`);
       assert(Boolean(restricted.restrictionNote?.trim()), `${restrictedSlug} restrictionNote is empty`);
       assert(restricted.productCount === 0, `${restrictedSlug} should not count restricted products`);
+      assert(restricted.restrictionReason === "country_rule", `${restrictedSlug} NG reason is not an explicit rule`);
 
       const ghTree = await publicService.getPublicTaxonomy({ countryCode: "GH" });
       const ghAll = flattenNodes(ghTree.departments);
       assertNodeContract(ghAll, "GH tree");
-      assert(
-        ghAll.every((node) => node.canPublish === true),
-        "GH has no country rules and must not inherit NG restrictions"
-      );
+      const regulatedGh = ghAll.filter((node) => node.isRegulated === true);
+      assert(regulatedGh.length > 0, "GH tree has no regulated nodes to verify");
+      for (const node of ghAll) {
+        const rule = ghRuleByCategory.get(node.id);
+        if (rule) {
+          assert(
+            node.canPublish === rule.canPublish,
+            `GH explicit rule for ${node.slug} (${String(rule.canPublish)}) != canPublish ${String(node.canPublish)}`
+          );
+          assert(
+            node.restrictionReason === (rule.canPublish ? null : "country_rule"),
+            `GH explicit rule reason for ${node.slug} is ${String(node.restrictionReason)}`
+          );
+          continue;
+        }
+        if (node.isRegulated === true) {
+          assert(node.canPublish === false, `GH regulated ${node.slug} without a rule was publishable`);
+          assert(
+            node.restrictionReason === "market_eligibility_unresolved",
+            `GH regulated ${node.slug} reason ${String(node.restrictionReason)}`
+          );
+          assert(Boolean(node.restrictionNote?.trim()), `GH regulated ${node.slug} has no restriction note`);
+        }
+      }
+      const ghPlain = findNode(ghTree.departments, "phones-tablets");
+      assert(ghPlain?.canPublish === true, "GH non-regulated category is not publishable");
+      assert(ghPlain?.restrictionReason === null, `GH non-regulated reason ${String(ghPlain?.restrictionReason)}`);
       const ghExpected = await expectedCounts(client, "GH", "root");
       for (const node of ghTree.departments) {
         assert(
           node.subtreeProductCount === (ghExpected.get(node.id) ?? 0),
           `GH ${node.slug} count ${node.subtreeProductCount} != independent ${ghExpected.get(node.id) ?? 0}`
         );
+      }
+
+      // Explicit GH deny/allow resolves the regulated node without granting NG.
+      const regulatedLeaf = categories.rows.find((row) => row.slug === "otc-medicines-treatments");
+      assert(regulatedLeaf, "regulated otc-medicines-treatments leaf is missing");
+      assert(regulatedLeaf.isRegulated === true, "otc-medicines-treatments is not flagged regulated");
+      const priorGhRule = ghRuleByCategory.get(regulatedLeaf.id) ?? null;
+      try {
+        await client.query(
+          `insert into "CategoryCountryRule" ("categoryId", "countryCode", "canPublish", note)
+           values ($1, 'GH', false, $2)
+           on conflict ("categoryId", "countryCode") do update
+             set "canPublish" = excluded."canPublish", note = excluded.note`,
+          [regulatedLeaf.id, `Run-owned GH deny ${runId}.`]
+        );
+        const deniedTree = await publicService.getPublicTaxonomy({ countryCode: "GH" });
+        const deniedNode = findNode(deniedTree.departments, regulatedLeaf.id);
+        assert(deniedNode?.canPublish === false, "explicit GH deny did not block the regulated node");
+        assert(deniedNode?.restrictionReason === "country_rule", `GH deny reason ${String(deniedNode?.restrictionReason)}`);
+        const deniedEligibility = await eligibilityService
+          .assertSellerCategoryEligibility({ categoryId: regulatedLeaf.id, countryCode: "GH" })
+          .then(() => null)
+          .catch((error) => error as { status?: number; code?: string; details?: Json });
+        assert(deniedEligibility, "explicit GH deny was publishable through seller eligibility");
+        assert(deniedEligibility.status === 403 && deniedEligibility.code === "category_restricted", "GH deny did not fail closed");
+        assert(deniedEligibility.details?.reason === "country_rule", `GH deny details ${String(deniedEligibility.details?.reason)}`);
+
+        await client.query(
+          `update "CategoryCountryRule" set "canPublish" = true, note = $2
+            where "categoryId" = $1 and "countryCode" = 'GH'`,
+          [regulatedLeaf.id, `Run-owned GH allow ${runId}.`]
+        );
+        const allowedTree = await publicService.getPublicTaxonomy({ countryCode: "GH" });
+        const allowedNode = findNode(allowedTree.departments, regulatedLeaf.id);
+        assert(allowedNode?.canPublish === true, "explicit GH allow did not resolve the regulated node");
+        assert(allowedNode?.restrictionReason === null, `GH allow reason ${String(allowedNode?.restrictionReason)}`);
+        const allowed = await eligibilityService.assertSellerCategoryEligibility({
+          categoryId: regulatedLeaf.id,
+          countryCode: "GH"
+        });
+        assert(allowed.category.id === regulatedLeaf.id, "explicit GH allow did not pass seller eligibility");
+
+        const ngAfterGhAllow = await publicService.getPublicTaxonomy({ countryCode: "NG" });
+        const ngNode = findNode(ngAfterGhAllow.departments, regulatedLeaf.id);
+        assert(ngNode?.canPublish === false, "GH allow incorrectly granted NG publishing");
+        assert(ngNode?.restrictionReason === "country_rule", `NG explicit deny reason ${String(ngNode?.restrictionReason)}`);
+      } finally {
+        if (priorGhRule) {
+          await client
+            .query(
+              `update "CategoryCountryRule" set "canPublish" = $2, note = $3
+                where "categoryId" = $1 and "countryCode" = 'GH'`,
+              [regulatedLeaf.id, priorGhRule.canPublish, priorGhRule.note]
+            )
+            .catch(() => undefined);
+        } else {
+          await client
+            .query(`delete from "CategoryCountryRule" where "categoryId" = $1 and "countryCode" = 'GH' and note like $2`, [
+              regulatedLeaf.id,
+              `Run-owned GH %${created.marker}%`
+            ])
+            .catch(() => undefined);
+        }
       }
     });
 
@@ -507,15 +608,16 @@ async function main(): Promise<void> {
       assert(ngLevelOne.categories.every((node) => node.level === 1), "level-1 projection contains another level");
       assert(ngLevelOne.categories.every((node) => node.browsingVisible), "hidden category leaked into the rail projection");
       assertNodeContract(ngLevelOne.categories as unknown as NodeLike[], "/api/taxonomy/categories service");
-      const sorted = [...ngLevelOne.categories].sort(
-        (left, right) =>
-          left.sortOrder - right.sortOrder ||
-          left.name.localeCompare(right.name) ||
-          left.id.localeCompare(right.id)
+      assert(ngTree, "NG tree missing for order comparison");
+      const treeOrder = (ngTree?.departments ?? []).flatMap((department) =>
+        (department.children ?? [])
+          .filter((node) => node.level === 1 && node.browsingVisible !== false && node.canPublish !== false)
+          .map((node) => node.id)
       );
       assert(
-        ngLevelOne.categories.every((node, index) => node.id === sorted[index].id),
-        "level-1 projection is not in merchandising order"
+        ngLevelOne.categories.length === treeOrder.length &&
+          ngLevelOne.categories.every((node, index) => node.id === treeOrder[index]),
+        "level-1 projection is not in published tree merchandising order"
       );
       for (const node of ngLevelOne.categories) {
         assert(
@@ -906,6 +1008,14 @@ async function main(): Promise<void> {
         `%${created.marker.toLowerCase()}%`
       ])
       .catch(() => undefined);
+    if (created.regulatedFixtureId) {
+      await client
+        .query(`delete from "CategoryCountryRule" where "categoryId" = $1 and "countryCode" = 'GH' and note like $2`, [
+          created.regulatedFixtureId,
+          `%${created.marker}%`
+        ])
+        .catch(() => undefined);
+    }
     if (created.categoryId) {
       await client.query(`delete from "Category" where id = $1`, [created.categoryId]).catch(() => undefined);
     }
