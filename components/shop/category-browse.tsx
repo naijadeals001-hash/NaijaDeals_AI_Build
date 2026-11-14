@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { apiClient, type ApiCategory, type ApiProduct } from "@/lib/api-client";
+import { useLocale } from "@/lib/i18n/locale-provider";
 import {
   BROWSE_PAGE_SIZE,
   BROWSE_SORTS,
@@ -48,6 +49,7 @@ export function CategoryBrowse({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const searchKey = searchParams.toString();
+  const { country, city } = useLocale();
   const defaultSort: BrowseSort = mode === "deals" ? "price-asc" : "featured";
 
   const [filters, setFilters] = useState<BrowseFilters>(() =>
@@ -117,7 +119,8 @@ export function CategoryBrowse({
 
   useEffect(() => {
     let active = true;
-    fetch("/api/taxonomy", { cache: "no-store" })
+    const query = new URLSearchParams({ country, ...(city ? { city } : {}) });
+    fetch(`/api/taxonomy?${query}`, { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error("taxonomy"))))
       .then((payload: { departments?: Array<Record<string, unknown>> }) => {
         if (!active) return;
@@ -144,7 +147,7 @@ export function CategoryBrowse({
     return () => {
       active = false;
     };
-  }, []);
+  }, [country, city]);
 
   // Typing searches after a short pause; Enter applies immediately.
   useEffect(() => {
@@ -176,7 +179,11 @@ export function CategoryBrowse({
     setError("");
     apiClient
       .getProductPage(
-        browseApiParams({ q, sort, maxPrice, page }, mode === "category" ? categorySlug : undefined)
+        browseApiParams(
+          { q, sort, maxPrice, page },
+          mode === "category" ? categorySlug : undefined,
+          { country, city }
+        )
       )
       .then((data) => {
         if (!active) return;
@@ -193,7 +200,7 @@ export function CategoryBrowse({
     return () => {
       active = false;
     };
-  }, [q, sort, maxPrice, page, categorySlug, mode, attempt]);
+  }, [q, sort, maxPrice, page, categorySlug, mode, attempt, country, city]);
 
   const knownCategory = taxonomyNodes.find((item) => item.slug === categorySlug) ?? categories.find((item) => item.slug === categorySlug);
   const departmentMissing =

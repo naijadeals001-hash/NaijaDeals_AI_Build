@@ -465,6 +465,7 @@ async function main(): Promise<void> {
     process.env.DATABASE_URL = reviewUrl;
     const publicService = await import("../lib/services/taxonomy/public");
     const eligibilityService = await import("../lib/services/taxonomy/eligibility");
+    const assistService = await import("../lib/services/taxonomy/assist");
 
     const readCategories = async () => {
       const rows = await client.query<CategoryRow>(
@@ -585,6 +586,16 @@ async function main(): Promise<void> {
         asArray(asRecord(ghHiddenProducts.body).items).length === 0,
         "GH public catalogue leaked a product whose market eligibility is unresolved"
       );
+      const ghHiddenDetail = await http.get(
+        `/api/products/${created.regulatedProductId}`,
+        "nd_country=GH"
+      );
+      assert(ghHiddenDetail.status === 404, `GH detail for unresolved regulated product -> ${ghHiddenDetail.status}`);
+      const ghCandidates = await assistService.listEligibleCategoryCandidates("GH");
+      assert(
+        !ghCandidates.some((candidate) => candidate.id === created.regulatedCategoryId),
+        "Aura candidates offered a GH-regulated category with no explicit rule"
+      );
 
       const ngBlocked = await eligibilityService
         .assertSellerCategoryEligibility({
@@ -641,6 +652,13 @@ async function main(): Promise<void> {
         ),
         "explicit GH allow did not release the run-owned regulated product"
       );
+      const ghVisibleDetail = await http.get(
+        `/api/products/${created.regulatedProductId}`,
+        "nd_country=GH"
+      );
+      expectStatus(ghVisibleDetail, 200, "GET GH detail after an explicit allow");
+      const ngCrossMarketDetail = await http.get(`/api/products/${created.regulatedProductId}`, "nd_country=NG");
+      assert(ngCrossMarketDetail.status === 404, `NG detail leaked a GH listing -> ${ngCrossMarketDetail.status}`);
 
       const ngStillBlocked = await publicService.getPublicTaxonomy({ countryCode: "NG" });
       const ngNode = findNode(ngStillBlocked.departments, created.regulatedCategoryId as string);

@@ -57,6 +57,7 @@ import {
 } from "@/lib/api-client";
 import { ModuleLanding } from "@/components/sections/module-landing";
 import { announceShopCartCount } from "@/components/shop/shop-header";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 /** Authoritative cart badge count: active lines only, saved-for-later excluded. */
 function activeCartCount(cart: ApiCart | null | undefined) {
@@ -986,6 +987,7 @@ function ShopResultCard({ product, onAdd }: { product: ApiProduct; onAdd: (produ
 
 export function SearchPage() {
   const params = useSearchParams();
+  const { country, city } = useLocale();
   const [query, setQuery] = useState(params.get("q") ?? "");
   const [category, setCategory] = useState(params.get("category") ?? "all");
   const [sort, setSort] = useState(params.get("sort") ?? "newest");
@@ -1020,14 +1022,14 @@ export function SearchPage() {
     setStatus("loading");
     setError("");
     try {
-      const items = await apiClient.getProducts({ q: query, category, sort });
+      const items = await apiClient.getProducts({ q: query, category, sort, country, city });
       setProducts(items);
       setStatus("ready");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed.");
       setStatus("error");
     }
-  }, [query, category, sort]);
+  }, [query, category, sort, country, city]);
 
   useEffect(() => {
     void apiClient.getCategories().then(setCategories).catch(() => undefined);

@@ -103,8 +103,16 @@ export default async function CategoryPage({ params }: { params: { slug: string 
   // The catalogue applies the category filter (including a parent's published
   // subtree once aggregation is enabled by the API). The page only reads the
   // total for honest context; CategoryBrowse renders those products once.
-  const page = match ? await fetchInternal<{ total?: number }>(`/api/products?category=${encodeURIComponent(slug)}&page=1&pageSize=1`) : null;
+  const productQuery = new URLSearchParams({
+    category: slug,
+    country,
+    page: "1",
+    pageSize: "1"
+  }).toString();
+  const page = match ? await fetchInternal<{ total?: number }>(`/api/products?${productQuery}`) : null;
   const total = typeof page?.total === "number" ? page.total : null;
+  const marketRestricted = match?.node.canPublish === false;
+  const restrictionNote = match?.node.restrictionNote?.trim();
   const alternatives = alternativesFor(roots, match, slug);
   const children = match?.node.children ?? [];
   const isBranch = children.length > 0;
@@ -161,12 +169,14 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                   </span>
                 </p>
                 <p className="mt-1 text-[11.5px] leading-5 text-[#565959]">
-                  {total === null
-                    ? "The catalogue count could not be checked. The grid below loads the listings, or its own error state."
-                    : total === 0
-                      ? "No demonstration listings were returned for this branch as a whole yet. Its published subcategories may still contain demonstration listings."
-                      : "Listings for this branch are returned by the catalogue and shown once in the grid below."}{" "}
-                  Each listing appears once; nothing is repeated from the subcategories.
+                  {marketRestricted
+                    ? `${restrictionNote ?? "Publishing into this category is not approved for this market yet."} The catalogue does not show listings here until an explicit market rule is approved.`
+                    : total === null
+                      ? "The catalogue count could not be checked. The grid below loads the listings, or its own error state."
+                      : total === 0
+                        ? "No demonstration listings were returned for this branch as a whole yet. Its published subcategories may still contain demonstration listings."
+                        : "Listings for this branch are returned by the catalogue and shown once in the grid below."}{" "}
+                  {marketRestricted ? "" : "Each listing appears once; nothing is repeated from the subcategories."}
                 </p>
                 <p className="mt-2 text-[10.5px] font-bold uppercase tracking-wide text-[#565959]">
                   Published subcategories
@@ -188,11 +198,14 @@ export default async function CategoryPage({ params }: { params: { slug: string 
             ) : total === 0 ? (
               <div className="mt-2 rounded-lg border border-dashed border-[#cfdccb] bg-white p-3">
                 <p className="break-words text-[12px] font-extrabold text-[#0f1111]">
-                  No demonstration listings in {match.node.name} yet.
+                  {marketRestricted
+                    ? `${match.node.name} is not open for listings in ${country} yet.`
+                    : `No demonstration listings in ${match.node.name} yet.`}
                 </p>
                 <p className="mt-1 text-[11.5px] leading-5 text-[#565959]">
-                  The category is published and open for listings, but no seller has published a demonstration listing here. Nothing is hidden and
-                  no listing is invented.
+                  {marketRestricted
+                    ? `${restrictionNote ?? "Publishing into this category is not approved for this market yet."} An explicit market rule is required before listings appear.`
+                    : "The category is published and open for listings, but no seller has published a demonstration listing here. Nothing is hidden and no listing is invented."}
                 </p>
                 {alternatives.length > 0 ? (
                   <div className="mt-2">
@@ -212,13 +225,15 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                     </ul>
                   </div>
                 ) : null}
-                <p className="mt-2 text-[11px] text-[#565959]">
-                  Sell this kind of product?{" "}
-                  <Link href="/sell" className="font-bold text-[#0b5c33] underline">
-                    Open a seller account
-                  </Link>
-                  .
-                </p>
+                {marketRestricted ? null : (
+                  <p className="mt-2 text-[11px] text-[#565959]">
+                    Sell this kind of product?{" "}
+                    <Link href="/sell" className="font-bold text-[#0b5c33] underline">
+                      Open a seller account
+                    </Link>
+                    .
+                  </p>
+                )}
               </div>
             ) : null}
           </div>

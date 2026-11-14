@@ -84,7 +84,8 @@ export async function listEligibleCategoryCandidates(countryCode: string): Promi
         isSelectable: true,
         deprecatedAt: true,
         sortOrder: true,
-        description: true
+        description: true,
+        isRegulated: true
       }
     }),
     prisma.categoryCountryRule.findMany({

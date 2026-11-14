@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/auth/guard";
 import type { SessionUser } from "@/lib/auth/session";
 import { hasPermission, unheldPermissions } from "@/lib/auth/permissions";
 import { assertRegion } from "@/lib/auth/scope";
+import { assertSellerCategoryEligibility } from "@/lib/services/taxonomy/eligibility";
 import { recordAudit } from "./audit.service";
 import { isCityActivated } from "./city.service";
 import { notifyUser, notifyVendorOwner } from "./notification.service";
@@ -705,6 +706,14 @@ export async function reviewSellerApplication(input: {
 export async function moderateProduct(input: { adminId: string; productId: string; status: "ACTIVE" | "SUSPENDED" | "ARCHIVED"; note?: string }) {
   const product = await prisma.product.findUnique({ where: { id: input.productId } });
   if (!product) throw new ApiError(404, "product_not_found", "Product not found.");
+  if (input.status === "ACTIVE") {
+    // Moderation must not be a second publication path around the taxonomy
+    // gate: an unresolved or denied market rule blocks reactivation too.
+    await assertSellerCategoryEligibility({
+      categoryId: product.categoryId,
+      countryCode: product.countryCode
+    });
+  }
   return prisma.$transaction(async (tx) => {
     const updated = await tx.product.update({
       where: { id: product.id },

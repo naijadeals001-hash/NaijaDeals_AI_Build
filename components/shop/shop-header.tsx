@@ -173,7 +173,6 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
   const accountReturnFocusRef = useRef<HTMLElement | null>(null);
   const moreReturnFocusRef = useRef<HTMLElement | null>(null);
   const locationReturnFocusRef = useRef<HTMLElement | null>(null);
-  const countsLoadedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -237,7 +236,7 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
     return () => {
       active = false;
     };
-  }, []);
+  }, [country, city]);
 
   useEffect(() => {
     let active = true;
@@ -321,11 +320,11 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
   // Live listing counts are only needed once the All drawer is opened. Fetch
   // them on demand instead of downloading the catalogue for every shop route.
   useEffect(() => {
-    if (openPanel !== "all" || countsLoadedRef.current) return;
+    if (openPanel !== "all") return;
     let active = true;
     setCountsStatus("loading");
     apiClient
-      .getProducts()
+      .getProducts({ country, city })
       .then((items) => {
         if (!active) return;
         const list: ApiProduct[] = Array.isArray(items) ? items : [];
@@ -339,7 +338,6 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
           if (!slug) continue;
           counts[slug] = (counts[slug] ?? 0) + 1;
         }
-        countsLoadedRef.current = true;
         setCategoryCounts(counts);
         setCountsStatus("ready");
       })
@@ -349,7 +347,7 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
     return () => {
       active = false;
     };
-  }, [openPanel]);
+  }, [openPanel, country, city]);
 
   const departments = departmentTree;
   const searchScopes = useMemo(() => collectSearchScopes(departmentTree), [departmentTree]);

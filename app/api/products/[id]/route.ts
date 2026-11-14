@@ -11,11 +11,10 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  let product;
   try {
-    // The raw row is read only to learn its country; no field is returned until
-    // the Shop gate and the existing public-visibility checks both pass.
-    product = await getProduct(params.id);
+    // Confirm the row exists before evaluating the visitor's market. No field is
+    // returned until the Shop gate and the public-visibility checks both pass.
+    await getProduct(params.id);
   } catch {
     return NextResponse.json(
       { error: "Product not found.", code: "not_found" },
@@ -24,9 +23,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   const { previewAuthorized } = await previewAuthorizationForRequest();
+  const countryCode = (request.cookies.get("nd_country")?.value ?? "NG").toUpperCase().slice(0, 2);
+  const cityCode = (request.cookies.get("nd_city")?.value ?? "").toLowerCase().slice(0, 40) || null;
   try {
     await assertVerticalAccess("shop", {
-      countryCode: product.countryCode,
+      countryCode,
+      cityCode,
       previewAuthorized
     });
   } catch (error) {
@@ -37,7 +39,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
   try {
     const detail = await getPublicProductDetail(params.id, {
-      countryCode: product.countryCode,
+      countryCode,
+      cityCode,
       previewAuthorized
     });
     if (!detail) {

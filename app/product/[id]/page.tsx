@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { unstable_noStore as noStore } from "next/cache";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { ProductDetailClient } from "@/components/functional/product-detail-client";
 import type { ProductAttributeDefinition } from "@/components/product-detail/types";
@@ -8,6 +9,14 @@ import { jsonSafe } from "@/lib/services/core/serialize";
 import { previewAuthorizationForRequest } from "@/lib/services/core/vertical-activation.service";
 import { prisma } from "@/lib/prisma";
 import type { ApiProduct } from "@/lib/api-client";
+
+/** The visitor's selected market; the catalogue never falls back to a product's own country. */
+function visitorMarket() {
+  const store = cookies();
+  const countryCode = (store.get("nd_country")?.value ?? "NG").toUpperCase().slice(0, 2);
+  const cityCode = (store.get("nd_city")?.value ?? "").toLowerCase().slice(0, 40) || null;
+  return { countryCode, cityCode };
+}
 
 /**
  * Preview/disabled authorization and price/stock reads are per-request state.
@@ -29,7 +38,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   noStore();
   try {
     const { previewAuthorized } = await previewAuthorizationForRequest();
-    const product = await getPublicProductDetail(params.id, { previewAuthorized });
+    const product = await getPublicProductDetail(params.id, { ...visitorMarket(), previewAuthorized });
     if (!product) return { title: "Product unavailable" };
     return {
       title: product.name,
@@ -93,15 +102,19 @@ export default async function ProductDetail({ params }: { params: { id: string }
   // PREVIEW is visible to an authorized Control Center user; everyone else
   // gets a 404 before any product field or related rail is rendered.
   const { user: sessionUser, previewAuthorized } = await previewAuthorizationForRequest();
+  const market = visitorMarket();
 
   try {
-    const product = await getPublicProductDetail(params.id, { previewAuthorized });
+    const product = await getPublicProductDetail(params.id, { ...market, previewAuthorized });
     if (!product) notFound();
     initialProduct = jsonSafe(product) as unknown as ApiProduct;
     attributeDefinitions = await loadAttributeDefinitions(product.categoryId);
     try {
       initialRelated = jsonSafe(
-        await listRelatedProducts(product.category.slug, product.id, 4, { previewAuthorized })
+        await listRelatedProducts(product.category.slug, product.id, 4, {
+          previewAuthorized,
+          countryCode: market.countryCode
+        })
       ) as unknown as ApiProduct[];
     } catch {
       // The related rail is optional. Record the failure so the client can retry

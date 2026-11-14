@@ -59,13 +59,16 @@ export function browseHref(pathname: string, filters: BrowseFilters, overrides: 
 /** Parameters for the paginated catalogue API. */
 export function browseApiParams(
   filters: BrowseFilters,
-  categorySlug?: string
+  categorySlug?: string,
+  market?: { country?: string; city?: string }
 ): Record<string, string | undefined> {
   return {
     q: filters.q || undefined,
     category: categorySlug || undefined,
     sort: filters.sort,
     maxPrice: filters.maxPrice || undefined,
+    country: market?.country || undefined,
+    city: market?.city || undefined,
     page: String(filters.page),
     pageSize: String(BROWSE_PAGE_SIZE)
   };

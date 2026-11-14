@@ -99,6 +99,16 @@ export async function getPublicProductDetail(
   if (!allowed) return null;
   if (product.status !== "ACTIVE" || product.vendor.status !== "VERIFIED") return null;
 
+  // A selected market is a real publication boundary: a product listed in
+  // another country, or in a category whose eligibility is unresolved for the
+  // visitor's market, is not a public detail page.
+  const visitorCountry = access.countryCode?.trim().toUpperCase();
+  if (visitorCountry && !access.previewAuthorized) {
+    if (product.countryCode.trim().toUpperCase() !== visitorCountry) return null;
+    const tree = await loadPublicCategoryTree(visitorCountry);
+    if (!tree.visibleById.has(product.categoryId) || tree.restricted.has(product.categoryId)) return null;
+  }
+
   const [reviews, saleMode] = await Promise.all([listReviews(product.id), saleModeFor(product.id)]);
   return {
     ...product,
@@ -119,14 +129,14 @@ export async function listRelatedProducts(
   categorySlug: string,
   excludeId: string,
   limit = 4,
-  access: { previewAuthorized?: boolean } = {}
+  access: { previewAuthorized?: boolean; countryCode?: string | null } = {}
 ) {
   const page = await queryCatalogProducts(
     {
       q: null,
       category: categorySlug,
       market: null,
-      country: null,
+      country: access.countryCode ?? null,
       vendor: null,
       price: null,
       maxPriceKobo: null,

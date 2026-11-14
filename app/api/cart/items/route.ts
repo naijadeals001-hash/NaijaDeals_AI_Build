@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { addCartItem, cartTotals } from "@/lib/services/core/cart.service";
-import { assertSameOrigin, jsonError, readJson, requireNumber, requireString, requireUser } from "@/lib/auth/guard";
+import { ApiError, assertSameOrigin, jsonError, readJson, requireNumber, requireString, requireUser } from "@/lib/auth/guard";
 import { jsonSafe } from "@/lib/services/core/serialize";
 import { prisma } from "@/lib/prisma";
 import {
@@ -36,8 +37,17 @@ export async function POST(request: Request) {
       .findUnique({ where: { id: productId }, select: { countryCode: true } })
       .catch(() => null);
     const { previewAuthorized } = await previewAuthorizationForRequest();
+    const cookieStore = cookies();
+    const visitorCountry = (cookieStore.get("nd_country")?.value ?? "NG").toUpperCase().slice(0, 2);
+    if (target && target.countryCode.trim().toUpperCase() !== visitorCountry) {
+      throw new ApiError(
+        409,
+        "product_market_unavailable",
+        "This listing is not sold in your selected market. Change your delivery location to shop its home market."
+      );
+    }
     await assertVerticalAccess("shop", {
-      countryCode: target?.countryCode ?? "NG",
+      countryCode: visitorCountry,
       previewAuthorized,
       statusCode: 409,
       message:
