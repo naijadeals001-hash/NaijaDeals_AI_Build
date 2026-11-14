@@ -5036,9 +5036,12 @@ deployment, live charge, payout or provider charge occurred.
   findings, which were fixed.
 - Independent imagery review: `agent_4ac60da2-e285-4551-a7a2-2800df194696` — found 28 material
   fallback mismatches; targeted remaps and ten additional original illustrations were applied. Final
-  focused recheck on `1nR…` passes the Timber (7/7), Djibouti Doum palm and Rwanda Imigongo tiles;
-  no known material mismatch remains in the reviewed set. Counts 101 GENERATED / 127
-  APPROVED_EXISTING / 96 ILLUSTRATION; all 12 generated files referenced.
+  focused recheck on `1nR…` passed the Timber (7/7), Djibouti Doum palm and Rwanda Imigongo tiles.
+- Full independent 324-tile audit `agent_5bbd31f0-7bfd-4338-9a0a-85cabb897c43`: initially 205 PASS /
+  117 BROAD / 2 MATERIAL (the automotive illustration read as a lifebuoy). The illustration was
+  replaced with a multi-pin wiring harness and the two Botswana/Lesotho tiles passed a focused
+  recheck (PASS/PASS), giving a derived 207 PASS / 117 BROAD / 0 MATERIAL. Broad matches are recorded;
+  counts 101 GENERATED / 127 APPROVED_EXISTING / 96 ILLUSTRATION; all 12 generated files referenced.
 - Data/backend, public UI, Control Center and Kie integration were implemented by the coordinator;
   no separate implementation subagent was used. The final report must not claim otherwise.
 
@@ -5047,7 +5050,7 @@ deployment, live charge, payout or provider charge occurred.
   six labels per page, directory coverage, 404 cases, delivery-cookie preservation, scoped/ordinary
   admin refusals, drift gates, audit/origin scope, unpublish → public 404 → authorized preview 200 →
   republish 200. Log: `qa-artifacts/visual/discover-africa/acceptance-final6.log`.
-- 324/324 theme image URLs resolve on disk; 69 distinct assets; 324/324 alt; 101 GENERATED,
+- 324/324 theme image URLs resolve on disk; 70 distinct assets; 324/324 alt; 101 GENERATED,
   127 APPROVED_EXISTING, 96 ILLUSTRATION. No null images.
 - Kie: 12 generated WebP, 72 credits, model `gpt-image-2-5-flare-text-to-image`, tasks recorded in
   `docs/countries/imagery-manifest.md`. Further host approvals timed out; no REST bypass, no top-up.
@@ -5067,9 +5070,9 @@ deployment, live charge, payout or provider charge occurred.
   `qa-artifacts/visual/discover-africa/origin-fixture-check.json`. This proves the mechanics, not
   real supply. Dispatch location is not separately modelled.
 - Some theme images are broad existing assets or original illustrations rather than specific
-  commodity photographs. The 28 originally flagged and 9 regression tiles were corrected; a full
-  324-tile visual re-audit was not repeated after the final Imigongo change, though the focused
-  recheck passed. Broad-but-related matches are recorded in the imagery manifest.
+  commodity photographs (117 BROAD of 324 in the final semantic audit). No material mismatch remains
+  in the audited set after the automotive correction; broad matches are listed in the imagery
+  manifest and final audit evidence.
 - External source URLs were checked for presence/format, not re-fetched in final acceptance.
 - GitHub preservation remains blocked: `gh auth status` is not logged in and the known credential was
   rejected; no push, no force-push, no credential retry. Local commits remain the preservation path.
