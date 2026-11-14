@@ -129,7 +129,7 @@ export default async function CategoryPage({
   // single, more specific empty state and the server panel steps aside. The
   // unfiltered zero-result category uses the server panel as the only message.
   const firstPage = String(Array.isArray(searchParams?.page) ? searchParams?.page[0] : searchParams?.page ?? "1");
-  const filtered = ["q", "price", "maxPrice"].some((key) => {
+  const filtered = ["q", "maxPrice"].some((key) => {
     const value = searchParams?.[key];
     return Array.isArray(value) ? value.some(Boolean) : Boolean(value);
   }) || (firstPage !== "1" && firstPage !== "");

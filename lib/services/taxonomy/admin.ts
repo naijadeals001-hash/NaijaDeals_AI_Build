@@ -294,15 +294,29 @@ function createBodyFromRequest(input: {
 }): Record<string, unknown> {
   const overrides = isPlainObject(input.createCategory) ? input.createCategory : {};
   const hasParentOverride = Object.prototype.hasOwnProperty.call(overrides, "parentId");
+  const name = typeof overrides.name === "string" ? overrides.name : input.request.suggestedName;
+  const imageUrl = typeof overrides.imageUrl === "string" ? overrides.imageUrl : input.request.imageUrl;
+  // CategoryRequest stores a reference image but no alt column. The approval
+  // API accepts an explicit alt override; when the request only has an image,
+  // use a neutral category-name alt so the image/alt pair stays valid and the
+  // request can still be approved. This describes the category, not an
+  // unverified subject claim.
+  const imageAlt =
+    typeof overrides.imageAlt === "string" && overrides.imageAlt.trim()
+      ? overrides.imageAlt
+      : imageUrl
+        ? `${name} category image`
+        : undefined;
   const body: Record<string, unknown> = {
     parentId: hasParentOverride ? overrides.parentId : input.request.parentId,
     key: input.key,
     slug: input.slug,
-    name: typeof overrides.name === "string" ? overrides.name : input.request.suggestedName,
+    name,
     description: typeof overrides.description === "string" ? overrides.description : input.request.description,
-    imageUrl: typeof overrides.imageUrl === "string" ? overrides.imageUrl : input.request.imageUrl
+    imageUrl,
+    ...(imageAlt ? { imageAlt } : {})
   };
-  for (const field of ["imageAlt", "isSelectable", "showOnHomepage", "browsingVisible", "isActive", "sortOrder"] as const) {
+  for (const field of ["isSelectable", "showOnHomepage", "browsingVisible", "isActive", "sortOrder"] as const) {
     if (overrides[field] !== undefined) body[field] = overrides[field];
   }
   return body;
