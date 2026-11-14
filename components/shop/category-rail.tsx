@@ -68,28 +68,36 @@ function finiteCount(value: unknown): number | null {
  * Map one taxonomy node to a rail entry.
  *
  * Eligibility is the taxonomy's own contract, not a local category list:
- *   - only level 1 (category); roots/leaves are excluded
- *   - `browsingVisible === false` stays out of browsing lists
+ *   - only level 1 (category) with an explicit `browsingVisible === true`;
+ *     roots, leaves and nodes with a missing flag are excluded
  *   - `canPublish === false` stays browsable with a restriction notice and a
- *     zero listing count; it never becomes publishable from this projection
+ *     zero listing count; it never becomes publishable from this projection,
+ *     and a missing `canPublish` is rejected rather than defaulted to true
  *
  * Counts are the server's subtree product counts, which exclude fixtures,
  * non-public products and publish-restricted branches. A response without a
  * count stays `null` and is rendered as unavailable, never as zero.
  */
 export function categoryRailEntry(node: PublicTaxonomyNode | PublicCategoryLevel): CategoryRailEntry | null {
-  if (!node || !node.id || !node.slug || !node.name) return null;
-  if (typeof node.level === "number" && node.level !== 1) return null;
-  if (node.browsingVisible === false) return null;
+  // Defensive re-validation: the API client already rejects a malformed
+  // payload, but an entry passed in by a future caller must still not be
+  // promoted into an eligible card by a missing flag.
+  if (!node || typeof node.id !== "string" || !node.id.trim()) return null;
+  if (typeof node.slug !== "string" || !node.slug.trim()) return null;
+  if (typeof node.name !== "string" || !node.name.trim()) return null;
+  if (node.level !== 1) return null;
+  if (node.browsingVisible !== true) return null;
+  if (typeof node.canPublish !== "boolean") return null;
   return {
     id: node.id,
     name: node.name,
     slug: node.slug,
     imageUrl: node.imageUrl ?? null,
     imageAlt: node.imageAlt ?? null,
-    isSelectable: node.isSelectable !== false,
+    // Only an explicit `true` is selectable; a malformed value stays false.
+    isSelectable: node.isSelectable === true,
     count: finiteCount(node.subtreeProductCount) ?? finiteCount(node.productCount),
-    canPublish: node.canPublish !== false,
+    canPublish: node.canPublish,
     restrictionNote: typeof node.restrictionNote === "string" ? node.restrictionNote : null
   };
 }

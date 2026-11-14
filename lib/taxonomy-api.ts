@@ -223,19 +223,109 @@ function normaliseRestrictionReason(value: unknown): PublishRestrictionReason | 
 }
 
 /**
- * Display normalization for the published taxonomy contract. Browsing and
- * publication flags default to the endpoint's published values, but counts stay
- * null so the UI can say they are unavailable instead of inventing zero.
- * Country publishing permission is always enforced server-side on mutation;
- * the client flag only drives the browsing filter.
+ * A response that cannot be interpreted is an unavailable taxonomy, never an
+ * empty one. A valid empty array stays an honest empty state; a missing root,
+ * a non-array body or a category without its eligibility flags fails closed.
+ */
+function malformedTaxonomyResponse(detail: string): TaxonomyApiError {
+  return new TaxonomyApiError(
+    `The category service returned an unusable response (${detail}). Categories are unavailable right now; try again.`,
+    502,
+    "malformed_taxonomy_response"
+  );
+}
+
+function asResponseRecord(value: unknown, scope: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw malformedTaxonomyResponse(`${scope} is not an object`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function readRequiredString(value: unknown, path: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw malformedTaxonomyResponse(`${path} must be a non-empty string`);
+  }
+  return value;
+}
+
+function readFiniteNumber(value: unknown, path: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw malformedTaxonomyResponse(`${path} must be a finite number`);
+  }
+  return value;
+}
+
+function readBooleanFlag(value: unknown, path: string): boolean {
+  if (typeof value !== "boolean") {
+    throw malformedTaxonomyResponse(`${path} must be a boolean`);
+  }
+  return value;
+}
+
+/**
+ * A response that names a different market is stale/cross-market data. Treat it
+ * as malformed rather than letting a previous market's rail replace the
+ * selected one. A response without a country code is left to the other checks.
+ */
+function assertResponseMarket(
+  body: Record<string, unknown>,
+  market: TaxonomyMarket,
+  scope: string
+): void {
+  const expected = market.country.trim().toUpperCase();
+  const actual = typeof body.countryCode === "string" ? body.countryCode.trim().toUpperCase() : "";
+  if (actual && actual !== expected) {
+    throw malformedTaxonomyResponse(`${scope} was for ${actual}, not the requested market ${expected}`);
+  }
+}
+
+/**
+ * Validate one published node before it reaches normalisation.
+ *
+ * `browsingVisible` and `canPublish` are explicit contract fields: a response
+ * that omits either cannot be interpreted safely, so it is rejected instead of
+ * defaulting to visible/publishable. Counts stay optional because the UI has an
+ * honest "count unavailable" state; malformed counts are carried as `null`.
+ */
+function readPublicNode(value: unknown, path: string): PublicTaxonomyNode {
+  const record = asResponseRecord(value, path);
+  readRequiredString(record.id, `${path}.id`);
+  readRequiredString(record.name, `${path}.name`);
+  readRequiredString(record.slug, `${path}.slug`);
+  const level = readFiniteNumber(record.level, `${path}.level`);
+  const sortOrder = readFiniteNumber(record.sortOrder, `${path}.sortOrder`);
+  const browsingVisible = readBooleanFlag(record.browsingVisible, `${path}.browsingVisible`);
+  const canPublish = readBooleanFlag(record.canPublish, `${path}.canPublish`);
+  if (record.children !== undefined && !Array.isArray(record.children)) {
+    throw malformedTaxonomyResponse(`${path}.children must be an array when present`);
+  }
+  const children = Array.isArray(record.children)
+    ? record.children.map((child, index) => readPublicNode(child, `${path}.children[${index}]`))
+    : [];
+  return {
+    ...(record as unknown as PublicTaxonomyNode),
+    level,
+    sortOrder,
+    browsingVisible,
+    canPublish,
+    children
+  };
+}
+
+/**
+ * Display normalization for the published taxonomy contract. Eligibility flags
+ * fail closed (`=== true`); counts stay null so the UI can say they are
+ * unavailable instead of inventing zero. Country publishing permission is
+ * always enforced server-side on mutation; the client flag drives the browsing
+ * filter only.
  */
 function normalisePublicNode(node: PublicTaxonomyNode): PublicTaxonomyNode {
   return {
     ...node,
     level: typeof node.level === "number" ? node.level : 0,
     sortOrder: typeof node.sortOrder === "number" ? node.sortOrder : 0,
-    browsingVisible: node.browsingVisible !== false,
-    // Fail closed if a malformed/legacy response omits publication state.
+    browsingVisible: node.browsingVisible === true,
     canPublish: node.canPublish === true,
     restrictionNote: typeof node.restrictionNote === "string" ? node.restrictionNote : null,
     restrictionReason: normaliseRestrictionReason(node.restrictionReason),
@@ -250,6 +340,12 @@ function normaliseCategoryLevel(node: PublicCategoryLevel): PublicCategoryLevel 
   const normalised = normalisePublicNode({ ...node, children: [] });
   const { children: _children, ...fields } = normalised;
   void _children;
+  if (node.parentId !== undefined && node.parentId !== null && typeof node.parentId !== "string") {
+    throw malformedTaxonomyResponse("category parentId must be a string or null");
+  }
+  if (node.parentName !== undefined && node.parentName !== null && typeof node.parentName !== "string") {
+    throw malformedTaxonomyResponse("category parentName must be a string or null");
+  }
   return {
     ...fields,
     parentId: typeof node.parentId === "string" ? node.parentId : null,
@@ -353,17 +449,25 @@ type PublicTaxonomyOptions = TaxonomyMarket & {
 export async function getPublicTaxonomy(
   options: PublicTaxonomyOptions
 ): Promise<{ countryCode: string | null; city: string | null; departments: PublicTaxonomyNode[] }> {
-  const body = await requestTaxonomy<{
-    countryCode?: unknown;
-    city?: unknown;
-    departments?: PublicTaxonomyNode[];
-    categories?: PublicTaxonomyNode[];
-  }>(`/api/taxonomy${taxonomyQuery(options)}`, { signal: options.signal });
-  const roots = Array.isArray(body?.departments) ? body.departments : asArray<PublicTaxonomyNode>(body?.categories);
+  const body = asResponseRecord(
+    await requestTaxonomy<unknown>(`/api/taxonomy${taxonomyQuery(options)}`, { signal: options.signal }),
+    "taxonomy response"
+  );
+  assertResponseMarket(body, options, "taxonomy response");
+  // `departments` is the current field; `categories` is the legacy alias. A
+  // present-but-wrong value is malformed rather than a reason to try the alias.
+  const rootValue = Object.prototype.hasOwnProperty.call(body, "departments")
+    ? body.departments
+    : Object.prototype.hasOwnProperty.call(body, "categories")
+      ? body.categories
+      : undefined;
+  if (!Array.isArray(rootValue)) {
+    throw malformedTaxonomyResponse("taxonomy response does not contain a departments array");
+  }
   return {
-    countryCode: typeof body?.countryCode === "string" ? body.countryCode : null,
-    city: typeof body?.city === "string" ? body.city : null,
-    departments: roots.map(normalisePublicNode)
+    countryCode: typeof body.countryCode === "string" ? body.countryCode : null,
+    city: typeof body.city === "string" ? body.city : null,
+    departments: rootValue.map((value, index) => normalisePublicNode(readPublicNode(value, `departments[${index}]`)))
   };
 }
 
@@ -375,40 +479,64 @@ export async function getPublicTaxonomy(
 export async function getPublicLevelOneCategories(
   options: PublicTaxonomyOptions
 ): Promise<{ countryCode: string | null; city: string | null; categories: PublicCategoryLevel[] }> {
-  const body = await requestTaxonomy<{
-    countryCode?: unknown;
-    city?: unknown;
-    categories?: PublicCategoryLevel[];
-  }>(`/api/taxonomy/categories${taxonomyQuery(options)}`, { signal: options.signal });
+  const body = asResponseRecord(
+    await requestTaxonomy<unknown>(`/api/taxonomy/categories${taxonomyQuery(options)}`, { signal: options.signal }),
+    "category response"
+  );
+  assertResponseMarket(body, options, "category response");
+  if (!Array.isArray(body.categories)) {
+    throw malformedTaxonomyResponse("category response does not contain a categories array");
+  }
   return {
-    countryCode: typeof body?.countryCode === "string" ? body.countryCode : null,
-    city: typeof body?.city === "string" ? body.city : null,
-    categories: asArray<PublicCategoryLevel>(body?.categories).map(normaliseCategoryLevel)
+    countryCode: typeof body.countryCode === "string" ? body.countryCode : null,
+    city: typeof body.city === "string" ? body.city : null,
+    categories: body.categories.map((value, index) =>
+      normaliseCategoryLevel(readPublicNode(value, `categories[${index}]`) as PublicCategoryLevel)
+    )
   };
 }
 
-/** Seller-publishable categories for the authenticated seller's market. */
+/**
+ * Seller-publishable categories for the authenticated seller's market.
+ *
+ * Publication state is explicit: a seller-category entry without a boolean
+ * `canPublish` is a malformed response, and only `canPublish === true` is
+ * exposed as publishable. Missing `isSelectable` also fails closed.
+ */
 export async function getSellerCategories(): Promise<SellerCategory[]> {
-  const body = await requestTaxonomy<{ categories?: unknown }>("/api/seller/categories");
-  return asArray<Record<string, unknown>>(body?.categories).map((entry) => ({
-    id: String(entry.id ?? ""),
-    key: typeof entry.key === "string" ? entry.key : null,
-    name: typeof entry.name === "string" ? entry.name : "",
-    path: typeof entry.path === "string" && entry.path ? entry.path : typeof entry.name === "string" ? entry.name : "",
-    level: typeof entry.level === "number" ? entry.level : 0,
-    isSelectable: entry.isSelectable !== false,
-    canPublish: entry.canPublish !== false,
-    restrictionNote: typeof entry.restrictionNote === "string" ? entry.restrictionNote : null,
-    restrictionReason: normaliseRestrictionReason(entry.restrictionReason),
-    isRegulated: entry.isRegulated === true,
-    attributes: normaliseAttributes(entry.attributes),
-    description: typeof entry.description === "string" ? entry.description : null,
-    examples: Array.isArray(entry.examples)
-      ? entry.examples.filter((example): example is string => typeof example === "string")
-      : Array.isArray(entry.inclusionExamples)
-        ? (entry.inclusionExamples as unknown[]).filter((example): example is string => typeof example === "string")
-        : []
-  }));
+  const body = asResponseRecord(await requestTaxonomy<unknown>("/api/seller/categories"), "seller category response");
+  if (!Array.isArray(body.categories)) {
+    throw malformedTaxonomyResponse("seller category response does not contain a categories array");
+  }
+  return body.categories.map((value, index) => {
+    const path = `categories[${index}]`;
+    const entry = asResponseRecord(value, path);
+    readRequiredString(entry.id, `${path}.id`);
+    readRequiredString(entry.name, `${path}.name`);
+    const canPublish = readBooleanFlag(entry.canPublish, `${path}.canPublish`);
+    if (entry.isSelectable !== undefined && typeof entry.isSelectable !== "boolean") {
+      throw malformedTaxonomyResponse(`${path}.isSelectable must be a boolean when present`);
+    }
+    return {
+      id: String(entry.id),
+      key: typeof entry.key === "string" ? entry.key : null,
+      name: String(entry.name),
+      path: typeof entry.path === "string" && entry.path ? entry.path : String(entry.name),
+      level: typeof entry.level === "number" ? entry.level : 0,
+      isSelectable: entry.isSelectable === true,
+      canPublish: canPublish === true,
+      restrictionNote: typeof entry.restrictionNote === "string" ? entry.restrictionNote : null,
+      restrictionReason: normaliseRestrictionReason(entry.restrictionReason),
+      isRegulated: entry.isRegulated === true,
+      attributes: normaliseAttributes(entry.attributes),
+      description: typeof entry.description === "string" ? entry.description : null,
+      examples: Array.isArray(entry.examples)
+        ? entry.examples.filter((example): example is string => typeof example === "string")
+        : Array.isArray(entry.inclusionExamples)
+          ? (entry.inclusionExamples as unknown[]).filter((example): example is string => typeof example === "string")
+          : []
+    };
+  });
 }
 
 export async function suggestSellerCategories(query: string): Promise<Array<{ categoryId: string; path: string; reason: string }>> {

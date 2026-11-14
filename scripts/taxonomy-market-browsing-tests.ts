@@ -366,6 +366,10 @@ async function main(): Promise<void> {
     browsingCategoryId: null as string | null,
     regulatedCategoryId: null as string | null,
     regulatedProductId: null as string | null,
+    marketRootId: null as string | null,
+    marketLeafId: null as string | null,
+    marketNgProductId: null as string | null,
+    marketGhProductId: null as string | null,
     productId: null as string | null,
     sessionIds: [] as string[],
     marker: runId
@@ -436,6 +440,37 @@ async function main(): Promise<void> {
     created.regulatedCategoryId = regulatedCategory.rows[0]?.id ?? null;
     assert(created.regulatedCategoryId, "run-owned regulated category was not created");
 
+    // Run-owned market root/leaf with one NG and one GH listing. The root is a
+    // real department in the `/api/categories` projection, which lets the legacy
+    // count endpoint be checked without relying on another market's catalogue.
+    const marketRoot = await client.query<{ id: string }>(
+      `insert into "Category"
+         (id, key, name, slug, "parentId", level, "isActive", "isSelectable", "showOnHomepage",
+          "browsingVisible", "isRegulated", "sortOrder", "createdAt")
+       values ($1, $2, $3, $4, null, 0, true, false, false, true, false, 999998, now())
+       returning id`,
+      [`txmktroot${randomBytes(10).toString("hex")}`, `${runKey}_market_root`, `${runId} Market Root`, `${runSlug}-market-root`]
+    );
+    created.marketRootId = marketRoot.rows[0]?.id ?? null;
+    assert(created.marketRootId, "run-owned market root was not created");
+
+    const marketLeaf = await client.query<{ id: string }>(
+      `insert into "Category"
+         (id, key, name, slug, "parentId", level, "isActive", "isSelectable", "showOnHomepage",
+          "browsingVisible", "isRegulated", "sortOrder", "createdAt")
+       values ($1, $2, $3, $4, $5, 2, true, true, false, true, false, 0, now())
+       returning id`,
+      [
+        `txmktleaf${randomBytes(10).toString("hex")}`,
+        `${runKey}_market_leaf`,
+        `${runId} Market Leaf`,
+        `${runSlug}-market-leaf`,
+        created.marketRootId
+      ]
+    );
+    created.marketLeafId = marketLeaf.rows[0]?.id ?? null;
+    assert(created.marketLeafId, "run-owned market leaf was not created");
+
     // A GH-eligible listing inside the regulated leaf proves the public
     // catalogue itself fails closed while market eligibility is unresolved.
     const regulatedVendor = await client.query<{ id: string }>(
@@ -480,6 +515,19 @@ async function main(): Promise<void> {
     };
 
     // ---- service-level market projection --------------------------------
+    await step("category counts require an explicit market at the service layer", async () => {
+      const catalog = await import("../lib/services/core/catalog.service");
+      const error = await catalog
+        .getCategories({ countryCode: " " })
+        .then(() => null)
+        .catch((caught) => caught as { status?: number; code?: string });
+      assert(error, "getCategories accepted a request without an explicit market");
+      assert(
+        error.status === 400 && error.code === "market_required",
+        `missing-market error status=${String(error.status)} code=${String(error.code)}`
+      );
+    });
+
     await step("public tree exposes isRegulated and country-specific restriction reasons", async () => {
       const ngTree = await publicService.getPublicTaxonomy({ countryCode: "NG", city: "Lagos" });
       assert(ngTree.countryCode === "NG", `NG countryCode ${ngTree.countryCode}`);
@@ -745,6 +793,138 @@ async function main(): Promise<void> {
       ]
     );
 
+    const marketNgProductId = `txmktngprod${randomBytes(10).toString("hex")}`;
+    const marketGhProductId = `txmktghprod${randomBytes(10).toString("hex")}`;
+    created.marketNgProductId = marketNgProductId;
+    created.marketGhProductId = marketGhProductId;
+    for (const fixture of [
+      {
+        id: marketNgProductId,
+        name: `${runId} Nigeria Market Product`,
+        slug: `${runSlug}-market-ng-product`,
+        countryCode: "NG"
+      },
+      {
+        id: marketGhProductId,
+        name: `${runId} Ghana Market Product`,
+        slug: `${runSlug}-market-gh-product`,
+        countryCode: "GH"
+      }
+    ] as const) {
+      await client.query(
+        `insert into "Product"
+           (id, "vendorId", "categoryId", name, slug, description, "priceKobo", "countryCode",
+            status, "isSample", "createdAt", "updatedAt")
+         values ($1, $2, $3, $4, $5, $6, 300000, $7, 'ACTIVE', false, now(), now())`,
+        [
+          fixture.id,
+          vendorId,
+          created.marketLeafId,
+          fixture.name,
+          fixture.slug,
+          `Run-owned ${fixture.countryCode} fixture proving /api/categories counts follow the selected market.`,
+          fixture.countryCode
+        ]
+      );
+    }
+
+    await step("legacy /api/categories counts follow the selected market and locale fallback", async () => {
+      const ng = await http.get("/api/categories?country=NG&city=Lagos");
+      expectStatus(ng, 200, "GET /api/categories NG");
+      const gh = await http.get("/api/categories?country=GH&city=Accra");
+      expectStatus(gh, 200, "GET /api/categories GH");
+
+      const rootOf = (result: { body: unknown }) =>
+        asArray(result.body).map((row) => asRecord(row)).find((row) => row.id === created.marketRootId) ?? null;
+      const ngRoot = rootOf(ng);
+      const ghRoot = rootOf(gh);
+      assert(ngRoot, "run-owned market root is missing from NG /api/categories");
+      assert(ghRoot, "run-owned market root is missing from GH /api/categories");
+      assert(ngRoot.productCount === 1, `NG root count ${String(ngRoot.productCount)} should count only the NG listing`);
+      assert(ghRoot.productCount === 1, `GH root count ${String(ghRoot.productCount)} should count only the GH listing`);
+
+      // No query: shared locale resolution. A GH cookie selects GH (browsing
+      // stays available even though GH has delivery disabled); no cookie keeps
+      // the NG default through readLocale, never an implicit service fallback.
+      const localeGh = await http.get("/api/categories", "nd_country=GH; nd_city=Accra");
+      expectStatus(localeGh, 200, "GET /api/categories with GH locale");
+      assert(
+        rootOf(localeGh)?.productCount === 1,
+        `locale GH root count ${String(rootOf(localeGh)?.productCount)}`
+      );
+      const localeDefault = await http.get("/api/categories");
+      expectStatus(localeDefault, 200, "GET /api/categories with no market");
+      assert(
+        rootOf(localeDefault)?.productCount === 1,
+        `default root count ${String(rootOf(localeDefault)?.productCount)}`
+      );
+
+      const invalidCountry = await http.get("/api/categories?country=ZZ");
+      expectStatus(invalidCountry, 400, "GET /api/categories invalid country");
+      assert(asRecord(invalidCountry.body).code === "invalid_market", "invalid country did not return invalid_market");
+      const invalidCity = await http.get("/api/categories?country=NG&city=Accra");
+      expectStatus(invalidCity, 400, "GET /api/categories cross-market city");
+      assert(asRecord(invalidCity.body).code === "invalid_city", "cross-market city did not return invalid_city");
+
+      // Search consumers use the same selected country: the GH listing is
+      // browsable and searchable while the NG listing is absent (and vice versa).
+      const ghSearch = await http.get(
+        `/api/products?country=GH&category=${encodeURIComponent(`${runSlug}-market-leaf`)}&page=1&pageSize=5`
+      );
+      expectStatus(ghSearch, 200, "GET GH products in the market leaf");
+      const ghItems = asArray(asRecord(ghSearch.body).items).map((row) => asRecord(row).id);
+      assert(ghItems.includes(marketGhProductId), "GH search is missing the GH market listing");
+      assert(!ghItems.includes(marketNgProductId), "GH search leaked the NG market listing");
+      const ngSearch = await http.get(
+        `/api/products?country=NG&category=${encodeURIComponent(`${runSlug}-market-leaf`)}&page=1&pageSize=5`
+      );
+      expectStatus(ngSearch, 200, "GET NG products in the market leaf");
+      const ngItems = asArray(asRecord(ngSearch.body).items).map((row) => asRecord(row).id);
+      assert(ngItems.includes(marketNgProductId), "NG search is missing the NG market listing");
+      assert(!ngItems.includes(marketGhProductId), "NG search leaked the GH market listing");
+    });
+
+    await step("unauthorised taxonomy admin requests are refused without writes", async () => {
+      const before = await client.query<{ isRegulated: boolean }>(
+        `select "isRegulated" from "Category" where id = $1`,
+        [created.browsingCategoryId]
+      );
+      const sellerPatch = await http.patch(
+        `/api/admin/taxonomy/${created.browsingCategoryId}`,
+        { isRegulated: true },
+        sellerCookie
+      );
+      expectStatus(sellerPatch, 403, "seller PATCH admin taxonomy");
+      const sellerCreate = await http.request("/api/admin/taxonomy", {
+        method: "POST",
+        body: {
+          parentId: created.marketRootId,
+          key: `${runKey}_denied`,
+          name: `${runId} Denied Admin Node`,
+          slug: `${runSlug}-denied-admin-node`,
+          isRegulated: true
+        },
+        cookie: sellerCookie
+      });
+      expectStatus(sellerCreate, 403, "seller POST admin taxonomy");
+      const anonymousPatch = await http.patch(
+        `/api/admin/taxonomy/${created.browsingCategoryId}`,
+        { isRegulated: true },
+        ""
+      );
+      expectStatus(anonymousPatch, 401, "anonymous PATCH admin taxonomy");
+      const after = await client.query<{ isRegulated: boolean }>(
+        `select "isRegulated" from "Category" where id = $1`,
+        [created.browsingCategoryId]
+      );
+      assert(after.rows[0]?.isRegulated === before.rows[0]?.isRegulated, "a refused admin request changed isRegulated");
+      const deniedRows = await client.query<{ count: string }>(
+        `select count(*)::text as count from "Category" where slug = $1`,
+        [`${runSlug}-denied-admin-node`]
+      );
+      assert(deniedRows.rows[0]?.count === "0", "a refused admin create still wrote a category row");
+    });
+
     await step("admin browsing/order/image edit flows to the rail projection and preserves audit", async () => {
       const patch = await http.patch(
         `/api/admin/taxonomy/${created.browsingCategoryId}`,
@@ -852,6 +1032,60 @@ async function main(): Promise<void> {
       assert(ngRows.length === ghRows.length, `browsing membership changed by market: ${ngRows.length}/${ghRows.length}`);
       const ngRunRow = ngRows.find((row) => row.id === created.browsingCategoryId);
       assert(ngRunRow?.canPublish === true, "NG run-owned category lost publishing eligibility");
+    });
+
+    await step("seller publication into unresolved and explicitly denied taxonomy is refused", async () => {
+      const sellerBody = (categoryId: string, slugSuffix: string) => ({
+        name: `${runId} Rejected Seller Product ${slugSuffix}`,
+        description: "Run-owned publication-rejection fixture; no product should be created.",
+        categoryId,
+        priceKobo: "150000",
+        quantity: 1,
+        imageUrl: "/generated/shop/hero-desktop.webp",
+        imageAlt: `${runId} publication rejection fixture`
+      });
+
+      const unresolved = await http.request("/api/seller/products", {
+        method: "POST",
+        body: sellerBody(created.regulatedCategoryId as string, "unresolved"),
+        cookie: sellerCookie
+      });
+      expectStatus(unresolved, 403, "seller POST into NG-unresolved regulated category");
+      assert(asRecord(unresolved.body).code === "category_restricted", "unresolved seller rejection lost category_restricted");
+      assert(
+        asRecord(asRecord(unresolved.body).details).reason === "market_eligibility_unresolved",
+        `unresolved seller rejection reason ${String(asRecord(asRecord(unresolved.body).details).reason)}`
+      );
+
+      const deny = await http.patch(
+        `/api/admin/taxonomy/${created.marketLeafId}`,
+        { countryRules: [{ countryCode: "NG", canPublish: false, note: `Run-owned NG deny ${runId}.` }] },
+        adminCookie
+      );
+      expectStatus(deny, 200, "PATCH admin taxonomy NG deny for seller rejection");
+      const denied = await http.request("/api/seller/products", {
+        method: "POST",
+        body: sellerBody(created.marketLeafId as string, "denied"),
+        cookie: sellerCookie
+      });
+      expectStatus(denied, 403, "seller POST into explicitly denied NG category");
+      assert(asRecord(denied.body).code === "category_restricted", "explicit deny seller rejection lost category_restricted");
+      assert(
+        asRecord(asRecord(denied.body).details).reason === "country_rule",
+        `explicit deny seller rejection reason ${String(asRecord(asRecord(denied.body).details).reason)}`
+      );
+
+      const restore = await http.patch(
+        `/api/admin/taxonomy/${created.marketLeafId}`,
+        { countryRules: [{ countryCode: "NG", canPublish: true, note: `Run-owned NG allow ${runId}.` }] },
+        adminCookie
+      );
+      expectStatus(restore, 200, "PATCH admin taxonomy restore NG allow");
+      const rejectedRows = await client.query<{ count: string }>(
+        `select count(*)::text as count from "Product" where name like $1`,
+        [`${runId} Rejected Seller Product%`]
+      );
+      assert(rejectedRows.rows[0]?.count === "0", "a refused seller publication still wrote a product row");
     });
 
     // ---- browser: selected market, dynamic count, states -----------------
@@ -1097,6 +1331,206 @@ async function main(): Promise<void> {
         );
         await countContext.close();
       });
+
+      await step("browser rejects malformed/partial taxonomy instead of faking an empty catalogue", async () => {
+        const normal = await http.get("/api/taxonomy/categories?country=NG&city=Lagos");
+        expectStatus(normal, 200, "GET NG categories for malformed browser checks");
+        const rows = asArray(asRecord(normal.body).categories).map((row) => ({ ...asRecord(row) }));
+        assert(rows.length > 0, "no NG categories are available for the malformed browser checks");
+
+        const missingCanPublish = structuredClone(rows);
+        delete missingCanPublish[0].canPublish;
+        const missingBrowsingVisible = structuredClone(rows);
+        delete missingBrowsingVisible[0].browsingVisible;
+        const scenarios = [
+          {
+            name: "missing canPublish",
+            body: { countryCode: "NG", city: "Lagos", categories: missingCanPublish }
+          },
+          {
+            name: "missing browsingVisible",
+            body: { countryCode: "NG", city: "Lagos", categories: missingBrowsingVisible }
+          },
+          {
+            name: "non-array categories",
+            body: { countryCode: "NG", city: "Lagos", categories: { rows } }
+          }
+        ];
+
+        for (const scenario of scenarios) {
+          const context = await browserWithLocale(activeBrowser, baseUrl, { width: 1440, height: 900 }, "NG", "Lagos");
+          const page = await context.newPage();
+          await page.route("**/api/taxonomy/categories*", (route) =>
+            route.fulfill({
+              status: 200,
+              contentType: "application/json",
+              body: JSON.stringify(scenario.body)
+            })
+          );
+          await page.goto(`${baseUrl}/naijashop`, { waitUntil: "load", timeout: 180_000 });
+          const noticeVisible = await page
+            .getByText(/browsing category list could not be loaded/i)
+            .first()
+            .waitFor({ state: "visible", timeout: 120_000 })
+            .then(() => true)
+            .catch(() => false);
+          const railCount = await page.locator("[data-category-rail]").count();
+          const fakeEmpty = await page.getByText(/No published categories are available/i).count();
+          assert(
+            noticeVisible && railCount === 0 && fakeEmpty === 0,
+            `${scenario.name}: rail notice=${noticeVisible}, rail=${railCount}, empty=${fakeEmpty}`
+          );
+
+          await page.goto(`${baseUrl}/naijashop/categories`, { waitUntil: "load", timeout: 180_000 });
+          const alertVisible = await page
+            .getByRole("alert")
+            .first()
+            .waitFor({ state: "visible", timeout: 120_000 })
+            .then(() => true)
+            .catch(() => false);
+          const retry = await page.getByRole("button", { name: /try again/i }).count();
+          const cards = await page.locator("[data-category-directory-card]").count();
+          const fakeEmptyDirectory = await page.getByText(/No published categories yet/i).count();
+          assert(
+            alertVisible && retry > 0 && cards === 0 && fakeEmptyDirectory === 0,
+            `${scenario.name}: directory alert=${alertVisible}, retry=${retry}, cards=${cards}, empty=${fakeEmptyDirectory}`
+          );
+          await context.close();
+        }
+      });
+
+      await step("browser ignores a delayed previous-market taxonomy response", async () => {
+        const makeNode = (id: string, name: string, slug: string) => ({
+          id,
+          name,
+          slug,
+          level: 1,
+          sortOrder: 0,
+          browsingVisible: true,
+          canPublish: true,
+          restrictionNote: null,
+          restrictionReason: null,
+          isRegulated: false,
+          productCount: 1,
+          subtreeProductCount: 1,
+          parentId: "run-dept",
+          parentName: "Run Department"
+        });
+        const currentNg = { countryCode: "NG", city: "Lagos", categories: [makeNode("stale-current-ng", "Current Nigeria", "stale-current-ng")] };
+        const staleGh = { countryCode: "GH", city: "Accra", categories: [makeNode("stale-gh", "Stale Ghana", "stale-gh-market")] };
+
+        const installDelayedRoute = async (page: Page) => {
+          let release!: () => void;
+          let ghStarted!: () => void;
+          const held = new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          const started = new Promise<void>((resolve) => {
+            ghStarted = resolve;
+          });
+          await page.route("**/api/taxonomy/categories*", async (route) => {
+            const url = new URL(route.request().url());
+            if ((url.searchParams.get("country") ?? "").toUpperCase() === "GH") {
+              ghStarted();
+              await held;
+              await route
+                .fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(staleGh) })
+                .catch(() => undefined);
+              return;
+            }
+            await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(currentNg) });
+          });
+          return { release: () => release(), ghStarted: started };
+        };
+
+        const switchToNigeria = async (page: Page) => {
+          await page.locator('button[aria-controls="shop-location-panel"]').first().click();
+          await page.waitForSelector("#shop-location-country", { timeout: 60_000 });
+          await page.selectOption("#shop-location-country", "NG");
+        };
+
+        // Rail: the GH response is held while the visitor switches to NG. The
+        // late GH payload must not replace the rendered NG rail.
+        const railContext = await browserWithLocale(activeBrowser, baseUrl, { width: 1440, height: 900 }, "GH", "Accra");
+        const railPage = await railContext.newPage();
+        const railRoute = await installDelayedRoute(railPage);
+        await railPage.goto(`${baseUrl}/naijashop`, { waitUntil: "load", timeout: 180_000 });
+        await railRoute.ghStarted;
+        await switchToNigeria(railPage);
+        await railPage.waitForSelector('[data-category-card][data-category-slug="stale-current-ng"]', {
+          timeout: 120_000
+        });
+        railRoute.release();
+        await railPage.waitForTimeout(1500);
+        const railSlugs = await railPage.$$eval("[data-category-card]", (cards) =>
+          cards.map((card) => card.getAttribute("data-category-slug"))
+        );
+        assert(
+          railSlugs.length === 1 && railSlugs[0] === "stale-current-ng",
+          `delayed GH rail response replaced the NG rail: ${railSlugs.join(",")}`
+        );
+        await railContext.close();
+
+        // Directory: same stale-response guarantee for the full directory.
+        const directoryContext = await browserWithLocale(activeBrowser, baseUrl, { width: 768, height: 1024 }, "GH", "Accra");
+        const directoryPage = await directoryContext.newPage();
+        const directoryRoute = await installDelayedRoute(directoryPage);
+        await directoryPage.goto(`${baseUrl}/naijashop/categories`, { waitUntil: "load", timeout: 180_000 });
+        await directoryRoute.ghStarted;
+        await switchToNigeria(directoryPage);
+        await directoryPage.waitForSelector('[data-category-directory-card][data-category-slug="stale-current-ng"]', {
+          timeout: 120_000
+        });
+        directoryRoute.release();
+        await directoryPage.waitForTimeout(1500);
+        const directorySlugs = await directoryPage.$$eval("[data-category-directory-card]", (cards) =>
+          cards.map((card) => card.getAttribute("data-category-slug"))
+        );
+        assert(
+          directorySlugs.length === 1 && directorySlugs[0] === "stale-current-ng",
+          `delayed GH directory response replaced the NG directory: ${directorySlugs.join(",")}`
+        );
+        await directoryContext.close();
+      });
+
+      await step("browser header reports a malformed published taxonomy honestly", async () => {
+        const normal = await http.get("/api/taxonomy?country=NG&city=Lagos");
+        expectStatus(normal, 200, "GET NG taxonomy for malformed header check");
+        const departments = asArray(asRecord(normal.body).departments).map((row) => ({ ...asRecord(row) }));
+        assert(departments.length > 0, "no departments are available for the malformed header check");
+        delete departments[0].canPublish;
+        const malformedTree = { countryCode: "NG", city: "Lagos", departments };
+
+        const context = await browserWithLocale(activeBrowser, baseUrl, { width: 1440, height: 900 }, "NG", "Lagos");
+        const page = await context.newPage();
+        await page.route("**/api/taxonomy*", (route) => {
+          const url = new URL(route.request().url());
+          if (url.pathname === "/api/taxonomy") {
+            return route.fulfill({
+              status: 200,
+              contentType: "application/json",
+              body: JSON.stringify(malformedTree)
+            });
+          }
+          return route.continue();
+        });
+        await page.goto(`${baseUrl}/naijashop`, { waitUntil: "load", timeout: 180_000 });
+        await page.getByRole("button", { name: /open all departments/i }).first().click();
+        const noticeVisible = await page
+          .getByText(/published taxonomy for this market could not be loaded/i)
+          .first()
+          .waitFor({ state: "visible", timeout: 120_000 })
+          .then(() => true)
+          .catch(() => false);
+        assert(noticeVisible, "header did not report the malformed published taxonomy");
+        const railVisible = await page
+          .waitForSelector("[data-category-rail]", { timeout: 120_000 })
+          .then(() => true)
+          .catch(() => false);
+        const railCount = await page.locator("[data-category-rail]").count();
+        assert(railVisible && railCount === 1, `the independent categories rail disappeared (rail=${railCount})`);
+        await context.close();
+      });
     } finally {
       await browser?.close().catch(() => undefined);
     }
@@ -1122,7 +1556,19 @@ async function main(): Promise<void> {
       if (created.regulatedProductId) {
         await client.query(`delete from "Product" where id = $1`, [created.regulatedProductId]);
       }
-      for (const id of [created.browsingCategoryId, created.regulatedCategoryId]) {
+      if (created.marketNgProductId) {
+        await client.query(`delete from "Product" where id = $1`, [created.marketNgProductId]);
+      }
+      if (created.marketGhProductId) {
+        await client.query(`delete from "Product" where id = $1`, [created.marketGhProductId]);
+      }
+      // Child before parent: the run-owned market leaf references its root.
+      for (const id of [
+        created.marketLeafId,
+        created.marketRootId,
+        created.browsingCategoryId,
+        created.regulatedCategoryId
+      ]) {
         if (!id) continue;
         await client.query(`delete from "CategoryCountryRule" where "categoryId" = $1`, [id]);
         await client.query(`delete from "Category" where id = $1`, [id]);

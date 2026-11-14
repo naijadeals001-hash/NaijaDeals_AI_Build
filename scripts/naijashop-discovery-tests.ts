@@ -277,10 +277,24 @@ async function main() {
     });
 
     await check("acceptance fixture categories are not advertised as departments", async () => {
-      const categories = await getCategories();
+      const categories = await getCategories({ countryCode: "NG" });
       assert(categories.some((item) => item.id === category.id), "real category missing from departments");
       assert(!categories.some((item) => item.id === refundCategory.id), "refund fixture category leaked into departments");
       return "fixture category hidden; real category listed";
+    });
+
+    await check("category roots require an explicit market instead of defaulting to NG", async () => {
+      let rejected: unknown = null;
+      try {
+        await getCategories({ countryCode: "  " });
+      } catch (error) {
+        rejected = error;
+      }
+      assert(rejected, "getCategories accepted a request without a market country");
+      const status = (rejected as { status?: number }).status;
+      const code = (rejected as { code?: string }).code;
+      assert(status === 400 && code === "market_required", `missing-market error status=${String(status)} code=${String(code)}`);
+      return "blank market rejected with market_required";
     });
 
     await check("price bucket filters apply server-side", async () => {

@@ -441,7 +441,7 @@ async function main(): Promise<void> {
     }
 
     // ---- /api/categories roots and counts --------------------------------
-    const roots = await catalog.getCategories();
+    const roots = await catalog.getCategories({ countryCode: COUNTRY });
     const rootCountSum = roots.reduce((sum, root) => sum + root.productCount, 0);
     const rootScopes = roots.map((root) => {
       const row = tree.publicById.get(root.id);

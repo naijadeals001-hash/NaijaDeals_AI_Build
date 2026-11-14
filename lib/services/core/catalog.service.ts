@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { COUNTRIES } from "@/lib/config/commerce";
+import { ApiError } from "@/lib/auth/api-error";
 import { effectivePublishRule, isReachable, sortCategoryRows } from "@/lib/services/taxonomy/shared";
 import { verticalAccess } from "./vertical-activation.service";
 import { listReviews } from "./account.service";
@@ -363,14 +364,29 @@ export function listEligiblePublicCategoryIds(countryCode: string): Promise<stri
  *
  * The contract requires the same active roots that `/api/taxonomy` returns.
  * `productCount` is the number of distinct publicly eligible products in the
- * root's subtree; a product is counted once even when nested categories overlap
- * in navigation. Prices, stock and fixture filtering stay in the catalogue
- * query, so this count describes the unfiltered browsing scope the root opens.
+ * root's subtree for the selected market; a product is counted once even when
+ * nested categories overlap in navigation. Prices, stock and fixture filtering
+ * stay in the catalogue query, so this count describes the unfiltered browsing
+ * scope the root opens.
+ *
+ * The market is required: browsing counts are scoped to the selected country
+ * (products from another market never contribute). Delivery/checkout
+ * eligibility is a separate concern and must not be inferred from these counts
+ * or used to hide a market from browsing.
  */
-export async function getCategories(
-  options: { previewAuthorized?: boolean; countryCode?: string | null; cityCode?: string | null } = {}
-) {
-  const countryCode = (options.countryCode ?? DEFAULT_PUBLIC_COUNTRY).trim().toUpperCase() || DEFAULT_PUBLIC_COUNTRY;
+export async function getCategories(options: {
+  countryCode: string;
+  cityCode?: string | null;
+  previewAuthorized?: boolean;
+}) {
+  const countryCode = typeof options.countryCode === "string" ? options.countryCode.trim().toUpperCase() : "";
+  if (!/^[A-Z]{2}$/.test(countryCode)) {
+    throw new ApiError(
+      400,
+      "market_required",
+      "A market country is required to read Shop category counts; no implicit market is applied."
+    );
+  }
   if (
     !(await shopReadAllowed({
       countryCode,
