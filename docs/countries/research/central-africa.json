@@ -1,0 +1,789 @@
+{
+  "region": "Central Africa",
+  "feature": "NaijaDeals Shop — Discover Africa",
+  "accessedAt": "2026-11-14",
+  "editorialStandard": "Themes describe cultural and economic associations, not NaijaDeals supply availability. Rankings and volume claims appear only where the cited source states them. Themes with no adequate fetched source carry reviewStatus needs-source.",
+  "countries": [
+    {
+      "code": "CM",
+      "slug": "cameroon",
+      "name": "Cameroon",
+      "region": "Central Africa",
+      "localizedNames": {
+        "en": "Cameroon",
+        "fr": "Cameroun"
+      },
+      "introduction": "Cameroon stretches from the Gulf of Guinea coast to forested plateaus and savannah near Lake Chad. Agriculture remains central to the rural economy, and cocoa, coffee, cotton, rubber and bananas anchor exports, while cassava and plantains supply daily markets. The ports of Douala, Limbe and Kribi link producers to regional and overseas trade.",
+      "themes": [
+        {
+          "key": "cocoa",
+          "label": "Cocoa",
+          "association": "Cocoa beans are Cameroon's leading agricultural export by value, ahead of cotton and bananas, with cocoa paste and cocoa butter also exported. The National Cocoa and Coffee Office publishes campaign statistics and exporter price indicators for the sector.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 1: Cameroon",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-02_e.pdf",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "Office National du Cacao et du Café (ONCC) — Cameroun",
+              "url": "https://www.oncc.cm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "coffee",
+          "label": "Coffee",
+          "association": "Robusta and Arabica coffee are supervised through the National Cocoa and Coffee Office, which publishes CIF and FOB price indicators for both varieties, and to which all cocoa and coffee exports must be declared before sale.",
+          "sources": [
+            {
+              "title": "Office National du Cacao et du Café (ONCC) — Cameroun",
+              "url": "https://www.oncc.cm",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 1: Cameroon",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-02_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cotton-and-cottonseed-oil",
+          "label": "Cotton and cottonseed oil",
+          "association": "Seed cotton from smallholder farms is ginned into fibre for export, while cottonseed is pressed into refined table oil sold under the Diamaor brand and into cake for animal feed. SODECOTON operates the ginneries and oil mills behind these products.",
+          "sources": [
+            {
+              "title": "SODECOTON — Société de Développement du Coton du Cameroun",
+              "url": "https://sodecoton.cm/",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 1: Cameroon",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-02_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "rubber-palm-oil-and-bananas",
+          "label": "Rubber, palm oil and bananas",
+          "association": "The Cameroon Development Corporation grows rubber, oil palm and bananas on plantations in the Littoral and South West regions, producing semi-finished rubber, palm oil, palm kernel, palm kernel oil and edible bananas for local and export markets.",
+          "sources": [
+            {
+              "title": "Cameroon Development Corporation — About CDC",
+              "url": "https://cdc-cameroon.net/new2014/about-cdc/",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 1: Cameroon",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-02_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "penja-pepper",
+          "label": "Penja pepper",
+          "association": "Penja pepper was the first sub-Saharan African product to obtain protected geographical indication status, registered by the African Intellectual Property Organization and later recognised in the European Union. It is grown around Penja in Cameroon's Littoral Region.",
+          "sources": [
+            {
+              "title": "OAPI — L'OAPI fière partenaire du 1er Festival International du Poivre de Penja",
+              "url": "https://oapi.int/2025/06/30/loapi-fiere-partenaire-du-1er-festival-international-du-poivre-de-penja/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cassava-and-plantains",
+          "label": "Cassava and plantains",
+          "association": "Cassava and plantains are staple food crops, with cassava output around 4.5 million tonnes and plantains around 2.6 million tonnes in 2020. Maize, millet, sorghum and taro are also widely grown for household supply and local markets.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 1: Cameroon",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-02_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "CF",
+      "slug": "central-african-republic",
+      "name": "Central African Republic",
+      "region": "Central Africa",
+      "localizedNames": {
+        "en": "Central African Republic",
+        "fr": "République centrafricaine"
+      },
+      "introduction": "The Central African Republic sits on the northern edge of the Congo Basin, where savannah and dense forest meet. Timber is the leading agricultural export, while gold and diamonds dominate mineral trade, and coffee, cotton and sesame are grown as cash crops. Cassava, maize and groundnuts support household food supply in a fragile rural economy.",
+      "themes": [
+        {
+          "key": "timber",
+          "label": "Timber",
+          "association": "Wood is the Central African Republic's main agricultural export, earning about EUR 32 million in 2019 and supplying roughly a third of total tax revenue. Rough wood and sawn timber move mainly to China and Germany, with production concentrated in the south-west forest massif.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 4: Central African Republic",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-05_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "coffee",
+          "label": "Coffee",
+          "association": "Coffee is a traditional export crop that the government is trying to revive through free seedlings from the national agronomic research institute. Growers must sell to a cooperative or to buyers approved by the ORCCPA, which also carries out export certification, and producer prices are fixed by order of the Ministry of Rural Development.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 4: Central African Republic",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-05_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cotton",
+          "label": "Cotton",
+          "association": "Cotton is a long-established cash crop, but the sector lost almost its entire industry and the authorities are working to revive production. Cotton, carded or combed, is still recorded among the country's leading agricultural exports.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 4: Central African Republic",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-05_e.pdf",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "WTO Trade Profile 2023 — Central African Republic",
+              "url": "https://www.wto.org/english/res_e/statis_e/daily_update_e/trade_profiles/CF_E.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "sesame",
+          "label": "Sesame",
+          "association": "Sesame is grown as a cash crop, with national production recorded at about 130,000 tonnes in 2021. The authorities intend to continue sesame exports initiated with the Enhanced Integrated Framework project in Basse-Kotto and Ouaka.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 4: Central African Republic",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-05_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cassava-and-maize",
+          "label": "Cassava and maize",
+          "association": "Cassava is the main food crop, with fresh output around 822,000 tonnes in 2021, and groundnuts around 485,000 tonnes. Maize, millet and sorghum are also grown, and ongoing conflict limits farmers' access to fields and inputs.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 4: Central African Republic",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-05_e.pdf",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "FAO GIEWS country brief: Central African Republic",
+              "url": "https://cb.apps.fao.org/country.jsp?code=CAF&lang=en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "livestock-and-hides",
+          "label": "Livestock and hides",
+          "association": "Livestock farming has extensive pastureland, and a national livestock development agency supports breeders. Raw hides and skins of bovine animals appear among the country's smaller agricultural exports.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 4: Central African Republic",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-05_e.pdf",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "WTO Trade Profile 2023 — Central African Republic",
+              "url": "https://www.wto.org/english/res_e/statis_e/daily_update_e/trade_profiles/CF_E.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "TD",
+      "slug": "chad",
+      "name": "Chad",
+      "region": "Central Africa",
+      "localizedNames": {
+        "en": "Chad",
+        "fr": "Tchad",
+        "ar": "تشاد"
+      },
+      "introduction": "Chad reaches from Sahelian grazing lands to the shores of Lake Chad and the fertile south. Cotton, gum arabic and sesame are the main cash crops, and livestock is exported on the hoof to Nigeria and Cameroon. Millet, sorghum, berbere and maize anchor household food supply, while oil dominates export earnings.",
+      "themes": [
+        {
+          "key": "gum-arabic",
+          "label": "Gum arabic",
+          "association": "Chad is the world's second-largest exporter of gum arabic after Sudan. Average production is estimated at 12,000 to 13,000 tonnes a year, around a quarter of global output, and the harvest provides seasonal income for more than 500,000 farming and herding households.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 5: Chad",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-06_e.pdf",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "FAO Acacia Operation Project — gums and resins producer countries",
+              "url": "https://www.fao.org/dryland-forestry/projects/detail/acacia-operation-project--support-to-food-security--poverty-alleviation-and-soil-degradation-control-in-the-gums-and-resins-producer-countries/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cotton",
+          "label": "Cotton",
+          "association": "Cotton is one of Chad's main cash crops, and ginned cotton is exported to Asia and Europe. The crop is grown across the southern cotton zones and processed domestically before export.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 5: Chad",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-06_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "sesame",
+          "label": "Sesame",
+          "association": "Sesame is a main cash crop in Chad, grown alongside cotton, groundnuts and sugar cane. Production is recorded in national agricultural statistics.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 5: Chad",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-06_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "livestock",
+          "label": "Livestock",
+          "association": "Chad's other main export product is livestock on the hoof, sent mainly to Nigeria and Cameroon. Many animals are still traded informally across borders, and pastoral grazing shapes rural livelihoods in the Sahel.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 5: Chad",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-06_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "millet-sorghum-and-berbere",
+          "label": "Millet, sorghum and berbere",
+          "association": "Millet, sorghum, berbere, maize and rice are Chad's main food crops, grown across the Sahelian and Sudanian cereal zones. The 2025 cereal harvest was about 10 percent above the five-year average, though erratic rains and insecurity left millions facing acute food insecurity.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Chad",
+              "url": "https://cb.apps.fao.org/country.jsp?code=TCD&lang=en",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 5: Chad",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-06_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "handicrafts",
+          "label": "Handicrafts",
+          "association": "The National Crafts Development Agency (ANDA) exists to strengthen organisations that support handicraft production. Handicrafts accounted for about 0.4 percent of GDP in 2021.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 5: Chad",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-06_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "CG",
+      "slug": "republic-of-the-congo",
+      "name": "Republic of the Congo",
+      "region": "Central Africa",
+      "localizedNames": {
+        "en": "Republic of the Congo",
+        "fr": "République du Congo"
+      },
+      "introduction": "The Republic of the Congo lies on the equator, with Atlantic coastline and vast forest cover. Oil dominates exports, but timber, cocoa, sugar and cassava remain part of the rural economy. Cassava is the main food crop, followed by plantains and yam, while marine and inland fisheries supply coastal and riverine markets.",
+      "themes": [
+        {
+          "key": "cocoa",
+          "label": "Cocoa",
+          "association": "Cocoa beans are exported in modest volumes, and the government plans to expand cocoa and coffee cultivation in forest regions.",
+          "sources": [
+            {
+              "title": "WTO Trade Profile 2023 — Republic of the Congo",
+              "url": "https://www.wto.org/english/res_e/statis_e/daily_update_e/trade_profiles/CG_E.pdf",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 2: Congo, Republic of the",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-03_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "timber",
+          "label": "Timber",
+          "association": "Timber exports are taxed by species and processing stage: 10 percent of free-on-truck value on rough okoumé, afrormosia and ebony, falling to zero on finished products such as flooring, mouldings and furniture parts. Only finished or semi-finished wood, plus rough wood of certain heavy and hardwood species, may be exported, and rough-wood exports are capped at 15 percent of a company's production before surtax applies.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 2: Congo, Republic of the",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-03_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cassava-and-plantains",
+          "label": "Cassava and plantains",
+          "association": "Cassava is the main food crop, followed by plantains, yam and other fruits and vegetables. Domestic cereals are limited, and imports supply about 90 percent of total cereal use, making cassava central to food security.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Congo",
+              "url": "https://cb.apps.fao.org/country.jsp?code=COG&lang=en",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 2: Congo, Republic of the",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-03_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "sugar",
+          "label": "Sugar",
+          "association": "Sugar marketing is managed by SARIS Congo under a monopoly, and part of national production is exported. Refined cane sugar imports are banned, while other sugar types not produced locally may be imported.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 2: Congo, Republic of the",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-03_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "fisheries",
+          "label": "Fisheries",
+          "association": "Congo practises both marine and inland fishing, including small-scale, sardine and trawler fisheries. In 2017, 166,822 people were employed in small-scale inland and marine fisheries, and the state also collects a sardine cannery tax.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 2: Congo, Republic of the",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-03_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "bran-and-milling-residues",
+          "label": "Bran and milling residues",
+          "association": "Bran, sharps and other milling residues are the Republic of the Congo's leading agricultural export line by value, ahead of sugar, cocoa beans and cereal groats. These residues are used in animal feed.",
+          "sources": [
+            {
+              "title": "WTO Trade Profile 2023 — Republic of the Congo",
+              "url": "https://www.wto.org/english/res_e/statis_e/daily_update_e/trade_profiles/CG_E.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "CD",
+      "slug": "democratic-republic-of-the-congo",
+      "name": "Democratic Republic of the Congo",
+      "region": "Central Africa",
+      "localizedNames": {
+        "en": "Democratic Republic of the Congo",
+        "fr": "République démocratique du Congo"
+      },
+      "introduction": "The Democratic Republic of the Congo occupies most of the Congo Basin, with forests, savannah and highlands suited to many crops. Cocoa and coffee are leading agricultural exports, while cassava and maize feed most households. Copper and cobalt dominate total exports, and timber, palm oil and botanical products add to agricultural trade.",
+      "themes": [
+        {
+          "key": "cocoa",
+          "label": "Cocoa",
+          "association": "Cocoa beans are the Democratic Republic of the Congo's leading agricultural export by value, ahead of green coffee. The national coffee office (ONC) levies 3 percent of free-on-board value on cocoa exports, against 4.5 percent on Robusta and 3.5 percent on Arabica coffee.",
+          "sources": [
+            {
+              "title": "WTO Trade Profile 2023 — Democratic Republic of the Congo",
+              "url": "https://www.wto.org/english/res_e/statis_e/daily_update_e/trade_profiles/CD_E.pdf",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/339 — Democratic Republic of the Congo",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s339_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "coffee",
+          "label": "Coffee",
+          "association": "Green coffee is a major agricultural export, with the national coffee office levying different rates on Robusta and Arabica. Coffee and cocoa are the subsectors the government has targeted for productivity, quality and producer-income support.",
+          "sources": [
+            {
+              "title": "WTO Trade Profile 2023 — Democratic Republic of the Congo",
+              "url": "https://www.wto.org/english/res_e/statis_e/daily_update_e/trade_profiles/CD_E.pdf",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/339 — Democratic Republic of the Congo",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s339_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cassava-and-maize",
+          "label": "Cassava and maize",
+          "association": "Cassava and maize are the main food crops, alongside plantains, groundnuts and rice. The 2026 main-season maize area was estimated below the five-year average, and cereal production remains affected by conflict, displacement and climate shocks.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Democratic Republic of the Congo",
+              "url": "https://cb.apps.fao.org/country.jsp?code=COD&lang=en",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/339 — Democratic Republic of the Congo",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s339_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "timber",
+          "label": "Timber",
+          "association": "Forests cover around 155 million hectares, more than 60 percent of the national territory, of which 60 million hectares are exploitable by the timber industry. Declared annual production is around 500,000 cubic metres, and export duties on logs and edged timber are used to encourage local processing.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/339 — Democratic Republic of the Congo",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s339_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "palm-oil",
+          "label": "Palm oil",
+          "association": "Palm oil is among the country's agricultural exports, and oil palm is grown in the Congo Basin alongside rubber, cocoa and coffee. Food crops also include palm nuts, and the government has supported recovery of the oil palm subsector.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/339 — Democratic Republic of the Congo",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s339_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "medicinal-plants",
+          "label": "Medicinal plants and extracts",
+          "association": "Plants and parts of plants, and vegetable saps and extracts, are notable non-food agricultural exports. Medicinal plants appear among the agricultural products covered by the Congolese Control Office's export service fee.",
+          "sources": [
+            {
+              "title": "WTO Trade Profile 2023 — Democratic Republic of the Congo",
+              "url": "https://www.wto.org/english/res_e/statis_e/daily_update_e/trade_profiles/CD_E.pdf",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/339 — Democratic Republic of the Congo",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s339_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "GQ",
+      "slug": "equatorial-guinea",
+      "name": "Equatorial Guinea",
+      "region": "Central Africa",
+      "localizedNames": {
+        "en": "Equatorial Guinea",
+        "es": "Guinea Ecuatorial",
+        "fr": "Guinée équatoriale",
+        "pt": "Guiné Equatorial"
+      },
+      "introduction": "Equatorial Guinea combines the island of Bioko with a mainland region of rainforest and coastal plain. Hydrocarbons dominate the economy, but cocoa remains the main cash crop, and cassava, sweet potatoes and plantains supply local food. Forests and marine resources are identified as sectors for diversification beyond oil and gas.",
+      "themes": [
+        {
+          "key": "cocoa",
+          "label": "Cocoa",
+          "association": "Cocoa is the dominant cash crop, grown mainly on Bioko. The government is working with Bioko producer groups to revive output, register farmers and add local processing capacity.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Equatorial Guinea",
+              "url": "https://cb.apps.fao.org/country.jsp?code=GNQ&lang=en",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "Guinea Ecuatorial Press — El Comité Nacional para la Diversificación Económica recibe a los productores de cacao de Bioko",
+              "url": "https://www.guineaecuatorialpress.com/noticias/el_comite_nacional_para_la_diversificacion_economica_recibe_a_los_productores_de_cacao_de_bioko",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cassava",
+          "label": "Cassava",
+          "association": "Cassava is a main staple crop, with output around 77,000 tonnes in 2024 and near-average levels expected in 2026. Only about 20,000 of 850,000 hectares of arable land are cultivated with staples.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Equatorial Guinea",
+              "url": "https://cb.apps.fao.org/country.jsp?code=GNQ&lang=en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "plantains",
+          "label": "Plantains",
+          "association": "Plantains are a main staple alongside cassava and sweet potatoes, with output around 41,000 tonnes in 2024. Groundnuts and bananas are also grown for local food.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Equatorial Guinea",
+              "url": "https://cb.apps.fao.org/country.jsp?code=GNQ&lang=en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "timber",
+          "label": "Timber",
+          "association": "Equatorial Guinea is endowed with extensive forests alongside its oil and gas reserves, and the green economy is one of the diversification pillars under Agenda 2035.",
+          "sources": [
+            {
+              "title": "World Bank — Equatorial Guinea overview",
+              "url": "https://www.worldbank.org/en/country/equatorialguinea/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "fisheries",
+          "label": "Fisheries",
+          "association": "Marine resources form part of the country's natural asset base, and the blue economy is one of the diversification pillars under Agenda 2035.",
+          "sources": [
+            {
+              "title": "World Bank — Equatorial Guinea overview",
+              "url": "https://www.worldbank.org/en/country/equatorialguinea/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "coffee",
+          "label": "Coffee",
+          "association": "Coffee is being revived alongside cocoa. A cocoa-processing company with more than 30 years of operations in the country has been proposed as the partner to absorb cocoa and coffee output and export it as paste.",
+          "sources": [
+            {
+              "title": "Guinea Ecuatorial Press — El Gobierno cuenta con Casa Mallo para la producción del cacao y el café",
+              "url": "https://www.guineaecuatorialpress.com/index.php/noticias/el_gobierno_cuenta_con_casa_mayo_para_la_produccion_del_cacao_y_el_cafe",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "GA",
+      "slug": "gabon",
+      "name": "Gabon",
+      "region": "Central Africa",
+      "localizedNames": {
+        "en": "Gabon",
+        "fr": "Gabon"
+      },
+      "introduction": "Gabon straddles the equator under dense rainforest, with an economy long centred on oil and manganese. Timber, rubber and palm oil are established or expanding export sectors, while cassava and plantains are the main food crops. The government's diversification programme promotes agricultural entrepreneurship and local processing.",
+      "themes": [
+        {
+          "key": "timber",
+          "label": "Timber",
+          "association": "Timber is a long-established export sector, with okoumé among the country's signature species. ITTO reports Gabon's timber sector contracting in 2026 amid EU deforestation rules and a shift toward Asian markets.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 3: Gabon",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-04_e.pdf",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "ITTO — GTI report: Brazilian, Thai timber sectors strong amid wider production improvement",
+              "url": "https://www.itto.int/news/2026/10/19/gti_report_brazilian_thai_timber_sectors_strong_amid_wider_production_improvement/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "palm-oil",
+          "label": "Palm oil",
+          "association": "Oil palm is expanding under public-private partnerships linked to the GRAINE programme, with SOTRADER and OLAM involved. Gabon aims to become a major African exporter of palm oil and to supply local processing industries.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 3: Gabon",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-04_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "rubber",
+          "label": "Rubber",
+          "association": "Rubber is grown in partnership with OLAM and SIAT-Gabon, and significant investment has gone into hevea plantations. Gabon's stated ambition is to become a major African exporter of rubber alongside palm oil.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 3: Gabon",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-04_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cassava",
+          "label": "Cassava",
+          "association": "Cassava and plantains are Gabon's main food crops, while cereal imports supply about 90 percent of total cereal use. Cassava sowing runs from January to March and supports household food supply.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Gabon",
+              "url": "https://cb.apps.fao.org/country.jsp?code=GAB&lang=en",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 3: Gabon",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-04_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "sugar",
+          "label": "Sugar",
+          "association": "SUCAF-Gabon operates in the sugar sector, and the government aims to resume sugar exports within the subregion. Sugar is among the products identified for high value-added agricultural industry.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 3: Gabon",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-04_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "coffee-and-cocoa",
+          "label": "Coffee and cocoa",
+          "association": "Coffee and cocoa are smallholder crops managed under the CAISTAB stabilisation fund. Production remains low, with cocoa exports not exceeding 35 tonnes a year between 2019 and 2022, and coffee sold almost entirely to local processors.",
+          "sources": [
+            {
+              "title": "WTO Trade Policy Review WT/TPR/S/445 — Annex 3: Gabon",
+              "url": "https://www.wto.org/english/tratop_e/tpr_e/s445-04_e.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "ST",
+      "slug": "sao-tome-and-principe",
+      "name": "São Tomé and Príncipe",
+      "region": "Central Africa",
+      "localizedNames": {
+        "en": "São Tomé and Príncipe",
+        "pt": "São Tomé e Príncipe"
+      },
+      "introduction": "São Tomé and Príncipe is a two-island state in the Gulf of Guinea, with volcanic soils and equatorial rainfall. Cocoa, especially the Amelonado Seleção de São Tomé variety, remains the agricultural anchor, alongside palm oil, copra and pepper. Cocoa agroforestry also yields bananas, breadfruit, taro and jackfruit.",
+      "themes": [
+        {
+          "key": "cocoa",
+          "label": "Cocoa",
+          "association": "São Tomé's Amelonado Seleção de São Tomé cocoa is the only Amelonado variety recognised by the International Cocoa Organization as fine cocoa. It is grown in a four-layer shade system of canopy trees, fruit trees, cocoa and nitrogen-fixing shrubs.",
+          "sources": [
+            {
+              "title": "FAO GIAHS — Cocoa Agroforestry System of São Tomé and Príncipe",
+              "url": "https://www.fao.org/giahs/giahs-around-the-world/sao-tome-and-principe-cocoa-agroforestry-system/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "chocolate",
+          "label": "Chocolate",
+          "association": "Chocolate and other cocoa food preparations are exported from São Tomé and Príncipe.",
+          "sources": [
+            {
+              "title": "WTO Trade Profile 2023 — São Tomé and Príncipe",
+              "url": "https://www.wto.org/english/res_e/statis_e/daily_update_e/trade_profiles/ST_E.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "palm-oil",
+          "label": "Palm oil",
+          "association": "Palm oil and its fractions are among the country's leading agricultural exports, alongside cocoa beans, copra, palm kernel oil and chocolate.",
+          "sources": [
+            {
+              "title": "WTO Trade Profile 2023 — São Tomé and Príncipe",
+              "url": "https://www.wto.org/english/res_e/statis_e/daily_update_e/trade_profiles/ST_E.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "copra-and-palm-kernel-oil",
+          "label": "Copra and palm kernel oil",
+          "association": "Coconut copra and palm kernel oil are exported alongside palm oil.",
+          "sources": [
+            {
+              "title": "WTO Trade Profile 2023 — São Tomé and Príncipe",
+              "url": "https://www.wto.org/english/res_e/statis_e/daily_update_e/trade_profiles/ST_E.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "pepper",
+          "label": "Pepper",
+          "association": "Pepper of the genus Piper is exported in small volumes.",
+          "sources": [
+            {
+              "title": "WTO Trade Profile 2023 — São Tomé and Príncipe",
+              "url": "https://www.wto.org/english/res_e/statis_e/daily_update_e/trade_profiles/ST_E.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "agroforestry-food-crops",
+          "label": "Agroforestry food crops",
+          "association": "The cocoa agroforestry system also produces bananas, breadfruit, taro (matabala) and jackfruit. These crops provide additional food and income alongside cocoa.",
+          "sources": [
+            {
+              "title": "FAO GIAHS — Cocoa Agroforestry System of São Tomé and Príncipe",
+              "url": "https://www.fao.org/giahs/giahs-around-the-world/sao-tome-and-principe-cocoa-agroforestry-system/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    }
+  ]
+}

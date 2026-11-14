@@ -395,6 +395,24 @@ country research (customs, tax, entity, currency, consumer law) is recorded.
 
 Counts: VERIFIED 2, IMPLEMENTED 0, BLOCKED 2, NOT STARTED 2.
 
+### 2.8 Discover Africa editorial discovery (not commerce readiness)
+
+This is an editorial discovery registry, separate from the six-market commerce registry. Publishing a
+country guide does not enable checkout, delivery, currency, language or an operating entity in that
+country. Western Sahara is documented separately as a disputed/non-self-governing territory and is not
+a 55th country page.
+
+| Capability | Reference + evidence | Existing implementation | Gap | Planned adaptation | Owner (agent type) | Acceptance test | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 54-country coverage and direct navigation | `docs/countries/registry-reconciliation.md`; `CountryProfile`; `scripts/country-discovery-acceptance.cjs` | 54 published profiles, 54 flags, directory search, country row and dedicated pages | No approved commerce readiness for 50 of the 54 countries | Keep discovery and commerce separate; add a market only through the commerce checklist | Fullstack agent | Every published code resolves; row/directory/landing coverage; unknown and Western Sahara 404 | VERIFIED (34/34 final acceptance) |
+| Editorial source records | `docs/countries/research/*`; `CountryThemeSource` | 324 themes, 362 sources, 6 per country, all reviewed | Some source associations are single-source or dated; external links were not re-fetched in final acceptance | Periodic editorial recheck; keep access dates | Editorial agent | Every theme has source URL/date; no empty source; publication gate | VERIFIED |
+| Country card row and directory | `components/shop/country-discovery.tsx`; `qa-artifacts/visual/discover-africa/` | 54 lazy-loaded cards after two shelves, six HTML-labelled images, arrows/swipe/keyboard/snap/reduced motion; searchable directory | Broad reused/illustrated imagery remains for some themes; no auto-rotation | Replace broad tiles through the theme editor when accurate assets exist | Frontend agent | 54 cards; no overflow; focus/end-state; search; 390/768/1440 | VERIFIED |
+| Country landing and honest inventory | `app/naijashop/countries/[slug]/page.tsx`; `docs/countries/origin-data-audit.md` | Intro, six themes/sources, separate Known for / Available on NaijaDeals, wholesale/freight links | 0 products currently have recorded origin; populated listing path not exercised | Record genuine origin evidence through Control Center | Fullstack agent | 54/54 pages; empty state; delivery settings unchanged | VERIFIED for empty-state journey; populated origin path IMPLEMENTED but unverified |
+| Country Control Center | `/admin/countries`; `app/api/admin/country-discovery/**`; `lib/auth/permissions.ts` | Draft/edit/preview/publish/unpublish, source editing, order/featuring, audit, origin review | No dedicated `country_publisher`/`country_origin_reviewer` account exists in REVIEW; role separation is code-verified only | Create named staff roles when used operationally | Backend/Security agent | Admin edit/preview/publish/public, scoped and anonymous refusals, drift gate | VERIFIED (34/34) |
+| Kie theme imagery | `docs/countries/imagery-manifest.md`; `public/generated/countries` assets | 12 generated WebP, 72 credits; 231 approved-existing/illustration tiles | No further generation after host approval timeouts; some themes broad | Replace only where an accurate asset exists; no top-up | Visual assets agent | 324/324 URLs, alt, provenance; no fabricated landmarks/text | VERIFIED for integrity; correspondence has documented broad matches |
+
+Counts: VERIFIED 5, IMPLEMENTED 1, BLOCKED 0, NOT STARTED 0 for this editorial slice. Commerce counts above are unchanged.
+
 ## 3. Cross-cutting shared capabilities
 
 | Capability | Reference + evidence | Existing implementation | Gap | Planned adaptation | Owner (agent type) | Acceptance test | Status |

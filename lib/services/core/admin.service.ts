@@ -995,7 +995,20 @@ export async function listAssignableRoles() {
   });
 }
 
-const ROLE_NAMES = ["super_admin", "admin", "ops", "finance", "support", "moderator", "customer", "vendor", "courier", "driver"];
+const ROLE_NAMES = [
+  "super_admin",
+  "admin",
+  "ops",
+  "finance",
+  "support",
+  "moderator",
+  "customer",
+  "vendor",
+  "courier",
+  "driver",
+  "country_publisher",
+  "country_origin_reviewer"
+];
 
 /**
  * Replace a user's roles and region scope.

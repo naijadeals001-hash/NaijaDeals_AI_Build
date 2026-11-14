@@ -373,7 +373,16 @@ model Product {
   condition      String           @default("NEW")
   priceKobo      BigInt
   compareAtKobo  BigInt?
+  /// Marketplace fulfilment country. This is not the product's country of origin.
   countryCode    String           @default("NG")
+  /// Recorded product country of origin. Never inferred from the seller's
+  /// location or from a cultural/style association.
+  originCountryCode String?
+  /// SELLER_DECLARED or VERIFIED. VERIFIED requires an operator's recorded basis.
+  originBasis    String?
+  originNote     String?
+  originVerifiedAt DateTime?
+  originVerifiedBy String?
   weightGrams    Int              @default(500)
   /// escrow = paid through checkout; contact = seller-handled enquiry only.
   saleMode       SaleMode         @default(escrow)
@@ -395,6 +404,8 @@ model Product {
   savedBy        SavedItem[]
   /// Sample/fixture catalogue rows are excluded from the public storefront by default.
   isSample          Boolean            @default(false)
+
+  @@index([originCountryCode, status])
 }
 
 model ProductImage {
@@ -4214,4 +4225,82 @@ model PlusPromotion {
 
   @@index([status, sortOrder])
   @@index([kind, status])
+}
+
+/// Editorial "Discover Africa" country record. This registry is deliberately
+/// separate from the commerce COUNTRIES configuration: publishing a country
+/// profile does not enable checkout, delivery, currency or a marketplace
+/// operating entity in that country.
+enum CountryEditorialStatus {
+  NEEDS_REVIEW
+  REVIEWED
+}
+
+enum CountryPublicationStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model CountryProfile {
+  code              String                    @id
+  slug              String                    @unique
+  name              String
+  region            String
+  localizedNames    Json?
+  introduction      String
+  editorialStatus   CountryEditorialStatus    @default(NEEDS_REVIEW)
+  publicationStatus CountryPublicationStatus  @default(DRAFT)
+  /// Featured on the Shop country rail. Featuring changes order, never coverage:
+  /// every published country remains reachable from the directory.
+  homeFeatured      Boolean                   @default(false)
+  sortOrder         Int                       @default(0)
+  publishedAt       DateTime?
+  publishedBy       String?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  themes CountryTheme[]
+
+  @@index([publicationStatus, sortOrder])
+  @@index([homeFeatured, sortOrder])
+}
+
+/// One editorial "Known for" association. It is information about the country,
+/// not evidence that NaijaDeals supplies the product.
+model CountryTheme {
+  id                String                  @id @default(cuid())
+  countryCode       String
+  key               String
+  label             String
+  association       String
+  imageUrl          String?
+  imageAlt          String?
+  imageKind         String?
+  imageProvenance   String?
+  sortOrder         Int                     @default(0)
+  editorialStatus   CountryEditorialStatus  @default(NEEDS_REVIEW)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  country CountryProfile       @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+  sources CountryThemeSource[]
+
+  @@unique([countryCode, key])
+  @@index([countryCode, sortOrder])
+}
+
+model CountryThemeSource {
+  id        String   @id @default(cuid())
+  themeId   String
+  title     String
+  publisher String?
+  url       String
+  accessedAt DateTime
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  theme CountryTheme @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@unique([themeId, url])
+  @@index([themeId, sortOrder])
 }

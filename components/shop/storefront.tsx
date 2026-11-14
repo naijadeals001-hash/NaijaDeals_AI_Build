@@ -22,7 +22,9 @@ import {
 } from "@/lib/taxonomy-api";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { CategoryRail, categoryRailEntries, isStorefrontListing } from "./category-rail";
+import { CountryDiscoveryRow } from "./country-discovery";
 import { MarketplaceProductCard } from "./marketplace-card";
+import type { CountryCardSummary } from "@/lib/services/countries/discovery.service";
 import { announceShopCartCount } from "./shop-header";
 
 type StorefrontConfig = {
@@ -270,9 +272,11 @@ function pickExplore(
  * still starts with a producer quote and independent freight.
  */
 export function NaijaDealsMarketplace({
-  initialShopAvailability = null
+  initialShopAvailability = null,
+  initialCountries = []
 }: {
   initialShopAvailability?: ShopAvailability | null;
+  initialCountries?: CountryCardSummary[];
 } = {}) {
   const { country, city } = useLocale();
   const [products, setProducts] = useState<ApiProduct[]>([]);
@@ -806,7 +810,18 @@ export function NaijaDealsMarketplace({
         ) : null}
 
         {shopOpen && status === "ready" && showShelves
-          ? discovery.shelves.map(({ shelf, items }) => (
+          ? discovery.shelves.slice(0, 2).map(({ shelf, items }) => (
+              <ProductShelf key={shelf.id} shelf={shelf} items={items} onAdd={addToCart} addingId={addingId} addedId={addedId} />
+            ))
+          : null}
+
+        {/* Editorial discovery sits after the first retail shelves, never ahead
+            of them. It is not a marketplace availability claim and does not
+            change the selected delivery market. */}
+        {shopOpen && status !== "loading" ? <CountryDiscoveryRow countries={initialCountries} /> : null}
+
+        {shopOpen && status === "ready" && showShelves
+          ? discovery.shelves.slice(2).map(({ shelf, items }) => (
               <ProductShelf key={shelf.id} shelf={shelf} items={items} onAdd={addToCart} addingId={addingId} addedId={addedId} />
             ))
           : null}

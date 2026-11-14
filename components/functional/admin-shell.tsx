@@ -32,6 +32,7 @@ import {
   Sparkles,
   FolderTree,
   Power,
+  Globe2,
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { normalizeTab, TAB_LABELS, type AdminTab } from "@/lib/admin/admin-navigation";
@@ -85,6 +86,7 @@ const adminNavItems: NavItem[] = [
       { id: "applications", label: "Seller applications", icon: <UserCheck className="h-4 w-4" />, href: "/admin?tab=applications" },
       { id: "catalogue", label: "Catalogue workflow", icon: <Package className="h-4 w-4" />, href: "/admin/catalogue" },
       { id: "taxonomy", label: "Taxonomy", icon: <FolderTree className="h-4 w-4" />, href: "/admin/taxonomy" },
+      { id: "discovery", label: "Discover Africa", icon: <Globe2 className="h-4 w-4" />, href: "/admin/countries" },
     ],
   },
   {
@@ -160,13 +162,14 @@ export function AdminShell({
   const isSuperAdminPath = pathname?.startsWith("/super-admin") ?? false;
   const isPlusPath = pathname?.startsWith("/admin/plus") ?? false;
   const isCataloguePath = pathname?.startsWith("/admin/catalogue") ?? false;
+  const isDiscoveryPath = pathname?.startsWith("/admin/countries") ?? false;
   const isTaxonomyPath = pathname?.startsWith("/admin/taxonomy") ?? false;
   const isVerticalsPath = pathname?.startsWith("/admin/verticals") ?? false;
   const currentTab = normalizeTab(searchParams.get("tab"));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>(() => {
-    if (isTaxonomyPath || isCataloguePath) return ["catalog"];
+    if (isTaxonomyPath || isCataloguePath || isDiscoveryPath) return ["catalog"];
     if (currentTab === "products" || currentTab === "reviews" || currentTab === "applications") return ["catalog"];
     if (currentTab === "payments" || currentTab === "payouts") return ["finance"];
     if (["users", "vendors", "couriers", "drivers"].includes(currentTab)) return ["people"];
@@ -212,8 +215,9 @@ export function AdminShell({
     if (href === "/admin/plus") return isPlusPath;
     if (href === "/admin/catalogue") return isCataloguePath;
     if (href === "/admin/taxonomy") return isTaxonomyPath;
+    if (href === "/admin/countries") return isDiscoveryPath;
     if (href === "/admin/verticals") return isVerticalsPath;
-    if (isPlusPath || isCataloguePath || isTaxonomyPath || isVerticalsPath) return false;
+    if (isPlusPath || isCataloguePath || isTaxonomyPath || isVerticalsPath || isDiscoveryPath) return false;
     const tab: AdminTab = normalizeTab(href.includes("tab=") ? href.split("tab=")[1] : "overview");
     return currentTab === tab;
   };
@@ -459,9 +463,9 @@ export function AdminShell({
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h1 className="hidden font-display text-xl font-extrabold text-[#F0F6FC] lg:block">
-              {isSuperAdminPath ? "Super admin" : TAB_LABELS[currentTab]}
-            </h1>
+            <p className="hidden font-display text-xl font-extrabold text-[#F0F6FC] lg:block">
+              {isSuperAdminPath ? "Super admin" : isDiscoveryPath ? "Country discovery" : TAB_LABELS[currentTab]}
+            </p>
           </div>
 
           <div className="flex items-center gap-3">

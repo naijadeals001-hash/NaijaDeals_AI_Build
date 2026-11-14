@@ -4991,3 +4991,70 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   landing 95/95, rail 150/150, basket 10/10, financial 46/46; DB restored to 253/57 ACTIVE,
   0 variants, 0 activation rows. Screenshots/probe under
   `qa-artifacts/visual/final-independent-71392e4/`.
+
+## 2026-11-14 — Discover Africa, country by country
+
+**Serviced build:** `8V0zQOmjU9smSC40XLGRJ` (`NEXT_DIST_DIR=.next-programme`, REVIEW catalogue) on
+`http://localhost:3047`, database `naijadeals_review` (REVIEW). Source HEAD was `fb1ff28` plus this
+uncommitted slice. No production deployment, live charge, payout or provider charge occurred.
+
+**Scope delivered.**
+- Separate editorial discovery registry: 54 country profiles, 54 published, 324 themes, 362 source
+  records, all 54/54 editorially reviewed. The 54 reconcile to the 54 UN African member states.
+  Western Sahara is documented separately in `docs/countries/registry-reconciliation.md`; it is not a
+  55th page and is not merged into Morocco. Somaliland is excluded.
+- Shop row: 54 tall cards after the first two retail shelves; six HTML-labelled images per country;
+  flags; intro; Explore link; arrows (now visible at 390), swipe/trackpad, keyboard Home/End/arrows,
+  snap, reduced motion, no auto-rotation, lazy images, true-end state and “More” hint.
+- Searchable directory `/naijashop/countries` and landing pages `/naijashop/countries/[slug]` for
+  all 54. Known for is explicitly separate from Available on NaijaDeals. Empty origin inventory is
+  honest; browsing never changes delivery country/address/currency/language.
+- Control Center `/admin/countries`: country intro/status/order/featuring, six themes with sources,
+  image/alt, draft preview, publish/unpublish, audit history, and a separate origin-evidence tab.
+  Publication requires reviewed country + themes, sources, images and alt text. Unpublish deletes
+  nothing. Ordinary `admin` can draft but is withheld publication and origin review; new
+  `country_publisher` and `country_origin_reviewer` roles separate the duties. Scoped admins are
+  region-limited, including audit and origin country.
+- Origin schema: `Product.originCountryCode`, `originBasis`, `originNote`, `originVerifiedAt/By`.
+  Public country inventory filters on recorded origin only; vendor location, fulfilment country,
+  category/style and demo status are not substitutes. VERIFIED requires a ≥20-character evidence note.
+- Migrations: `20261114074843_country_discovery` and `20261114110000_country_theme_source_unique`,
+  both recorded applied on REVIEW. No unrelated index drop.
+
+**Agents actually used.**
+- East Africa research resolution: `agent_d950623c-fc13-4a22-a6ab-3dc93a3f47ab` — 84/84 sourced.
+- West Africa research resolution: `agent_701efe07-1ad5-4d86-93df-292529108e60` — 96/96 sourced.
+- Final editorial review: `agent_c0e23b70-41d1-46d9-8418-b056c64d9c31` — 11 remaining countries
+  reviewed, 54/54, 362 sources.
+- Independent journey review: `agent_2f2961c5-e11e-4123-909a-f9334019ec2c` — 54/54 coverage and
+  directory/landing/admin/delivery review; found the row-end, button-hidden, contrast, duplicate-H1
+  and 200-row findings, which were fixed and rechecked.
+- Independent security review: `agent_6e6ddeb7-ccc2-4041-b5c4-2fd8d76d1f60` — found the
+  role-separation, acceptance-DB-guard, audit-scope, published-drift, origin-scope and duplicate-source
+  findings, which were fixed.
+- Independent imagery review: `agent_4ac60da2-e285-4551-a7a2-2800df194696` — found 28 material
+  fallback mismatches; targeted remaps and nine additional original illustrations were applied.
+- Data/backend, public UI, Control Center and Kie integration were implemented by the coordinator;
+  no separate implementation subagent was used. The final report must not claim otherwise.
+
+**Verification.**
+- `scripts/country-discovery-acceptance.cjs`: **34/34** on the frozen build, including 54 pages,
+  six labels per page, directory coverage, 404 cases, delivery-cookie preservation, scoped/ordinary
+  admin refusals, drift gates, audit/origin scope, unpublish → public 404 → authorized preview 200 →
+  republish 200. Log: `qa-artifacts/visual/discover-africa/acceptance-final4.log`.
+- 324/324 theme image URLs resolve on disk; 68 distinct assets; 324/324 alt; 93 GENERATED,
+  135 APPROVED_EXISTING, 96 ILLUSTRATION. No null images.
+- Kie: 12 generated WebP, 72 credits, model `gpt-image-2-5-flare-text-to-image`, tasks recorded in
+  `docs/countries/imagery-manifest.md`. Further host approvals timed out; no REST bypass, no top-up.
+- Visual evidence under `qa-artifacts/visual/discover-africa/` (390/768/1440 directory, row, landing,
+  admin; reviewer folders).
+
+**Remaining gaps.**
+- No product currently has a recorded origin, so every country's Available on NaijaDeals section is
+  an honest empty state; the populated origin path is implemented and code-reviewed but not exercised
+  with real supply. Dispatch location is not separately modelled.
+- Some theme images are broad existing assets or original illustrations rather than specific
+  commodity photographs; the remaining broad matches are recorded in the imagery manifest.
+- External source URLs were checked for presence/format, not re-fetched in final acceptance.
+- GitHub preservation remains blocked: `gh auth status` is not logged in and the known credential was
+  rejected; no push, no force-push, no credential retry. Local commits remain the preservation path.

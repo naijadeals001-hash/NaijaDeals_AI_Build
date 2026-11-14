@@ -1,0 +1,1696 @@
+{
+  "region": "West Africa",
+  "feature": "NaijaDeals Shop — Discover Africa",
+  "accessedAt": "2026-11-14",
+  "editorialStandard": "Themes describe cultural and economic associations, not NaijaDeals supply availability. Rankings and volume claims appear only where the cited source states them. Themes with no adequate fetched source carry reviewStatus needs-source.",
+  "countries": [
+    {
+      "code": "BJ",
+      "slug": "benin",
+      "name": "Benin",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Benin",
+        "fr": "Bénin"
+      },
+      "introduction": "Benin links a busy coastal port to cotton, pineapple and shea-producing hinterlands, with Cotonou handling trade for its landlocked neighbours. Commercial life runs through port corridors, crop processing and a growing garment sector that supplies regional and European buyers.",
+      "themes": [
+        {
+          "key": "cotton",
+          "label": "Cotton",
+          "association": "Seed cotton grown across the northern belt and ginned for fibre; the WTO's trade policy review notes that cotton and its by-products dominate Benin's goods exports.",
+          "sources": [
+            {
+              "title": "Trade Policy Review: Benin (WT/TPR/S/362)",
+              "url": "https://www.wto.org/french/tratop_f/tpr_f/s362-01_f.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "pineapple",
+          "label": "Pineapple",
+          "association": "Fresh pineapple and juice from the Allada plateau; the Pain de Sucre variety has held a protected geographical indication since 2020, and national output is estimated at about 450,000 tonnes a year.",
+          "sources": [
+            {
+              "title": "Filière ananas – PACOFIDE",
+              "url": "https://pacofide.agriculture.gouv.bj/produit/9",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "shea",
+          "label": "Shea",
+          "association": "Shea kernels and butter collected and processed by rural women's groups in the north.",
+          "sources": [
+            {
+              "title": "Global Shea Alliance – about the shea industry",
+              "url": "https://www.globalshea.com/about",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "rice-and-maize",
+          "label": "Rice and maize",
+          "association": "Lowland rice and maize grown for household food and regional markets.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Benin",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=BEN",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "garments",
+          "label": "Garments",
+          "association": "Cut-make-trim garment production that the World Bank includes in Benin's manufacturing base.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Benin",
+              "url": "https://www.worldbank.org/en/country/benin/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "port-and-transit",
+          "label": "Port and transit trade",
+          "association": "Cotonou's port, terminal and logistics services, which the World Bank describes as leading the service sector alongside trade and transport.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Benin",
+              "url": "https://www.worldbank.org/en/country/benin/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "BF",
+      "slug": "burkina-faso",
+      "name": "Burkina Faso",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Burkina Faso",
+        "fr": "Burkina Faso"
+      },
+      "introduction": "Burkina Faso is a landlocked Sahelian economy where gold and cotton anchor exports while millet, sorghum and livestock sustain rural households. Ouagadougou's craft fair has made the country a meeting point for West African artisans and buyers.",
+      "themes": [
+        {
+          "key": "cotton",
+          "label": "Cotton",
+          "association": "Seed cotton ginned into fibre; SOFITEX reports handling about 80 percent of Burkina Faso's cotton production and paying growers each season.",
+          "sources": [
+            {
+              "title": "SOFITEX – Société Burkinabè des Fibres Textiles",
+              "url": "https://www.sofitex.bf/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "gold",
+          "label": "Gold",
+          "association": "Gold mining that the World Bank identifies as a driver of industry and a support to the external balance.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Burkina Faso",
+              "url": "https://www.worldbank.org/en/country/burkinafaso/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "shea",
+          "label": "Shea",
+          "association": "Shea kernels and butter collected and processed across the savannah parklands, a sector the Global Shea Alliance links to rural women's livelihoods.",
+          "sources": [
+            {
+              "title": "Global Shea Alliance – about the shea industry",
+              "url": "https://www.globalshea.com/about",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "crafts",
+          "label": "Craft industries",
+          "association": "Textiles, bronze, leather, basketry and jewellery shown at Ouagadougou's international craft fair, one of the continent's largest artisan gatherings.",
+          "sources": [
+            {
+              "title": "SIAO – Salon International de l'Artisanat de Ouagadougou",
+              "url": "https://www.siao.bf/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cereals",
+          "label": "Millet, sorghum and fonio",
+          "association": "Millet, sorghum, maize and fonio grown for household food and local markets, with coarse-grain prices closely watched.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Burkina Faso",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=BFA",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "livestock",
+          "label": "Livestock",
+          "association": "Cattle, sheep and goats raised across the Sahel, part of the agricultural economy the World Bank describes alongside farming.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Burkina Faso",
+              "url": "https://www.worldbank.org/en/country/burkinafaso/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "CV",
+      "slug": "cabo-verde",
+      "name": "Cabo Verde",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Cabo Verde",
+        "pt": "Cabo Verde",
+        "fr": "Cap-Vert"
+      },
+      "introduction": "Cabo Verde is an Atlantic archipelago whose economy leans on tourism, services and marine resources rather than large-scale farming. Smallholder coffee on Fogo and irrigated island horticulture show how scarce arable land is farmed carefully and intensively.",
+      "themes": [
+        {
+          "key": "fogo-coffee",
+          "label": "Fogo coffee",
+          "association": "Arabica grown on Fogo's volcanic slopes between 350 and 1,300 metres, harvested from February, with current output a little over 100 tonnes a year.",
+          "sources": [
+            {
+              "title": "Café do Fogo: O Melhor do Mundo",
+              "url": "https://www.cmmost.cv/cafe-fogo",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "tourism",
+          "label": "Island tourism",
+          "association": "Island tourism that the World Bank says employs more than two thirds of the population and contributes about a quarter of GDP.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Cabo Verde",
+              "url": "https://www.worldbank.org/en/country/caboverde/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "blue-economy",
+          "label": "Blue economy",
+          "association": "Coastal and marine livelihoods supported through the World Bank's Resilient Tourism and Blue Economy Development Project.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Cabo Verde",
+              "url": "https://www.worldbank.org/en/country/caboverde/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "horticulture",
+          "label": "Horticulture and maize",
+          "association": "Irrigated vegetables, beans and maize grown in island valleys, where maize is virtually the only cereal.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Cabo Verde",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=CPV",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "renewable-energy",
+          "label": "Renewable energy",
+          "association": "Solar and wind generation supported by the Renewable Energy and Improved Utility Performance Project.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Cabo Verde",
+              "url": "https://www.worldbank.org/en/country/caboverde/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "export-services",
+          "label": "Export services",
+          "association": "Trade and investment facilitation for exporters of goods and services, provided by the national trade and investment agency.",
+          "sources": [
+            {
+              "title": "Cabo Verde TradeInvest – investment and export promotion",
+              "url": "https://cvtradeinvest.cv/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "CI",
+      "slug": "cote-divoire",
+      "name": "Côte d'Ivoire",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Côte d'Ivoire",
+        "fr": "Côte d'Ivoire"
+      },
+      "introduction": "Côte d'Ivoire is the world's largest cocoa producer and a major exporter of cashew, mango, shea and palm oil. Abidjan's port and processing industries turn these commodities into an export economy that also includes offshore hydrocarbons.",
+      "themes": [
+        {
+          "key": "cocoa",
+          "label": "Cocoa",
+          "association": "Cocoa beans from the world's leading producer, with processing into butter, liquor and powder.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Côte d'Ivoire",
+              "url": "https://www.worldbank.org/en/country/cotedivoire/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cashew",
+          "label": "Cashew",
+          "association": "Raw cashew nuts and kernels, with processed exports reported above 30 percent of production.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Côte d'Ivoire",
+              "url": "https://www.worldbank.org/en/country/cotedivoire/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "mango",
+          "label": "Mango",
+          "association": "Mangoes supported under an agricultural value-chain project that also covers shea and palm oil.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Côte d'Ivoire",
+              "url": "https://www.worldbank.org/en/country/cotedivoire/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "shea",
+          "label": "Shea",
+          "association": "Shea kernels and butter from the northern savannah, part of a value-chain programme with mango and palm oil.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Côte d'Ivoire",
+              "url": "https://www.worldbank.org/en/country/cotedivoire/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "palm-oil",
+          "label": "Palm oil",
+          "association": "Palm oil produced for regional and international markets.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Côte d'Ivoire",
+              "url": "https://www.worldbank.org/en/country/cotedivoire/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "hydrocarbons",
+          "label": "Oil and gas",
+          "association": "Offshore oil and gas that the World Bank describes as an expanding industry.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Côte d'Ivoire",
+              "url": "https://www.worldbank.org/en/country/cotedivoire/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "GM",
+      "slug": "gambia",
+      "name": "Gambia",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Gambia",
+        "fr": "Gambie"
+      },
+      "introduction": "The Gambia follows the river of the same name, with groundnuts, rice and horticulture supporting most rural livelihoods. Coastal tourism, artisanal fisheries and a small manufacturing base add earnings beyond the single river corridor that defines the country.",
+      "themes": [
+        {
+          "key": "groundnut",
+          "label": "Groundnuts",
+          "association": "Groundnuts bought and traded through the national food-security corporation, which reports more than 100,000 tonnes purchased in recent seasons.",
+          "sources": [
+            {
+              "title": "National Food Security, Processing and Marketing Corporation (NFSPMC)",
+              "url": "https://nfsc.gm/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cashew",
+          "label": "Cashew",
+          "association": "Cashew orchards supported under an agricultural value-chains project.",
+          "sources": [
+            {
+              "title": "World Bank country overview: The Gambia",
+              "url": "https://www.worldbank.org/en/country/gambia/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "rice",
+          "label": "Rice",
+          "association": "Rice and maize grown along the river, with government seed distribution and a sustainable rice and millet food-systems project.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Gambia",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=GMB",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "horticulture",
+          "label": "Horticulture",
+          "association": "Vegetables and fruit for hotels, urban markets and export, listed among The Gambia's agricultural value chains.",
+          "sources": [
+            {
+              "title": "Invest in Agribusiness in The Gambia",
+              "url": "https://giepa.gm/industries/agribusiness/",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "World Bank country overview: The Gambia",
+              "url": "https://www.worldbank.org/en/country/gambia/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "fisheries",
+          "label": "Fisheries and aquaculture",
+          "association": "Artisanal and coastal fisheries plus aquaculture, identified by the investment agency as a priority value chain.",
+          "sources": [
+            {
+              "title": "Invest in Agribusiness in The Gambia",
+              "url": "https://giepa.gm/industries/agribusiness/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "tourism",
+          "label": "Tourism",
+          "association": "Coastal and river tourism; the World Bank reports arrivals rising 5.4 percent to 120,713 in the first half of 2026.",
+          "sources": [
+            {
+              "title": "World Bank country overview: The Gambia",
+              "url": "https://www.worldbank.org/en/country/gambia/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "GH",
+      "slug": "ghana",
+      "name": "Ghana",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Ghana"
+      },
+      "introduction": "Ghana combines cocoa, gold and oil exports with a broad non-traditional export sector that includes shea, pineapple, seafood and handwoven cloth. Accra and Kumasi anchor trade, processing and a growing creative-industry supply chain serving regional and international buyers.",
+      "themes": [
+        {
+          "key": "cocoa",
+          "label": "Cocoa",
+          "association": "Cocoa beans regulated and marketed through the national cocoa board, which sets the producer price and publishes purchases and exports by destination.",
+          "sources": [
+            {
+              "title": "Ghana Cocoa Board (COCOBOD)",
+              "url": "https://cocobod.gh/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "handwoven-textiles",
+          "label": "Fugu and handwoven cloth",
+          "association": "Handwoven fugu smock from the northern regions, which the export authority promotes as a heritage textile for international buyers.",
+          "sources": [
+            {
+              "title": "Fugu: Preserving Heritage, Promoting Exports",
+              "url": "https://www.gepaghana.org/publication/fugu-preserving-heritage-promoting-exports/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "shea",
+          "label": "Shea",
+          "association": "Shea kernels and butter processed mainly by women's cooperatives, a sector the Global Shea Alliance supports across West Africa.",
+          "sources": [
+            {
+              "title": "Global Shea Alliance – about the shea industry",
+              "url": "https://www.globalshea.com/about",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "gold",
+          "label": "Gold",
+          "association": "Gold exports that the World Bank identifies as supporting a current account surplus.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Ghana",
+              "url": "https://www.worldbank.org/en/country/ghana/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "pineapple",
+          "label": "Pineapple",
+          "association": "Pineapple grown for processing, packaging and sale at home and abroad.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Ghana",
+              "url": "https://www.worldbank.org/en/country/ghana/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "fisheries",
+          "label": "Fisheries",
+          "association": "Marine and inland fisheries listed among the export authority's priority sectors.",
+          "sources": [
+            {
+              "title": "Ghana Export Promotion Authority",
+              "url": "https://www.gepaghana.org/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "GN",
+      "slug": "guinea",
+      "name": "Guinea",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Guinea",
+        "fr": "Guinée"
+      },
+      "introduction": "Guinea holds some of the world's largest bauxite reserves and is adding iron ore from Simandou to a mining economy long centred on Conakry's port. Agriculture, including rice, maize and fonio, remains the largest employer.",
+      "themes": [
+        {
+          "key": "bauxite",
+          "label": "Bauxite",
+          "association": "Bauxite that APIP says accounts for about a quarter of world reserves, with export volumes up 31 percent year on year in the first half of 2025.",
+          "sources": [
+            {
+              "title": "APIP – Agence de Promotion des Investissements Privés",
+              "url": "https://apip.gov.gn/",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "World Bank country overview: Guinea",
+              "url": "https://www.worldbank.org/en/country/guinea/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "iron-ore",
+          "label": "Iron ore",
+          "association": "Iron ore from Simandou, which the World Bank says is ramping up exports and driving mining growth.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Guinea",
+              "url": "https://www.worldbank.org/en/country/guinea/overview",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "APIP – Agence de Promotion des Investissements Privés",
+              "url": "https://apip.gov.gn/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "gold",
+          "label": "Gold",
+          "association": "Gold within a mining portfolio that APIP lists alongside bauxite, iron ore, diamonds and rare minerals.",
+          "sources": [
+            {
+              "title": "APIP – Agence de Promotion des Investissements Privés",
+              "url": "https://apip.gov.gn/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "fonio",
+          "label": "Fonio",
+          "association": "Fonio, the ancient cereal that the World Bank lists among promoted agricultural exports.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Guinea",
+              "url": "https://www.worldbank.org/en/country/guinea/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "rice-and-maize",
+          "label": "Rice and maize",
+          "association": "Rice and maize grown in lowlands and uplands, part of the agropastoral sector described in the FAO brief.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Guinea",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=GIN",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "hydropower",
+          "label": "Hydropower",
+          "association": "Hydropower potential that APIP highlights alongside mining and agriculture.",
+          "sources": [
+            {
+              "title": "APIP – Agence de Promotion des Investissements Privés",
+              "url": "https://apip.gov.gn/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "GW",
+      "slug": "guinea-bissau",
+      "name": "Guinea-Bissau",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Guinea-Bissau",
+        "pt": "Guiné-Bissau",
+        "fr": "Guinée-Bissau"
+      },
+      "introduction": "Guinea-Bissau's export economy rests heavily on raw cashew nuts, grown by smallholders across the mainland. Rice, coarse grains and coastal fisheries support daily life around the Bijagós archipelago and the country's river estuaries and island communities.",
+      "themes": [
+        {
+          "key": "cashew",
+          "label": "Cashew",
+          "association": "Raw cashew nuts that the World Bank calls the main export driver, with a strong 2025 harvest.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Guinea-Bissau",
+              "url": "https://www.worldbank.org/en/country/guineabissau/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "rice",
+          "label": "Rice",
+          "association": "Rice grown in lowland and irrigated systems, one of the country's two main cereal groups.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Guinea-Bissau",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=GNB",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "coarse-grains",
+          "label": "Maize, millet and sorghum",
+          "association": "Maize, millet and sorghum grown alongside rice for household food.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Guinea-Bissau",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=GNB",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "fisheries",
+          "label": "Fisheries",
+          "association": "Artisanal and industrial fishing managed under the Ministry of Fisheries, whose statistics report 245 licences, 234 vessels and a January biological rest period.",
+          "sources": [
+            {
+              "title": "Ministério das Pescas – Guiné-Bissau",
+              "url": "https://pescas.gw/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "ecotourism",
+          "label": "Bijagós ecotourism",
+          "association": "Visits across the Bolama-Bijagós Biosphere Reserve and other protected areas, guided through the national biodiversity institute.",
+          "sources": [
+            {
+              "title": "Ecoturismo – IBAP Guiné-Bissau",
+              "url": "https://ecoturismo.ibapgbissau.org/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "services",
+          "label": "Services",
+          "association": "Services, which the World Bank names alongside agriculture as a key growth driver for Guinea-Bissau.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Guinea-Bissau",
+              "url": "https://www.worldbank.org/en/country/guineabissau/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "LR",
+      "slug": "liberia",
+      "name": "Liberia",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Liberia",
+        "fr": "Libéria"
+      },
+      "introduction": "Liberia's economy is shaped by rubber, iron ore, gold and timber, with Monrovia as the main port and commercial centre. Rice farming and tree crops such as cocoa support rural households alongside these extractive and plantation sectors.",
+      "themes": [
+        {
+          "key": "rubber",
+          "label": "Rubber",
+          "association": "Natural rubber from plantations and smallholder tapping, one of Liberia's named exports.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Liberia",
+              "url": "https://www.worldbank.org/en/country/liberia/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "iron-ore",
+          "label": "Iron ore",
+          "association": "Iron ore mining and export, one of the commodities the World Bank names in Liberia's export base.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Liberia",
+              "url": "https://www.worldbank.org/en/country/liberia/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "gold",
+          "label": "Gold",
+          "association": "Gold, which the World Bank lists among Liberia's exports.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Liberia",
+              "url": "https://www.worldbank.org/en/country/liberia/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "timber",
+          "label": "Timber",
+          "association": "Timber and value-added wood products from Liberia's forests.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Liberia",
+              "url": "https://www.worldbank.org/en/country/liberia/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "rice",
+          "label": "Rice",
+          "association": "Paddy rice, with about 322,000 tonnes produced in 2025 and irrigated lowland development in Lofa, Nimba and Bong.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Liberia",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=LBR",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cocoa",
+          "label": "Cocoa",
+          "association": "Cocoa planting and tree-crop extension promoted by the Ministry of Agriculture.",
+          "sources": [
+            {
+              "title": "Ministry of Agriculture – Republic of Liberia",
+              "url": "https://moa.gov.lr/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "ML",
+      "slug": "mali",
+      "name": "Mali",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Mali",
+        "fr": "Mali"
+      },
+      "introduction": "Mali is a landlocked Sahelian country where gold and cotton dominate formal exports while millet, sorghum and rice support most households. Bamako and Ségou also sustain artisan textiles, including bogolan, alongside livestock herding and river fishing.",
+      "themes": [
+        {
+          "key": "cotton",
+          "label": "Cotton",
+          "association": "Seed cotton ginned and marketed through Mali's national cotton company, which describes cotton as an engine of the national economy.",
+          "sources": [
+            {
+              "title": "CMDT – Compagnie Malienne pour le Développement des Textiles",
+              "url": "https://cmdt-mali.net/",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "World Bank country overview: Mali",
+              "url": "https://www.worldbank.org/en/country/mali/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "gold",
+          "label": "Gold",
+          "association": "Gold, which the World Bank identifies among Mali's main exports.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Mali",
+              "url": "https://www.worldbank.org/en/country/mali/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "lithium",
+          "label": "Lithium",
+          "association": "Lithium, an emerging mineral export that the World Bank lists alongside gold and cotton.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Mali",
+              "url": "https://www.worldbank.org/en/country/mali/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "millet-and-sorghum",
+          "label": "Millet and sorghum",
+          "association": "Millet and sorghum grown for household food, with coarse-grain prices monitored through the season.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Mali",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=MLI",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "rice",
+          "label": "Rice",
+          "association": "Rice grown alongside other cereals, a staple the FAO brief tracks through the season.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Mali",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=MLI",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "bogolan",
+          "label": "Bogolan",
+          "association": "Mud-dyed cotton cloth decorated with clay and plant tannins, documented in a WIPO presentation on geographical indications and traditional knowledge for Bogolan.",
+          "sources": [
+            {
+              "title": "Indications géographiques, savoirs traditionnels et expressions culturelles traditionnelles : cas du Bogolan",
+              "url": "https://www3.wipo.int/edocs/mdocs/sct/fr/wipo_geo_vfa_25/wipo_geo_vfa_25_d2_s2_presentation_by_mr_idrissa_dommo_goro.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "MR",
+      "slug": "mauritania",
+      "name": "Mauritania",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Mauritania",
+        "fr": "Mauritanie"
+      },
+      "introduction": "Mauritania pairs iron ore and gold mining with an Atlantic fishing zone extending across 234,000 square kilometres. Pastoral livestock, desert tourism and emerging gas production round out an economy concentrated in Nouakchott and Nouadhibou.",
+      "themes": [
+        {
+          "key": "iron-ore",
+          "label": "Iron ore",
+          "association": "Iron ore that anchors Mauritania's mining exports, with SNIM reporting a 27 percent contribution to export volume.",
+          "sources": [
+            {
+              "title": "SNIM – Société Nationale Industrielle et Minière",
+              "url": "https://www.snim.com/",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "APIM – Agence de Promotion des Investissements en Mauritanie",
+              "url": "https://apim.gov.mr/fr/page-daccueil/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "fisheries",
+          "label": "Fisheries",
+          "association": "Octopus, sardinella and other catch from a 234,000 square kilometre exclusive economic zone along 750 kilometres of Atlantic coast.",
+          "sources": [
+            {
+              "title": "APIM – Agence de Promotion des Investissements en Mauritanie",
+              "url": "https://apim.gov.mr/fr/page-daccueil/",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "World Bank country overview: Mauritania",
+              "url": "https://www.worldbank.org/en/country/mauritania/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "livestock",
+          "label": "Livestock",
+          "association": "Camel, cattle, sheep and goat herding, with APIM reporting more than 30 million head of livestock.",
+          "sources": [
+            {
+              "title": "APIM – Agence de Promotion des Investissements en Mauritanie",
+              "url": "https://apim.gov.mr/fr/page-daccueil/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "gold-and-copper",
+          "label": "Gold and copper",
+          "association": "Gold and copper mining alongside iron ore, both named in APIM's mining sector.",
+          "sources": [
+            {
+              "title": "APIM – Agence de Promotion des Investissements en Mauritanie",
+              "url": "https://apim.gov.mr/fr/page-daccueil/",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "World Bank country overview: Mauritania",
+              "url": "https://www.worldbank.org/en/country/mauritania/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "natural-gas",
+          "label": "Natural gas",
+          "association": "Offshore gas from the Greater Tortue Ahmeyim field, which the World Bank identifies as a new export stream.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Mauritania",
+              "url": "https://www.worldbank.org/en/country/mauritania/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "tourism",
+          "label": "Tourism",
+          "association": "Desert, coastal and heritage tourism promoted by the investment agency.",
+          "sources": [
+            {
+              "title": "APIM – Agence de Promotion des Investissements en Mauritanie",
+              "url": "https://apim.gov.mr/fr/page-daccueil/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "NE",
+      "slug": "niger",
+      "name": "Niger",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Niger",
+        "fr": "Niger"
+      },
+      "introduction": "Niger is a vast Sahelian country whose exports are dominated by uranium, oil and gold, moved through neighbouring corridors. Millet, sorghum and irrigated rice support households, while livestock herding connects pastoral communities to regional markets.",
+      "themes": [
+        {
+          "key": "uranium",
+          "label": "Uranium",
+          "association": "Uranium, long one of Niger's principal mineral exports.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Niger",
+              "url": "https://www.worldbank.org/en/country/niger/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "oil",
+          "label": "Oil",
+          "association": "Crude oil production and pipeline exports, which the World Bank names among Niger's exports.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Niger",
+              "url": "https://www.worldbank.org/en/country/niger/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "gold",
+          "label": "Gold",
+          "association": "Gold, part of the mineral base the World Bank describes alongside uranium and oil.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Niger",
+              "url": "https://www.worldbank.org/en/country/niger/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "livestock",
+          "label": "Livestock",
+          "association": "Pastoral livestock herding, one of the priority sectors listed by the investment agency.",
+          "sources": [
+            {
+              "title": "ANPIPS – Agence Nigérienne de la Promotion des Investissements Privés et des Projets Stratégiques",
+              "url": "https://anpips.ne/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "irrigated-farming",
+          "label": "Irrigated farming",
+          "association": "Irrigated farming in river valleys, which the World Bank highlights within Niger's agricultural economy.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Niger",
+              "url": "https://www.worldbank.org/en/country/niger/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "millet-and-sorghum",
+          "label": "Millet and sorghum",
+          "association": "Millet and sorghum, the rain-fed cereals that dominate household food in the Sahel.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Niger",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=NER",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "NG",
+      "slug": "nigeria",
+      "name": "Nigeria",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Nigeria",
+        "fr": "Nigéria"
+      },
+      "introduction": "Nigeria's economy spans oil and gas alongside cocoa, sesame, cashew and leather exports. Lagos and Kano anchor commerce and manufacturing, while textile crafts such as adire remain part of the country's cultural and commercial identity.",
+      "themes": [
+        {
+          "key": "cocoa",
+          "label": "Cocoa",
+          "association": "Cocoa beans and processed products, one of the product profiles the export council publishes for buyers.",
+          "sources": [
+            {
+              "title": "NEPC – Nigerian Export Promotion Council",
+              "url": "https://nepc.gov.ng/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "sesame",
+          "label": "Sesame",
+          "association": "Sesame seed, listed among the export council's product profiles and market-information sectors.",
+          "sources": [
+            {
+              "title": "NEPC – Nigerian Export Promotion Council",
+              "url": "https://nepc.gov.ng/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cashew",
+          "label": "Cashew",
+          "association": "Raw cashew nuts and kernels, one of the council's published product profiles.",
+          "sources": [
+            {
+              "title": "NEPC – Nigerian Export Promotion Council",
+              "url": "https://nepc.gov.ng/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "shea",
+          "label": "Shea",
+          "association": "Shea kernels and butter, profiled by the export council and linked by the Global Shea Alliance to rural women's livelihoods.",
+          "sources": [
+            {
+              "title": "NEPC – Nigerian Export Promotion Council",
+              "url": "https://nepc.gov.ng/",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "Global Shea Alliance – about the shea industry",
+              "url": "https://www.globalshea.com/about",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "leather",
+          "label": "Leather",
+          "association": "Hides, skins and finished leather goods, a sector the export council covers in its market information.",
+          "sources": [
+            {
+              "title": "NEPC – Nigerian Export Promotion Council",
+              "url": "https://nepc.gov.ng/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "textiles-and-crafts",
+          "label": "Textiles and crafts",
+          "association": "Dyed and woven cloth traditions within the crafts and textiles remit of the National Council for Arts and Culture.",
+          "sources": [
+            {
+              "title": "National Council for Arts and Culture",
+              "url": "https://ncac.gov.ng/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "SN",
+      "slug": "senegal",
+      "name": "Senegal",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Senegal",
+        "fr": "Sénégal"
+      },
+      "introduction": "Senegal's export profile combines seafood, mangoes, processed foods and handicrafts with gold and newly produced hydrocarbons. Dakar concentrates the country's port, services and manufacturing activity, while irrigated horticulture reaches regional and European markets through the year.",
+      "themes": [
+        {
+          "key": "mango",
+          "label": "Mango",
+          "association": "Fresh mangoes, one of the product groups the export agency promotes in its market sheets.",
+          "sources": [
+            {
+              "title": "ASEPEX – Agence Sénégalaise de Promotion des Exportations",
+              "url": "https://www.asepex.sn/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "seafood",
+          "label": "Seafood",
+          "association": "Fish, shellfish and processed seafood promoted for export.",
+          "sources": [
+            {
+              "title": "ASEPEX – Agence Sénégalaise de Promotion des Exportations",
+              "url": "https://www.asepex.sn/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "agri-food",
+          "label": "Agri-food",
+          "association": "Processed fruit, vegetables and cereals in the agency's agri-food export portfolio.",
+          "sources": [
+            {
+              "title": "ASEPEX – Agence Sénégalaise de Promotion des Exportations",
+              "url": "https://www.asepex.sn/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "handicrafts",
+          "label": "Handicrafts",
+          "association": "Basketry, leather, jewellery and woodwork in the agency's handicraft export portfolio.",
+          "sources": [
+            {
+              "title": "ASEPEX – Agence Sénégalaise de Promotion des Exportations",
+              "url": "https://www.asepex.sn/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cosmetics",
+          "label": "Cosmetics",
+          "association": "Plant-based cosmetics, one of the sectors ASEPEX promotes to exporters.",
+          "sources": [
+            {
+              "title": "ASEPEX – Agence Sénégalaise de Promotion des Exportations",
+              "url": "https://www.asepex.sn/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "textiles",
+          "label": "Textiles",
+          "association": "Tailoring, weaving and dyed cloth in the agency's textile export portfolio.",
+          "sources": [
+            {
+              "title": "ASEPEX – Agence Sénégalaise de Promotion des Exportations",
+              "url": "https://www.asepex.sn/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "SL",
+      "slug": "sierra-leone",
+      "name": "Sierra Leone",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Sierra Leone"
+      },
+      "introduction": "Sierra Leone's exports centre on rutile, diamonds, bauxite and iron ore, with Freetown as the main port. Rice remains the staple crop, and coastal fisheries and tourism offer additional livelihoods along the country's long Atlantic shoreline.",
+      "themes": [
+        {
+          "key": "rutile",
+          "label": "Rutile",
+          "association": "Rutile, one of the minerals the World Bank names in Sierra Leone's export base.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Sierra Leone",
+              "url": "https://www.worldbank.org/en/country/sierraleone/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "diamonds",
+          "label": "Diamonds",
+          "association": "Diamonds, long central to Sierra Leone's mineral exports.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Sierra Leone",
+              "url": "https://www.worldbank.org/en/country/sierraleone/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "bauxite",
+          "label": "Bauxite",
+          "association": "Bauxite, alongside rutile and iron ore in the mineral export base.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Sierra Leone",
+              "url": "https://www.worldbank.org/en/country/sierraleone/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "marine-fisheries",
+          "label": "Marine fisheries",
+          "association": "Artisanal and industrial fishing along the Atlantic coast, which the investment agency lists as a priority industry.",
+          "sources": [
+            {
+              "title": "SLIEPA – Agribusiness",
+              "url": "https://www.sliepa.gov.sl/industries/agribusiness/",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "Sierra Leone Investment and Export Promotion Agency",
+              "url": "https://www.sliepa.gov.sl/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "rice",
+          "label": "Rice",
+          "association": "Rice, the main staple, grown in upland and lowland systems.",
+          "sources": [
+            {
+              "title": "FAO GIEWS country brief: Sierra Leone",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=SLE",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "tourism",
+          "label": "Tourism and heritage",
+          "association": "Beach, island and heritage tourism promoted by the National Tourist Board.",
+          "sources": [
+            {
+              "title": "National Tourist Board – Sierra Leone",
+              "url": "https://ntb.gov.sl/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "TG",
+      "slug": "togo",
+      "name": "Togo",
+      "region": "West Africa",
+      "localizedNames": {
+        "en": "Togo",
+        "fr": "Togo"
+      },
+      "introduction": "Togo's economy pivots on Lomé's deep-water port and regional corridor trade, with phosphate, cotton and agro-food exports alongside. The narrow territory links coastal manufacturing and free-zone activity to an inland northern cotton and shea-producing savannah.",
+      "themes": [
+        {
+          "key": "phosphate",
+          "label": "Phosphate",
+          "association": "Phosphate rock, with the national company reporting average output of about 1.1 million tonnes a year.",
+          "sources": [
+            {
+              "title": "SNPT – Société Nouvelle des Phosphates du Togo",
+              "url": "https://www.snptogo.com/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "port-logistics",
+          "label": "Port and corridor logistics",
+          "association": "Lomé's deep-water port and regional corridor services, which the World Bank highlights in Togo's transport and logistics sector.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Togo",
+              "url": "https://www.worldbank.org/en/country/togo/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "agro-food",
+          "label": "Agro-food value chains",
+          "association": "Irrigated farming and agro-food value chains supported under the World Bank's agriculture programme.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Togo",
+              "url": "https://www.worldbank.org/en/country/togo/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "manufacturing",
+          "label": "Manufacturing",
+          "association": "Light manufacturing and processing, a sector the World Bank includes in Togo's growth profile.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Togo",
+              "url": "https://www.worldbank.org/en/country/togo/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "digital-services",
+          "label": "Digital services",
+          "association": "Digitisation and digital-economy initiatives that the World Bank groups with manufacturing and logistics as growth sectors.",
+          "sources": [
+            {
+              "title": "World Bank country overview: Togo",
+              "url": "https://www.worldbank.org/en/country/togo/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cotton",
+          "label": "Cotton",
+          "association": "Seed cotton grown in the northern savannah; the government reported 60,403 tonnes for the 2024-2025 campaign at an average yield of 797 kilograms per hectare.",
+          "sources": [
+            {
+              "title": "Coton : 60 403 tonnes produits en 2024-2025",
+              "url": "https://www.republiquetogolaise.tg/agro/0906-10753-coton-60-403-tonnes-produits-en-2024-2025",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    }
+  ],
+  "sources": [
+    {
+      "publisher": "ANPIPS",
+      "title": "ANPIPS – Agence Nigérienne de la Promotion des Investissements Privés et des Projets Stratégiques",
+      "url": "https://anpips.ne/"
+    },
+    {
+      "publisher": "APIM",
+      "title": "APIM – Agence de Promotion des Investissements en Mauritanie",
+      "url": "https://apim.gov.mr/fr/page-daccueil/"
+    },
+    {
+      "publisher": "APIP Guinée",
+      "title": "APIP – Agence de Promotion des Investissements Privés",
+      "url": "https://apip.gov.gn/"
+    },
+    {
+      "publisher": "ASEPEX",
+      "title": "ASEPEX – Agence Sénégalaise de Promotion des Exportations",
+      "url": "https://www.asepex.sn/"
+    },
+    {
+      "publisher": "CMDT",
+      "title": "CMDT – Compagnie Malienne pour le Développement des Textiles",
+      "url": "https://cmdt-mali.net/"
+    },
+    {
+      "publisher": "Cabo Verde TradeInvest",
+      "title": "Cabo Verde TradeInvest – investment and export promotion",
+      "url": "https://cvtradeinvest.cv/"
+    },
+    {
+      "publisher": "Câmara Municipal dos Mosteiros",
+      "title": "Café do Fogo: O Melhor do Mundo",
+      "url": "https://www.cmmost.cv/cafe-fogo"
+    },
+    {
+      "publisher": "FAO",
+      "title": "FAO GIEWS country brief: Benin",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=BEN"
+    },
+    {
+      "publisher": "FAO",
+      "title": "FAO GIEWS country brief: Burkina Faso",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=BFA"
+    },
+    {
+      "publisher": "FAO",
+      "title": "FAO GIEWS country brief: Cabo Verde",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=CPV"
+    },
+    {
+      "publisher": "FAO",
+      "title": "FAO GIEWS country brief: Gambia",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=GMB"
+    },
+    {
+      "publisher": "FAO",
+      "title": "FAO GIEWS country brief: Guinea",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=GIN"
+    },
+    {
+      "publisher": "FAO",
+      "title": "FAO GIEWS country brief: Guinea-Bissau",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=GNB"
+    },
+    {
+      "publisher": "FAO",
+      "title": "FAO GIEWS country brief: Liberia",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=LBR"
+    },
+    {
+      "publisher": "FAO",
+      "title": "FAO GIEWS country brief: Mali",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=MLI"
+    },
+    {
+      "publisher": "FAO",
+      "title": "FAO GIEWS country brief: Niger",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=NER"
+    },
+    {
+      "publisher": "FAO",
+      "title": "FAO GIEWS country brief: Sierra Leone",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=SLE"
+    },
+    {
+      "publisher": "GIEPA",
+      "title": "Invest in Agribusiness in The Gambia",
+      "url": "https://giepa.gm/industries/agribusiness/"
+    },
+    {
+      "publisher": "Ghana Cocoa Board",
+      "title": "Ghana Cocoa Board (COCOBOD)",
+      "url": "https://cocobod.gh/"
+    },
+    {
+      "publisher": "Ghana Export Promotion Authority",
+      "title": "Fugu: Preserving Heritage, Promoting Exports",
+      "url": "https://www.gepaghana.org/publication/fugu-preserving-heritage-promoting-exports/"
+    },
+    {
+      "publisher": "Ghana Export Promotion Authority",
+      "title": "Ghana Export Promotion Authority",
+      "url": "https://www.gepaghana.org/"
+    },
+    {
+      "publisher": "Global Shea Alliance",
+      "title": "Global Shea Alliance – about the shea industry",
+      "url": "https://www.globalshea.com/about"
+    },
+    {
+      "publisher": "IBAP (Guiné-Bissau)",
+      "title": "Ecoturismo – IBAP Guiné-Bissau",
+      "url": "https://ecoturismo.ibapgbissau.org/"
+    },
+    {
+      "publisher": "Ministry of Agriculture, Liberia",
+      "title": "Ministry of Agriculture – Republic of Liberia",
+      "url": "https://moa.gov.lr/"
+    },
+    {
+      "publisher": "Ministère de l'Agriculture, de l'Élevage et de la Pêche (Bénin)",
+      "title": "Filière ananas – PACOFIDE",
+      "url": "https://pacofide.agriculture.gouv.bj/produit/9"
+    },
+    {
+      "publisher": "Ministério das Pescas, Guiné-Bissau",
+      "title": "Ministério das Pescas – Guiné-Bissau",
+      "url": "https://pescas.gw/"
+    },
+    {
+      "publisher": "NFSPMC (Gambia)",
+      "title": "National Food Security, Processing and Marketing Corporation (NFSPMC)",
+      "url": "https://nfsc.gm/"
+    },
+    {
+      "publisher": "National Council for Arts and Culture, Nigeria",
+      "title": "National Council for Arts and Culture",
+      "url": "https://ncac.gov.ng/"
+    },
+    {
+      "publisher": "National Tourist Board, Sierra Leone",
+      "title": "National Tourist Board – Sierra Leone",
+      "url": "https://ntb.gov.sl/"
+    },
+    {
+      "publisher": "Nigeria Export Promotion Council",
+      "title": "NEPC – Nigerian Export Promotion Council",
+      "url": "https://nepc.gov.ng/"
+    },
+    {
+      "publisher": "Présidence de la République Togolaise",
+      "title": "Coton : 60 403 tonnes produits en 2024-2025",
+      "url": "https://www.republiquetogolaise.tg/agro/0906-10753-coton-60-403-tonnes-produits-en-2024-2025"
+    },
+    {
+      "publisher": "SIAO",
+      "title": "SIAO – Salon International de l'Artisanat de Ouagadougou",
+      "url": "https://www.siao.bf/"
+    },
+    {
+      "publisher": "SLIEPA",
+      "title": "SLIEPA – Agribusiness",
+      "url": "https://www.sliepa.gov.sl/industries/agribusiness/"
+    },
+    {
+      "publisher": "SLIEPA",
+      "title": "Sierra Leone Investment and Export Promotion Agency",
+      "url": "https://www.sliepa.gov.sl/"
+    },
+    {
+      "publisher": "SNIM",
+      "title": "SNIM – Société Nationale Industrielle et Minière",
+      "url": "https://www.snim.com/"
+    },
+    {
+      "publisher": "SNPT",
+      "title": "SNPT – Société Nouvelle des Phosphates du Togo",
+      "url": "https://www.snptogo.com/"
+    },
+    {
+      "publisher": "SOFITEX",
+      "title": "SOFITEX – Société Burkinabè des Fibres Textiles",
+      "url": "https://www.sofitex.bf/"
+    },
+    {
+      "publisher": "WIPO",
+      "title": "Indications géographiques, savoirs traditionnels et expressions culturelles traditionnelles : cas du Bogolan",
+      "url": "https://www3.wipo.int/edocs/mdocs/sct/fr/wipo_geo_vfa_25/wipo_geo_vfa_25_d2_s2_presentation_by_mr_idrissa_dommo_goro.pdf"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: Benin",
+      "url": "https://www.worldbank.org/en/country/benin/overview"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: Burkina Faso",
+      "url": "https://www.worldbank.org/en/country/burkinafaso/overview"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: Cabo Verde",
+      "url": "https://www.worldbank.org/en/country/caboverde/overview"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: Côte d'Ivoire",
+      "url": "https://www.worldbank.org/en/country/cotedivoire/overview"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: Ghana",
+      "url": "https://www.worldbank.org/en/country/ghana/overview"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: Guinea",
+      "url": "https://www.worldbank.org/en/country/guinea/overview"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: Guinea-Bissau",
+      "url": "https://www.worldbank.org/en/country/guineabissau/overview"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: Liberia",
+      "url": "https://www.worldbank.org/en/country/liberia/overview"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: Mali",
+      "url": "https://www.worldbank.org/en/country/mali/overview"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: Mauritania",
+      "url": "https://www.worldbank.org/en/country/mauritania/overview"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: Niger",
+      "url": "https://www.worldbank.org/en/country/niger/overview"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: Sierra Leone",
+      "url": "https://www.worldbank.org/en/country/sierraleone/overview"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: The Gambia",
+      "url": "https://www.worldbank.org/en/country/gambia/overview"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "World Bank country overview: Togo",
+      "url": "https://www.worldbank.org/en/country/togo/overview"
+    },
+    {
+      "publisher": "World Trade Organization",
+      "title": "Trade Policy Review: Benin (WT/TPR/S/362)",
+      "url": "https://www.wto.org/french/tratop_f/tpr_f/s362-01_f.pdf"
+    }
+  ]
+}

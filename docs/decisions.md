@@ -188,3 +188,21 @@ concrete recommendations; none is approved by existing code:
   silently altered between review and execution.
 - **Verification:** orchestration suite — wrong hash, wrong user, correct hash,
   repeat confirm.
+
+## 2026-11-14 — Discover Africa is a separate editorial registry
+
+**Decision.** Country discovery uses `CountryProfile` / `CountryTheme` / `CountryThemeSource`, not the
+six-market commerce `COUNTRIES` configuration. The discovery set reconciles to the 54 UN African
+member states. Western Sahara is documented separately (UN non-self-governing territory, AU member
+under the Sahrawi Arab Democratic Republic) and is not silently merged into Morocco or added as a
+55th public country page. Somaliland is excluded because it is neither a UN member nor an AU member.
+
+**Consequences.**
+- Publishing a guide does not enable checkout, delivery, currency, language or an operating entity.
+- `Product.countryCode` remains the fulfilment market and is never used as origin. Origin requires
+  `Product.originCountryCode` plus `originBasis` (`SELLER_DECLARED` or `VERIFIED`) and an evidence note.
+- Vendor location and cultural/style themes are not origin evidence.
+- Featuring controls the row order only; every published country remains in the directory.
+- Unpublishing preserves the profile, themes, sources, products, origin records and historical orders.
+- Editorial drafting, publication and origin verification are separate server permissions; the
+  ordinary `admin` role is withheld publication and origin review. `super_admin` still holds all.

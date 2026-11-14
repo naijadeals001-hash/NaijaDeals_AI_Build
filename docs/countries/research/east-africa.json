@@ -1,0 +1,1443 @@
+{
+  "region": "East Africa",
+  "feature": "NaijaDeals Shop — Discover Africa",
+  "accessedAt": "2026-11-14",
+  "editorialStandard": "Themes describe cultural and economic associations, not NaijaDeals supply availability. Rankings and volume claims appear only where the cited source states them. Themes with no adequate fetched source carry reviewStatus needs-source.",
+  "countries": [
+    {
+      "code": "BI",
+      "slug": "burundi",
+      "name": "Burundi",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "Burundi",
+        "fr": "Burundi",
+        "rn": "Burundi"
+      },
+      "introduction": "Burundi's highlands and lake plains support smallholder farming, with coffee and tea as the best-known cash crops and bananas, maize and beans as staples. Hides, skins and leather add a manufacturing link to the rural economy.",
+      "themes": [
+        {
+          "key": "coffee",
+          "label": "Coffee",
+          "association": "The World Bank's 2016 project appraisal document for the Burundi Coffee Sector Competitiveness Project states that coffee generated an average of US$40–50 million a year in export and foreign-exchange earnings over the previous three decades, equal to 60–70 percent of national exports, and that Burundi was then the 13th largest Arabica producer.",
+          "sources": [
+            {
+              "title": "Burundi Coffee Sector Competitiveness Project: Project Appraisal Document (P151869)",
+              "url": "https://documents1.worldbank.org/curated/en/821751468186545895/pdf/PAD1271-PAD-P151869-IDA-R2016-0132-1-OUO-9.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "tea",
+          "label": "Tea",
+          "association": "The Ministry of Commerce, Transport, Industry and Tourism describes the Office du Thé du Burundi (OTB), created in 1971, as the public institution for the national tea sector. It works with about 60,000 tea farmers across 2,239 hectares of industrial plantations and 7,087 hectares of village plantations, producing an average of 10,952 tonnes of dry tea a year, about 80 percent from village plantations.",
+          "sources": [
+            {
+              "title": "Office du Thé du Burundi (OTB)",
+              "url": "https://mctit.gov.bi/office-du-the-du-burundi-otb/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "wild-mushrooms",
+          "label": "Wild mushrooms",
+          "association": "FAO's 2001 review of non-wood forest products in Central Africa records more than 50 edible mushroom species gathered in Burundi, including Cantharellus chanterelles, and notes that over 1,000 kg of chanterelles from the Rumonge forests were exported to Germany in 1995.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (Central Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b18.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "maize",
+          "label": "Maize",
+          "association": "FAO's GIEWS country brief tracks maize as a staple cereal in Burundi, reporting a 2025 cereal harvest of about 789,000 tonnes, roughly 5 percent below the five-year average, and heavy maize losses in the 2026A season.",
+          "sources": [
+            {
+              "title": "Country Brief: Burundi",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=BDI",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "beans",
+          "label": "Beans",
+          "association": "FAO's GIEWS brief describes beans as an important staple in Burundi and reports that up to 80 percent of beans were lost in several lowland areas during the 2026A season.",
+          "sources": [
+            {
+              "title": "Country Brief: Burundi",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=BDI",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "leather",
+          "label": "Hides, skins and leather",
+          "association": "Burundi's Ministry of Commerce, Transport, Industry and Tourism, working with the COMESA Leather and Leather Products Institute, ran a 2025 workshop on traceability and eco-certification for hides, skins and leather. The ministry notes that Burundian hides are well regarded regionally while hide identification remains a challenge for competitiveness.",
+          "sources": [
+            {
+              "title": "Formation sur la traçabilité et l'éco-certification des cuirs et peaux au Burundi",
+              "url": "https://mctit.gov.bi/formation-sur-la-tracabilite-et-leco-certification-des-cuirs-et-peaux-au-burundi/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "KM",
+      "slug": "comoros",
+      "name": "Comoros",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "Comoros",
+        "fr": "Comores",
+        "ar": "جزر القمر"
+      },
+      "introduction": "The Comoros archipelago in the Mozambique Channel is known for perfume and spice crops, particularly ylang-ylang, cloves and vanilla. Artisanal tuna fishing and copra production round out an economy shaped by small-island farming.",
+      "themes": [
+        {
+          "key": "ylang-ylang",
+          "label": "Ylang-ylang",
+          "association": "A 2019 AGRIS-indexed study of the clove sector by Penot and Danthu notes that cloves and ylang-ylang essential oil compete for the top place among Comoros' exports.",
+          "sources": [
+            {
+              "title": "Entre « ignorance politique », ingérence et contrôle de l'État : quelles politiques publiques pour la filière girofle à Madagascar, aux Comores et à Zanzibar",
+              "url": "https://agris.fao.org/search/en/records/64746a59425ec3c088f03c1d",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cloves",
+          "label": "Cloves",
+          "association": "The same study reports that Anjouan and Mohéli produce cloves only, and that clove earnings contribute significantly to food security in producing areas. It notes that Comorian and Malagasy exports are mainly absorbed by an Indonesian-dominated Asian market.",
+          "sources": [
+            {
+              "title": "Entre « ignorance politique », ingérence et contrôle de l'État : quelles politiques publiques pour la filière girofle à Madagascar, aux Comores et à Zanzibar",
+              "url": "https://agris.fao.org/search/en/records/64746a59425ec3c088f03c1d",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "vanilla",
+          "label": "Vanilla",
+          "association": "FAO's 2022 food systems profile for the Union of the Comoros identifies vanilla, clove and ylang-ylang essential oil as the country's three main export crops and reports vanilla production falling from 180 tonnes in 2000 to 30 tonnes in 2018.",
+          "sources": [
+            {
+              "title": "Profil des systèmes alimentaires — Union des Comores (2022)",
+              "url": "https://openknowledge.fao.org/handle/20.500.14283/cb8911fr",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "tuna-fisheries",
+          "label": "Tuna and artisanal fisheries",
+          "association": "The Union of the Comoros national report to the Indian Ocean Tuna Commission states that fishing in Comoros is exclusively artisanal, targeting tunas including yellowfin and skipjack, and estimates the 2023 tuna catch at 9,173 tonnes.",
+          "sources": [
+            {
+              "title": "Rapport National destiné au Comité Scientifique de la Commission des Thons de l'Océan Indien, 2024 — Union des Comores",
+              "url": "https://iotc.org/sites/default/files/documents/2024/11/IOTC-2024-SC27-NR04F_Comoros.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "coconut",
+          "label": "Coconut palm",
+          "association": "The same FAO profile lists the coconut palm among Comoros' cash crops, alongside ylang-ylang, clove, vanilla and coffee, on 53,000 hectares of cash-crop land.",
+          "sources": [
+            {
+              "title": "Profil des systèmes alimentaires — Union des Comores (2022)",
+              "url": "https://openknowledge.fao.org/handle/20.500.14283/cb8911fr",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "honey",
+          "label": "Honey",
+          "association": "FAO's review of non-wood forest products in the Indian Ocean islands lists honey among Comoros' non-wood forest products, together with edible and ornamental plants, live animals and fodder.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (Insular East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b16.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "DJ",
+      "slug": "djibouti",
+      "name": "Djibouti",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "Djibouti",
+        "fr": "Djibouti",
+        "ar": "جيبوتي"
+      },
+      "introduction": "Djibouti sits at the mouth of the Red Sea, where pastoral lowlands meet one of Africa's busiest port complexes. Date palms, honey and the salt flats of Lake Assal form a sparse but distinctive product landscape.",
+      "themes": [
+        {
+          "key": "date-palm",
+          "label": "Date palm",
+          "association": "FAO's One Country One Priority Product initiative lists the date palm as Djibouti's special agricultural product.",
+          "sources": [
+            {
+              "title": "One Country One Priority Product: Africa",
+              "url": "https://www.fao.org/one-country-one-priority-product/africa/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "livestock",
+          "label": "Pastoral livestock",
+          "association": "FAO's GIEWS brief describes inland pastoral areas of Dikhil, Obock and Tadjourah, where rainfall deficits affect rangeland, pasture, water and livestock body condition.",
+          "sources": [
+            {
+              "title": "Country Brief: Djibouti",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=DJI",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "salt",
+          "label": "Lake Assal salt",
+          "association": "Djibouti's Decree No. 2002-0226/PR/MERN specifically regulates the extraction, processing and marketing of Lake Assal salt, creating separate licence categories for extraction and distribution and setting conditions for export-oriented sales.",
+          "sources": [
+            {
+              "title": "Décret n°2002-0226/PR/MERN portant réglementation spécifique de l'extraction, de traitement et de commercialisation du Sel du Lac-Assal",
+              "url": "https://faolex.fao.org/docs/pdf/dji38384.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "ports-logistics",
+          "label": "Ports and free zones",
+          "association": "The Djibouti Ports and Free Zones Authority regulates the country's ports and free zones and lists facilities including the Doraleh Multipurpose Port, Horizon Terminal and the ports of Tadjourah and Ghoubet, with road and rail links inland.",
+          "sources": [
+            {
+              "title": "Djibouti Ports and Free Zones Authority",
+              "url": "https://www.dpfza.gov.dj/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "honey",
+          "label": "Honey",
+          "association": "FAO's regional review of non-wood forest products lists honey among Djibouti's forest-derived products.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "doum-palm",
+          "label": "Doum palm",
+          "association": "FAO's regional review lists doum-palm branches and leaves among Djibouti's construction materials and non-wood forest products.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "ER",
+      "slug": "eritrea",
+      "name": "Eritrea",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "Eritrea",
+        "ti": "ኤርትራ",
+        "ar": "إريتريا"
+      },
+      "introduction": "Eritrea's highland plateaus and western lowlands produce cereals and pulses, while the Red Sea coast supports fishing. Frankincense, gum arabic and doum-palm fibre connect its dryland forests to craft and export trades.",
+      "themes": [
+        {
+          "key": "potato",
+          "label": "Potato",
+          "association": "FAO's One Country One Priority Product initiative lists the potato as Eritrea's special agricultural product.",
+          "sources": [
+            {
+              "title": "One Country One Priority Product: Africa",
+              "url": "https://www.fao.org/one-country-one-priority-product/africa/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cereals",
+          "label": "Cereals and pulses",
+          "association": "FAO's GIEWS brief names wheat, barley, sorghum, maize, teff and pulses as Eritrea's 2026 main-season crops, with Gash Barka the leading crop-producing region.",
+          "sources": [
+            {
+              "title": "Country Brief: Eritrea",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=ERI",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "olibanum",
+          "label": "Frankincense (olibanum)",
+          "association": "FAO's regional non-wood forest products review lists olibanum resins among Eritrea's forest products, alongside gum arabic.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "gum-arabic",
+          "label": "Gum arabic",
+          "association": "The same FAO review lists gum arabic among Eritrea's non-wood forest products.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "doum-fibre",
+          "label": "Doum-palm fibre",
+          "association": "The review also lists dried doum-palm leaves among Eritrea's non-wood forest products, used for fibre and other purposes.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cactus-wild-foods",
+          "label": "Cactus and wild foods",
+          "association": "FAO's regional review notes cactus as a drought food source in Eritrea and lists edible and medicinal plants among the country's non-wood forest products.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "ET",
+      "slug": "ethiopia",
+      "name": "Ethiopia",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "Ethiopia",
+        "am": "ኢትዮጵያ"
+      },
+      "introduction": "Ethiopia's highlands are the origin of arabica coffee and the home of teff, the grain behind injera. Honey, frankincense, leather goods and a growing textile sector extend its agricultural base into craft and manufacturing.",
+      "themes": [
+        {
+          "key": "teff",
+          "label": "Teff",
+          "association": "FAO's One Country One Priority Product initiative lists teff as Ethiopia's special agricultural product.",
+          "sources": [
+            {
+              "title": "One Country One Priority Product: Africa",
+              "url": "https://www.fao.org/one-country-one-priority-product/africa/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "coffee",
+          "label": "Coffee",
+          "association": "A World Bank blog on coffee and EU deforestation rules reports that 13–17 percent of Ethiopia's exports are exposed to the regulation and that millions of smallholders depend on coffee exports.",
+          "sources": [
+            {
+              "title": "Reimagining the future of climate action in Africa: Digitalization of coffee sector as use case",
+              "url": "https://blogs.worldbank.org/en/nasikiliza/reimagining-future-climate-action-africa-digitalizing-coffee-sector-afe-1224",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "honey",
+          "label": "Honey and beeswax",
+          "association": "FAO's regional review lists honey and beeswax among Ethiopia's non-wood forest products.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "olibanum",
+          "label": "Frankincense and myrrh",
+          "association": "FAO's review lists olibanum, gum arabic and myrrh among Ethiopia's exudates.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "leather",
+          "label": "Leather and footwear",
+          "association": "The Ethiopian Leather Industries Association reports 194 member companies, including 28 tanneries, 37 shoe manufacturers and 129 leather-product manufacturers, and manages the Ethiopian Highland Leather national brand.",
+          "sources": [
+            {
+              "title": "Ethiopian Leather Industries Association",
+              "url": "https://www.eliaet.com/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "textiles",
+          "label": "Cotton textiles and garments",
+          "association": "Ethiopia's Investment Commission promotes textiles and garments as a priority sector, citing fabrics, bags, suits, linens, t-shirts and undergarments, and reports over USD 140 million in sector exports.",
+          "sources": [
+            {
+              "title": "Textile & Garment",
+              "url": "https://investethiopia.gov.et/key-sectors/manufacturing/textile-garment/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "KE",
+      "slug": "kenya",
+      "name": "Kenya",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "Kenya",
+        "sw": "Kenya"
+      },
+      "introduction": "Kenya's varied climate supports tea, coffee, flowers and horticulture for export, alongside maize and livestock for the domestic market. Export-processing zones anchor garments and other manufactured goods.",
+      "themes": [
+        {
+          "key": "tea",
+          "label": "Tea",
+          "association": "The Tea Board of Kenya reports tea export earnings of KSh186.9 billion in 2025 and publishes monthly production, auction and export data.",
+          "sources": [
+            {
+              "title": "Home",
+              "url": "https://www.teaboard.or.ke/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "coffee",
+          "label": "Coffee",
+          "association": "An AGRIS-indexed study of 242 smallholder coffee farms in Kenya, published by the Coffee Research Foundation, found positive gross margins for farms producing 800 kg of clean coffee per hectare.",
+          "sources": [
+            {
+              "title": "Coffee production and profitability in the smallholder sector in Kenya",
+              "url": "https://agris.fao.org/search/en/records/6471edd12a40512c710ec8e0",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cut-flowers",
+          "label": "Cut flowers",
+          "association": "The Kenya Flower Council describes Kenya as among the world's top flower producers and says Kenyan flowers reach more than 60 destinations; its FOSS standard covers environmental and social compliance.",
+          "sources": [
+            {
+              "title": "Our Story",
+              "url": "https://kenyaflowercouncil.org/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "avocado",
+          "label": "Avocado",
+          "association": "The Fresh Produce Exporters Association of Kenya, a horticulture trade body founded in 1975, reports work on avocado production threats such as Persea mites and represents fruit, vegetable and flower exporters.",
+          "sources": [
+            {
+              "title": "FPEAK",
+              "url": "https://fpeak.org/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "export-manufacturing",
+          "label": "Export manufacturing",
+          "association": "The Export Processing Zones Authority, a state corporation established in 1990, promotes export-oriented investment through the EPZ programme and lists Eldoret, Sagana, Kabati and Nasewa among its flagship projects.",
+          "sources": [
+            {
+              "title": "Export Processing Zones Authority",
+              "url": "https://epzakenya.go.ke/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "honey",
+          "label": "Honey and beeswax",
+          "association": "FAO's regional non-wood forest products review lists honey and beeswax among Kenya's forest products.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "MG",
+      "slug": "madagascar",
+      "name": "Madagascar",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "Madagascar",
+        "fr": "Madagascar",
+        "mg": "Madagasikara"
+      },
+      "introduction": "Madagascar's rainforests, highlands and dry south produce vanilla, cloves, cocoa and rice. Raffia and other palm fibres support a weaving tradition that reaches export markets.",
+      "themes": [
+        {
+          "key": "vanilla",
+          "label": "Vanilla",
+          "association": "A World Bank article reports that Madagascar supplies about 80 percent of the global natural vanilla market, that the SAVA region grows nearly all of it, and that about 70,000 smallholders hand-pollinate the flowers.",
+          "sources": [
+            {
+              "title": "Small bridge, massive impact: Connecting Madagascar's vanilla to the world",
+              "url": "https://blogs.worldbank.org/en/transport/madagascar-bridge",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cloves",
+          "label": "Cloves",
+          "association": "The AGRIS-indexed study by Penot and Danthu compares clove value chains in Madagascar, Comoros and Zanzibar and notes that most Malagasy and Comorian exports go to an Indonesian-dominated Asian market.",
+          "sources": [
+            {
+              "title": "Entre « ignorance politique », ingérence et contrôle de l'État : quelles politiques publiques pour la filière girofle à Madagascar, aux Comores et à Zanzibar",
+              "url": "https://agris.fao.org/search/en/records/64746a59425ec3c088f03c1d",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cocoa",
+          "label": "Fine flavour cocoa",
+          "association": "The International Cocoa Organization lists Madagascar as a country exporting 100 percent fine or flavour cocoa.",
+          "sources": [
+            {
+              "title": "Fine or Flavour Cocoa",
+              "url": "https://www.icco.org/fine-or-flavor-cocoa/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "rice",
+          "label": "Rice",
+          "association": "FAO's GIEWS brief tracks paddy rice as Madagascar's main crop, noting that 2026 output rose from 2025 but remained below the five-year average.",
+          "sources": [
+            {
+              "title": "Country Brief: Madagascar",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=MDG",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "litchi",
+          "label": "Litchi",
+          "association": "The World Bank article describes lychee among the goods moved along Route Nationale 5a for export.",
+          "sources": [
+            {
+              "title": "Small bridge, massive impact: Connecting Madagascar's vanilla to the world",
+              "url": "https://blogs.worldbank.org/en/transport/madagascar-bridge",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "raffia",
+          "label": "Raffia weaving",
+          "association": "FAO's review of non-wood forest products in the Indian Ocean islands lists raffia among Malagasy craft materials, used for beach mats, hats and leatherwork.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (Insular East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b16.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "MU",
+      "slug": "mauritius",
+      "name": "Mauritius",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "Mauritius",
+        "fr": "Maurice",
+        "mfe": "Moris"
+      },
+      "introduction": "Mauritius combines sugarcane estates and smallholder farms with a diversified export sector. Sugar, tea, rum, textiles and seafood carry the island's agricultural and manufacturing heritage into world markets.",
+      "themes": [
+        {
+          "key": "sugar",
+          "label": "Cane sugar",
+          "association": "The Mauritius Cane Industry Authority, established by the MCIA Act 2011, oversees the sugarcane sector through units for research, mechanisation, farmer services and sugar storage, and promotes biomass energy from cane.",
+          "sources": [
+            {
+              "title": "MCIA Mauritius Cane Industry Authority",
+              "url": "https://mcia.mu/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "tea",
+          "label": "Tea",
+          "association": "Groupe Saint Aubin describes the Bois Chéri estate as a tea plantation with a factory and museum on the island's tea route, where visitors follow production from picking to processing.",
+          "sources": [
+            {
+              "title": "Domaine de Bois Chéri",
+              "url": "https://groupe-saintaubin.com/en/our-domains/domaine-de-bois-cheri/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "textiles",
+          "label": "Textiles and apparel",
+          "association": "The Mauritius Export Association, which describes itself as the sole private association of Mauritian export companies, lists textile and apparel among its sectors.",
+          "sources": [
+            {
+              "title": "Mauritius Export Association",
+              "url": "https://www.mexamauritius.org/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "rum",
+          "label": "Rum and spirits",
+          "association": "MEXA lists rum, spirits and ethanol among Mauritius' export sectors and reports the launch of the Mauritius Rum Geographical Indication.",
+          "sources": [
+            {
+              "title": "Mauritius Export Association",
+              "url": "https://www.mexamauritius.org/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "seafood",
+          "label": "Seafood",
+          "association": "MEXA lists seafood products among Mauritius' export sectors.",
+          "sources": [
+            {
+              "title": "Mauritius Export Association",
+              "url": "https://www.mexamauritius.org/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "jewellery-gems",
+          "label": "Jewellery and gemstones",
+          "association": "MEXA lists jewellery, gems and watches among Mauritius' export sectors, alongside textiles, rum and seafood.",
+          "sources": [
+            {
+              "title": "Mauritius Export Association",
+              "url": "https://www.mexamauritius.org/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "RW",
+      "slug": "rwanda",
+      "name": "Rwanda",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "Rwanda",
+        "rw": "Rwanda",
+        "fr": "Rwanda"
+      },
+      "introduction": "Rwanda's hillside farms produce coffee, tea and horticultural crops, while honey is a priority product. Imigongo panels and agaseke baskets carry the country's craft traditions.",
+      "themes": [
+        {
+          "key": "coffee",
+          "label": "Coffee",
+          "association": "Rwanda's National Agricultural Export Development Board (NAEB) describes coffee as a major foreign-exchange earner and publishes auction and export news.",
+          "sources": [
+            {
+              "title": "NAEB",
+              "url": "https://naeb.gov.rw/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "tea",
+          "label": "Tea",
+          "association": "NAEB describes tea as one of Rwanda's major exports, citing USD 90 million in export revenue in 2020–2021, and reports work on a ten-year tea strategy.",
+          "sources": [
+            {
+              "title": "NAEB",
+              "url": "https://naeb.gov.rw/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "honey",
+          "label": "Honey",
+          "association": "FAO's One Country One Priority Product initiative lists honey as Rwanda's special agricultural product.",
+          "sources": [
+            {
+              "title": "One Country One Priority Product: Africa",
+              "url": "https://www.fao.org/one-country-one-priority-product/africa/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "horticulture",
+          "label": "Fresh horticulture",
+          "association": "NAEB promotes horticulture under its Rwanda Fresh programme, covering vegetables, fruits, flowers and animal products.",
+          "sources": [
+            {
+              "title": "NAEB",
+              "url": "https://naeb.gov.rw/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "imigongo",
+          "label": "Imigongo art",
+          "association": "The Rwanda Cultural Heritage Academy, in a Google Arts & Culture exhibition, describes imigongo as geometric art made from cow dung, vegetable ash and natural dyes in black, white and red, originating in the late 18th or early 19th century and now applied to canvas and wooden objects.",
+          "sources": [
+            {
+              "title": "The Art of Decorating Houses in Rwanda",
+              "url": "https://artsandculture.google.com/story/the-art-of-decorating-houses-in-rwanda-rwanda-cultural-heritage-academy/rwVBZGu36jp5dQ",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "agaseke",
+          "label": "Agaseke baskets",
+          "association": "A Google Arts & Culture story describes the agaseke basket, woven with the Inyanja technique, as a symbol of peace and unity, and notes that weaving cooperatives brought together survivors and other women after the 1994 Genocide against the Tutsi.",
+          "sources": [
+            {
+              "title": "Agaseke: The Baskets That Brought Peace",
+              "url": "https://artsandculture.google.com/story/HQWhYjNwebFZHQ",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "SC",
+      "slug": "seychelles",
+      "name": "Seychelles",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "Seychelles",
+        "fr": "Seychelles",
+        "crs": "Sesel"
+      },
+      "introduction": "Seychelles is an Indian Ocean archipelago whose economy is tied to tuna and other marine resources. Cinnamon, coconut and vanilla recall its plantation history, while boatbuilding and crafts remain part of island life.",
+      "themes": [
+        {
+          "key": "tuna",
+          "label": "Tuna",
+          "association": "The Seychelles national report to the Indian Ocean Tuna Commission describes a purse-seine fleet operating in the Seychelles EEZ and reports catches of yellowfin, bigeye and skipjack tuna.",
+          "sources": [
+            {
+              "title": "Seychelles National Report to the Scientific Committee of the Indian Ocean Tuna Commission, 2021",
+              "url": "https://sfa.sc/wp-content/uploads/2024/08/IOTC-2021-SC24-NR22_Rev1_-_Seychelles1.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "reef-fisheries",
+          "label": "Reef and coastal fisheries",
+          "association": "The Seychelles Fishing Authority describes itself as responsible for sustainable management of marine resources and lists industrial, semi-industrial, artisanal, lobster, sea-cucumber and net fisheries.",
+          "sources": [
+            {
+              "title": "Seychelles Fisheries Authority",
+              "url": "https://www.sfa.sc/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cinnamon",
+          "label": "Cinnamon",
+          "association": "FAO's review records cinnamon bark as a Seychelles non-wood forest product, citing sales of 600,547 kg in 1971.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (Insular East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b16.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "coco-de-mer",
+          "label": "Coco de mer",
+          "association": "The same review lists the fruit of Lodoicea maldivica, the coco de mer, among Seychelles' non-wood forest products.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (Insular East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b16.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "breadfruit",
+          "label": "Breadfruit and santol",
+          "association": "The review lists santol and breadfruit among Seychelles' edible forest fruits.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (Insular East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b16.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "raffia-bamboo",
+          "label": "Raffia and bamboo materials",
+          "association": "The review lists raffia branches, bamboo, mixed poles and coconut leaves among Seychelles' craft and construction materials.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (Insular East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b16.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "SO",
+      "slug": "somalia",
+      "name": "Somalia",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "Somalia",
+        "so": "Soomaaliya",
+        "ar": "الصومال"
+      },
+      "introduction": "Somalia's rangelands and river valleys support livestock herding and cereal farming, while acacia forests yield frankincense and myrrh. Bananas and fisheries have historically added export diversity.",
+      "themes": [
+        {
+          "key": "sorghum",
+          "label": "Sorghum",
+          "association": "FAO's One Country One Priority Product initiative lists sorghum as Somalia's special agricultural product.",
+          "sources": [
+            {
+              "title": "One Country One Priority Product: Africa",
+              "url": "https://www.fao.org/one-country-one-priority-product/africa/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "frankincense",
+          "label": "Frankincense and myrrh",
+          "association": "FAO's regional non-wood forest products review lists myrrh, opopanax and olibanum among Somalia's exudates.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "maize",
+          "label": "Maize",
+          "association": "FAO's GIEWS brief names maize and sorghum as Somalia's main cereals, with maize grown chiefly in Lower and Middle Shabelle.",
+          "sources": [
+            {
+              "title": "Country Brief: Somalia",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=SOM",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "livestock",
+          "label": "Livestock and milk",
+          "association": "The same brief describes pastoral areas where poor rains reduce pasture, water, animal body condition and milk output.",
+          "sources": [
+            {
+              "title": "Country Brief: Somalia",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=SOM",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "bananas",
+          "label": "Bananas",
+          "association": "A 2010 Acta Horticulturae study indexed by AGRIS reports that Somalia was once East Africa's largest banana exporter with 12,000 hectares and 120,000 workers, and that 1,500 hectares producing 40,000 tonnes remained at the time of writing.",
+          "sources": [
+            {
+              "title": "A Market Analysis of the Somali Banana Sector and Its Potential for Export Revival",
+              "url": "https://agris.fao.org/search/fr/records/65dff6a90f3e94b9e5de0f0a",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "wild-fruits",
+          "label": "Wild edible fruits and nuts",
+          "association": "FAO's regional review lists edible fruits and nuts among Somalia's non-wood forest products.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "SS",
+      "slug": "south-sudan",
+      "name": "South Sudan",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "South Sudan",
+        "ar": "جنوب السودان"
+      },
+      "introduction": "South Sudan's flood plains and savannahs support sorghum, maize and livestock, with gum arabic, groundnuts, sesame and shea butter among forest and dryland products.",
+      "themes": [
+        {
+          "key": "sorghum",
+          "label": "Sorghum",
+          "association": "FAO's One Country One Priority Product initiative lists sorghum as South Sudan's special agricultural product.",
+          "sources": [
+            {
+              "title": "One Country One Priority Product: Africa",
+              "url": "https://www.fao.org/one-country-one-priority-product/africa/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "maize",
+          "label": "Maize",
+          "association": "FAO's GIEWS brief names maize and sorghum as the cereals harvested in South Sudan's first and second seasons.",
+          "sources": [
+            {
+              "title": "Country Brief: South Sudan",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=SSD",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "gum-arabic",
+          "label": "Gum arabic",
+          "association": "A 2022 report by South Sudan's Ministry of Trade and Industry and UNDP includes gum arabic among seven priority agricultural value chains for AfCFTA linkages and describes gum from Acacia senegal and Acacia seyal.",
+          "sources": [
+            {
+              "title": "Strengthening Agricultural Value Chain and AfCFTA Linkages in South Sudan: Opportunities and Challenges",
+              "url": "https://www.undp.org/sites/g/files/zskgke326/files/2023-10/strengthening_agriculture_value_afcfta_report_final_web.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "groundnuts",
+          "label": "Groundnuts",
+          "association": "The same report devotes a section to the groundnut value chain, covering seed, oil, oil cake and peanut butter.",
+          "sources": [
+            {
+              "title": "Strengthening Agricultural Value Chain and AfCFTA Linkages in South Sudan: Opportunities and Challenges",
+              "url": "https://www.undp.org/sites/g/files/zskgke326/files/2023-10/strengthening_agriculture_value_afcfta_report_final_web.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "sesame",
+          "label": "Sesame",
+          "association": "The report devotes a section to sesame, covering seeds, oil and oil cake.",
+          "sources": [
+            {
+              "title": "Strengthening Agricultural Value Chain and AfCFTA Linkages in South Sudan: Opportunities and Challenges",
+              "url": "https://www.undp.org/sites/g/files/zskgke326/files/2023-10/strengthening_agriculture_value_afcfta_report_final_web.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "shea-butter",
+          "label": "Shea butter",
+          "association": "The report includes the shea nut value chain among the seven priority chains and describes shea butter extraction.",
+          "sources": [
+            {
+              "title": "Strengthening Agricultural Value Chain and AfCFTA Linkages in South Sudan: Opportunities and Challenges",
+              "url": "https://www.undp.org/sites/g/files/zskgke326/files/2023-10/strengthening_agriculture_value_afcfta_report_final_web.pdf",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "TZ",
+      "slug": "tanzania",
+      "name": "Tanzania",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "Tanzania",
+        "sw": "Tanzania"
+      },
+      "introduction": "Tanzania ranges from the volcanic highlands to the Zanzibar archipelago, producing tea, cashew, cloves and sisal. Honey and avocado add newer export lines.",
+      "themes": [
+        {
+          "key": "avocado",
+          "label": "Avocado",
+          "association": "FAO's One Country One Priority Product initiative lists avocado as Tanzania's special agricultural product.",
+          "sources": [
+            {
+              "title": "One Country One Priority Product: Africa",
+              "url": "https://www.fao.org/one-country-one-priority-product/africa/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cashew",
+          "label": "Cashew",
+          "association": "The Cashewnut Board of Tanzania, a public institution under the Ministry of Agriculture based in Mtwara, regulates the cashew value chain from farmer to consumer, including farmer registration and licensing, and is developing the Maranje industrial park.",
+          "sources": [
+            {
+              "title": "Bodi ya Korosho Tanzania",
+              "url": "https://www.cashew.go.tz/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cloves",
+          "label": "Cloves",
+          "association": "The AGRIS-indexed clove study by Penot and Danthu covers Zanzibar alongside Madagascar and Comoros.",
+          "sources": [
+            {
+              "title": "Entre « ignorance politique », ingérence et contrôle de l'État : quelles politiques publiques pour la filière girofle à Madagascar, aux Comores et à Zanzibar",
+              "url": "https://agris.fao.org/search/en/records/64746a59425ec3c088f03c1d",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "tea",
+          "label": "Tea",
+          "association": "The Tea Board of Tanzania regulates tea imports and exports, registers buyers, traders and brokers, and publishes a 2025–2035 tea sector development plan.",
+          "sources": [
+            {
+              "title": "Bodi ya Chai Tanzania",
+              "url": "https://www.teaboard.go.tz/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "sisal",
+          "label": "Sisal",
+          "association": "The Tanzania Sisal Board, based in Tanga, licenses farmers, processors and exporters and describes sisal fibre used for ropes, mats and carpets, with research into new products from sisal waste.",
+          "sources": [
+            {
+              "title": "Bodi ya Mkonge Tanzania",
+              "url": "https://www.sisalboard.go.tz/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "honey",
+          "label": "Honey and beeswax",
+          "association": "FAO's regional non-wood forest products review lists honey and beeswax among Tanzania's forest products.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "UG",
+      "slug": "uganda",
+      "name": "Uganda",
+      "region": "East Africa",
+      "localizedNames": {
+        "en": "Uganda",
+        "sw": "Uganda"
+      },
+      "introduction": "Uganda's fertile plateau grows coffee, bananas and cocoa, with honey and shea butter from woodland areas. Barkcloth, made from fig bark, is among its best-known crafts.",
+      "themes": [
+        {
+          "key": "coffee",
+          "label": "Coffee",
+          "association": "The Uganda Coffee Development Authority reports exports of 8.6 million 60-kg bags worth USD 2.3 billion in the 12 months to May 2026, and publishes daily Robusta and Arabica prices.",
+          "sources": [
+            {
+              "title": "Uganda Coffee Development Authority",
+              "url": "https://ugandacoffee.go.ug/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cocoa",
+          "label": "Cocoa",
+          "association": "FAO's One Country One Priority Product initiative lists cocoa as Uganda's special agricultural product.",
+          "sources": [
+            {
+              "title": "One Country One Priority Product: Africa",
+              "url": "https://www.fao.org/one-country-one-priority-product/africa/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "honey",
+          "label": "Honey",
+          "association": "FAO's regional review describes honey as one of Uganda's most significant non-wood forest products.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "shea-butter",
+          "label": "Shea butter",
+          "association": "The same review lists shea butter and palm oil among Uganda's edible oils from forest sources.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "barkcloth",
+          "label": "Barkcloth",
+          "association": "UNESCO inscribed barkcloth making in Uganda on the Representative List in 2008; the craft of the Baganda uses the inner bark of the Mutuba tree, beaten with wooden mallets.",
+          "sources": [
+            {
+              "title": "Barkcloth making in Uganda",
+              "url": "https://ich.unesco.org/en/RL/barkcloth-making-among-the-baganda-00139",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "bananas",
+          "label": "Bananas and matoke",
+          "association": "IITA describes highland cooking bananas (matooke and mchare) as a staple food in the Eastern African highlands, where about 5 million hectares produce roughly 20 percent of global banana output, and estimates annual per capita consumption at 250–600 kg.",
+          "sources": [
+            {
+              "title": "Breeding Better Bananas",
+              "url": "https://iita.org/project/breeding-better-bananas/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    }
+  ],
+  "sources": [
+    {
+      "publisher": "World Bank",
+      "title": "Burundi Coffee Sector Competitiveness Project: Project Appraisal Document (P151869)",
+      "url": "https://documents1.worldbank.org/curated/en/821751468186545895/pdf/PAD1271-PAD-P151869-IDA-R2016-0132-1-OUO-9.pdf"
+    },
+    {
+      "publisher": "Ministry of Commerce, Transport, Industry and Tourism (Burundi)",
+      "title": "Office du Thé du Burundi (OTB)",
+      "url": "https://mctit.gov.bi/office-du-the-du-burundi-otb/"
+    },
+    {
+      "publisher": "FAO",
+      "title": "Non-wood forest products in Africa: a regional and national overview (Central Africa)",
+      "url": "https://www.fao.org/4/y1515b/y1515b18.htm"
+    },
+    {
+      "publisher": "FAO GIEWS",
+      "title": "Country Brief: Burundi",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=BDI"
+    },
+    {
+      "publisher": "Ministry of Commerce, Transport, Industry and Tourism (Burundi)",
+      "title": "Formation sur la traçabilité et l'éco-certification des cuirs et peaux au Burundi",
+      "url": "https://mctit.gov.bi/formation-sur-la-tracabilite-et-leco-certification-des-cuirs-et-peaux-au-burundi/"
+    },
+    {
+      "publisher": "FAO AGRIS",
+      "title": "Entre « ignorance politique », ingérence et contrôle de l'État : quelles politiques publiques pour la filière girofle à Madagascar, aux Comores et à Zanzibar",
+      "url": "https://agris.fao.org/search/en/records/64746a59425ec3c088f03c1d"
+    },
+    {
+      "publisher": "FAO",
+      "title": "Profil des systèmes alimentaires — Union des Comores (2022)",
+      "url": "https://openknowledge.fao.org/handle/20.500.14283/cb8911fr"
+    },
+    {
+      "publisher": "Indian Ocean Tuna Commission",
+      "title": "Rapport National destiné au Comité Scientifique de la Commission des Thons de l'Océan Indien, 2024 — Union des Comores",
+      "url": "https://iotc.org/sites/default/files/documents/2024/11/IOTC-2024-SC27-NR04F_Comoros.pdf"
+    },
+    {
+      "publisher": "FAO",
+      "title": "Non-wood forest products in Africa: a regional and national overview (Insular East Africa)",
+      "url": "https://www.fao.org/4/y1515b/y1515b16.htm"
+    },
+    {
+      "publisher": "FAO",
+      "title": "One Country One Priority Product: Africa",
+      "url": "https://www.fao.org/one-country-one-priority-product/africa/en"
+    },
+    {
+      "publisher": "FAO GIEWS",
+      "title": "Country Brief: Djibouti",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=DJI"
+    },
+    {
+      "publisher": "FAOLEX",
+      "title": "Décret n°2002-0226/PR/MERN portant réglementation spécifique de l'extraction, de traitement et de commercialisation du Sel du Lac-Assal",
+      "url": "https://faolex.fao.org/docs/pdf/dji38384.pdf"
+    },
+    {
+      "publisher": "Djibouti Ports and Free Zones Authority",
+      "title": "Djibouti Ports and Free Zones Authority",
+      "url": "https://www.dpfza.gov.dj/"
+    },
+    {
+      "publisher": "FAO",
+      "title": "Non-wood forest products in Africa: a regional and national overview (East Africa)",
+      "url": "https://www.fao.org/4/y1515b/y1515b15.htm"
+    },
+    {
+      "publisher": "FAO GIEWS",
+      "title": "Country Brief: Eritrea",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=ERI"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "Reimagining the future of climate action in Africa: Digitalization of coffee sector as use case",
+      "url": "https://blogs.worldbank.org/en/nasikiliza/reimagining-future-climate-action-africa-digitalizing-coffee-sector-afe-1224"
+    },
+    {
+      "publisher": "Ethiopian Leather Industries Association",
+      "title": "Ethiopian Leather Industries Association",
+      "url": "https://www.eliaet.com/"
+    },
+    {
+      "publisher": "Ethiopian Investment Commission",
+      "title": "Textile & Garment",
+      "url": "https://investethiopia.gov.et/key-sectors/manufacturing/textile-garment/"
+    },
+    {
+      "publisher": "Tea Board of Kenya",
+      "title": "Home",
+      "url": "https://www.teaboard.or.ke/"
+    },
+    {
+      "publisher": "FAO AGRIS",
+      "title": "Coffee production and profitability in the smallholder sector in Kenya",
+      "url": "https://agris.fao.org/search/en/records/6471edd12a40512c710ec8e0"
+    },
+    {
+      "publisher": "Kenya Flower Council",
+      "title": "Our Story",
+      "url": "https://kenyaflowercouncil.org/"
+    },
+    {
+      "publisher": "Fresh Produce Exporters Association of Kenya",
+      "title": "FPEAK",
+      "url": "https://fpeak.org/"
+    },
+    {
+      "publisher": "Export Processing Zones Authority (Kenya)",
+      "title": "Export Processing Zones Authority",
+      "url": "https://epzakenya.go.ke/"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "Small bridge, massive impact: Connecting Madagascar's vanilla to the world",
+      "url": "https://blogs.worldbank.org/en/transport/madagascar-bridge"
+    },
+    {
+      "publisher": "International Cocoa Organization",
+      "title": "Fine or Flavour Cocoa",
+      "url": "https://www.icco.org/fine-or-flavor-cocoa/"
+    },
+    {
+      "publisher": "FAO GIEWS",
+      "title": "Country Brief: Madagascar",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=MDG"
+    },
+    {
+      "publisher": "Mauritius Cane Industry Authority",
+      "title": "MCIA Mauritius Cane Industry Authority",
+      "url": "https://mcia.mu/"
+    },
+    {
+      "publisher": "Groupe Saint Aubin",
+      "title": "Domaine de Bois Chéri",
+      "url": "https://groupe-saintaubin.com/en/our-domains/domaine-de-bois-cheri/"
+    },
+    {
+      "publisher": "Mauritius Export Association",
+      "title": "Mauritius Export Association",
+      "url": "https://www.mexamauritius.org/"
+    },
+    {
+      "publisher": "National Agricultural Export Development Board (Rwanda)",
+      "title": "NAEB",
+      "url": "https://naeb.gov.rw/"
+    },
+    {
+      "publisher": "Rwanda Cultural Heritage Academy via Google Arts & Culture",
+      "title": "The Art of Decorating Houses in Rwanda",
+      "url": "https://artsandculture.google.com/story/the-art-of-decorating-houses-in-rwanda-rwanda-cultural-heritage-academy/rwVBZGu36jp5dQ"
+    },
+    {
+      "publisher": "Google Arts & Culture",
+      "title": "Agaseke: The Baskets That Brought Peace",
+      "url": "https://artsandculture.google.com/story/HQWhYjNwebFZHQ"
+    },
+    {
+      "publisher": "Seychelles Fishing Authority",
+      "title": "Seychelles National Report to the Scientific Committee of the Indian Ocean Tuna Commission, 2021",
+      "url": "https://sfa.sc/wp-content/uploads/2024/08/IOTC-2021-SC24-NR22_Rev1_-_Seychelles1.pdf"
+    },
+    {
+      "publisher": "Seychelles Fishing Authority",
+      "title": "Seychelles Fisheries Authority",
+      "url": "https://www.sfa.sc/"
+    },
+    {
+      "publisher": "FAO GIEWS",
+      "title": "Country Brief: Somalia",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=SOM"
+    },
+    {
+      "publisher": "FAO AGRIS",
+      "title": "A Market Analysis of the Somali Banana Sector and Its Potential for Export Revival",
+      "url": "https://agris.fao.org/search/fr/records/65dff6a90f3e94b9e5de0f0a"
+    },
+    {
+      "publisher": "FAO GIEWS",
+      "title": "Country Brief: South Sudan",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=SSD"
+    },
+    {
+      "publisher": "UNDP and Ministry of Trade and Industry (South Sudan)",
+      "title": "Strengthening Agricultural Value Chain and AfCFTA Linkages in South Sudan: Opportunities and Challenges",
+      "url": "https://www.undp.org/sites/g/files/zskgke326/files/2023-10/strengthening_agriculture_value_afcfta_report_final_web.pdf"
+    },
+    {
+      "publisher": "Cashewnut Board of Tanzania",
+      "title": "Bodi ya Korosho Tanzania",
+      "url": "https://www.cashew.go.tz/"
+    },
+    {
+      "publisher": "Tea Board of Tanzania",
+      "title": "Bodi ya Chai Tanzania",
+      "url": "https://www.teaboard.go.tz/"
+    },
+    {
+      "publisher": "Tanzania Sisal Board",
+      "title": "Bodi ya Mkonge Tanzania",
+      "url": "https://www.sisalboard.go.tz/"
+    },
+    {
+      "publisher": "Uganda Coffee Development Authority",
+      "title": "Uganda Coffee Development Authority",
+      "url": "https://ugandacoffee.go.ug/"
+    },
+    {
+      "publisher": "UNESCO Intangible Cultural Heritage",
+      "title": "Barkcloth making in Uganda",
+      "url": "https://ich.unesco.org/en/RL/barkcloth-making-among-the-baganda-00139"
+    },
+    {
+      "publisher": "International Institute of Tropical Agriculture",
+      "title": "Breeding Better Bananas",
+      "url": "https://iita.org/project/breeding-better-bananas/"
+    }
+  ]
+}

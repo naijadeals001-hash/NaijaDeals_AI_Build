@@ -29,6 +29,13 @@ export const PERMISSIONS = [
   "audit:read",
   "roles:write",
   "countries:write",
+  /// Discover Africa editorial registry. Drafting, publication and origin
+  /// verification are separate capabilities: an operator who may write a
+  /// country introduction does not thereby verify a product's origin.
+  "countries:editorial:read",
+  "countries:editorial:write",
+  "countries:editorial:publish",
+  "countries:origin:review",
   "disputes:read",
   "disputes:write",
   "gigs:read",
@@ -78,6 +85,16 @@ const PLUS_WITHHELD_FROM_ADMIN: readonly Permission[] = [
 const SUPER_ADMIN_ONLY: readonly Permission[] = ["verticals:write"] as const;
 
 /**
+ * Country publication and origin verification are deliberately withheld from
+ * the ordinary `admin` role. An admin may draft the editorial record; a named
+ * publisher or origin reviewer performs the consequential action.
+ */
+const COUNTRY_WITHHELD_FROM_ADMIN: readonly Permission[] = [
+  "countries:editorial:publish",
+  "countries:origin:review"
+] as const;
+
+/**
  * Role to permission mapping.
  *
  * - `super_admin` holds every permission, including role administration.
@@ -101,11 +118,16 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
   plus_membership_admin: ["plus:content:read", "plus:membership:configure"],
   // Sponsored-promotion review only.
   plus_advertiser_reviewer: ["plus:content:read", "plus:advertiser:approve"],
+  // Discover Africa publication, separate from drafting and origin review.
+  country_publisher: ["countries:editorial:read", "countries:editorial:publish"],
+  // Origin evidence review, separate from editorial publication.
+  country_origin_reviewer: ["countries:editorial:read", "countries:origin:review"],
   admin: PERMISSIONS.filter(
     (permission) =>
       permission !== "roles:write" &&
       !PLUS_WITHHELD_FROM_ADMIN.includes(permission) &&
-      !SUPER_ADMIN_ONLY.includes(permission)
+      !SUPER_ADMIN_ONLY.includes(permission) &&
+      !COUNTRY_WITHHELD_FROM_ADMIN.includes(permission)
   ),
   ops: [
     "dashboard:read",
@@ -119,6 +141,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "products:read",
     "vendors:read",
     "users:read",
+    "countries:editorial:read",
     "gigs:read",
     "stream:read"
   ],
@@ -141,6 +164,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "vendors:read",
     "users:read",
     "disputes:read",
+    "countries:editorial:read",
     "gigs:read",
     "stream:read"
   ],
@@ -151,6 +175,7 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "products:moderate",
     "vendors:read",
     "vendors:review",
+    "countries:editorial:read",
     "gigs:read",
     "gigs:moderate",
     "stream:read",
@@ -170,7 +195,9 @@ export const STAFF_ROLES = [
   "plus_editor",
   "plus_publisher",
   "plus_membership_admin",
-  "plus_advertiser_reviewer"
+  "plus_advertiser_reviewer",
+  "country_publisher",
+  "country_origin_reviewer"
 ] as const;
 
 export type StaffRole = (typeof STAFF_ROLES)[number];

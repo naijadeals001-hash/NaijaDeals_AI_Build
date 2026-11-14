@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { NaijaDealsMarketplace } from "@/components/shop/storefront";
 import { readLocale } from "@/lib/i18n/server";
+import { listPublishedCountryCards } from "@/lib/services/countries/discovery.service";
 import {
   previewAuthorizationForRequest,
   unavailableMessage,
@@ -32,6 +33,9 @@ export default async function Page() {
           : unavailableMessage(verticalDefinition("shop"), shop.effective)
       }
     : null;
+  // Country guides are editorial, not commerce. They are published independently
+  // of Shop activation and never mutate the visitor's delivery market.
+  const initialCountries = await listPublishedCountryCards().catch(() => []);
   return (
     <>
       <Suspense
@@ -44,7 +48,7 @@ export default async function Page() {
           </div>
         }
       >
-        <NaijaDealsMarketplace initialShopAvailability={initialShopAvailability} />
+        <NaijaDealsMarketplace initialShopAvailability={initialShopAvailability} initialCountries={initialCountries} />
       </Suspense>
     </>
   );

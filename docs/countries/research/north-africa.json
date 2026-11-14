@@ -1,0 +1,687 @@
+{
+  "region": "North Africa",
+  "feature": "NaijaDeals Shop — Discover Africa",
+  "accessedAt": "2026-11-14",
+  "editorialStandard": "Themes describe cultural and economic associations, not NaijaDeals supply availability. Rankings and volume claims appear only where the cited source states them.",
+  "countries": [
+    {
+      "code": "DZ",
+      "slug": "algeria",
+      "name": "Algeria",
+      "region": "North Africa",
+      "localizedNames": {
+        "en": "Algeria",
+        "ar": "الجزائر",
+        "fr": "Algérie"
+      },
+      "introduction": "Algeria stretches from Mediterranean ports to Saharan oases, where irrigated gardens, date palms and olive groves shape rural life. Its markets carry figs, semolina, woven carpets and handmade pottery that reflect both Amazigh and Arab traditions.",
+      "themes": [
+        {
+          "key": "figs",
+          "label": "Figs",
+          "association": "FAO's One Country One Priority Product programme names the fig as Algeria's special agricultural product, citing more than seven million trees and over 30 varieties. Dried figs from Beni Maouche carry geographical indication status.",
+          "sources": [
+            {
+              "title": "FAO OCOP profile: Algeria (fig)",
+              "url": "https://www.fao.org/one-country-one-priority-product/near-east-and-north-africa/algeria/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "deglet-nour-dates",
+          "label": "Deglet Nour dates",
+          "association": "Deglet Nour is the amber date most closely associated with Algeria's Saharan oases. FAO notes that Algeria and Tunisia are the two origins from which most Deglet Nour exports are shipped.",
+          "sources": [
+            {
+              "title": "FAO: 6 Date Varieties",
+              "url": "https://www.fao.org/4/J1851E/j1851e08.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "olive-oil",
+          "label": "Olive oil",
+          "association": "Olive growing is an established Mediterranean crop in Algeria, and FAO has supported conversion to organic production. The FAO project notes that olives and date palms account for most of the country's small organic area.",
+          "sources": [
+            {
+              "title": "Assistance technique pour la promotion de la production d'huile d'olive biologique en Algérie (FAO)",
+              "url": "https://openknowledge.fao.org/handle/20.500.14283/cb0808fr",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "couscous",
+          "label": "Couscous",
+          "association": "Couscous knowledge and practices were inscribed on UNESCO's intangible cultural heritage list following a joint nomination by Algeria, Morocco, Tunisia and Mauritania. The Algerian submission was prepared with heritage bodies from the other three countries.",
+          "sources": [
+            {
+              "title": "Algerian Couscous — Consulate General of Algeria in New York",
+              "url": "https://algeria-cgny.org/algerian-couscous/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "carpets",
+          "label": "Woven carpets",
+          "association": "Algerian weaving is regionally distinct, with named carpets including Djebel Amour, Ait Hichem, Babar, Haracta and Gargour. The ministry notes that patterns vary between pastoral regions.",
+          "sources": [
+            {
+              "title": "Algerian Crafts — Algerian Ministry of Tourism and Handicrafts",
+              "url": "https://www.mta.gov.dz/algerian-crafts/?lang=en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "pottery",
+          "label": "Pottery and ceramics",
+          "association": "Pottery and ceramics are made in several Algerian regions, including the Ouarsenis, Chenoua and Kabylie areas. The ministry describes shared techniques and locally distinctive symbolic motifs.",
+          "sources": [
+            {
+              "title": "Algerian Crafts — Algerian Ministry of Tourism and Handicrafts",
+              "url": "https://www.mta.gov.dz/algerian-crafts/?lang=en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "EG",
+      "slug": "egypt",
+      "name": "Egypt",
+      "region": "North Africa",
+      "localizedNames": {
+        "en": "Egypt",
+        "ar": "مصر",
+        "fr": "Égypte"
+      },
+      "introduction": "Egypt's economy and cooking have long been tied to the Nile, whose valley and delta support intensive farming alongside desert oases. Cotton textiles, citrus, dates, furniture and aromatic plants connect its agricultural heritage to export markets.",
+      "themes": [
+        {
+          "key": "dates",
+          "label": "Dates",
+          "association": "Egypt designated the date palm as its special agricultural product under FAO's programme. FAO reports annual output above 1.8 million tonnes, with palms grown from the Nile Valley and Delta to Western Desert oases.",
+          "sources": [
+            {
+              "title": "FAO OCOP profile: Egypt (date palm)",
+              "url": "https://www.fao.org/one-country-one-priority-product/near-east-and-north-africa/egypt/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cotton-textiles",
+          "label": "Cotton textiles",
+          "association": "Egyptian Cotton™ is protected through a licensing and traceability system run by the Egyptian Cotton Association. The system includes DNA testing and accreditation of manufacturers.",
+          "sources": [
+            {
+              "title": "Egyptian Cotton Association — Egyptian Cotton™",
+              "url": "https://www.egyptiancottonassociation.com/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "citrus",
+          "label": "Citrus",
+          "association": "An FAO/EBRD project article reports that citrus fruits are Egypt's most exported product, generating more than USD 920 million in export value during the 2022–2023 season.",
+          "sources": [
+            {
+              "title": "Expanding Egypt's horticultural exports through improved food safety compliance (FAO Investment Centre)",
+              "url": "https://www.fao.org/investment-centre/latest/news/detail/expanding-egypt-s-horticultural-exports-through-improved-food-safety-compliance/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "apparel",
+          "label": "Ready-made apparel",
+          "association": "The Apparel Export Council of Egypt is a public-private body created by ministerial decree to promote garment exports. Its members produce knitwear, woven garments and accessories.",
+          "sources": [
+            {
+              "title": "Apparel Export Council of Egypt — AECE at a Glance",
+              "url": "https://aecegy.com/aece-at-a-glance/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "furniture",
+          "label": "Furniture",
+          "association": "Egypt's furniture manufacturers are represented by an export council that supports design, training and participation in international exhibitions.",
+          "sources": [
+            {
+              "title": "Egyptian Furniture Export Council — About Us",
+              "url": "http://www.efecfurniture.com/about-us-2",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "medicinal-aromatic-plants",
+          "label": "Medicinal and aromatic plants",
+          "association": "Medicinal and aromatic plants are among the five horticultural crops covered by an FAO/EBRD food-safety programme in Egypt, alongside citrus, grapes, strawberries and tomatoes.",
+          "sources": [
+            {
+              "title": "Expanding Egypt's horticultural exports through improved food safety compliance (FAO Investment Centre)",
+              "url": "https://www.fao.org/investment-centre/latest/news/detail/expanding-egypt-s-horticultural-exports-through-improved-food-safety-compliance/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "LY",
+      "slug": "libya",
+      "name": "Libya",
+      "region": "North Africa",
+      "localizedNames": {
+        "en": "Libya",
+        "ar": "ليبيا",
+        "fr": "Libye"
+      },
+      "introduction": "Libya combines a Mediterranean coastline with Saharan oases and the Nafusa Mountains, where olives, dates and cereals grow in scattered farming areas. Coastal fisheries and crafts such as Gharyan pottery remain part of local livelihoods despite the country's heavy dependence on oil.",
+      "themes": [
+        {
+          "key": "dates",
+          "label": "Dates of Al Jufrah",
+          "association": "Al Jufrah is one of Libya's notable date-growing areas, with five oases cultivating 18 local cultivars in a genetic survey. The study found the palms resemble western North African date types.",
+          "sources": [
+            {
+              "title": "The date palms of Al Jufrah – Libya: a survey on genetic diversity (AGRIS)",
+              "url": "https://agris.fao.org/search/en/providers/122436/records/67597e05c7a957febdf8e778",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "olive-oil",
+          "label": "Olive oil",
+          "association": "Libyan olive oil output has ranged from about 4,360 to 19,620 tonnes in recent years while consumption stayed steadier. A 2026 study in Comprehensive Journal of Science describes a persistent but narrowing supply gap.",
+          "sources": [
+            {
+              "title": "Analysis of Olive Oil Production and Consumption in Libya",
+              "url": "https://cjos.histr.edu.ly/index.php/journal/en/article/view/1466",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "fisheries",
+          "label": "Coastal fisheries",
+          "association": "Libya's marine catch is dominated by small pelagics such as sardine, mackerel and horse mackerel, with tuna taken by traditional tonnara nets. Fishing is concentrated in western waters between the Tunisian border and Misurata.",
+          "sources": [
+            {
+              "title": "The marine wealth sector of Libya: a development planning profile (FAO)",
+              "url": "https://www.fao.org/4/ag421e/AG421E03.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cereals",
+          "label": "Wheat and barley",
+          "association": "Libya's cereal farming centres on wheat and barley, especially in Al Jabal Al Akhdar, but domestic output covers only part of demand. Cereal imports are projected at 3.3 million tonnes for 2026/27.",
+          "sources": [
+            {
+              "title": "FAO GIEWS Country Brief: Libya",
+              "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=LBY",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "honey",
+          "label": "Honey",
+          "association": "A USAID-funded beekeeping programme has worked with Libyan beekeepers on hive data, honey quality standards and market access. It presents honey production as a small-scale livelihood, including for women.",
+          "sources": [
+            {
+              "title": "Beekeeping in Libya — Moomken",
+              "url": "https://moomken.org/en/programs/beekeeping",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "gharyan-pottery",
+          "label": "Gharyan pottery",
+          "association": "Gharyan and nearby Bughilan in the Nafusa Mountains are known for red-clay pottery, including water jars, oil amphorae and tableware. Artisans hand-build or wheel-throw the vessels.",
+          "sources": [
+            {
+              "title": "Gharyan Red-Clay Pottery — World Craft Depository (CRAFT)",
+              "url": "https://www.craftheritage.world/technique/gharyan-red-clay-pottery-libya",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "MA",
+      "slug": "morocco",
+      "name": "Morocco",
+      "region": "North Africa",
+      "localizedNames": {
+        "en": "Morocco",
+        "ar": "المغرب",
+        "fr": "Maroc"
+      },
+      "introduction": "Morocco's Atlantic and Mediterranean coasts, mountain ranges and Saharan oases support a varied agricultural and craft economy. Argan groves, carob, oasis date palms and olive groves sit alongside leatherwork and woven textiles that give its markets a distinctive regional character.",
+      "themes": [
+        {
+          "key": "carob",
+          "label": "Carob",
+          "association": "FAO selected carob as Morocco's special agricultural product, citing its use as a cocoa alternative and its fit with semi-arid agroforestry. The national target cited is 160,000 hectares by 2030.",
+          "sources": [
+            {
+              "title": "FAO OCOP profile: Morocco (carob)",
+              "url": "https://www.fao.org/one-country-one-priority-product/near-east-and-north-africa/morocco/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "argan",
+          "label": "Argan",
+          "association": "ANDZOA promotes sustainable arganiculture and the argan value chain within Morocco's argan biosphere reserve and oasis zones.",
+          "sources": [
+            {
+              "title": "ANDZOA — Agence Nationale pour le Développement des Zones Oasiennes et de l'Arganier",
+              "url": "https://andzoa.ma/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "oasis-dates",
+          "label": "Oasis dates",
+          "association": "Date palms form part of ANDZOA's oasis development programme, which includes the international date salon in Erfoud.",
+          "sources": [
+            {
+              "title": "ANDZOA — Agence Nationale pour le Développement des Zones Oasiennes et de l'Arganier",
+              "url": "https://andzoa.ma/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "olive-oil",
+          "label": "Olive oil",
+          "association": "An FAO/EBRD policy brief estimates Moroccan olive oil at about 5 percent of global production in 2021. The sector accounts for 13 percent of agricultural workdays and 19 percent of the country's food-oil needs.",
+          "sources": [
+            {
+              "title": "More per drop: building resilience and adding value in Morocco's olive oil sector (FAO)",
+              "url": "https://www.fao.org/investment-centre/latest/news/detail/more-per-drop--building-resilience-and-adding-value-in-morocco-s-olive-oil-sector/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "leatherwork",
+          "label": "Leatherwork",
+          "association": "Leatherwork appears as \"Leather arts\", one of the craft categories listed by Morocco's Maison de l'Artisan (MDA), the handicraft body whose site sets out the country's craft categories.",
+          "sources": [
+            {
+              "title": "Maison de l'Artisan — Moroccan Handicraft",
+              "url": "https://mda.gov.ma/en/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "woven-textiles",
+          "label": "Woven textiles",
+          "association": "Textile arts form a separate category in the same Maison de l'Artisan listing, alongside leather, wood, metal, jewellery and earthen arts.",
+          "sources": [
+            {
+              "title": "Maison de l'Artisan — Moroccan Handicraft",
+              "url": "https://mda.gov.ma/en/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "SD",
+      "slug": "sudan",
+      "name": "Sudan",
+      "region": "North Africa",
+      "localizedNames": {
+        "en": "Sudan",
+        "ar": "السودان",
+        "fr": "Soudan"
+      },
+      "introduction": "Sudan spans desert, savannah and the Nile corridor, where sorghum, sesame and gum arabic trees underpin rural livelihoods. Henna, doum-palm fibre and tamarind add to a craft and food economy now shaped by conflict and displacement.",
+      "themes": [
+        {
+          "key": "sorghum",
+          "label": "Sorghum",
+          "association": "Sorghum is Sudan's special agricultural product under FAO's programme, grown on about five million hectares in rainfed areas. Traditional types include feterita, hemesse and abjaro.",
+          "sources": [
+            {
+              "title": "FAO OCOP profile: Sudan (sorghum)",
+              "url": "https://www.fao.org/one-country-one-priority-product/near-east-and-north-africa/Sudan/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "gum-arabic",
+          "label": "Gum arabic",
+          "association": "Gum arabic from Acacia senegal, known as hashab, is Sudan's most valuable non-wood forest product and is tapped across the central gum belt. FAO describes producer associations and auction chains that link tappers to exporters through Port Sudan.",
+          "sources": [
+            {
+              "title": "The Sudan: Elmirehbiba gum arabic producers association (FAO)",
+              "url": "https://www.fao.org/4/a0226e/a0226e10.htm",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview (FAO)",
+              "url": "https://www.fao.org/4/y1515b/y1515b15.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "sesame",
+          "label": "Sesame",
+          "association": "Sesame is a major Sudanese export crop, though a 2008 study found production and export volumes highly variable. The authors linked volatility to taxation, marketing services, finance and quality standards.",
+          "sources": [
+            {
+              "title": "Sesame production and export performance in Sudan (AGRIS)",
+              "url": "https://agris.fao.org/search/en/records/64724f5ee17b74d2224fc9da",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "henna",
+          "label": "Henna",
+          "association": "Henna is cultivated in Sudan and was described by FAO as the country's only cultivated non-wood forest product, with output around 2,925 tonnes in the reference period.",
+          "sources": [
+            {
+              "title": "Non-wood goods and services in Sudan (FAO)",
+              "url": "https://www.fao.org/4/ae429e/ae429e00.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "doum-fibre",
+          "label": "Doum-palm fibre",
+          "association": "Fibres from the doum palm and borassus palm, known locally as saaf, are used for weaving and basketry. FAO recorded about 6,100 tonnes of these fibres.",
+          "sources": [
+            {
+              "title": "Non-wood goods and services in Sudan (FAO)",
+              "url": "https://www.fao.org/4/ae429e/ae429e00.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "tamarind",
+          "label": "Tamarind",
+          "association": "Tamarind, called aradeib in Sudan, is gathered from wild trees for food and medicinal use. FAO recorded around 1,530 tonnes and noted exports.",
+          "sources": [
+            {
+              "title": "Non-wood goods and services in Sudan (FAO)",
+              "url": "https://www.fao.org/4/ae429e/ae429e00.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "TN",
+      "slug": "tunisia",
+      "name": "Tunisia",
+      "region": "North Africa",
+      "localizedNames": {
+        "en": "Tunisia",
+        "ar": "تونس",
+        "fr": "Tunisie"
+      },
+      "introduction": "Tunisia's northern hills, Cap Bon peninsula and southern oases support olive groves, date palms and market gardens. Harissa, olive oil, woven carpets, ceramics and the chechia connect household traditions with a craft sector that serves both local and export markets.",
+      "themes": [
+        {
+          "key": "harissa",
+          "label": "Harissa",
+          "association": "Harissa, a chilli paste central to Tunisian cooking, was inscribed on UNESCO's intangible cultural heritage list in 2022. FAO now treats it as Tunisia's special agricultural product, linking farmers, processors and exporters.",
+          "sources": [
+            {
+              "title": "FAO OCOP profile: Tunisia (harissa)",
+              "url": "https://www.fao.org/one-country-one-priority-product/near-east-and-north-africa/tunisia/en",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "Harissa, knowledge, skills and culinary and social practices — UNESCO Intangible Cultural Heritage",
+              "url": "https://ich.unesco.org/en/RL/harissa-knowledge-skills-and-culinary-and-social-practices-01710",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "olive-oil",
+          "label": "Olive oil",
+          "association": "A World Bank value-chain study describes north-west Tunisia as a major olive region, supplying 41 percent of national organic and extra-virgin oil. It notes that most output is exported in bulk and that bottled, branded oil remains a small share.",
+          "sources": [
+            {
+              "title": "Olive Oil in the North-West of Tunisia: A Value Chain and Jobs Analysis (World Bank)",
+              "url": "https://documents1.worldbank.org/curated/en/700491593018215436/txt/Olive-Oil-in-the-North-West-of-Tunisia-A-Value-Chain-and-Jobs-Analysis.txt",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "deglet-nour-dates",
+          "label": "Deglet Nour dates",
+          "association": "Deglet Nour dates are associated with Tunisia's southern oases, and FAO identifies Tunisia and Algeria as the main origins of exported Deglet Nour.",
+          "sources": [
+            {
+              "title": "FAO: 6 Date Varieties",
+              "url": "https://www.fao.org/4/J1851E/j1851e08.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "carpets",
+          "label": "Carpets and flat-weave textiles",
+          "association": "Tunisia's national handicraft office, ONAT, lists weaving—including carpets and flat-weave textiles—as a craft category with dedicated producer guides.",
+          "sources": [
+            {
+              "title": "ONAT — Tunisian handicraft categories",
+              "url": "https://artisanat.nat.tn/artisanats/artisanat",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "ceramics",
+          "label": "Ceramics",
+          "association": "Clay and stone crafts, including ceramics, are listed among Tunisia's traditional craft categories by ONAT.",
+          "sources": [
+            {
+              "title": "ONAT — Tunisian handicraft categories",
+              "url": "https://artisanat.nat.tn/artisanats/artisanat",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "chechia",
+          "label": "Chechia",
+          "association": "The chechia, a felt cap, appears within Tunisia's traditional-clothing category in ONAT's national craft classification.",
+          "sources": [
+            {
+              "title": "ONAT — Tunisian handicraft categories",
+              "url": "https://artisanat.nat.tn/artisanats/artisanat",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    }
+  ],
+  "sources": [
+    {
+      "publisher": "FAO",
+      "title": "OCOP profile: Algeria (fig)",
+      "url": "https://www.fao.org/one-country-one-priority-product/near-east-and-north-africa/algeria/en"
+    },
+    {
+      "publisher": "FAO",
+      "title": "OCOP profile: Egypt (date palm)",
+      "url": "https://www.fao.org/one-country-one-priority-product/near-east-and-north-africa/egypt/en"
+    },
+    {
+      "publisher": "FAO",
+      "title": "OCOP profile: Morocco (carob)",
+      "url": "https://www.fao.org/one-country-one-priority-product/near-east-and-north-africa/morocco/en"
+    },
+    {
+      "publisher": "FAO",
+      "title": "OCOP profile: Sudan (sorghum)",
+      "url": "https://www.fao.org/one-country-one-priority-product/near-east-and-north-africa/Sudan/en"
+    },
+    {
+      "publisher": "FAO",
+      "title": "OCOP profile: Tunisia (harissa)",
+      "url": "https://www.fao.org/one-country-one-priority-product/near-east-and-north-africa/tunisia/en"
+    },
+    {
+      "publisher": "FAO",
+      "title": "6 Date Varieties",
+      "url": "https://www.fao.org/4/J1851E/j1851e08.htm"
+    },
+    {
+      "publisher": "FAO",
+      "title": "Assistance technique pour la promotion de la production d'huile d'olive biologique en Algérie",
+      "url": "https://openknowledge.fao.org/handle/20.500.14283/cb0808fr"
+    },
+    {
+      "publisher": "Consulate General of Algeria in New York",
+      "title": "Algerian Couscous",
+      "url": "https://algeria-cgny.org/algerian-couscous/"
+    },
+    {
+      "publisher": "Algerian Ministry of Tourism and Handicrafts",
+      "title": "Algerian Crafts",
+      "url": "https://www.mta.gov.dz/algerian-crafts/?lang=en"
+    },
+    {
+      "publisher": "Egyptian Cotton Association",
+      "title": "Egyptian Cotton™",
+      "url": "https://www.egyptiancottonassociation.com/"
+    },
+    {
+      "publisher": "FAO Investment Centre",
+      "title": "Expanding Egypt's horticultural exports through improved food safety compliance",
+      "url": "https://www.fao.org/investment-centre/latest/news/detail/expanding-egypt-s-horticultural-exports-through-improved-food-safety-compliance/"
+    },
+    {
+      "publisher": "Apparel Export Council of Egypt",
+      "title": "AECE at a Glance",
+      "url": "https://aecegy.com/aece-at-a-glance/"
+    },
+    {
+      "publisher": "Egyptian Furniture Export Council",
+      "title": "About Us",
+      "url": "http://www.efecfurniture.com/about-us-2"
+    },
+    {
+      "publisher": "FAO AGRIS",
+      "title": "The date palms of Al Jufrah – Libya: a survey on genetic diversity",
+      "url": "https://agris.fao.org/search/en/providers/122436/records/67597e05c7a957febdf8e778"
+    },
+    {
+      "publisher": "Comprehensive Journal of Science (University of Tripoli)",
+      "title": "Analysis of Olive Oil Production and Consumption in Libya",
+      "url": "https://cjos.histr.edu.ly/index.php/journal/en/article/view/1466"
+    },
+    {
+      "publisher": "FAO",
+      "title": "The marine wealth sector of Libya: a development planning profile",
+      "url": "https://www.fao.org/4/ag421e/AG421E03.htm"
+    },
+    {
+      "publisher": "FAO GIEWS",
+      "title": "Country Brief: Libya",
+      "url": "https://www.fao.org/giews/countrybrief/country.jsp?code=LBY"
+    },
+    {
+      "publisher": "Moomken",
+      "title": "Beekeeping in Libya",
+      "url": "https://moomken.org/en/programs/beekeeping"
+    },
+    {
+      "publisher": "World Craft Depository (CRAFT)",
+      "title": "Gharyan Red-Clay Pottery — Libya",
+      "url": "https://www.craftheritage.world/technique/gharyan-red-clay-pottery-libya"
+    },
+    {
+      "publisher": "ANDZOA",
+      "title": "Agence Nationale pour le Développement des Zones Oasiennes et de l'Arganier",
+      "url": "https://andzoa.ma/"
+    },
+    {
+      "publisher": "FAO Investment Centre",
+      "title": "More per drop: building resilience and adding value in Morocco's olive oil sector",
+      "url": "https://www.fao.org/investment-centre/latest/news/detail/more-per-drop--building-resilience-and-adding-value-in-morocco-s-olive-oil-sector/en"
+    },
+    {
+      "publisher": "Maison de l'Artisan (Morocco)",
+      "title": "Moroccan Handicraft",
+      "url": "https://mda.gov.ma/en/"
+    },
+    {
+      "publisher": "FAO",
+      "title": "The Sudan: Elmirehbiba gum arabic producers association",
+      "url": "https://www.fao.org/4/a0226e/a0226e10.htm"
+    },
+    {
+      "publisher": "FAO",
+      "title": "Non-wood forest products in Africa: a regional and national overview",
+      "url": "https://www.fao.org/4/y1515b/y1515b15.htm"
+    },
+    {
+      "publisher": "FAO AGRIS",
+      "title": "Sesame production and export performance in Sudan",
+      "url": "https://agris.fao.org/search/en/records/64724f5ee17b74d2224fc9da"
+    },
+    {
+      "publisher": "FAO",
+      "title": "Non-wood goods and services in Sudan",
+      "url": "https://www.fao.org/4/ae429e/ae429e00.htm"
+    },
+    {
+      "publisher": "UNESCO Intangible Cultural Heritage",
+      "title": "Harissa, knowledge, skills and culinary and social practices",
+      "url": "https://ich.unesco.org/en/RL/harissa-knowledge-skills-and-culinary-and-social-practices-01710"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "Olive Oil in the North-West of Tunisia: A Value Chain and Jobs Analysis",
+      "url": "https://documents1.worldbank.org/curated/en/700491593018215436/txt/Olive-Oil-in-the-North-West-of-Tunisia-A-Value-Chain-and-Jobs-Analysis.txt"
+    },
+    {
+      "publisher": "ONAT (Tunisia)",
+      "title": "Tunisian handicraft categories",
+      "url": "https://artisanat.nat.tn/artisanats/artisanat"
+    }
+  ]
+}

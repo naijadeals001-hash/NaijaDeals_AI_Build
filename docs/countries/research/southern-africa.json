@@ -1,0 +1,1128 @@
+{
+  "region": "Southern Africa",
+  "feature": "NaijaDeals Shop — Discover Africa",
+  "accessedAt": "2026-11-14",
+  "editorialStandard": "Themes describe cultural and economic associations, not NaijaDeals supply availability. Rankings and volume claims appear only where the cited source states them. Trade values are as reported by World Bank WITS (UN Comtrade data) for 2023 unless the source says otherwise. Themes with no adequate fetched source carry reviewStatus needs-source.",
+  "countries": [
+    {
+      "code": "AO",
+      "slug": "angola",
+      "name": "Angola",
+      "region": "Southern Africa",
+      "localizedNames": {
+        "en": "Angola",
+        "pt": "Angola"
+      },
+      "introduction": "Angola runs from Atlantic fishing towns to the Central Plateau, where cassava, maize and beans underpin household food supply. Coffee, palm oil and diamond exports connect that agricultural base to world markets beyond the oil sector.",
+      "themes": [
+        {
+          "key": "coffee",
+          "label": "Coffee",
+          "association": "Angola's agriculture ministry has set out a diversification strategy covering palm oil, soybeans, coffee and cereals, as reported by FAO's country office. Coffee is one of four crops the ministry names in that agenda.",
+          "sources": [
+            {
+              "title": "FAO in Angola",
+              "url": "https://www.fao.org/angola/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "palm-oil",
+          "label": "Palm oil",
+          "association": "Palm oil appears alongside coffee, soybeans and cereals in the agricultural strategy FAO reports for Angola, one of the crops named in the ministry's diversification plan.",
+          "sources": [
+            {
+              "title": "FAO in Angola",
+              "url": "https://www.fao.org/angola/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cassava",
+          "label": "Cassava",
+          "association": "A joint FAO/WFP crop assessment described cassava as the main staple in Angola's northern provinces and put 2003/04 output at 6.64 million tonnes, with the north producing 84% of the total. The assessment treats cassava as the country's second food crop by planted area.",
+          "sources": [
+            {
+              "title": "Missão conjunta FAO/PMA de avaliação das colheitas e do abastecimento alimentar em Angola",
+              "url": "https://www.fao.org/4/j2771p/j2771p00.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "maize",
+          "label": "Maize and beans",
+          "association": "The same FAO/WFP assessment estimated maize output at 576,917 tonnes in 2003/04 and described maize and beans as the dominant crops of Angola's Central Plateau.",
+          "sources": [
+            {
+              "title": "Missão conjunta FAO/PMA de avaliação das colheitas e do abastecimento alimentar em Angola",
+              "url": "https://www.fao.org/4/j2771p/j2771p00.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "honey",
+          "label": "Honey",
+          "association": "FAO's regional review of non-wood forest products describes beekeeping in Angola as mainly a subsistence activity, with potential in the country's nectar-producing plants and eucalyptus plantations.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview",
+              "url": "https://www.fao.org/4/y1515b/y1515b17.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "industrial-diamonds",
+          "label": "Industrial diamonds",
+          "association": "World Bank WITS lists unworked industrial diamonds as one of Angola's largest exports in 2023 at about US$1.59 billion, behind petroleum oils and liquefied natural gas.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Angola",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/AGO/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "BW",
+      "slug": "botswana",
+      "name": "Botswana",
+      "region": "Southern Africa",
+      "localizedNames": {
+        "en": "Botswana",
+        "tn": "Botswana"
+      },
+      "introduction": "Botswana is a semi-arid country where cattle ranching and diamond mining have shaped the modern economy. Beef, soda ash, copper and vehicle wiring sets lead exports, alongside indigenous crafts sold through curio shops in Gaborone, Francistown, Maun and Kasane.",
+      "themes": [
+        {
+          "key": "beef",
+          "label": "Beef",
+          "association": "The Botswana Meat Commission, a parastatal founded in 1965, operates abattoirs at Lobatse, Francistown and Maun and lists the UK, Netherlands, Italy, Germany and South Africa among its export markets. FAO's Botswana office has urged Nata-Gweta beef producers to invest in compliance and certification for regional and international markets.",
+          "sources": [
+            {
+              "title": "Botswana Meat Commission",
+              "url": "https://www.bmc.bw",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "FAO in Botswana",
+              "url": "https://www.fao.org/botswana/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "diamonds",
+          "label": "Diamonds",
+          "association": "Debswana, established in 1969, operates the Jwaneng, Orapa, Letlhakane and Damtshaa mines and describes itself as one of the world's foremost diamond producers by value and volume.",
+          "sources": [
+            {
+              "title": "Debswana Diamond Company",
+              "url": "https://www.debswana.com",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "crafts",
+          "label": "Indigenous crafts",
+          "association": "Botswana's tourism board notes that indigenous crafts are sold through curio, craft and gift shops in Gaborone, Francistown, Maun and Kasane and at safari camps, and describes the mokoro canoe, dug from ebony or kigelia trunks, as an Okavango Delta tradition.",
+          "sources": [
+            {
+              "title": "Botswana Tourism Organisation",
+              "url": "https://www.botswanatourism.co.bw",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "soda-ash",
+          "label": "Soda ash",
+          "association": "World Bank WITS records disodium carbonate, or soda ash, among Botswana's top five exports in 2023 at about US$56 million, an industrial chemicals line traded alongside diamonds and copper.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Botswana",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/BWA/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "wiring-harnesses",
+          "label": "Vehicle wiring sets",
+          "association": "Ignition and other wiring sets for vehicles were Botswana's fourth-largest export in 2023 at about US$123 million, according to World Bank WITS, evidence of vehicle-component manufacturing.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Botswana",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/BWA/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "copper",
+          "label": "Copper ore",
+          "association": "Copper ores and concentrates ranked third among Botswana's exports in 2023 at about US$507 million, World Bank WITS data show.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Botswana",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/BWA/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "SZ",
+      "slug": "eswatini",
+      "name": "Eswatini",
+      "region": "Southern Africa",
+      "localizedNames": {
+        "en": "Eswatini",
+        "ss": "eSwatini"
+      },
+      "introduction": "Eswatini sits between South Africa and Mozambique, with irrigated cane fields in the lowveld and timber plantations in the highveld. Sugar, sawn timber, handcrafted candles and flavouring compounds anchor an export trade that also includes coal and bananas.",
+      "themes": [
+        {
+          "key": "sugar",
+          "label": "Sugar",
+          "association": "The Eswatini Sugar Association states that the industry sells into four markets — the domestic SACU market, the EU, the US and regional markets — and contributes 6.3% of GDP with annual revenue above E7 billion.",
+          "sources": [
+            {
+              "title": "Eswatini Sugar",
+              "url": "https://www.eswatinisugar.co.sz",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "candles",
+          "label": "Handcrafted candles",
+          "association": "Swazi Candles, established in 1982 in the Malkerns Valley, makes millifiore candles, glycerine soaps and marula oil balm, employs 45 people permanently and exports to more than 20 countries.",
+          "sources": [
+            {
+              "title": "Swazi Candles",
+              "url": "https://swazicandles.com",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "timber",
+          "label": "Timber",
+          "association": "Montigny Investments describes itself as the largest privately owned integrated timber company in Southern Africa, owning over 55,000 hectares of certified plantation and selling treated timber, biomass, pulp and chipboard.",
+          "sources": [
+            {
+              "title": "Montigny Investments",
+              "url": "https://www.montigny.co.sz",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "flavourings",
+          "label": "Flavouring compounds",
+          "association": "Mixtures of odoriferous substances were Eswatini's largest export in 2023 at about US$584 million, according to World Bank WITS — a flavouring and fragrance manufacturing line ahead of raw cane sugar.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Eswatini",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/SWZ/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "coal",
+          "label": "Coal",
+          "association": "Other coal ranked fifth among Eswatini's exports in 2023 at about US$72 million, World Bank WITS data show.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Eswatini",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/SWZ/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "bananas",
+          "label": "Bananas",
+          "association": "FAO's Eswatini office reports training that builds national surveillance capacity against Fusarium wilt of banana, a disease affecting one of the country's established fruit crops.",
+          "sources": [
+            {
+              "title": "FAO in Eswatini",
+              "url": "https://www.fao.org/eswatini/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "LS",
+      "slug": "lesotho",
+      "name": "Lesotho",
+      "region": "Southern Africa",
+      "localizedNames": {
+        "en": "Lesotho",
+        "st": "Lesotho"
+      },
+      "introduction": "Lesotho is a high-altitude kingdom entirely surrounded by South Africa, where mountain water, wool and mohair shape rural livelihoods. Garments, bottled water, diamonds and automotive components make up most of its recorded export earnings, according to World Bank trade data.",
+      "themes": [
+        {
+          "key": "garments",
+          "label": "Garments and textiles",
+          "association": "The Lesotho National Development Corporation states that Lesotho is among Africa's top four producers of textiles and garments, and World Bank WITS lists men's cotton trousers and T-shirts among its five largest exports in 2023. The World Bank describes textiles as the country's largest private employer.",
+          "sources": [
+            {
+              "title": "Lesotho National Development Corporation",
+              "url": "https://www.lndc.org.ls",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "World Bank — Lesotho Overview",
+              "url": "https://www.worldbank.org/en/country/lesotho/overview",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "wool",
+          "label": "Wool",
+          "association": "Greasy wool was Lesotho's fourth-largest export in 2023 at about US$39 million, according to World Bank WITS, and the national development corporation lists wool and mohair among export opportunities.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Lesotho",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/LSO/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "Lesotho National Development Corporation",
+              "url": "https://www.lndc.org.ls",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "mohair",
+          "label": "Mohair",
+          "association": "The Lesotho National Development Corporation lists mohair, alongside wool, as an export opportunity and presents the sector as part of the country's livestock economy.",
+          "sources": [
+            {
+              "title": "Lesotho National Development Corporation",
+              "url": "https://www.lndc.org.ls",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "bottled-water",
+          "label": "Highland water",
+          "association": "Mineral and aerated waters were Lesotho's second-largest export in 2023 at about US$72 million, World Bank WITS shows, consistent with the development corporation's emphasis on plentiful highland water.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Lesotho",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/LSO/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "Lesotho National Development Corporation",
+              "url": "https://www.lndc.org.ls",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "trout",
+          "label": "Trout",
+          "association": "The Lesotho National Development Corporation lists trout among the country's export opportunities, alongside diamonds, water and apparel.",
+          "sources": [
+            {
+              "title": "Lesotho National Development Corporation",
+              "url": "https://www.lndc.org.ls",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "automotive-components",
+          "label": "Automotive components",
+          "association": "Lesotho's development corporation reports a growing position in automotive components, electronics and electrical products, extending the country's manufacturing base beyond garments.",
+          "sources": [
+            {
+              "title": "Lesotho National Development Corporation",
+              "url": "https://www.lndc.org.ls",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "MW",
+      "slug": "malawi",
+      "name": "Malawi",
+      "region": "Southern Africa",
+      "localizedNames": {
+        "en": "Malawi",
+        "ny": "Malaŵi"
+      },
+      "introduction": "Malawi follows the Great Rift Valley from Lake Malawi to the tea and macadamia estates of Thyolo and Mulanje. Tobacco, tea, sugar and groundnuts dominate exports, while agriculture employs over 80% of the population and most households farm maize.",
+      "themes": [
+        {
+          "key": "tea",
+          "label": "Tea",
+          "association": "Black tea was Malawi's second-largest export in 2023 at about US$70 million, per World Bank WITS, and the Malawi Investment and Trade Centre names tea among the crops its land and climate support.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Malawi",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/MWI/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "Malawi Investment and Trade Centre",
+              "url": "https://mitc.mw",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "tobacco",
+          "label": "Tobacco",
+          "association": "Tobacco, partly or wholly stemmed, was Malawi's largest export in 2023 at about US$427 million, according to World Bank WITS.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Malawi",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/MWI/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "sugar",
+          "label": "Sugar",
+          "association": "Raw cane sugar ranked fifth among Malawi's exports in 2023 at about US$42 million, World Bank WITS data show.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Malawi",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/MWI/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "groundnuts",
+          "label": "Groundnuts",
+          "association": "Shelled groundnuts were Malawi's third-largest export in 2023 at about US$54 million, per World Bank WITS.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Malawi",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/MWI/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "macadamia",
+          "label": "Macadamia",
+          "association": "The Malawi Investment and Trade Centre names macadamia nuts among the crops that Malawi's fertile land and climate support, alongside tea and coffee.",
+          "sources": [
+            {
+              "title": "Malawi Investment and Trade Centre",
+              "url": "https://mitc.mw",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "honey",
+          "label": "Honey",
+          "association": "FAO's regional non-wood forest products review estimates about 8,000 Malawian beekeepers producing 1,000 tonnes of honey and 150 tonnes of beeswax a year, while 80% of honey consumed in the country is imported.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview",
+              "url": "https://www.fao.org/4/y1515b/y1515b17.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "MZ",
+      "slug": "mozambique",
+      "name": "Mozambique",
+      "region": "Southern Africa",
+      "localizedNames": {
+        "en": "Mozambique",
+        "pt": "Moçambique"
+      },
+      "introduction": "Mozambique's long Indian Ocean coast and fertile river valleys support cashew, cotton and oilseed farming. Aluminium, coal and natural gas dominate recorded export value, while honey and palm-leaf weaving support rural trade in the interior.",
+      "themes": [
+        {
+          "key": "cashew",
+          "label": "Cashew",
+          "association": "Mozambique's Cashew Institute (IAM) describes its mission as promoting production, marketing, processing and export of cashew, and set a 2024/25 reference price of 45 meticais per kilogram, later raised to 48. FAO's MAFAP programme calls cashew a key Mozambican commodity and a former export leader, and reviewed the price formula at IAM's request in 2023.",
+          "sources": [
+            {
+              "title": "Instituto de Amêndoas de Moçambique (IAM)",
+              "url": "https://www.iam.gov.mz",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "FAO MAFAP — Review of cashew reference price-setting in Mozambique",
+              "url": "https://www.fao.org/in-action/mafap/news-details/mafap-presents-review-of-ways-to-set-reference-price-for-cashew-nut-producers-in-mozambique/",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cotton",
+          "label": "Cotton",
+          "association": "The Cotton and Oilseeds Institute of Mozambique (IAOM), created by decree in 2020, regulates cotton and oilseeds and reports cotton output of 23,516 tonnes in the 2022/23 campaign.",
+          "sources": [
+            {
+              "title": "Instituto do Algodão e Oleaginosas de Moçambique (IAOM)",
+              "url": "https://www.iaom.gov.mz",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "sesame",
+          "label": "Sesame and oilseeds",
+          "association": "IAOM's 2022/23 figures put sesame at 191,639 tonnes, far above its 74,120 tonnes of soy and 5,703 tonnes of sunflower, making sesame the institute's largest reported oilseed.",
+          "sources": [
+            {
+              "title": "Instituto do Algodão e Oleaginosas de Moçambique (IAOM)",
+              "url": "https://www.iaom.gov.mz",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "honey",
+          "label": "Honey",
+          "association": "FAO's regional review estimates 20,000 traditional beekeepers in Mozambique producing 360 tonnes of honey and 60 tonnes of beeswax a year, and notes that smoke-heavy harvesting reduces quality.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview",
+              "url": "https://www.fao.org/4/y1515b/y1515b17.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "palm-crafts",
+          "label": "Palm-leaf weaving",
+          "association": "FAO reports that palm leaves are woven into baskets and that Phragmites and Cyperus papyrus are used for mats in Mozambique, with a growing number of small palm-leaf enterprises in Maputo.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview",
+              "url": "https://www.fao.org/4/y1515b/y1515b17.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "aluminium",
+          "label": "Aluminium",
+          "association": "Unwrought aluminium was Mozambique's third-largest export in 2023 at about US$1.09 billion, World Bank WITS data show, behind coal and liquefied natural gas.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Mozambique",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/MOZ/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "NA",
+      "slug": "namibia",
+      "name": "Namibia",
+      "region": "Southern Africa",
+      "localizedNames": {
+        "en": "Namibia",
+        "af": "Namibië"
+      },
+      "introduction": "Namibia's desert coast, cattle country and northern communal lands support diamonds, uranium, beef and fish exports. Swakara pelts, palm-leaf baskets and other non-wood forest products carry craft traditions into markets in southern Africa and beyond.",
+      "themes": [
+        {
+          "key": "beef",
+          "label": "Beef",
+          "association": "Namibia's Livestock and Livestock Products Board administers the Farm Assured Namibian Meat (FAN Meat) scheme and the NamLITS traceability system, and manages a Norway beef quota.",
+          "sources": [
+            {
+              "title": "Livestock and Livestock Products Board of Namibia",
+              "url": "https://www.nammic.com.na",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "diamonds",
+          "label": "Diamonds",
+          "association": "Namdeb, owned in equal shares by the Namibian government and De Beers, mines diamonds along the southwest coast around Oranjemund and at satellite operations near Lüderitz and the Orange River.",
+          "sources": [
+            {
+              "title": "Namdeb",
+              "url": "https://www.namdeb.com",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "fish",
+          "label": "Fish",
+          "association": "Frozen fish fillets were Namibia's fourth-largest export in 2023 at about US$355 million, per World Bank WITS, and the Namibia Fish Consumption Promotion Trust works to improve domestic access to fish.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Namibia",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/NAM/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "Namibia Fish Consumption Promotion Trust",
+              "url": "https://www.nfcpt.com.na",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "uranium",
+          "label": "Uranium",
+          "association": "Uranium ores and concentrates were Namibia's second-largest export in 2023 at about US$778 million, according to World Bank WITS.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Namibia",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/NAM/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "swakara",
+          "label": "Swakara pelts",
+          "association": "Agra states that Swakara pelts come from Namibia's arid regions, that it managed the Swakara Board and sorted and marketed all pelts until 31 March 2022, and that the Swakara Breeders' Society dates from 1919.",
+          "sources": [
+            {
+              "title": "Agra — Swakara",
+              "url": "https://www.agra.com.na/index.php/about-agra/swakara",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "basketry",
+          "label": "Basketry",
+          "association": "FAO's regional review values Namibian basketry at N$16.4 million within N$65.3 million of non-wood forest product value, including Hyphaene palm-leaf baskets and mopane-based Mahangu basketry.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview",
+              "url": "https://www.fao.org/4/y1515b/y1515b17.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "ZA",
+      "slug": "south-africa",
+      "name": "South Africa",
+      "region": "Southern Africa",
+      "localizedNames": {
+        "en": "South Africa",
+        "af": "Suid-Afrika"
+      },
+      "introduction": "South Africa spans winter-rainfall vineyards, summer-grain plateaus and subtropical cane fields in KwaZulu-Natal and Mpumalanga. Wine, citrus, rooibos, mohair, grain and sugar are established export industries with organised producer bodies and nationally recognised industry standards.",
+      "themes": [
+        {
+          "key": "rooibos",
+          "label": "Rooibos",
+          "association": "The South African Rooibos Council states that rooibos is native to the Cederberg, that it was the first African food granted EU Protected Designation of Origin, and that about 20,000 tonnes are produced a year, half consumed locally.",
+          "sources": [
+            {
+              "title": "South African Rooibos Council",
+              "url": "https://sarooibos.co.za",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "wine",
+          "label": "Wine",
+          "association": "Wines of South Africa is the industry's export promotion body, and Vinpro represents close to 2,600 South African wine producers, cellars and industry stakeholders.",
+          "sources": [
+            {
+              "title": "Wines of South Africa (WOSA)",
+              "url": "https://www.wosa.co.za",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "Vinpro",
+              "url": "https://www.vinpro.co.za",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "citrus",
+          "label": "Citrus",
+          "association": "The Citrus Growers Association of Southern Africa represents growers in regions including Limpopo, Mpumalanga and the Western Cape and works on market access and quality assurance.",
+          "sources": [
+            {
+              "title": "Citrus Growers Association of Southern Africa",
+              "url": "https://www.cga.co.za",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "mohair",
+          "label": "Mohair",
+          "association": "Mohair South Africa promotes the fibre through the Responsible Mohair Standard and Oritain traceability, connecting Angora goat farmers to brokers, processors, spinners, dye houses and manufacturers.",
+          "sources": [
+            {
+              "title": "Mohair South Africa",
+              "url": "https://www.mohair.co.za",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "grain",
+          "label": "Grain and maize",
+          "association": "Grain SA represents over 7,852 commercial and 5,891 emerging grain producers growing maize, wheat, sunflower, soybeans, barley, canola, groundnuts and sorghum.",
+          "sources": [
+            {
+              "title": "Grain SA",
+              "url": "https://www.grainsa.co.za",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "sugar",
+          "label": "Sugar",
+          "association": "The South African Sugar Association describes a R24 billion industry in Mpumalanga and KwaZulu-Natal that ranks in the global top 25 of about 120 sugar-producing countries.",
+          "sources": [
+            {
+              "title": "South African Sugar Association",
+              "url": "https://www.sasa.org.za",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "ZM",
+      "slug": "zambia",
+      "name": "Zambia",
+      "region": "Southern Africa",
+      "localizedNames": {
+        "en": "Zambia"
+      },
+      "introduction": "Zambia's copperbelt drives export earnings, while maize, soya, cotton and sugar cane support farm livelihoods across the plateau. Honey and basketry from forest-based enterprises add smaller but widespread rural income, particularly among beekeepers in the north-western provinces.",
+      "themes": [
+        {
+          "key": "copper",
+          "label": "Copper",
+          "association": "The Zambia Development Agency describes Zambia as the world's seventh-largest copper producer with 6% of reserves, and World Bank WITS shows unrefined copper and copper cathodes as the country's two largest exports in 2023.",
+          "sources": [
+            {
+              "title": "Zambia Development Agency",
+              "url": "https://www.zda.org.zm",
+              "accessedAt": "2026-11-14"
+            },
+            {
+              "title": "World Bank WITS — Country Profile: Zambia",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/ZMB/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "sugar",
+          "label": "Sugar",
+          "association": "Zambia Sugar describes itself as Africa's largest single-mill cane sugar producer, operating the Nakambala estate in Mazabuka and selling under the Whitespoon brand into SADC and COMESA markets.",
+          "sources": [
+            {
+              "title": "Zambia Sugar",
+              "url": "https://www.zambiasugar.com",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "cotton",
+          "label": "Cotton",
+          "association": "The Cotton Board of Zambia, established under the Cotton Act No. 21 of 2005, regulates seed cotton production and ginning and registers buyers and ginners.",
+          "sources": [
+            {
+              "title": "Cotton Board of Zambia",
+              "url": "https://cbz.org.zm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "soya",
+          "label": "Soybeans",
+          "association": "FAO's Zambia office reports that the soybean value chain has expanded rapidly to become the country's second most important crop after maize.",
+          "sources": [
+            {
+              "title": "FAO in Zambia",
+              "url": "https://www.fao.org/zambia/en",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "honey",
+          "label": "Honey",
+          "association": "FAO's regional review calls honey and beeswax among Zambia's most important non-wood forest products, estimating national output above 1,500 tonnes a year and some 6,000 beekeepers with 500,000 hives in the north-west.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview",
+              "url": "https://www.fao.org/4/y1515b/y1515b17.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "basketry",
+          "label": "Basketry",
+          "association": "FAO reports that basketry is the most important activity in Zambia's small-scale forest industry, with 60.3% of forest-based enterprises making baskets, mats or hats, largely from bamboo.",
+          "sources": [
+            {
+              "title": "Non-wood forest products in Africa: a regional and national overview",
+              "url": "https://www.fao.org/4/y1515b/y1515b17.htm",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    },
+    {
+      "code": "ZW",
+      "slug": "zimbabwe",
+      "name": "Zimbabwe",
+      "region": "Southern Africa",
+      "localizedNames": {
+        "en": "Zimbabwe"
+      },
+      "introduction": "Zimbabwe's highveld farms, eastern tea estates and mineral belts shape its export economy. Tobacco and gold lead recorded trade, with tea, macadamia, horticulture, leather goods and stone sculpture among the sectors the national trade promotion body promotes for export.",
+      "themes": [
+        {
+          "key": "tobacco",
+          "label": "Tobacco",
+          "association": "Tobacco, partly or wholly stemmed, was Zimbabwe's second-largest export in 2023 at about US$1.17 billion, World Bank WITS data show, behind semi-manufactured gold.",
+          "sources": [
+            {
+              "title": "World Bank WITS — Country Profile: Zimbabwe",
+              "url": "https://wits.worldbank.org/CountryProfile/en/Country/ZWE/Year/LTST/Summary",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "tea",
+          "label": "Tea",
+          "association": "Tanganda Tea Company operates five estates in Chipinge cropped with tea, coffee, avocados and macadamia, and runs a tea blending and packaging plant in Mutare.",
+          "sources": [
+            {
+              "title": "Tanganda Tea Company",
+              "url": "https://tangandatea.com",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "crafts",
+          "label": "Stone sculpture and crafts",
+          "association": "ZimTrade promotes an arts and crafts export sector and describes Zimbabwean crafts as ranging from intricate stone sculptures to beadwork and woven baskets.",
+          "sources": [
+            {
+              "title": "Trade Zimbabwe (ZimTrade)",
+              "url": "https://tradezimbabwe.com",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "leather",
+          "label": "Leather goods",
+          "association": "ZimTrade lists leather products among Zimbabwe's export sectors and describes the country's leather goods as authentic.",
+          "sources": [
+            {
+              "title": "Trade Zimbabwe (ZimTrade)",
+              "url": "https://tradezimbabwe.com",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "horticulture",
+          "label": "Horticulture",
+          "association": "ZimTrade identifies horticulture as an export sector and refers to a diverse range of Zimbabwean horticultural crops.",
+          "sources": [
+            {
+              "title": "Trade Zimbabwe (ZimTrade)",
+              "url": "https://tradezimbabwe.com",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        },
+        {
+          "key": "macadamia",
+          "label": "Macadamia",
+          "association": "Tanganda's Chipinge estates are cropped with macadamia nuts alongside tea, coffee and avocados, according to the company.",
+          "sources": [
+            {
+              "title": "Tanganda Tea Company",
+              "url": "https://tangandatea.com",
+              "accessedAt": "2026-11-14"
+            }
+          ]
+        }
+      ],
+      "editorialStatus": "reviewed"
+    }
+  ],
+  "sources": [
+    {
+      "publisher": "FAO",
+      "title": "FAO in Angola",
+      "url": "https://www.fao.org/angola/en"
+    },
+    {
+      "publisher": "FAO / WFP",
+      "title": "Missão conjunta FAO/PMA de avaliação das colheitas e do abastecimento alimentar em Angola",
+      "url": "https://www.fao.org/4/j2771p/j2771p00.htm"
+    },
+    {
+      "publisher": "FAO",
+      "title": "Non-wood forest products in Africa: a regional and national overview",
+      "url": "https://www.fao.org/4/y1515b/y1515b17.htm"
+    },
+    {
+      "publisher": "World Bank WITS",
+      "title": "Country Profile: Angola — Trade Summary",
+      "url": "https://wits.worldbank.org/CountryProfile/en/Country/AGO/Year/LTST/Summary"
+    },
+    {
+      "publisher": "Botswana Meat Commission",
+      "title": "Botswana Meat Commission",
+      "url": "https://www.bmc.bw"
+    },
+    {
+      "publisher": "FAO",
+      "title": "FAO in Botswana",
+      "url": "https://www.fao.org/botswana/en"
+    },
+    {
+      "publisher": "Debswana Diamond Company",
+      "title": "Debswana Diamond Company",
+      "url": "https://www.debswana.com"
+    },
+    {
+      "publisher": "Botswana Tourism Organisation",
+      "title": "Botswana Tourism Organisation",
+      "url": "https://www.botswanatourism.co.bw"
+    },
+    {
+      "publisher": "World Bank WITS",
+      "title": "Country Profile: Botswana — Trade Summary",
+      "url": "https://wits.worldbank.org/CountryProfile/en/Country/BWA/Year/LTST/Summary"
+    },
+    {
+      "publisher": "Eswatini Sugar Association",
+      "title": "Eswatini Sugar",
+      "url": "https://www.eswatinisugar.co.sz"
+    },
+    {
+      "publisher": "Swazi Candles",
+      "title": "Swazi Candles",
+      "url": "https://swazicandles.com"
+    },
+    {
+      "publisher": "Montigny Investments",
+      "title": "Montigny Investments",
+      "url": "https://www.montigny.co.sz"
+    },
+    {
+      "publisher": "FAO",
+      "title": "FAO in Eswatini",
+      "url": "https://www.fao.org/eswatini/en"
+    },
+    {
+      "publisher": "World Bank WITS",
+      "title": "Country Profile: Eswatini — Trade Summary",
+      "url": "https://wits.worldbank.org/CountryProfile/en/Country/SWZ/Year/LTST/Summary"
+    },
+    {
+      "publisher": "Lesotho National Development Corporation",
+      "title": "Lesotho National Development Corporation",
+      "url": "https://www.lndc.org.ls"
+    },
+    {
+      "publisher": "World Bank",
+      "title": "Lesotho Overview",
+      "url": "https://www.worldbank.org/en/country/lesotho/overview"
+    },
+    {
+      "publisher": "World Bank WITS",
+      "title": "Country Profile: Lesotho — Trade Summary",
+      "url": "https://wits.worldbank.org/CountryProfile/en/Country/LSO/Year/LTST/Summary"
+    },
+    {
+      "publisher": "Malawi Investment and Trade Centre",
+      "title": "Malawi Investment and Trade Centre",
+      "url": "https://mitc.mw"
+    },
+    {
+      "publisher": "World Bank WITS",
+      "title": "Country Profile: Malawi — Trade Summary",
+      "url": "https://wits.worldbank.org/CountryProfile/en/Country/MWI/Year/LTST/Summary"
+    },
+    {
+      "publisher": "Instituto de Amêndoas de Moçambique (IAM)",
+      "title": "Instituto de Amêndoas de Moçambique",
+      "url": "https://www.iam.gov.mz"
+    },
+    {
+      "publisher": "FAO MAFAP",
+      "title": "Review of ways to set reference price for cashew nut producers in Mozambique",
+      "url": "https://www.fao.org/in-action/mafap/news-details/mafap-presents-review-of-ways-to-set-reference-price-for-cashew-nut-producers-in-mozambique/"
+    },
+    {
+      "publisher": "Instituto do Algodão e Oleaginosas de Moçambique (IAOM)",
+      "title": "Instituto do Algodão e Oleaginosas de Moçambique",
+      "url": "https://www.iaom.gov.mz"
+    },
+    {
+      "publisher": "World Bank WITS",
+      "title": "Country Profile: Mozambique — Trade Summary",
+      "url": "https://wits.worldbank.org/CountryProfile/en/Country/MOZ/Year/LTST/Summary"
+    },
+    {
+      "publisher": "Livestock and Livestock Products Board of Namibia",
+      "title": "Livestock and Livestock Products Board of Namibia",
+      "url": "https://www.nammic.com.na"
+    },
+    {
+      "publisher": "Namdeb",
+      "title": "Namdeb",
+      "url": "https://www.namdeb.com"
+    },
+    {
+      "publisher": "Namibia Fish Consumption Promotion Trust",
+      "title": "Namibia Fish Consumption Promotion Trust",
+      "url": "https://www.nfcpt.com.na"
+    },
+    {
+      "publisher": "Agra",
+      "title": "Agra — Swakara",
+      "url": "https://www.agra.com.na/index.php/about-agra/swakara"
+    },
+    {
+      "publisher": "World Bank WITS",
+      "title": "Country Profile: Namibia — Trade Summary",
+      "url": "https://wits.worldbank.org/CountryProfile/en/Country/NAM/Year/LTST/Summary"
+    },
+    {
+      "publisher": "South African Rooibos Council",
+      "title": "South African Rooibos Council",
+      "url": "https://sarooibos.co.za"
+    },
+    {
+      "publisher": "Wines of South Africa (WOSA)",
+      "title": "Wines of South Africa",
+      "url": "https://www.wosa.co.za"
+    },
+    {
+      "publisher": "Vinpro",
+      "title": "Vinpro",
+      "url": "https://www.vinpro.co.za"
+    },
+    {
+      "publisher": "Citrus Growers Association of Southern Africa",
+      "title": "Citrus Growers Association",
+      "url": "https://www.cga.co.za"
+    },
+    {
+      "publisher": "Mohair South Africa",
+      "title": "Mohair South Africa",
+      "url": "https://www.mohair.co.za"
+    },
+    {
+      "publisher": "Grain SA",
+      "title": "Grain SA",
+      "url": "https://www.grainsa.co.za"
+    },
+    {
+      "publisher": "South African Sugar Association",
+      "title": "South African Sugar Association",
+      "url": "https://www.sasa.org.za"
+    },
+    {
+      "publisher": "Zambia Development Agency",
+      "title": "Zambia Development Agency",
+      "url": "https://www.zda.org.zm"
+    },
+    {
+      "publisher": "Zambia Sugar",
+      "title": "Zambia Sugar",
+      "url": "https://www.zambiasugar.com"
+    },
+    {
+      "publisher": "Cotton Board of Zambia",
+      "title": "Cotton Board of Zambia",
+      "url": "https://cbz.org.zm"
+    },
+    {
+      "publisher": "FAO",
+      "title": "FAO in Zambia",
+      "url": "https://www.fao.org/zambia/en"
+    },
+    {
+      "publisher": "World Bank WITS",
+      "title": "Country Profile: Zambia — Trade Summary",
+      "url": "https://wits.worldbank.org/CountryProfile/en/Country/ZMB/Year/LTST/Summary"
+    },
+    {
+      "publisher": "Trade Zimbabwe (ZimTrade)",
+      "title": "Trade Zimbabwe",
+      "url": "https://tradezimbabwe.com"
+    },
+    {
+      "publisher": "Tanganda Tea Company",
+      "title": "Tanganda Tea Company",
+      "url": "https://tangandatea.com"
+    },
+    {
+      "publisher": "World Bank WITS",
+      "title": "Country Profile: Zimbabwe — Trade Summary",
+      "url": "https://wits.worldbank.org/CountryProfile/en/Country/ZWE/Year/LTST/Summary"
+    }
+  ]
+}
