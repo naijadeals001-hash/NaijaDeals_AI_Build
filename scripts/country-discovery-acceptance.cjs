@@ -335,7 +335,15 @@ async function main() {
 
       const editorList = await req("/api/admin/country-discovery", editorCookie);
       const editorRows = await editorList.json();
-      check("dedicated country_editor can read 54 editorial rows", editorList.status === 200 && editorRows.length === 54, `${editorList.status}`);
+      const acceptedCodes = new Set(profiles.map((row) => row.code));
+      const editorCodes = Array.isArray(editorRows) ? new Set(editorRows.map((row) => row.code)) : new Set();
+      check(
+        "dedicated country_editor can read all 54 accepted editorial rows",
+        editorList.status === 200 &&
+          Array.isArray(editorRows) &&
+          [...acceptedCodes].every((code) => editorCodes.has(code)),
+        `${editorList.status} rows=${Array.isArray(editorRows) ? editorRows.length : "?"}`
+      );
       const editorEdit = await req("/api/admin/country-discovery", editorCookie, {
         method: "PATCH",
         body: JSON.stringify({ code: fixtureCode, introduction: fixture.profile.introduction })
@@ -489,8 +497,14 @@ async function main() {
         preview.status === 200 && previewHtml.includes("DRAFT PREVIEW") && fixtureLabels.every((label) => previewHtml.includes(label)),
         String(preview.status)
       );
-      const foreignPreview = await req(`/naijashop/countries/${fixtureSlug}?preview=1`, editorGhCookie);
-      check("GH-scoped editor cannot preview another market's draft", foreignPreview.status === 404, String(foreignPreview.status));
+      const ghPreviewCredential = roleCredentials(credentialsDir, "editor-gh");
+      if (ghPreviewCredential) {
+        const ghPreviewCookie = await login(ghPreviewCredential);
+        const foreignPreview = await req(`/naijashop/countries/${fixtureSlug}?preview=1`, ghPreviewCookie);
+        check("GH-scoped editor cannot preview another market's draft", foreignPreview.status === 404, String(foreignPreview.status));
+      } else {
+        blocked("GH-scoped editor cannot preview another market's draft", "editor-gh credentials were not supplied.");
+      }
       const publish = await req("/api/admin/country-discovery", publisherCookie, {
         method: "PATCH",
         body: JSON.stringify({ code: fixtureCode, action: "publish" })

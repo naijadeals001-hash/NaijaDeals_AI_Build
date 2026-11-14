@@ -1088,6 +1088,7 @@ export async function listProductsForOriginReview(filters: OriginReviewFilters =
       orderBy: { countryCode: "asc" }
     }),
     prisma.countryProfile.findMany({
+      where: { publicationStatus: "PUBLISHED" },
       select: { code: true, name: true },
       orderBy: { name: "asc" }
     })
