@@ -778,7 +778,7 @@ export function CountryWorkspace({
                 <h3 className="text-[13px] font-extrabold">Audit history</h3>
                 <p className="text-[10px] text-[#566359]">Latest editorial and publication actions for this country. Origin edits are recorded separately.</p>
                 {audit.length > 0 ? (
-                  <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
+                  <ul tabIndex={0} aria-label="Country audit history" className="mt-2 max-h-64 space-y-1 overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8ed14b]">
                     {audit.map((row) => (
                       <li key={row.id} className="rounded-lg border border-[#eef2ea] px-2.5 py-1.5 text-[9.5px]">
                         <span className="font-extrabold text-[#14241b]">{row.action}</span>
