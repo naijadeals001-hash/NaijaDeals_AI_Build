@@ -4832,3 +4832,9 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   `naijadeals_checkout_refund_test` but did not complete after 20+ minutes (idle DB sessions, no
   output) and was stopped; it is not claimed as a pass on this build. The new checkout market
   refusal was verified directly with a run-owned cart/product on REVIEW (0 orders).
+- Final independent check on `GN-opuHx19t_JA0Mf03GM`: journey-tester
+  `agent_4d83ce41-597d-4624-865e-930595fb5325` 19/19 (NG 37/57, GH 0 shelves, rail arrows,
+  six banners, GH search/category zero) with screenshots in
+  `qa-artifacts/visual/final-acceptance/final-GN-opuHx19t-independent/`; security reviewer
+  `agent_1379be1e-e1a6-4537-b24e-bac055e7cadd` CLOSED the migration history and cross-market
+  checkout checks with no new high-severity finding.
