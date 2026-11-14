@@ -40,7 +40,7 @@ import {
  * Direct-only counts would undercount them and falsely report a changed map.
  */
 const EXPECTED_ACTIVE_PRODUCTS_ON_EXISTING = 43;
-const EXPECTED_ACTIVE_PRODUCTS_TOTAL = 57;
+const EXPECTED_ACTIVE_PRODUCTS_TOTAL = 63;
 
 /** All ids in the subtree rooted at rootId (including rootId). */
 function subtreeIds(rootId: string, nodes: Array<{ id: string; parentId: string | null }>): Set<string> {

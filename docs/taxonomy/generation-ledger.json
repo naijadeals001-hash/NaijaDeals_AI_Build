@@ -1771,5 +1771,67 @@
       ]
     },
     "previewNote": "Existing 3047 was not restarted; its public-file index predates the batch, so new image paths 404 there until the next authorised start. An isolated temporary next start on 3061 (same build, review DB, current public) served every image with HTTP 200 and was stopped after verification."
+  },
+  "publicationBatch3": {
+    "batch": "taxonomy-batch3",
+    "date": "2026-11-14",
+    "workflow": "seller DRAFT -> admin exact alt -> admin isDemo=true -> admin action=validate -> admin action=publish",
+    "database": "naijadeals_review",
+    "products": [
+      {
+        "id": "cmwgvdgdk000av4a04s42azpi",
+        "slug": "demo-long-grain-white-rice-5kg-hd49g",
+        "name": "DEMO — Long-grain white rice, 5kg",
+        "leafKey": "rice-grains",
+        "priceKobo": "950000",
+        "stock": 24,
+        "image": "/generated/taxonomy/long-grain-rice.webp"
+      },
+      {
+        "id": "cmwgvdgh1000zv4a0t81d2xiy",
+        "slug": "demo-red-palm-oil-1-litre-rn11s",
+        "name": "DEMO — Red palm oil, 1 litre",
+        "leafKey": "palm-cooking-oils",
+        "priceKobo": "480000",
+        "stock": 18,
+        "image": "/generated/taxonomy/red-palm-oil.webp"
+      },
+      {
+        "id": "cmwgvdgjz001ov4a0mscnxcro",
+        "slug": "demo-household-cleaning-set-leqbm",
+        "name": "DEMO — Household cleaning set",
+        "leafKey": "cleaning-supplies",
+        "priceKobo": "850000",
+        "stock": 16,
+        "image": "/generated/taxonomy/household-cleaning-set.webp"
+      },
+      {
+        "id": "cmwgvdgmo002dv4a0gjm10k4l",
+        "slug": "demo-pen-pencil-and-ruler-set-q4g44",
+        "name": "DEMO — Pen, pencil and ruler set",
+        "leafKey": "writing-drawing-instruments",
+        "priceKobo": "320000",
+        "stock": 40,
+        "image": "/generated/taxonomy/stationery-writing-set.webp"
+      },
+      {
+        "id": "cmwgvdgpi0032v4a0f9ebosxv",
+        "slug": "demo-wooden-stacking-toy-with-soft-ball-uz6wu",
+        "name": "DEMO — Wooden stacking toy with soft ball",
+        "leafKey": "baby-toddler-toys",
+        "priceKobo": "420000",
+        "stock": 30,
+        "image": "/generated/taxonomy/wooden-stacking-toy.webp"
+      },
+      {
+        "id": "cmwgvdgsa003rv4a0756m8lif",
+        "slug": "demo-yoga-mat-cork-block-and-resistance-band-set-x55et",
+        "name": "DEMO — Yoga mat, cork block and resistance band set",
+        "leafKey": "yoga-fitness-accessories",
+        "priceKobo": "760000",
+        "stock": 20,
+        "image": "/generated/taxonomy/yoga-mat-set.webp"
+      }
+    ]
   }
 }

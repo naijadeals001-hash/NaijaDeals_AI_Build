@@ -3,7 +3,7 @@
  * READ-ONLY active-product reconciliation for the REVIEW catalogue.
  *
  * Proves the reviewed arithmetic:
- *   57 active = 31 accepted baseline + 6 Batch A + 4 Batch B + 8 taxonomy batch
+ *   63 active = 31 accepted baseline + 6 Batch A + 4 Batch B + 8 taxonomy batch
  *              + 8 Batch 2
  *
  * The script opens an explicit READ ONLY transaction, prints every active

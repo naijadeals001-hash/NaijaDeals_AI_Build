@@ -6,9 +6,9 @@
 > --expect-db=naijadeals_review --images`. The verified values on 2026-11-14 are:
 >
 > - **165 active taxonomy nodes: 11 departments / 37 categories / 117 selectable leaves.**
-> - **100 publishable leaves; 17 NG-blocked leaves (of 18 regulated definitions); 35 populated publishable leaves
->   (35/100); 65 publishable leaves empty.**
-> - **57 ACTIVE products: all 57 on selectable leaves, 0 retained on level-1 categories
+> - **100 publishable leaves; 17 NG-blocked leaves (of 18 regulated definitions); 41 populated publishable leaves
+>   (41/100); 59 publishable leaves empty.**
+> - **63 ACTIVE products: all 63 on selectable leaves, 0 retained on level-1 categories
 >   (ambiguous), 0 active acceptance fixtures.**
 > - **41 audited `Product.categoryId` moves applied; 12 re-applied after a revert; all
 >   active products sit on audited leaves. The four previously pending leaf requests
@@ -16,7 +16,7 @@
 >   moved from level-1 categories to the new leaves.**
 > - **`CategoryRequest`: 7 APPROVED / 0 PENDING / 1 REJECTED; 0 CRF category or request
 >   names.**
-> - **68 image URLs audited (57 active product images + 11 department banners): 68 HEAD 200
+> - **74 image URLs audited (63 active product images + 11 department banners): 74 HEAD 200
 >   and Chromium `naturalWidth > 0`; 0 departments lack approved banner art.**
 >
 > The 16 example areas used to size the first taxonomy batch are illustrative coverage
@@ -47,7 +47,7 @@ Kie generation: `gpt-image-2-5-flare-text-to-image`, 1K, 1:1, 6 credits/image re
 
 ## Batch 2 — coverage and representative DEMO products (2026-11-13)
 
-Scope: 11 departments / 37 categories / 113 leaves. 17 NG-blocked leaves are excluded from publication (NG `canPublish=false`); 96 leaves are approved publishable. The regulated definition is explicit in `lib/taxonomy/regulated.ts` and covers 18 leaves: `cycling-helmets-protection` is regulated but explicitly allowed in NG with a standards-marking note, so it is not one of the 17 NG-blocked leaves. **Current computed coverage is 30 populated of 96 publishable leaves, with 66 publishable leaves empty.** The reviewed plan applied 34 audited `Product.categoryId` moves and kept 16 products already on their leaf; the 7 ambiguous legacy listings remain on their selectable level-1 categories and are not counted against a leaf. The coverage script derives the 57 active-product total, 50 leaf products and 7 ambiguous products from the database; none of those figures are hardcoded documentation claims.
+Scope: 11 departments / 37 categories / 113 leaves. 17 NG-blocked leaves are excluded from publication (NG `canPublish=false`); 96 leaves are approved publishable. The regulated definition is explicit in `lib/taxonomy/regulated.ts` and covers 18 leaves: `cycling-helmets-protection` is regulated but explicitly allowed in NG with a standards-marking note, so it is not one of the 17 NG-blocked leaves. **At Batch 2 completion, coverage was 30 populated of 96 publishable leaves, with 66 publishable leaves empty.** The reviewed plan applied 34 audited `Product.categoryId` moves and kept 16 products already on their leaf; the 7 ambiguous legacy listings remain on their selectable level-1 categories and are not counted against a leaf. At Batch 2 completion the script derived 57 active products, 50 leaf products and 7 ambiguous products. Current computed totals are at the top of this document.
 
 Batch 2 added eight representative DEMO products across eight departments, each with one original Kie image: First-Aid Supplies (Health & Wellness), Bottles/Teats/Sterilisers (Baby, Kids & Toys), Football & Basketball (Sports & Outdoors), Car Care & Cleaning (Automotive & Motorcycle), Drills & Drivers (Tools & Building Materials), Notebooks & Paper (Books & Stationery), Cassava Products (Food & Everyday Essentials) and Bags & Accessories (Fashion & Beauty). No regulated leaf was populated.
 
