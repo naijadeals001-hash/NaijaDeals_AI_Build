@@ -40,7 +40,25 @@
     ".next-test/types/**/*.ts",
     ".next-live/types/**/*.ts",
     ".next-live3/types/**/*.ts",
-    ".next-pay/types/**/*.ts"
+    ".next-pay/types/**/*.ts",
+    ".next-drive-check/types/**/*.ts",
+    ".next-discovery/types/**/*.ts",
+    ".next-programme/types/**/*.ts",
+    ".next-shop-redesign/types/**/*.ts",
+    ".next-home-redesign/types/**/*.ts",
+    ".next-dev/types/**/*.ts",
+    ".next-home-build/types/**/*.ts",
+    ".next-shop-header/types/**/*.ts",
+    ".next-product-shell/types/**/*.ts",
+    ".next-checkout-acceptance/types/**/*.ts",
+    ".next-plus/types/**/*.ts",
+    ".next-shop-header-catalogue/types/**/*.ts",
+    ".next-catalogue-review/types/**/*.ts",
+    ".next-taxonomy-dev/types/**/*.ts",
+    ".next-storefront-audit/types/**/*.ts",
+    ".next-storefront-prod/types/**/*.ts",
+    ".next-vertical-activation-test/types/**/*.ts",
+    ".next-taxonomy-market/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

@@ -733,6 +733,7 @@ async function main(): Promise<void> {
             isSelectable: true,
             showOnHomepage: false,
             browsingVisible: true,
+            isRegulated: true,
             isActive: true,
             sortOrder: 9999,
             countryRules: [{ countryCode: "NG", canPublish: true, note: `Run-tagged rule ${runId}.` }]
@@ -743,6 +744,13 @@ async function main(): Promise<void> {
         const body = bodyOf(result);
         assert(typeof body.id === "string", "created category id missing");
         assert(body.browsingVisible === true, "created category browsingVisible is not true");
+        assert(body.isRegulated === true, "admin create did not persist isRegulated=true");
+        const restoreRegulated = await http.patch(
+          `/api/admin/taxonomy/${body.id}`,
+          { isRegulated: false },
+          adminCookie
+        );
+        expectStatus(restoreRegulated, 200, "PATCH isRegulated=false");
         created.categoryId = body.id;
       });
 
