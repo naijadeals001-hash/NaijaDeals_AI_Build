@@ -5672,14 +5672,14 @@ their correct leaves; accepted catalogue delta is exactly the six planned rows.
 
 ## 2026-11-14 — Paused Shop presentation and server availability
 
-**Artifact:** application commit `3052d07`, build `9GdPgANsxDE6ujX7hE5bI`, canonical 3047.
+**Artifact:** application commit `9fdafdf`, build `c3_KHQCzxGGf-GfVMZQP6`, canonical 3047, PID 11944. Earlier probe-dedupe commit `3052d07` / build `9GdPgANsxDE6ujX7hE5bI` is superseded by the paused-footer fix.
 Shop presentation was already committed at `873aa37`; this slice removes redundant first-paint
 availability probes.
 
 - Server layout/page resolves effective Shop activation and passes it to the Shop header,
   storefront and homepage. When supplied, the first client effect reuses it (0 probes on LIVE);
   a market switch still re-probes.
-- LIVE: shelves render, no paused panel, 0 initial availability requests, 0px overflow at 390.
+- LIVE: shelves render, no paused panel, 0 initial availability requests, 0px overflow at 390. The paused footer hides Shop and Sell/Seller-onboarding links; LIVE keeps those links; refused deals pages show no listing count.
 - Paused panel keeps existing orders, receipts, cart/saved items, returns/disputes/wallet payments
   for existing orders and support; it advertises no new order, cart addition or seller listing.
 - Activation suite 30/30 covers LIVE, anonymous PREVIEW, authorized PREVIEW, DISABLED, navigation,
@@ -5689,6 +5689,10 @@ availability probes.
   remain NOT_WIRED. Stay is already ENFORCED but **hold expiry has no scheduler invocation**;
   Stream **media recovery (`recoverPendingJobs`) is not called at boot/worker**. No new vertical is
   marked ENFORCED and no vertical rebuild is started.
+- Independent journey reviewer `agent_5d19a106-f315-43ba-9001-93b43b23a306` verified LIVE, anonymous
+  PREVIEW, authorized PREVIEW, DISABLED and restoration on build `c3_KHQCzxGGf-GfVMZQP6`: 0 initial
+  availability probes, 0 `/sell` or `/seller` links while paused, commitments preserved, no deals
+  count, shop restored to 0 activation rows/LIVE, lease and snapshots empty.
 - Open Shop blockers remain the variant concurrency follow-ups (legacy variant image exposure,
   DB CHECK constraints, test-doc env, activation recovery TOCTOU/audit, saved-item status,
   refund/restock suppression, paused homepage RSC recheck).
