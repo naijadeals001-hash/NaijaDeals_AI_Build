@@ -5539,3 +5539,75 @@ taxonomy seed, no deployment.
 - Five variant-concurrency public-route checks remain environment-blocked in
   degraded mode; the same behaviour was covered by focus/API probes.
 - No push or deployment.
+
+
+## 2026-11-14 — Catalogue batch 3, taxonomy reconciliation and Shop recovery
+
+**Served artifact:** canonical 3047 from clean worktree
+`C:/Users/User/naijadeals-clean-20261114-135010`, build **`MEXjYZz0XXOfTVByJUM3l`**, PID 20344.
+Application/build source commit **`25250d3`**; final documentation HEAD **`5701698`**. The later
+commit changes only `.env.example`, the generation ledger and a reconcile comment, so no rebuild
+was required. REVIEW DB; Shop `LIVE`; `VerticalActivation` 0 rows.
+
+### Shop activation recovery
+
+- The reported GLOBAL Shop DISABLED was an interrupted-run leftover; prior audit showed the test
+  run and later `vertical.cleared`, and current verification shows zero rules and LIVE/available.
+- `scripts/lib/shop-activation-snapshot.ts` now writes exact prior Shop rows atomically before
+  mutation; `scripts/recover-shop-activation.ts` restores by explicit run/snapshot with database
+  identity + REVIEW/TEST checks, blocks non-run operator conflicts, and verifies row-for-row.
+- The activation suite writes/restores the snapshot, handles SIGINT/SIGTERM/SIGBREAK/uncaught
+  exceptions, refuses startup with leftover run rows, and deletes the snapshot only after verified
+  restoration. Review exercised empty, non-empty, conflicting and simulated-interrupted recovery.
+
+### Taxonomy/source and population
+
+- Four leaves already agreed across `lib/data/taxonomy.ts`, REVIEW and approved requests:
+  headphones-personal-audio, fragrance-perfume, cameras-photography, smartwatches-wearables.
+  No pending requests; no duplicate definitions.
+- 63 ACTIVE products all sit on selectable level-2 leaves; 0 ambiguous. The audited mapping plan
+  was extended with Batch 3.
+- Six authorized images were generated with the verified
+  `gpt-image-2-5-flare-text-to-image` model at 1K/1:1. Actual cost: 6 credits each, **36 credits**,
+  balance 10,920.8 → 10,884.8. No purchase, top-up or automatic retry.
+- Assets: long-grain-rice, red-palm-oil, household-cleaning-set, stationery-writing-set,
+  wooden-stacking-toy, yoga-mat-set (1024×1024 WebP), visually inspected; task IDs and prompts in
+  `docs/taxonomy/generation-ledger.json` (`taxonomy-batch3`).
+- Six DEMO listings were published through seller DRAFT → admin exact alt/isDemo → validate →
+  publish. Preflight 30/30, publication 126/126, idempotent rerun 126/126, no duplicates.
+
+### Computed coverage (not hardcoded)
+
+- 11 departments / 37 categories / **117 selectable leaves** / 165 nodes.
+- **100 publishable; 17 NG-blocked; 41/100 populated; 59 empty.**
+- **63 ACTIVE / 259 total; 63 on leaves; 0 ambiguous; 0 active fixtures.**
+- Plan 63: 41 map, 22 keep, 0 review. Image audit **74/74** (63 product + 11 department).
+- Seed guard updated to 63; independent seed run PASS with identical category/image/product/
+  inventory/request/alias/attribute/rule fingerprints.
+- Reconciliation and landing audit now derive from the current mapping; 95/95 landing.
+
+### Verification
+
+Variant management 30/30, activation 30/30, landing 95/95, market 18/18, basket 10/10,
+financial refusal 46/46 (0 provider calls), coverage/reconcile PASS, `tsc --noEmit` clean.
+Independent reviewer `agent_7ea3bfa9-2490-4eec-96c5-751ee17dfad2` accepted the exact build,
+images, destinations, coverage, seed and Shop recovery. The six products remain ACTIVE/DEMO in
+their correct leaves; accepted catalogue delta is exactly the six planned rows.
+
+### Agents
+
+- Taxonomy/source and activation recovery: `agent_4cc38137-20e5-4d2a-9c34-d4f81a9fd1d5`.
+- Imagery/catalogue: `agent_5fefad86-0feb-44c9-92bb-f20126865f4a`.
+- Independent reviewer: `agent_7ea3bfa9-2490-4eec-96c5-751ee17dfad2`.
+
+### Open findings (not closed)
+
+- Recovery has a plausible TOCTOU window between conflict-diff and the restore transaction; a
+  concurrent operator row inserted in that window could be removed. Not demonstrated.
+- SIGKILL/power loss cannot run signal handlers; the durable snapshot plus CLI recovery is the
+  fallback and requires operator action. The next suite refuses to start with a clear instruction.
+- Two ledger alt strings (wooden/yoga) are present but not byte-identical to the published
+  `ProductImage.alt`; four match exactly. Low provenance wording only.
+- The separate variant-integrity LOW findings remain OPEN: stock-row-absent transition risk and
+  product-level cart lines becoming unfulfillable after stocked-to-variant conversion.
+- No push or deployment.
