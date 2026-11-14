@@ -4961,3 +4961,27 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   95/95, rail 150/150, basket 10/10, activation 30/30, financial 46/46. Reviewer agent
   `agent_25ed5f83-730c-423e-bb26-2f8468820bb0` found the variant-gallery defect on the preceding
   build; focused recheck of this build is recorded below when complete.
+
+### Enforcement matrix after the Stay batch
+
+| Vertical | Runtime enforcement | Notes |
+|---|---|---|
+| Shop | ENFORCED | Catalogue, detail, cart-add, checkout, seller listing and discovery gates |
+| Stay | ENFORCED | Discovery/search/destinations/property pages + new holds + host application/listing; bookings, cancellation, review, host tools and help preserved |
+| Food (eats) | NOT_WIRED | Route/service audit complete; no row has runtime effect |
+| Groceries (fresh) | NOT_WIRED | Route/service audit complete; no row has runtime effect |
+| Drive | NOT_WIRED | Sweeper/active-trip recovery and homepage primary action still need a bounded batch |
+| Deliveries (send) | NOT_WIRED | Shop/Fresh/Eats logistics bridge must be decoupled first |
+| Services (gigs) | NOT_WIRED | Escrow/dispute contract needs a bounded batch |
+| Music (stream) | NOT_WIRED | Large media surface + processor restart recovery need a bounded batch |
+| Wallet (wallet) | NOT_WIRED | Shared ledger underpins accepted Shop/Plus/affiliate flows; do not pause it with this batch |
+| Aura | NOT_WIRED | Per-capability gating and paid-provider policy unresolved; Valkey unavailable |
+
+- Final: 57 ACTIVE products all on leaves; 117 leaves; 35/100 populated; 65 gaps; 68/68 image
+  URLs; 0 ambiguous products; 0 variant rows and 0 activation rows after cleanup.
+- Kie: 0 credits; the six-image population batch is documented as an asset gap, not generated.
+- Aura/Valkey: Docker Desktop service is present but `Start-Service com.docker.service` failed with
+  `Cannot open com.docker.service service on computer '.'`; no Valkey/Rate-limit bypass and no live
+  paid model call. Mocked acceptance remains available.
+- GitHub: `github-preservation` remote exists; `gh auth status` reports no logged-in host. No push,
+  no force-push and no credential retry.
