@@ -5049,7 +5049,7 @@ deployment, live charge, payout or provider charge occurred.
 - `scripts/country-discovery-acceptance.cjs`: **34/34** on the frozen build, including 54 pages,
   six labels per page, directory coverage, 404 cases, delivery-cookie preservation, scoped/ordinary
   admin refusals, drift gates, audit/origin scope, unpublish → public 404 → authorized preview 200 →
-  republish 200. Log: `qa-artifacts/visual/discover-africa/acceptance-final6.log`.
+  republish 200. Log: `qa-artifacts/visual/discover-africa/acceptance-final7.log`.
 - 324/324 theme image URLs resolve on disk; 70 distinct assets; 324/324 alt; 101 GENERATED,
   127 APPROVED_EXISTING, 96 ILLUSTRATION. No null images.
 - Kie: 12 generated WebP, 72 credits, model `gpt-image-2-5-flare-text-to-image`, tasks recorded in
