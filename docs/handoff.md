@@ -4995,8 +4995,9 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
 ## 2026-11-14 — Discover Africa, country by country
 
 **Serviced build:** `1nRvPbicJwbL53G4k6prP` (`NEXT_DIST_DIR=.next-programme`, REVIEW catalogue) on
-`http://localhost:3047`, database `naijadeals_review` (REVIEW). Source HEAD was `fb1ff28` plus this
-uncommitted slice. No production deployment, live charge, payout or provider charge occurred.
+`http://localhost:3047`, database `naijadeals_review` (REVIEW). Source commits are `7630ca9`
+(the slice) and `85f5382` (imagery review fixes), both on `naijashop-marketplace`. No production
+deployment, live charge, payout or provider charge occurred.
 
 **Scope delivered.**
 - Separate editorial discovery registry: 54 country profiles, 54 published, 324 themes, 362 source
@@ -5028,12 +5029,16 @@ uncommitted slice. No production deployment, live charge, payout or provider cha
   reviewed, 54/54, 362 sources.
 - Independent journey review: `agent_2f2961c5-e11e-4123-909a-f9334019ec2c` — 54/54 coverage and
   directory/landing/admin/delivery review; found the row-end, button-hidden, contrast, duplicate-H1
-  and 200-row findings, which were fixed and rechecked.
+  and 200-row findings. Final recheck on `1nR…`: row end 45/45, contrast 9/9, admin one-H1 and
+  eyebrow 10.46:1, origin 253 rows, directory/landing/delivery/shop PASS.
 - Independent security review: `agent_6e6ddeb7-ccc2-4041-b5c4-2fd8d76d1f60` — found the
   role-separation, acceptance-DB-guard, audit-scope, published-drift, origin-scope and duplicate-source
   findings, which were fixed.
 - Independent imagery review: `agent_4ac60da2-e285-4551-a7a2-2800df194696` — found 28 material
-  fallback mismatches; targeted remaps and ten additional original illustrations were applied.
+  fallback mismatches; targeted remaps and ten additional original illustrations were applied. Final
+  focused recheck on `1nR…` passes the Timber (7/7), Djibouti Doum palm and Rwanda Imigongo tiles;
+  no known material mismatch remains in the reviewed set. Counts 101 GENERATED / 127
+  APPROVED_EXISTING / 96 ILLUSTRATION; all 12 generated files referenced.
 - Data/backend, public UI, Control Center and Kie integration were implemented by the coordinator;
   no separate implementation subagent was used. The final report must not claim otherwise.
 
@@ -5042,8 +5047,8 @@ uncommitted slice. No production deployment, live charge, payout or provider cha
   six labels per page, directory coverage, 404 cases, delivery-cookie preservation, scoped/ordinary
   admin refusals, drift gates, audit/origin scope, unpublish → public 404 → authorized preview 200 →
   republish 200. Log: `qa-artifacts/visual/discover-africa/acceptance-final5.log`.
-- 324/324 theme image URLs resolve on disk; 68 distinct assets; 324/324 alt; 93 GENERATED,
-  135 APPROVED_EXISTING, 96 ILLUSTRATION. No null images.
+- 324/324 theme image URLs resolve on disk; 69 distinct assets; 324/324 alt; 101 GENERATED,
+  127 APPROVED_EXISTING, 96 ILLUSTRATION. No null images.
 - Kie: 12 generated WebP, 72 credits, model `gpt-image-2-5-flare-text-to-image`, tasks recorded in
   `docs/countries/imagery-manifest.md`. Further host approvals timed out; no REST bypass, no top-up.
 - Visual evidence under `qa-artifacts/visual/discover-africa/` (390/768/1440 directory, row, landing,
@@ -5054,7 +5059,9 @@ uncommitted slice. No production deployment, live charge, payout or provider cha
   an honest empty state; the populated origin path is implemented and code-reviewed but not exercised
   with real supply. Dispatch location is not separately modelled.
 - Some theme images are broad existing assets or original illustrations rather than specific
-  commodity photographs; the remaining broad matches are recorded in the imagery manifest.
+  commodity photographs. The 28 originally flagged and 9 regression tiles were corrected; a full
+  324-tile visual re-audit was not repeated after the final Imigongo change, though the focused
+  recheck passed. Broad-but-related matches are recorded in the imagery manifest.
 - External source URLs were checked for presence/format, not re-fetched in final acceptance.
 - GitHub preservation remains blocked: `gh auth status` is not logged in and the known credential was
   rejected; no push, no force-push, no credential retry. Local commits remain the preservation path.
