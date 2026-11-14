@@ -5233,3 +5233,76 @@ was not reset, squashed or rebuilt over. Work continues on the later accepted tr
   pre-existing limitations; non-hashed `/generated` and `/icons` assets can remain cache-first across
   worker updates until the version is bumped.
 - No commit, push or deployment at the time of this review; GitHub preservation remains blocked.
+
+
+## 2026-11-14 — Market-scoped browsing and regulated eligibility
+
+**Scope:** completed the market-browsing integration from `a39470d` without resetting the accepted
+Discover Africa, storefront-density, service-worker or banner work.
+
+**Served artifact:** canonical 3047, REVIEW database `naijadeals_review`, started through
+`scripts/start-review-preview.cmd` with `REVIEW_DATABASE_URL` and
+`REVIEW_EXPECTED_DATABASE=naijadeals_review`. Served build ID **`FtdTd85hiBH2IDlgapA77`** (the HTML
+contains it); app commit **`8482d23`**. No deployment and no production write.
+
+### Implemented
+
+- Effective market now reaches the header, rail, directory, `/naijashop/c/*` server category pages,
+  `/search`, homepage product rail and Aura. `/api/products` and the homepage pass `city` into
+  activation; the homepage availability probe follows the selected country/city; the server category
+  page uses `readLocale()` instead of raw cookies. Search invalidates an in-flight request at the
+  start of the debounce, so an old NG response cannot overwrite GH results.
+- Homepage deals use the canonical public category ids and `countryCode`; ACTIVE GDEMO/fixture,
+  unverified-vendor, other-market, restricted and unresolved listings cannot appear.
+- Aura `search_products` and `compare_products` use the canonical public catalogue/detail services
+  with the visitor country, city and preview flag. Regulated/unresolved products are absent from
+  cards, summaries and comparison errors; Aura keeps its old price-ascending order.
+- `isRegulated` is an explicit established definition (`lib/taxonomy/regulated.ts`, 18 keys), not
+  derived from `reviewRequired`. The seed writes/asserts the same helper. A country-scoped
+  administrator cannot change the platform-wide flag on create or update (403 `region_forbidden`, no
+  write); a platform administrator can, with before/after `isRegulated` and actor-scope audit.
+- Shop's LocationPanel now exposes a country selector, so NG → GH → NG works inside Shop. When
+  delivery is not configured for the country, the trigger says "Shopping in" and the panel states
+  delivery is unavailable instead of implying checkout delivery.
+
+### Documented reconciliation
+
+- 18 regulated definitions; **17 NG deny rules**. `cycling-helmet-protection` (key
+  `cycling-helmets-protection`) is explicitly allowed in NG with a standards-marking note; GH has no
+  rule for regulated leaves, so GH eligibility is unresolved and fail-closed.
+- The live REVIEW tree is **117 selectable leaves / 100 publishable / 35 populated / 65 empty**; the
+  four previously pending leaf requests (headphones, fragrance, cameras, smartwatches) are approved,
+  and all 57 active products now sit on leaves. The batch-2 113/96 figures are historical.
+
+### Verification (actual)
+
+- `scripts/vertical-activation-tests.ts` unchanged on 3047: **30/30 PASS**.
+- `scripts/taxonomy-market-browsing-tests.ts`: **11/11 PASS** (new endpoint interception, shared
+  tree ordering, unresolved regulated-market eligibility preserved).
+- `scripts/taxonomy-browsing-visibility-tests.ts`: **16/16 PASS**.
+- `scripts/taxonomy-aura-eligibility-tests.ts`: **9/9 PASS**; run-owned fixtures cleaned, audit
+  evidence retained.
+- Independent code/security recheck (`agent_9ef1e3be-742d-40e9-82a6-b5144ac7b9e3`): 46/46
+  independent service/security probes, 32/33 HTTP probes (the one failure is the pre-existing
+  shape-only `country=ZZ` taxonomy acceptance), 5/5 homepage rail probes; all seven fixes accepted.
+  No high/critical findings.
+- Independent journey recheck (`agent_7307746c-93a9-45d8-b4d2-54a09a032ab8`) on the preceding build:
+  in-Shop NG/GH switch **14/14 at 390** and **14/14 at 1440**; same-mounted-SearchPage delayed NG
+  response did not overwrite GH **3/3**; counts 57 → 0 → 57; search `raffia` 1 → 0 → 1; no overflow.
+  The final build adds only the GH delivery disclosure; direct verification on
+  `FtdTd85hiBH2IDlgapA77` shows "Shopping in Accra" and the unavailable-delivery notice.
+- Implementation agent: `agent_e9ff1785-01db-47f0-8493-93ec14129d69`.
+  Evidence: `qa-artifacts/visual/market-switch-2026-11-14/` (ignored), including
+  `final-gh-panel-390.png`, `shop-switch/` and the journey/race JSON files.
+
+### Limitations
+
+- Aura was verified through its tool functions, not a live model call; no provider was contacted.
+- Admin HTTP routes were verified by service execution plus permission inspection, not a real admin
+  browser session.
+- Chromium/headless only; no non-Chromium, physical-device or real-payment validation.
+- REVIEW has no `VerticalActivation` rows; city proof used a temporary run-owned CITY row, restored to
+  0. `deliveryEnabled=false` for GH is displayed honestly; no delivery was offered.
+- GitHub push remains blocked by the rejected preservation credential; this commit is local. The
+  previously dirty line-ending-only `scripts/marketplace-tests.ts` and
+  `scripts/optimize-photography.mjs` were left untouched.

@@ -3,21 +3,19 @@
 > **Current coverage is computed from the REVIEW database by
 > `scripts/taxonomy-coverage-report.ts`.** Run it with
 > `REVIEW_DATABASE_URL=… npx tsx scripts/taxonomy-coverage-report.ts
-> --expect-db=naijadeals_review --images`. The verified values on 2026-11-13 are:
+> --expect-db=naijadeals_review --images`. The verified values on 2026-11-14 are:
 >
-> - **161 active taxonomy nodes: 11 departments / 37 categories / 113 selectable leaves.**
-> - **96 publishable leaves; 17 NG-regulated leaves; 31 populated publishable leaves
->   (31/96); 65 publishable leaves empty.**
-> - **57 ACTIVE products: 52 on selectable leaves, 5 retained on level-1 categories
->   pending four requested leaves (ambiguous), 0 active acceptance fixtures.**
-> - **36 audited `Product.categoryId` moves applied; 16 products already on their leaf;
->   5 ambiguous. Seven moves were re-applied after a revert and all seven now sit on
->   their audited leaves. The two 2026-11-13 ambiguous-resolution moves (wired gaming
->   mouse, portable solar battery charging station) were applied by
->   `scripts/taxonomy-resolve-ambiguous.ts` under run `TAXAMB-20261113`.**
-> - **`CategoryRequest`: 3 APPROVED / 4 PENDING / 1 REJECTED; 0 CRF category or request
->   names. The four PENDING rows are the reviewed leaf requests for headphones, fragrance,
->   cameras and smartwatches.**
+> - **165 active taxonomy nodes: 11 departments / 37 categories / 117 selectable leaves.**
+> - **100 publishable leaves; 17 NG-blocked leaves (of 18 regulated definitions); 35 populated publishable leaves
+>   (35/100); 65 publishable leaves empty.**
+> - **57 ACTIVE products: all 57 on selectable leaves, 0 retained on level-1 categories
+>   (ambiguous), 0 active acceptance fixtures.**
+> - **41 audited `Product.categoryId` moves applied; 12 re-applied after a revert; all
+>   active products sit on audited leaves. The four previously pending leaf requests
+>   (headphones, fragrance, cameras, smartwatches) were approved and their five products
+>   moved from level-1 categories to the new leaves.**
+> - **`CategoryRequest`: 7 APPROVED / 0 PENDING / 1 REJECTED; 0 CRF category or request
+>   names.**
 > - **68 image URLs audited (57 active product images + 11 department banners): 68 HEAD 200
 >   and Chromium `naturalWidth > 0`; 0 departments lack approved banner art.**
 >
@@ -49,17 +47,17 @@ Kie generation: `gpt-image-2-5-flare-text-to-image`, 1K, 1:1, 6 credits/image re
 
 ## Batch 2 — coverage and representative DEMO products (2026-11-13)
 
-Scope: 11 departments / 37 categories / 113 leaves. 17 regulated leaves are excluded from publication (NG `canPublish=false`); 96 leaves are approved publishable. **Current computed coverage is 30 populated of 96 publishable leaves, with 66 publishable leaves empty.** The reviewed plan applied 34 audited `Product.categoryId` moves and kept 16 products already on their leaf; the 7 ambiguous legacy listings remain on their selectable level-1 categories and are not counted against a leaf. The coverage script derives the 57 active-product total, 50 leaf products and 7 ambiguous products from the database; none of those figures are hardcoded documentation claims.
+Scope: 11 departments / 37 categories / 113 leaves. 17 NG-blocked leaves are excluded from publication (NG `canPublish=false`); 96 leaves are approved publishable. The regulated definition is explicit in `lib/taxonomy/regulated.ts` and covers 18 leaves: `cycling-helmets-protection` is regulated but explicitly allowed in NG with a standards-marking note, so it is not one of the 17 NG-blocked leaves. **Current computed coverage is 30 populated of 96 publishable leaves, with 66 publishable leaves empty.** The reviewed plan applied 34 audited `Product.categoryId` moves and kept 16 products already on their leaf; the 7 ambiguous legacy listings remain on their selectable level-1 categories and are not counted against a leaf. The coverage script derives the 57 active-product total, 50 leaf products and 7 ambiguous products from the database; none of those figures are hardcoded documentation claims.
 
 Batch 2 added eight representative DEMO products across eight departments, each with one original Kie image: First-Aid Supplies (Health & Wellness), Bottles/Teats/Sterilisers (Baby, Kids & Toys), Football & Basketball (Sports & Outdoors), Car Care & Cleaning (Automotive & Motorcycle), Drills & Drivers (Tools & Building Materials), Notebooks & Paper (Books & Stationery), Cassava Products (Food & Everyday Essentials) and Bags & Accessories (Fashion & Beauty). No regulated leaf was populated.
 
 ### Department summary
 
-| Department | Publishable leaves | Populated leaves | Active products on leaves | Images | Empty publishable leaves | Excluded regulated leaves |
+| Department | Publishable leaves | Populated leaves | Active products on leaves | Images | Empty publishable leaves | Excluded NG-blocked leaves |
 |---|---:|---:|---:|---:|---:|---:|
-| Electronics & Technology | 12 | 7 | 17 | 17 | 5 | 0 |
-| Home & Living | 9 | 4 | 4 | 4 | 5 | 0 |
-| Fashion & Beauty | 11 | 8 | 11 | 11 | 3 | 0 |
+| Electronics & Technology | 15 | 10 | 21 | 21 | 5 | 0 |
+| Home & Living | 9 | 5 | 5 | 5 | 4 | 0 |
+| Fashion & Beauty | 12 | 9 | 13 | 13 | 3 | 0 |
 | Food & Everyday Essentials | 9 | 4 | 11 | 11 | 5 | 0 |
 | Agriculture & Business | 8 | 1 | 1 | 1 | 7 | 3 |
 | Health & Wellness | 1 | 1 | 1 | 1 | 0 | 5 |
@@ -68,9 +66,9 @@ Batch 2 added eight representative DEMO products across eight departments, each 
 | Automotive & Motorcycle | 7 | 1 | 1 | 1 | 6 | 6 |
 | Tools & Building Materials | 10 | 1 | 1 | 1 | 9 | 1 |
 | Books & Stationery | 10 | 1 | 1 | 1 | 9 | 0 |
-| **Total** | **96** | **30** | **50** | **50** | **66** | **17** |
+| **Total** | **100** | **35** | **57** | **57** | **65** | **17** |
 
-The 7 ambiguous legacy products (headphones, two perfumes, gaming mouse, portable power station, DSLR camera, smartwatch) remain on their level-1 categories until a classification rule or leaf is approved; they are not included in the leaf counts above.
+All 57 active products now sit on selectable leaves; the previously ambiguous headphones, two perfumes, DSLR camera and smartwatch moved to the four newly approved leaves.
 
 ### Publishable-leaf manifest
 
@@ -145,7 +143,7 @@ The 7 ambiguous legacy products (headphones, two perfumes, gaming mouse, portabl
 | Sports & Outdoors | Tents & Sleeping Gear (`tents-sleeping-bags`) | — | — | Empty — needs original image |
 | Sports & Outdoors | Camping Cooking & Coolers (`camping-cooking-coolers`) | — | — | Empty — needs original image |
 | Sports & Outdoors | Bicycles (`bicycles`) | — | — | Empty — needs original image |
-| Sports & Outdoors | Cycling Helmets & Protection (`cycling-helmets-protection`) | — | — | Empty — review-required standards marking |
+| Sports & Outdoors | Cycling Helmets & Protection (`cycling-helmets-protection`) | — | — | Empty — regulated; NG allowed with standards marking |
 | Sports & Outdoors | Cycling Accessories (`cycling-accessories`) | — | — | Empty — needs original image |
 | Automotive & Motorcycle | Engine Filters & Fluids (`engine-filters-fluids`) | — | — | Empty — needs original image |
 | Automotive & Motorcycle | Auto Electrical & Lighting (`auto-electrical-lighting`) | — | — | Empty — needs original image |
@@ -389,7 +387,7 @@ resolution. All passed: correct subject, plausible equipment/ingredients, no
 readable text, logos or brand names, no people or hands, and a safe centre crop.
 No retries were required; no task is left submitted, timed out or uncertain.
 
-### Deliberately skipped — 2 fully regulated categories
+### Deliberately skipped — 2 fully NG-blocked categories
 
 These level-1 categories have **no publishable NG leaf**, so no tile or
 generation was made. A neutral tile would still advertise a category that cannot
@@ -397,8 +395,8 @@ be transacted in Nigeria.
 
 | Category | Subtree | Why skipped |
 |---|---|---|
-| Medicines & Treatments | Over-the-Counter Medicines (`NG:false`, NAFDAC) | Entire subtree is regulated/unpublishable |
-| Vitamins & Supplements | Vitamins & Minerals + Herbal & Traditional Remedies (both `NG:false`) | Entire subtree is regulated/unpublishable |
+| Medicines & Treatments | Over-the-Counter Medicines (`NG:false`, NAFDAC) | Entire subtree is regulated and NG-blocked |
+| Vitamins & Supplements | Vitamins & Minerals + Herbal & Traditional Remedies (both `NG:false`) | Entire subtree is regulated and NG-blocked |
 
 Categories with a mixed subtree (farm-inputs, car-parts, motorcycle-parts,
 baby-gear-nursery, baby-feeding-care, building-materials, medical-devices-aids)
@@ -477,7 +475,8 @@ inside the target subtree, first image, exact URL) and every alt-only source
   lazily loaded product images resolved; no broken tiles.
 - `scripts/taxonomy-coverage-report.ts --expect-db=naijadeals_review` still
   passes with 11 departments / 37 categories / 113 leaves (161 nodes), 96
-  publishable / 17 regulated, 30/96 populated, 0 problems. Read-only.
+  publishable / 17 NG-blocked (18 regulated definitions), 30/96 populated,
+  0 problems. Read-only.
 - Canonical 3047 limitation: its API now reports the new `imageUrl` values from
   the database, but newly added files under `public/` return **404 on 3047**
   until that process is restarted because Next caches the public file list at

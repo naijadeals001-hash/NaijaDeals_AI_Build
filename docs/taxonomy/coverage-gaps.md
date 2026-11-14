@@ -43,10 +43,16 @@ The six added departments currently have no approved department image (`imageUrl
 The storefront falls back to a neutral tile rather than using unrelated imagery; original
 assets are a separate, unauthorised-here task.
 
-## 2. Regulated leaves — not publishable
+## 2. Regulated definitions and NG publication rules
 
-Seventeen leaves set `canPublish=false` for NG and remain gated by `reviewRequired=true`.
-No regulated leaf is publishable in NG.
+The regulated definition is the explicit set in `lib/taxonomy/regulated.ts`
+(`REGULATED_CATEGORY_KEYS`): goods that need a safety, standards or health review in
+each market. It is **not** derived from `reviewRequired`; that flag is an editorial
+property only.
+
+There are **18 regulated definitions** and **17 NG deny rules**. Seventeen leaves set
+`canPublish=false` for NG. Regulated goods are fail-closed: a regulated node with no
+rule for a country is unresolved, never permitted.
 
 | Area | Leaves |
 |---|---|
@@ -61,8 +67,9 @@ No regulated leaf is publishable in NG.
 | Farm chemicals | `pesticides-crop-protection` |
 | Pre-existing regulated leaves | `seeds-seedlings`, `fertilizers-crop-nutrition` |
 
-`cycling-helmets-protection` is publishable but `reviewRequired=true` and carries an NG
-note requiring a recognised standards marking. Other countries have no rule yet; they
+`cycling-helmets-protection` is regulated but explicitly publishable in NG: its NG rule
+is `canPublish=true` with a note requiring a recognised standards marking. GH has no
+rule for the regulated leaves, so their GH eligibility is unresolved. Other countries
 must add their own country review before any restricted leaf is enabled there.
 
 ## 3. Product-leaf mapping (57 active products, applied)
@@ -182,10 +189,10 @@ correctly classified at level 1 and `activeOnLevelOne = 5` is the expected state
   re-applied; the computed state is **57 active products, 52 on selectable leaves and 5 on
   selectable level-1 categories**. The live counts are derived by
   `scripts/taxonomy-coverage-report.ts`, not asserted from this paragraph.
-- `CategoryRequest` is **8**: three APPROVED, one REJECTED and four PENDING run-tagged
-  requests. The four PENDING rows are this run's reviewed leaf requests (run
-  `TAXAMB-20261113`), not residue; destructive cleanup was not authorised and was not
-  performed. CRF names in `Category.name` and `CategoryRequest.suggestedName`: 0.
+- `CategoryRequest` is **8**: seven APPROVED and one REJECTED, with no PENDING rows.
+  The four run-tagged requests from `TAXAMB-20261113` (headphones, fragrance, cameras,
+  smartwatches) were approved; their leaves are active and host the five previously
+  ambiguous products. CRF names in `Category.name` and `CategoryRequest.suggestedName`: 0.
 - Acceptance fixtures are not active: 2 fixture-like DRAFT rows and 126 fixture-like
   ARCHIVED rows (including acceptance lifecycle probes) remain excluded. ACTIVE
   fixture-like rows: 0. The archived count grows as the workflow archives its run-owned
@@ -194,7 +201,8 @@ correctly classified at level 1 and `activeOnLevelOne = 5` is the expected state
 - The taxonomy seed was not re-run in this slice. Its REVIEW expectations are re-baselined
   to the 57-active state, but the coverage report and reconciliation script are the current
   count authority. The seed does not move products.
-- 82 selectable leaves are empty: 65 publishable and 17 NG-regulated. Empty publishable
+- 82 selectable leaves are empty: 65 publishable and 17 NG-blocked (non-publishable).
+  Empty publishable
   leaves render honest empty states and are deliberately not padded with duplicate
   products. Populating them needs original imagery and reviewed listings
   (see `docs/taxonomy/population-asset-gap-2026-11-13.md`).
