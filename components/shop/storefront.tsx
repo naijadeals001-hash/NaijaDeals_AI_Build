@@ -648,13 +648,19 @@ export function NaijaDealsMarketplace() {
             <p className="mt-1 max-w-2xl text-[12px] leading-6 text-[#8a1c14]">
               {error || "The marketplace catalogue is unavailable right now."}
             </p>
-            <button
-              type="button"
-              onClick={() => setReloadKey((value) => value + 1)}
-              className="mt-3 inline-flex h-10 items-center rounded-full bg-[#7a1c12] px-4 text-[11.5px] font-extrabold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1c12] focus-visible:ring-offset-2"
-            >
-              Try again
-            </button>
+            {!/preview|paused|vertical_unavailable|not available to the public/i.test(error) ? (
+              <button
+                type="button"
+                onClick={() => setReloadKey((value) => value + 1)}
+                className="mt-3 inline-flex h-10 items-center rounded-full bg-[#7a1c12] px-4 text-[11.5px] font-extrabold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1c12] focus-visible:ring-offset-2"
+              >
+                Try again
+              </button>
+            ) : (
+              <p className="mt-3 text-[11.5px] font-semibold text-[#8a1c14]">
+                Retrying cannot open a preview-only catalogue. Sign in with an authorized Control Center account.
+              </p>
+            )}
           </div>
         ) : null}
 

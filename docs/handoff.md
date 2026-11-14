@@ -4773,3 +4773,6 @@ local PostgreSQL connection budget is available; and keep the preview on 3047 (t
   failure message was produced; it must be treated as an authorization rejection, not an interface bug.
   The later REST submissions were therefore a process breach and must not be repeated. No further
   generation is authorised in this assignment.
+- Final build `o4jEJVzz0uZG7KYL_Ewfe`: anonymous PREVIEW listing error no longer offers a
+  dead "Try again"; it explains preview access instead. D2 department-banner crop remains a
+  low visual note (banners render 1600x900 but the strip crops vertically).
