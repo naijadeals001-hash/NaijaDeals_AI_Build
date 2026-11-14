@@ -160,6 +160,7 @@ type CategoryTreeRow = {
   showOnHomepage: boolean;
   sortOrder: number;
   deprecatedAt: Date | null;
+  isRegulated: boolean;
 };
 
 type PublicCategoryTree = {
@@ -199,7 +200,8 @@ async function loadPublicCategoryTree(countryCode: string): Promise<PublicCatego
       isSelectable: true,
       showOnHomepage: true,
       sortOrder: true,
-      deprecatedAt: true
+      deprecatedAt: true,
+      isRegulated: true
     }
   });
 
@@ -240,17 +242,17 @@ async function loadPublicCategoryTree(countryCode: string): Promise<PublicCatego
     where: { countryCode: country },
     select: { categoryId: true, countryCode: true, canPublish: true, note: true }
   });
-  if (rules.length > 0) {
-    const ruleMap = new Map(rules.map((rule) => [`${rule.categoryId}:${country}`, rule]));
-    for (const row of visible) {
-      const effective = effectivePublishRule({
-        categoryId: row.id,
-        byId: visibleById,
-        rules: ruleMap,
-        countryCode: country
-      });
-      if (!effective.canPublish) restricted.add(row.id);
-    }
+  // Evaluate every node even when this market has no rule rows at all:
+  // a regulated node without a rule is unresolved, not permitted.
+  const ruleMap = new Map(rules.map((rule) => [`${rule.categoryId}:${country}`, rule]));
+  for (const row of visible) {
+    const effective = effectivePublishRule({
+      categoryId: row.id,
+      byId: visibleById,
+      rules: ruleMap,
+      countryCode: country
+    });
+    if (!effective.canPublish) restricted.add(row.id);
   }
 
   return {

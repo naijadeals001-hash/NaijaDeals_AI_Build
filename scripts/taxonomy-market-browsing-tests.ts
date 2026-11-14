@@ -365,6 +365,7 @@ async function main(): Promise<void> {
   const created = {
     browsingCategoryId: null as string | null,
     regulatedCategoryId: null as string | null,
+    regulatedProductId: null as string | null,
     productId: null as string | null,
     sessionIds: [] as string[],
     marker: runId
@@ -434,6 +435,30 @@ async function main(): Promise<void> {
     );
     created.regulatedCategoryId = regulatedCategory.rows[0]?.id ?? null;
     assert(created.regulatedCategoryId, "run-owned regulated category was not created");
+
+    // A GH-eligible listing inside the regulated leaf proves the public
+    // catalogue itself fails closed while market eligibility is unresolved.
+    const regulatedVendor = await client.query<{ id: string }>(
+      `select id from "Vendor" where status = 'VERIFIED' order by name limit 1`
+    );
+    const regulatedVendorId = regulatedVendor.rows[0]?.id;
+    assert(regulatedVendorId, "no VERIFIED vendor exists for the regulated product fixture");
+    const regulatedProductId = `txmktregprod${randomBytes(10).toString("hex")}`;
+    created.regulatedProductId = regulatedProductId;
+    await client.query(
+      `insert into "Product"
+         (id, "vendorId", "categoryId", name, slug, description, "priceKobo", "countryCode",
+          status, "isSample", "createdAt", "updatedAt")
+       values ($1, $2, $3, $4, $5, $6, 250000, 'GH', 'ACTIVE', false, now(), now())`,
+      [
+        regulatedProductId,
+        regulatedVendorId,
+        created.regulatedCategoryId,
+        `${runId} Regulated Product`,
+        `${runSlug}-regulated-product`,
+        "Run-owned GH listing proving unresolved market eligibility hides products."
+      ]
+    );
 
     // The service reads DATABASE_URL; point it at the verified REVIEW URL only
     // after the direct-pg guard has passed.
@@ -545,6 +570,22 @@ async function main(): Promise<void> {
     });
 
     await step("regulated run-owned category is unresolved until an explicit country rule exists", async () => {
+      const ghUnresolvedTree = await publicService.getPublicTaxonomy({ countryCode: "GH" });
+      const ghUnresolvedNode = findNode(ghUnresolvedTree.departments, created.regulatedCategoryId as string);
+      assert(ghUnresolvedNode?.canPublish === false, "GH regulated category with no rule at all was publishable");
+      assert(
+        ghUnresolvedNode?.restrictionReason === "market_eligibility_unresolved",
+        `GH missing-rule reason ${String(ghUnresolvedNode?.restrictionReason)}`
+      );
+      const ghHiddenProducts = await http.get(
+        `/api/products?country=GH&category=${encodeURIComponent(`${runSlug}-regulated`)}&page=1&pageSize=5`
+      );
+      expectStatus(ghHiddenProducts, 200, "GET GH products in an unresolved regulated category");
+      assert(
+        asArray(asRecord(ghHiddenProducts.body).items).length === 0,
+        "GH public catalogue leaked a product whose market eligibility is unresolved"
+      );
+
       const ngBlocked = await eligibilityService
         .assertSellerCategoryEligibility({
           categoryId: created.regulatedCategoryId as string,
@@ -589,6 +630,17 @@ async function main(): Promise<void> {
       const ghNode = findNode(ghTreeAllowed.departments, created.regulatedCategoryId as string);
       assert(ghNode?.canPublish === true, "explicit GH allow did not publish");
       assert(ghNode?.restrictionReason === null, `explicit GH allow reason ${String(ghNode?.restrictionReason)}`);
+
+      const ghVisibleProducts = await http.get(
+        `/api/products?country=GH&category=${encodeURIComponent(`${runSlug}-regulated`)}&page=1&pageSize=5`
+      );
+      expectStatus(ghVisibleProducts, 200, "GET GH products after an explicit allow");
+      assert(
+        asArray(asRecord(ghVisibleProducts.body).items).some(
+          (item) => asRecord(item).id === created.regulatedProductId
+        ),
+        "explicit GH allow did not release the run-owned regulated product"
+      );
 
       const ngStillBlocked = await publicService.getPublicTaxonomy({ countryCode: "NG" });
       const ngNode = findNode(ngStillBlocked.departments, created.regulatedCategoryId as string);
@@ -1029,6 +1081,9 @@ async function main(): Promise<void> {
     try {
       if (created.productId) {
         await client.query(`delete from "Product" where id = $1`, [created.productId]);
+      }
+      if (created.regulatedProductId) {
+        await client.query(`delete from "Product" where id = $1`, [created.regulatedProductId]);
       }
       for (const id of [created.browsingCategoryId, created.regulatedCategoryId]) {
         if (!id) continue;

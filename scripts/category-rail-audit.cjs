@@ -49,9 +49,9 @@ if (!CHROME) {
 const VIEWPORTS = [
   { width: 390, height: 844, touch: true, name: "mobile", country: "NG", city: "Lagos" },
   { width: 768, height: 1024, touch: true, name: "tablet", country: "NG", city: "Lagos" },
-  // The desktop pass exercises a non-default market so the locale-scoped
-  // rail/directory fetch is covered without adding a duplicate viewport set.
-  { width: 1440, height: 900, touch: false, name: "desktop", country: "GH", city: "Accra" }
+  // Desktop runs the default market so shelf-order assertions have a populated
+  // catalogue; non-default market scoping is checked separately below.
+  { width: 1440, height: 900, touch: false, name: "desktop", country: "NG", city: "Lagos" }
 ];
 
 const checks = [];
@@ -965,6 +965,44 @@ async function runStateInterception(browser, eligible, taxonomy, projection) {
   }
 }
 
+async function runMarketScopeCheck(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(String(error).slice(0, 200)));
+  await applyLocale(context, "GH", "Accra");
+
+  const ghProducts = await fetchJson("/api/products?country=GH&city=Accra").catch(() => null);
+  const rows = Array.isArray(ghProducts) ? ghProducts : Array.isArray(ghProducts?.products) ? ghProducts.products : null;
+  check("market scope: GH catalogue API returns no published listings", Boolean(rows) && rows.length === 0, rows ? `${rows.length} listings` : "API unavailable");
+  await page.goto(`${BASE}/naijashop`, { waitUntil: "load", timeout: 180000 });
+  await waitForRail(page);
+  await page.waitForTimeout(800);
+
+  const state = await page.evaluate(() => {
+    const shelves = Array.from(document.querySelectorAll("[data-storefront-shelf]"));
+    const rail = document.querySelector("[data-category-rail-section]");
+    const cards = Array.from(document.querySelectorAll("[data-category-rail] [data-category-slug]"));
+    return {
+      shelves: shelves.length,
+      productLinks: document.querySelectorAll('a[href*="/product/"]').length,
+      railCards: cards.length,
+      nonZero: cards.filter((card) => Number(card.getAttribute("data-category-count")) > 0).length,
+      summaryText: rail?.querySelector("h2")?.parentElement?.innerText ?? "",
+      pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth
+    };
+  });
+  check("market scope: GH storefront renders no NG product shelves", state.shelves === 0 && state.productLinks === 0, `${state.shelves} shelves, ${state.productLinks} product links`);
+  check("market scope: GH rail keeps every eligible category with zero local listings", state.railCards > 0 && state.nonZero === 0, `${state.railCards} cards, ${state.nonZero} non-zero`);
+  check(
+    "market scope: GH summary states zero published listings without demonstration claims",
+    /0 published listings/i.test(state.summaryText) && !/demonstration/i.test(state.summaryText),
+    state.summaryText.slice(0, 160)
+  );
+  check("market scope: GH storefront has no horizontal overflow or page errors", state.pageOverflow <= 1 && pageErrors.length === 0, `${state.pageOverflow}px, ${pageErrors[0] ?? "no errors"}`);
+  await context.close();
+}
+
 (async () => {
   if (!CHROME) throw new Error("Chromium executable missing");
   console.log(`Category rail audit against ${BASE}`);
@@ -991,7 +1029,7 @@ async function runStateInterception(browser, eligible, taxonomy, projection) {
   const projection = marketData.NG.projection;
   const eligible = marketData.NG.eligible;
   const departments = Array.isArray(taxonomy.departments) ? taxonomy.departments : [];
-  notes.push("Market coverage: mobile/tablet use NG (Lagos) and desktop uses GH (Accra); API parity is checked for both.");
+  notes.push("Market coverage: storefront viewports use NG (Lagos); GH (Accra) is checked separately for market scoping and zero-listing isolation.");
 
   check(
     "taxonomy response is available for NG and GH",
@@ -1059,6 +1097,7 @@ async function runStateInterception(browser, eligible, taxonomy, projection) {
     await checkAllCategoryLinks(browser, [...observedLinks]);
     await runReducedMotion(browser, eligible);
     await runStateInterception(browser, eligible, taxonomy, projection);
+    await runMarketScopeCheck(browser);
   } finally {
     await browser.close();
   }

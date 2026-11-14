@@ -182,7 +182,7 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
     // endpoint is unavailable the header still works from the canonical
     // /api/categories list, and says so in the All drawer rather than
     // presenting a flat list as the complete hierarchy.
-    getPublicTaxonomy()
+    getPublicTaxonomy({ country, city })
       .then(({ departments }) => {
         if (!active) return;
         const tree = departments.map(toShopDepartment);

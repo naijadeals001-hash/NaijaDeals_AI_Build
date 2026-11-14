@@ -284,7 +284,7 @@ export function NaijaDealsMarketplace() {
     setError("");
 
     apiClient
-      .getProducts()
+      .getProducts({ country, city })
       .then((items) => {
         if (!active) return;
         const list = Array.isArray(items) ? items : [];
@@ -321,7 +321,7 @@ export function NaijaDealsMarketplace() {
     return () => {
       active = false;
     };
-  }, [reloadKey]);
+  }, [reloadKey, country, city]);
 
   // Taxonomy is market-scoped, so both the published tree (shelves/navigation)
   // and the level-1 browsing projection (rail/directory) refetch when the

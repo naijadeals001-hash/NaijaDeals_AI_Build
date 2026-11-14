@@ -819,7 +819,10 @@ async function main() {
       const { chromium } = await import("playwright");
       const browser = await chromium.launch({ headless: true });
       try {
-        const publicPage = await browser.newPage();
+        // Service workers are unrelated to activation; a first-load controller
+        // change can reload "/" and interrupt the next navigation.
+        const publicContext = await browser.newContext({ serviceWorkers: "block" });
+        const publicPage = await publicContext.newPage();
         await publicPage.goto(`${base}/`, { waitUntil: "domcontentloaded", timeout: 90_000 });
         await publicPage.waitForSelector('[data-shop-availability="PREVIEW"]', { timeout: 60_000 });
         assert((await publicPage.locator('[data-service="shop"]').count()) === 0, "public Shop card still visible in PREVIEW");
@@ -829,7 +832,7 @@ async function main() {
         assert((await publicPage.locator('nav[aria-label="Marketplace sections"]').count()) === 0, "public Shop section nav still visible");
         assert((await publicPage.locator('a[href="/orders"]').count()) > 0, "public Orders link disappeared");
 
-        const context = await browser.newContext();
+        const context = await browser.newContext({ serviceWorkers: "block" });
         const [name, value] = superSession.session.split("=");
         if (name && value) await context.addCookies([{ name, value, domain: "localhost", path: "/" }]);
         const adminPage = await context.newPage();

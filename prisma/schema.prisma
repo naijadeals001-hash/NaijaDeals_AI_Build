@@ -280,6 +280,8 @@ model Category {
   showOnHomepage  Boolean   @default(false)
   /// Browsing rail/directory visibility, separate from taxon publication and homepage merchandising.
   browsingVisible Boolean   @default(true)
+  /// Regulated goods: publishing needs an explicit country rule, never absence-of-rule.
+  isRegulated     Boolean   @default(false)
   deprecatedAt    DateTime?
   sortOrder       Int       @default(0)
   isActive        Boolean   @default(true)

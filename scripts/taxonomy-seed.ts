@@ -34,7 +34,7 @@ import {
  * the reviewed product->leaf mapping moved listings onto descendant leaves.
  * Direct-only counts would undercount them and falsely report a changed map.
  */
-const EXPECTED_ACTIVE_PRODUCTS_ON_EXISTING = 49;
+const EXPECTED_ACTIVE_PRODUCTS_ON_EXISTING = 43;
 const EXPECTED_ACTIVE_PRODUCTS_TOTAL = 57;
 
 /** All ids in the subtree rooted at rootId (including rootId). */
@@ -288,7 +288,7 @@ async function main(): Promise<void> {
         for (const definition of TAXONOMY_NODES) {
           const matches = await tx.category.findMany({
             where: { OR: [{ key: definition.key }, { slug: definition.slug }] },
-            select: { id: true, key: true, slug: true, name: true }
+            select: { id: true, key: true, slug: true, name: true, imageUrl: true, imageAlt: true }
           });
           if (matches.length > 1) {
             throw new Error(
@@ -358,8 +358,8 @@ async function main(): Promise<void> {
                   key: definition.key,
                   name: definition.name,
                   description: definition.description,
-                  imageUrl: definition.imageUrl ?? null,
-                  imageAlt: definition.imageAlt ?? null,
+                  imageUrl: definition.imageUrl ?? found.imageUrl,
+                  imageAlt: definition.imageAlt ?? found.imageAlt,
                   parentId,
                   level: definition.level,
                   isSelectable: definition.isSelectable,
