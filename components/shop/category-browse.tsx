@@ -298,9 +298,11 @@ export function CategoryBrowse({
           <div className="flex flex-wrap items-end justify-between gap-2">
             <h1 className="break-words font-display text-[22px] font-extrabold">{heading}</h1>
             <p aria-live="polite" className="text-[12px] text-[#565959]">
-              {status === "loading" && products.length === 0
-                ? "Loading products…"
-                : `${rangeStart}–${rangeEnd} of ${pageInfo.total} products`}
+              {status === "error"
+                ? null
+                : status === "loading" && products.length === 0
+                  ? "Loading products…"
+                  : `${rangeStart}–${rangeEnd} of ${pageInfo.total} products`}
             </p>
           </div>
         </div>

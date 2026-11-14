@@ -43,11 +43,11 @@ const ECOSYSTEM: Array<[string, string]> = [
  * real route; the old NaijaShop navy footer is deliberately not reused here so
  * the storefront shares the owner-approved brand rather than a separate brand.
  */
-export function ShopSiteFooter() {
+export function ShopSiteFooter({ shopPaused = false }: { shopPaused?: boolean }) {
   return (
     <footer className="mt-12 bg-[#07351f] text-white">
       <div className="mx-auto max-w-[1440px] px-4 pb-28 pt-10 sm:px-6 lg:px-8 lg:pb-12 lg:pt-12">
-        <div className="grid gap-9 sm:grid-cols-2 lg:grid-cols-[1.35fr_1fr_1fr_1fr]">
+        <div className={`grid gap-9 sm:grid-cols-2 ${shopPaused ? "lg:grid-cols-[1.35fr_1fr]" : "lg:grid-cols-[1.35fr_1fr_1fr_1fr]"}`}>
           <div>
             <Link href="/naijashop" aria-label="NaijaDeals Marketplace home" className="inline-flex flex-col">
               <NaijaDealsLogo tone="onDark" size="lg" />
@@ -70,8 +70,8 @@ export function ShopSiteFooter() {
             </ul>
           </div>
 
-          <FooterColumn title="Shop" links={SHOP_LINKS} />
-          <FooterColumn title="Sell and move" links={SELL_LINKS} />
+          {!shopPaused ? <FooterColumn title="Shop" links={SHOP_LINKS} /> : null}
+          {!shopPaused ? <FooterColumn title="Sell and move" links={SELL_LINKS} /> : null}
           <FooterColumn title="Help" links={HELP_LINKS} />
         </div>
 
@@ -92,9 +92,11 @@ export function ShopSiteFooter() {
           <p>© 2026 NaijaDeals.com — one ecosystem for Africa.</p>
           <p className="flex items-center gap-3">
             <span>NGN · Nigeria</span>
-            <Link href="/sell" className="inline-flex items-center gap-1 font-bold text-[#d6e7d7] hover:text-white">
-              Sell on NaijaDeals <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-            </Link>
+            {!shopPaused ? (
+              <Link href="/sell" className="inline-flex items-center gap-1 font-bold text-[#d6e7d7] hover:text-white">
+                Sell on NaijaDeals <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+            ) : null}
           </p>
         </div>
       </div>

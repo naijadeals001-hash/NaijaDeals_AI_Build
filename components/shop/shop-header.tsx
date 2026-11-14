@@ -110,6 +110,7 @@ function collectSearchScopes(departments: ShopDepartment[]): SearchScope[] {
  * and scroll lock behave the same everywhere.
  */
 export function ShopShell({ children, initialShopAvailability = null }: { children: ReactNode; initialShopAvailability?: { available: boolean; status: "LIVE" | "PREVIEW" | "DISABLED"; message?: string | null } | null }) {
+  const [shopAvailability, setShopAvailability] = useState(initialShopAvailability);
   return (
     <div
       data-shop-shell
@@ -122,16 +123,22 @@ export function ShopShell({ children, initialShopAvailability = null }: { childr
       >
         Skip to marketplace content
       </a>
-      <ShopHeader initialShopAvailability={initialShopAvailability} />
+      <ShopHeader initialShopAvailability={initialShopAvailability} onAvailabilityChange={setShopAvailability} />
       <main id="shop-main" tabIndex={-1} className="min-w-0 flex-1 outline-none">
         {children}
       </main>
-      <ShopSiteFooter />
+      <ShopSiteFooter shopPaused={shopAvailability?.available === false} />
     </div>
   );
 }
 
-function ShopHeader({ initialShopAvailability = null }: { initialShopAvailability?: { available: boolean; status: "LIVE" | "PREVIEW" | "DISABLED"; message?: string | null } | null }) {
+function ShopHeader({
+  initialShopAvailability = null,
+  onAvailabilityChange
+}: {
+  initialShopAvailability?: { available: boolean; status: "LIVE" | "PREVIEW" | "DISABLED"; message?: string | null } | null;
+  onAvailabilityChange?: (value: { available: boolean; status: "LIVE" | "PREVIEW" | "DISABLED"; message?: string | null }) => void;
+}) {
   const pathname = usePathname();
   const { city, cities, setCity, setCountry, country, countryName, deliveryEnabled } = useLocale();
 
@@ -254,7 +261,10 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
     fetch(`/api/products/availability?${params.toString()}`, { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((value: { available: boolean; status: "LIVE" | "PREVIEW" | "DISABLED"; message?: string | null } | null) => {
-        if (active && value && typeof value.available === "boolean") setShopAvailability(value);
+        if (active && value && typeof value.available === "boolean") {
+          setShopAvailability(value);
+          onAvailabilityChange?.(value);
+        }
       })
       .catch(() => {
         /* Keep the last known state; the page's own catalogue request still refuses. */
@@ -262,7 +272,7 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
     return () => {
       active = false;
     };
-  }, [country, city]);
+  }, [country, city, onAvailabilityChange]);
 
   // Keep the single search field in step with the applied URL. The header is
   // shared by every Marketplace route, so a category page seeds the department
