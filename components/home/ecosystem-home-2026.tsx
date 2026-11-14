@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -67,8 +67,16 @@ type ShopAvailability = {
 export function EcosystemHome2026({ products = [], initialShopAvailability = null }: EcosystemHome2026Props) {
   const [shopAvailability, setShopAvailability] = useState<ShopAvailability | null>(initialShopAvailability);
   const { country, city } = useLocale();
+  const availabilityInitialised = useRef(false);
 
   useEffect(() => {
+    if (!availabilityInitialised.current && initialShopAvailability) {
+      // The server already resolved this exact first paint. Avoid a duplicate
+      // probe/loading flash; a market switch still re-probes below.
+      availabilityInitialised.current = true;
+      return;
+    }
+    availabilityInitialised.current = true;
     let active = true;
     const params = new URLSearchParams({ country });
     if (city) params.set("city", city);

@@ -300,6 +300,7 @@ export function NaijaDealsMarketplace({
   const [draftPreview, setDraftPreview] = useState(false);
   const previewApplied = useRef(false);
   const [shopAvailability, setShopAvailability] = useState<ShopAvailability | null>(initialShopAvailability);
+  const availabilityInitialised = useRef(false);
   const [missingArt, setMissingArt] = useState<Record<string, boolean>>({});
 
   const markMissing = (key: string) => setMissingArt((current) => (current[key] ? current : { ...current, [key]: true }));
@@ -310,6 +311,13 @@ export function NaijaDealsMarketplace({
   // unresolved: the page then relies on the protected catalogue response rather
   // than claiming the marketplace is open.
   useEffect(() => {
+    if (!availabilityInitialised.current && initialShopAvailability) {
+      // Server-resolved first paint: do not duplicate the availability probe.
+      // A country/city switch still reaches the network on the next effect.
+      availabilityInitialised.current = true;
+      return;
+    }
+    availabilityInitialised.current = true;
     let active = true;
     const params = new URLSearchParams({ country: country || "NG" });
     if (city) params.set("city", city);

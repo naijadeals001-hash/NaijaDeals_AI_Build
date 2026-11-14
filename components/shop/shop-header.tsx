@@ -153,6 +153,7 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
     status: "LIVE" | "PREVIEW" | "DISABLED";
     message?: string | null;
   } | null>(initialShopAvailability);
+  const availabilityInitialised = useRef(false);
   const shopUnavailable = shopAvailability?.available === false;
   const shopPreview = shopAvailability?.status === "PREVIEW" && shopAvailability.available;
 
@@ -240,6 +241,13 @@ function ShopHeader({ initialShopAvailability = null }: { initialShopAvailabilit
   // market replaces the marketplace section rail with an explicit notice while
   // leaving Account, Orders and support routes reachable.
   useEffect(() => {
+    if (!availabilityInitialised.current && initialShopAvailability) {
+      // The server already supplied this state for the first render; avoid a
+      // duplicate probe/flash. A market switch re-probes on the next effect.
+      availabilityInitialised.current = true;
+      return;
+    }
+    availabilityInitialised.current = true;
     let active = true;
     const params = new URLSearchParams({ country });
     if (city) params.set("city", city);
