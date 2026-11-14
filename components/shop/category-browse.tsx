@@ -266,7 +266,7 @@ export function CategoryBrowse({
               /* Category tiles are square or near-square. Keep the whole
                  subject visible; the softly scaled copy fills the wide strip
                  without presenting a cropped product as the category. */
-              <div className="relative h-40 overflow-hidden bg-[#eef3ec] sm:h-52">
+              <div className="relative h-44 overflow-hidden bg-[#eef3ec] sm:h-60">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={node.imageUrl}

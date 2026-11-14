@@ -888,13 +888,23 @@ async function runStateInterception(browser, eligible, taxonomy, projection) {
     for (const department of mutatedTaxonomy.departments ?? []) {
       for (const node of department.children ?? []) {
         if (node.slug === hiddenBrowsing) node.browsingVisible = false;
-        if (node.slug === hiddenCountry) node.canPublish = false;
+        if (node.slug === hiddenCountry) {
+          node.canPublish = false;
+          node.productCount = 0;
+          node.subtreeProductCount = 0;
+          node.restrictionNote = "Publishing is not open in this market; an explicit country rule is required.";
+        }
       }
     }
     const mutatedProjection = structuredClone(projection);
     for (const node of mutatedProjection.categories ?? []) {
       if (node.slug === hiddenBrowsing) node.browsingVisible = false;
-      if (node.slug === hiddenCountry) node.canPublish = false;
+      if (node.slug === hiddenCountry) {
+        node.canPublish = false;
+        node.productCount = 0;
+        node.subtreeProductCount = 0;
+        node.restrictionNote = "Publishing is not open in this market; an explicit country rule is required.";
+      }
     }
     await routeTaxonomyPair(page, (route) =>
       route.fulfill({

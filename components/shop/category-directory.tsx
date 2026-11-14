@@ -228,7 +228,7 @@ export function CategoryDirectory() {
                                   const url = entry.imageUrl as string;
                                   setBrokenArt((current) => (current[url] ? current : { ...current, [url]: true }));
                                 }}
-                                className="h-full w-full object-cover transition duration-300 group-hover:scale-105 motion-reduce:transition-none"
+                                className="h-full w-full object-contain transition duration-300 group-hover:scale-105 motion-reduce:transition-none"
                               />
                             ) : (
                               <LayoutGrid className="h-4 w-4 text-[#7a9c80]" aria-hidden />
