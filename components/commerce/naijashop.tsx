@@ -161,6 +161,7 @@ export function ProductCard({ product, onAdd }: { product: ApiProduct; onAdd?: (
 }
 
 export function NaijaShopPage() {
+  const { country, city } = useLocale();
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [category, setCategory] = useState("all");
@@ -288,7 +289,7 @@ export function NaijaShopPage() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([apiClient.getProducts(), apiClient.getCategories()])
+    Promise.all([apiClient.getProducts({ country, city }), apiClient.getCategories({ country, city })])
       .then(([items, cats]) => {
         if (!active) return;
         setProducts(items);
@@ -304,7 +305,7 @@ export function NaijaShopPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [country, city]);
 
   // The public storefront only shows genuine seller listings. Seeded demo rows are
   // flagged in the database and stay behind an explicit, clearly-labelled toggle.
@@ -1032,8 +1033,8 @@ export function SearchPage() {
   }, [query, category, sort, country, city]);
 
   useEffect(() => {
-    void apiClient.getCategories().then(setCategories).catch(() => undefined);
-  }, []);
+    void apiClient.getCategories({ country, city }).then(setCategories).catch(() => undefined);
+  }, [country, city]);
 
   useEffect(() => {
     const timeout = setTimeout(() => void load(), 250);

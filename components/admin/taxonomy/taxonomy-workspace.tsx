@@ -82,6 +82,7 @@ function draftFromNode(node: AdminTaxonomyNode, parentId: string | null): NodeDr
     isSelectable: node.isSelectable !== false,
     showOnHomepage: node.showOnHomepage === true,
     browsingVisible: browsingVisibleOf(node),
+    isRegulated: node.isRegulated === true,
     isActive: node.isActive !== false,
     sortOrder: typeof node.sortOrder === "number" ? String(node.sortOrder) : "",
     deprecatedAt: node.deprecatedAt ?? null,
@@ -377,6 +378,7 @@ export function TaxonomyWorkspace({
       isSelectable: editing.isSelectable,
       showOnHomepage: editing.showOnHomepage,
       browsingVisible: editing.browsingVisible,
+      isRegulated: editing.isRegulated,
       isActive: editing.isActive,
       sortOrder: editing.sortOrder ? Number(editing.sortOrder) : 0,
       aliases: editing.aliases

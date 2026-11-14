@@ -235,7 +235,8 @@ function normalisePublicNode(node: PublicTaxonomyNode): PublicTaxonomyNode {
     level: typeof node.level === "number" ? node.level : 0,
     sortOrder: typeof node.sortOrder === "number" ? node.sortOrder : 0,
     browsingVisible: node.browsingVisible !== false,
-    canPublish: node.canPublish !== false,
+    // Fail closed if a malformed/legacy response omits publication state.
+    canPublish: node.canPublish === true,
     restrictionNote: typeof node.restrictionNote === "string" ? node.restrictionNote : null,
     restrictionReason: normaliseRestrictionReason(node.restrictionReason),
     isRegulated: node.isRegulated === true,

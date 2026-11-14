@@ -44,6 +44,8 @@ export type CategoryCreateValues = {
   showOnHomepage: boolean;
   /** Browsing rail/directory visibility, independent of publication. */
   browsingVisible: boolean;
+  /** Regulated goods require an explicit country rule before publication. */
+  isRegulated: boolean;
   isActive: boolean;
   sortOrder: number;
 };
@@ -154,6 +156,7 @@ export async function validateCategoryCreateInput(tx: Db, body: Record<string, u
     isSelectable: body.isSelectable === undefined ? true : readBoolean(body.isSelectable, "isSelectable"),
     showOnHomepage: body.showOnHomepage === undefined ? false : readBoolean(body.showOnHomepage, "showOnHomepage"),
     browsingVisible: body.browsingVisible === undefined ? true : readBoolean(body.browsingVisible, "browsingVisible"),
+    isRegulated: body.isRegulated === undefined ? false : readBoolean(body.isRegulated, "isRegulated"),
     isActive: body.isActive === undefined ? true : readBoolean(body.isActive, "isActive"),
     sortOrder: body.sortOrder === undefined ? 0 : readInteger(body.sortOrder, "sortOrder", 0, 100_000)
   };
@@ -181,6 +184,7 @@ export async function createCategoryRecord(
       isSelectable: values.isSelectable,
       showOnHomepage: values.showOnHomepage,
       browsingVisible: values.browsingVisible,
+      isRegulated: values.isRegulated,
       isActive: values.isActive,
       sortOrder: values.sortOrder
     },
@@ -567,6 +571,7 @@ export async function updateCategoryNode(
         ...(body.browsingVisible !== undefined
           ? { browsingVisible: readBoolean(body.browsingVisible, "browsingVisible") }
           : {}),
+        ...(body.isRegulated !== undefined ? { isRegulated: readBoolean(body.isRegulated, "isRegulated") } : {}),
         ...(body.isActive !== undefined ? { isActive: readBoolean(body.isActive, "isActive") } : {}),
         ...(body.sortOrder !== undefined ? { sortOrder: readInteger(body.sortOrder, "sortOrder", 0, 100_000) } : {}),
         ...(body.deprecatedAt !== undefined ? { deprecatedAt: readDate(body.deprecatedAt, "deprecatedAt") ?? null } : {})
@@ -618,6 +623,7 @@ export async function updateCategoryNode(
             isSelectable: existing.isSelectable,
             showOnHomepage: existing.showOnHomepage,
             browsingVisible: existing.browsingVisible,
+            isRegulated: existing.isRegulated,
             sortOrder: existing.sortOrder,
             imageUrl: existing.imageUrl,
             imageAlt: existing.imageAlt,
@@ -633,6 +639,7 @@ export async function updateCategoryNode(
             isSelectable: updated.isSelectable,
             showOnHomepage: updated.showOnHomepage,
             browsingVisible: updated.browsingVisible,
+            isRegulated: updated.isRegulated,
             sortOrder: updated.sortOrder,
             imageUrl: updated.imageUrl,
             imageAlt: updated.imageAlt,

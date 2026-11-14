@@ -184,52 +184,31 @@ export function CategoryRail({
 }) {
   const trackId = useId();
   const trackRef = useRef<HTMLUListElement | null>(null);
-  const lastSnapRef = useRef(0);
   const [bounds, setBounds] = useState({ start: true, end: true });
   const [brokenArt, setBrokenArt] = useState<Record<string, boolean>>({});
   const reducedMotion = usePrefersReducedMotion();
 
-  // Scroll snap cannot align the final card to the start when the remaining
-  // distance is shorter than a card, so the last reachable position is the
-  // largest snap point that still fits. Comparing against raw `max` would leave
-  // Next enabled after the rail had nothing left to show. Snap points are
-  // measured on resize only — scroll updates just read the cached value.
-  const measureSnap = useCallback(() => {
-    const track = trackRef.current;
-    if (!track) return;
-    const max = track.scrollWidth - track.clientWidth;
-    let lastSnap = max;
-    if (max > 2) {
-      const trackRect = track.getBoundingClientRect();
-      const snapPoints = Array.from(track.querySelectorAll<HTMLElement>(CARD_QUERY))
-        .map((card) => card.getBoundingClientRect().left - trackRect.left + track.scrollLeft)
-        .filter((left) => left <= max + 2);
-      lastSnap = snapPoints.length > 0 ? Math.max(...snapPoints) : max;
-    }
-    lastSnapRef.current = lastSnap;
-  }, []);
-
+  // The final scroll position is the true maximum, not the last card's snap
+  // point. A card that starts beyond the maximum still becomes fully visible at
+  // `max`; gating Next on a previous snap point left the last card unreachable
+  // with the arrow controls.
   const updateBounds = useCallback(() => {
     const track = trackRef.current;
     if (!track) return;
     const max = track.scrollWidth - track.clientWidth;
     const start = track.scrollLeft <= 2;
-    const end = max <= 2 || track.scrollLeft >= lastSnapRef.current - 3;
+    const end = max <= 2 || track.scrollLeft >= max - 3;
     setBounds((current) => (current.start === start && current.end === end ? current : { start, end }));
   }, []);
 
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
-    measureSnap();
     updateBounds();
-    const observer = new ResizeObserver(() => {
-      measureSnap();
-      updateBounds();
-    });
+    const observer = new ResizeObserver(() => updateBounds());
     observer.observe(track);
     return () => observer.disconnect();
-  }, [measureSnap, updateBounds, entries.length]);
+  }, [updateBounds, entries.length]);
 
   const behavior = useCallback((): ScrollBehavior => (reducedMotion ? "auto" : "smooth"), [reducedMotion]);
 

@@ -353,9 +353,20 @@ async function allPublicCategoryIds(countryCode: string): Promise<string[]> {
  * in navigation. Prices, stock and fixture filtering stay in the catalogue
  * query, so this count describes the unfiltered browsing scope the root opens.
  */
-export async function getCategories(options: { previewAuthorized?: boolean } = {}) {
-  if (!(await shopReadAllowed({ previewAuthorized: options.previewAuthorized }))) return [];
-  const tree = await loadPublicCategoryTree(DEFAULT_PUBLIC_COUNTRY);
+export async function getCategories(
+  options: { previewAuthorized?: boolean; countryCode?: string | null; cityCode?: string | null } = {}
+) {
+  const countryCode = (options.countryCode ?? DEFAULT_PUBLIC_COUNTRY).trim().toUpperCase() || DEFAULT_PUBLIC_COUNTRY;
+  if (
+    !(await shopReadAllowed({
+      countryCode,
+      cityCode: options.cityCode,
+      previewAuthorized: options.previewAuthorized
+    }))
+  ) {
+    return [];
+  }
+  const tree = await loadPublicCategoryTree(countryCode);
   const scopes = tree.roots.map((root) => ({ root, ids: subtreeIds(tree, root) }));
   const ids = [...new Set(scopes.flatMap((scope) => scope.ids))];
 
@@ -365,6 +376,7 @@ export async function getCategories(options: { previewAuthorized?: boolean } = {
           where: {
             status: "ACTIVE",
             isSample: false,
+            countryCode,
             categoryId: { in: ids },
             vendor: { status: "VERIFIED" }
           },

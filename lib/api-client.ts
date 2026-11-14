@@ -425,7 +425,8 @@ export const apiClient = {
   getProductPage: (params?: Record<string, string | undefined>) =>
     requestJson<ApiProductPage>(withParams("/api/products", params)),
   getProduct: (id: string) => requestJson<ApiProduct>(`/api/products/${id}`),
-  getCategories: () => requestJson<ApiCategory[]>("/api/categories"),
+  getCategories: (params?: { country?: string; city?: string }) =>
+    requestJson<ApiCategory[]>(withParams("/api/categories", params)),
 
   getCart: () => requestJson<ApiCart>("/api/cart"),
   addCartItem: (productId: string, quantity = 1, variantId?: string | null) =>

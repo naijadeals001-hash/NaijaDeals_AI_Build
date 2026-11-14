@@ -26,6 +26,7 @@ export type NodeDraft = {
    * listability (`isSelectable`).
    */
   browsingVisible: boolean;
+  isRegulated: boolean;
   isActive: boolean;
   sortOrder: string;
   deprecatedAt: string | null;
@@ -51,6 +52,7 @@ export function emptyNodeDraft(parentId = ""): NodeDraft {
     isSelectable: true,
     showOnHomepage: false,
     browsingVisible: true,
+    isRegulated: false,
     isActive: true,
     sortOrder: "",
     deprecatedAt: null,
@@ -349,6 +351,15 @@ export function TaxonomyNodeEditor({
         <label className="flex items-center gap-2 text-[11px] font-bold text-[#F0F6FC]">
           <input
             type="checkbox"
+            checked={draft.isRegulated}
+            disabled={disabled}
+            onChange={(event) => update({ isRegulated: event.target.checked })}
+          />
+          Regulated goods (explicit country rule required)
+        </label>
+        <label className="flex items-center gap-2 text-[11px] font-bold text-[#F0F6FC]">
+          <input
+            type="checkbox"
             checked={draft.isActive}
             disabled={disabled}
             onChange={(event) => update({ isActive: event.target.checked })}
@@ -366,7 +377,7 @@ export function TaxonomyNodeEditor({
         </label>
       </div>
       <p className="mt-2 text-[10px] leading-4 text-[#8B949E]">
-        These four flags are independent. <span className="font-bold text-[#C9D1D9]">Published</span> controls whether the
+        These five flags are independent. <span className="font-bold text-[#C9D1D9]">Published</span> controls whether the
         node appears in the public taxonomy at all. <span className="font-bold text-[#C9D1D9]">Visible in browsing rails</span>{" "}
         only hides it from category rails and browsing directories such as{" "}
         <code className="rounded bg-[#161B22] px-1">/api/taxonomy/categories</code>; the node stays published, keeps its
