@@ -1,22 +1,29 @@
 /**
- * Seed the reviewed Discover Africa editorial registry into a database.
+ * Seed the reviewed Discover Africa editorial registry into the REVIEW database.
  *
  * Usage (REVIEW database only):
- *   DATABASE_URL=<review-url> npx tsx scripts/seed-country-discovery.ts
+ *   REVIEW_DATABASE_URL=<review-url> npx tsx scripts/seed-country-discovery.ts
  *
- * The script is intentionally not part of the application runtime. It refuses
- * any database whose name is not an explicitly REVIEW/test database so a
- * production or daily-development database cannot be seeded by accident.
+ * The shared guard verifies the explicit URL, live current_database(), the
+ * REVIEW classification and the required tables before any write. DATABASE_URL
+ * is never used as a fallback.
+ *
+ * Each country is replaced inside one transaction that holds the profile row
+ * lock used by the Control Center publication/edit paths. A crash therefore
+ * leaves either the previous complete country record or the new complete one,
+ * never a profile whose sources were deleted but not recreated. Theme imagery
+ * mapping is declared here and is not decided by this transactional change.
  */
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { PrismaClient } from "@prisma/client";
+import { pathToFileURL } from "node:url";
+import { PrismaClient, Prisma } from "@prisma/client";
+import { requireCountryReviewDatabase, sanitizeCountryReviewError } from "./lib/country-review-db";
+import { getCountryThemeImageOverride } from "../lib/data/country-theme-image-overrides";
 
-const prisma = new PrismaClient();
-
-type Source = { title: string; url: string; accessedAt: string; publisher?: string };
-type Theme = { key: string; label: string; association: string; sources: Source[] };
-type Country = {
+export type Source = { title: string; url: string; accessedAt: string; publisher?: string };
+export type Theme = { key: string; label: string; association: string; sources: Source[] };
+export type Country = {
   code: string;
   slug: string;
   name: string;
@@ -308,141 +315,235 @@ function loadCountries(): Country[] {
   return all;
 }
 
-function assertReviewDatabase() {
-  const url = process.env.DATABASE_URL ?? "";
-  let name = "";
-  try {
-    name = new URL(url).pathname.replace(/^\//, "");
-  } catch {
-    // handled below
-  }
-  if (!name || !/(review|test)/i.test(name)) {
-    throw new Error(`Refusing to seed ${name || "an unidentified database"}: set DATABASE_URL to an isolated REVIEW/test database.`);
-  }
-}
+export type PreparedTheme = {
+  key: string;
+  label: string;
+  association: string;
+  image: { url: string; alt: string; kind: string; provenance: string };
+  sortOrder: number;
+  sources: Array<{ title: string; publisher: string | null; url: string; accessedAt: Date; sortOrder: number }>;
+};
 
-async function assertReviewClassification() {
-  const rows = await prisma.databaseClassification.findMany({ select: { classification: true } });
-  if (!rows.some((row) => row.classification === "REVIEW")) {
-    throw new Error("Refusing to seed: the database is not classified REVIEW.");
-  }
-}
+export type PreparedCountry = {
+  country: Country;
+  sortOrder: number;
+  localizedNames: Prisma.InputJsonValue;
+  themes: PreparedTheme[];
+};
 
-async function main() {
-  assertReviewDatabase();
-  await assertReviewClassification();
-  const countries = loadCountries();
-  if (countries.length !== 54) throw new Error(`Expected 54 countries, found ${countries.length}.`);
-  const codes = new Set(countries.map((country) => country.code));
-  if (codes.size !== countries.length) throw new Error("Duplicate country codes in research files.");
-
-  for (const country of countries) {
-    if (country.themes.length !== 6) throw new Error(`${country.code} has ${country.themes.length} themes, expected 6.`);
-    for (const theme of country.themes) {
-      if (theme.sources.length === 0) throw new Error(`${country.code}/${theme.key} has no source.`);
-    }
-  }
-
-  let published = 0;
-  let themes = 0;
-  let sources = 0;
-  const created: string[] = [];
-
-  for (const [index, country] of countries.entries()) {
+/**
+ * Validate the complete registry and precompute every row before the first
+ * write. A malformed research file therefore fails without touching any
+ * country, and each country transaction below can only fail on a database
+ * problem (which rolls back that country).
+ */
+function prepareCountries(countries: Country[]): PreparedCountry[] {
+  return countries.map((country, index) => {
     if (country.editorialStatus !== "reviewed") {
       throw new Error(`${country.code} is not editorially reviewed; refusing to publish an unreviewed country.`);
     }
+    if (country.themes.length !== 6) {
+      throw new Error(`${country.code} has ${country.themes.length} themes, expected 6.`);
+    }
     const regionIndex = REGION_ORDER.indexOf(country.region);
     const sortOrder = (regionIndex < 0 ? REGION_ORDER.length : regionIndex) * 1000 + index;
-    const profile = await prisma.countryProfile.upsert({
-      where: { code: country.code },
-      create: {
-        code: country.code,
-        slug: country.slug,
-        name: country.name,
-        region: country.region,
-        localizedNames: country.localizedNames ?? { en: country.name },
-        introduction: country.introduction,
-        editorialStatus: "REVIEWED",
-        publicationStatus: "PUBLISHED",
-        homeFeatured: false,
-        sortOrder,
-        publishedAt: new Date(),
-        publishedBy: "system:seed"
-      },
-      update: {
-        slug: country.slug,
-        name: country.name,
-        region: country.region,
-        localizedNames: country.localizedNames ?? { en: country.name },
-        introduction: country.introduction,
-        editorialStatus: "REVIEWED",
-        sortOrder
-      }
-    });
-    created.push(profile.code);
-    published += 1;
-
-    for (const [themeIndex, theme] of country.themes.entries()) {
-      const image = themeImage(theme.key, theme.label);
-      const row = await prisma.countryTheme.upsert({
-        where: { countryCode_key: { countryCode: country.code, key: theme.key } },
-        create: {
-          countryCode: country.code,
-          key: theme.key,
-          label: theme.label,
-          association: theme.association,
-          imageUrl: image.url,
-          imageAlt: `${image.alt}. Illustrative image for the ${theme.label} theme.`,
-          imageKind: image.kind,
-          imageProvenance: image.provenance,
-          sortOrder: themeIndex,
-          editorialStatus: "REVIEWED"
-        },
-        update: {
-          label: theme.label,
-          association: theme.association,
-          imageUrl: image.url,
-          imageAlt: `${image.alt}. Illustrative image for the ${theme.label} theme.`,
-          imageKind: image.kind,
-          imageProvenance: image.provenance,
-          sortOrder: themeIndex,
-          editorialStatus: "REVIEWED"
+    const themes = country.themes.map((theme, themeIndex) => {
+      if (theme.sources.length === 0) throw new Error(`${country.code}/${theme.key} has no source.`);
+      const seen = new Set<string>();
+      const sources = theme.sources.map((source, sourceIndex) => {
+        if (seen.has(source.url)) throw new Error(`${country.code}/${theme.key} has a duplicate source URL.`);
+        seen.add(source.url);
+        const accessedAt = new Date(`${source.accessedAt}T00:00:00.000Z`);
+        if (Number.isNaN(accessedAt.getTime())) {
+          throw new Error(`${country.code}/${theme.key} has an invalid source access date.`);
         }
+        return {
+          title: source.title,
+          publisher: source.publisher ?? null,
+          url: source.url,
+          accessedAt,
+          sortOrder: sourceIndex
+        };
       });
-      themes += 1;
-      await prisma.countryThemeSource.deleteMany({ where: { themeId: row.id } });
-      for (const [sourceIndex, source] of theme.sources.entries()) {
-        await prisma.countryThemeSource.create({
-          data: {
-            themeId: row.id,
-            title: source.title,
-            publisher: source.publisher ?? null,
-            url: source.url,
-            accessedAt: new Date(`${source.accessedAt}T00:00:00.000Z`),
-            sortOrder: sourceIndex
-          }
-        });
-        sources += 1;
+      const override = getCountryThemeImageOverride(country.code, theme.key);
+      const image = override ?? themeImage(theme.key, theme.label);
+      if (override && !existsSync(path.join(process.cwd(), "public", override.url))) {
+        throw new Error(`Country theme override asset is missing: ${override.url}`);
       }
-    }
-  }
-
-  const counts = {
-    countries: await prisma.countryProfile.count(),
-    published: await prisma.countryProfile.count({ where: { publicationStatus: "PUBLISHED" } }),
-    themes: await prisma.countryTheme.count(),
-    sources: await prisma.countryThemeSource.count(),
-    unreviewed: await prisma.countryProfile.count({ where: { editorialStatus: "NEEDS_REVIEW" } })
-  };
-  console.log(JSON.stringify({ seeded: { countries: created.length, published, themes, sources }, counts }, null, 2));
+      return {
+        key: theme.key,
+        label: theme.label,
+        association: theme.association,
+        image: {
+          url: image.url,
+          // Override alt text already names the theme; never append the label twice.
+          alt: override ? image.alt : `${image.alt}. Illustrative image for the ${theme.label} theme.`,
+          kind: image.kind,
+          provenance: image.provenance
+        },
+        sources,
+        sortOrder: themeIndex
+      } satisfies PreparedTheme;
+    });
+    return {
+      country,
+      sortOrder,
+      localizedNames: (country.localizedNames ?? { en: country.name }) as Prisma.InputJsonValue,
+      themes
+    };
+  });
 }
 
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
+export async function seedCountry(prisma: PrismaClient, prepared: PreparedCountry) {
+  const { country, sortOrder, localizedNames, themes } = prepared;
+  const themeKeys = themes.map((theme) => theme.key);
+  let themeCount = 0;
+  let sourceCount = 0;
+
+  await prisma.$transaction(
+    async (tx) => {
+      // Same lock order as the Control Center: CountryProfile first, then its
+      // themes and sources. Publication/edit waits for this replacement to
+      // commit instead of validating a half-deleted source set.
+      await tx.$queryRaw`SELECT "code" FROM "CountryProfile" WHERE "code" = ${country.code} FOR UPDATE`;
+
+      await tx.countryProfile.upsert({
+        where: { code: country.code },
+        create: {
+          code: country.code,
+          slug: country.slug,
+          name: country.name,
+          region: country.region,
+          localizedNames,
+          introduction: country.introduction,
+          editorialStatus: "REVIEWED",
+          publicationStatus: "PUBLISHED",
+          homeFeatured: false,
+          sortOrder,
+          publishedAt: new Date(),
+          publishedBy: "system:seed"
+        },
+        update: {
+          slug: country.slug,
+          name: country.name,
+          region: country.region,
+          localizedNames,
+          introduction: country.introduction,
+          editorialStatus: "REVIEWED",
+          sortOrder
+        }
+      });
+
+      const existing = await tx.countryTheme.findMany({
+        where: { countryCode: country.code },
+        select: { id: true, key: true }
+      });
+      if (existing.length > 0) {
+        await tx.countryThemeSource.deleteMany({
+          where: { themeId: { in: existing.map((theme) => theme.id) } }
+        });
+      }
+      // Replacement semantics: themes not present in the reviewed registry are
+      // removed inside this same transaction (their sources cascade).
+      await tx.countryTheme.deleteMany({
+        where: { countryCode: country.code, key: { notIn: themeKeys } }
+      });
+
+      for (const theme of themes) {
+        const row = await tx.countryTheme.upsert({
+          where: { countryCode_key: { countryCode: country.code, key: theme.key } },
+          create: {
+            countryCode: country.code,
+            key: theme.key,
+            label: theme.label,
+            association: theme.association,
+            imageUrl: theme.image.url,
+            imageAlt: theme.image.alt,
+            imageKind: theme.image.kind,
+            imageProvenance: theme.image.provenance,
+            sortOrder: theme.sortOrder,
+            editorialStatus: "REVIEWED"
+          },
+          update: {
+            label: theme.label,
+            association: theme.association,
+            imageUrl: theme.image.url,
+            imageAlt: theme.image.alt,
+            imageKind: theme.image.kind,
+            imageProvenance: theme.image.provenance,
+            sortOrder: theme.sortOrder,
+            editorialStatus: "REVIEWED"
+          }
+        });
+        await tx.countryThemeSource.createMany({
+          data: theme.sources.map((source) => ({
+            themeId: row.id,
+            title: source.title,
+            publisher: source.publisher,
+            url: source.url,
+            accessedAt: source.accessedAt,
+            sortOrder: source.sortOrder
+          }))
+        });
+        themeCount += 1;
+        sourceCount += theme.sources.length;
+      }
+    },
+    { timeout: 30_000 }
+  );
+
+  return { themes: themeCount, sources: sourceCount };
+}
+
+async function main() {
+  // The guard must run before the Prisma client is constructed so no query can
+  // reach an unverified database.
+  await requireCountryReviewDatabase();
+  const prisma = new PrismaClient();
+
+  try {
+    const countries = loadCountries();
+    if (countries.length !== 54) throw new Error(`Expected 54 countries, found ${countries.length}.`);
+    const codes = new Set(countries.map((country) => country.code));
+    if (codes.size !== countries.length) throw new Error("Duplicate country codes in research files.");
+
+    const prepared = prepareCountries(countries);
+    let themes = 0;
+    let sources = 0;
+    for (const entry of prepared) {
+      const result = await seedCountry(prisma, entry);
+      themes += result.themes;
+      sources += result.sources;
+    }
+
+    const counts = {
+      countries: await prisma.countryProfile.count(),
+      published: await prisma.countryProfile.count({ where: { publicationStatus: "PUBLISHED" } }),
+      themes: await prisma.countryTheme.count(),
+      sources: await prisma.countryThemeSource.count(),
+      unreviewed: await prisma.countryProfile.count({ where: { editorialStatus: "NEEDS_REVIEW" } })
+    };
+    console.log(
+      JSON.stringify(
+        {
+          seeded: { countries: prepared.length, themes, sources },
+          counts
+        },
+        null,
+        2
+      )
+    );
+  } finally {
     await prisma.$disconnect();
+  }
+}
+
+const executedDirectly =
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+
+if (executedDirectly) {
+  main().catch((error) => {
+    console.error(sanitizeCountryReviewError(error));
+    process.exitCode = 1;
   });
+}

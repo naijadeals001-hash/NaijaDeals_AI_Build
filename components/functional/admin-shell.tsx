@@ -464,7 +464,7 @@ export function AdminShell({
               <Menu className="h-5 w-5" />
             </button>
             <p className="hidden font-display text-xl font-extrabold text-[#F0F6FC] lg:block">
-              {isSuperAdminPath ? "Super admin" : isDiscoveryPath ? "Country discovery" : TAB_LABELS[currentTab]}
+              {isSuperAdminPath ? "Super admin" : isDiscoveryPath ? "Discover Africa" : TAB_LABELS[currentTab]}
             </p>
           </div>
 

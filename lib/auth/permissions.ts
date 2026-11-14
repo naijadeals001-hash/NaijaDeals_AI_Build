@@ -103,12 +103,18 @@ const COUNTRY_WITHHELD_FROM_ADMIN: readonly Permission[] = [
  *   roles or exercise Plus+'s publication/membership/advertiser powers.
  * - `ops`, `finance`, `support` and `moderator` are narrow staff roles.
  * - The `plus_*` roles are single-capability editorial and commercial roles.
+ * - `country_editor` drafts and edits Discover Africa content but cannot
+ *   publish/unpublish a country or record origin evidence. Publication and
+ *   origin verification keep their own named roles.
  */
 const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
   super_admin: PERMISSIONS,
   // Read-only affiliate review. Deliberately narrow: inspection without any
   // authority to resolve, approve or move money.
   affiliate_reviewer: ["affiliates:read"],
+  // Discover Africa editorial drafting and editing, without publication or
+  // origin verification.
+  country_editor: ["countries:editorial:read", "countries:editorial:write"],
   // Plus+ draft editing. Cannot publish, configure commercial terms or approve
   // an advertiser.
   plus_editor: ["plus:content:read", "plus:content:write"],
@@ -196,6 +202,7 @@ export const STAFF_ROLES = [
   "plus_publisher",
   "plus_membership_admin",
   "plus_advertiser_reviewer",
+  "country_editor",
   "country_publisher",
   "country_origin_reviewer"
 ] as const;

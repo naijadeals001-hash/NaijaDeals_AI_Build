@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight, BookOpenCheck, CheckCircle2, MapPin, PackageSear
 import { MarketplaceProductCard } from "@/components/shop/marketplace-card";
 import type { ApiProduct } from "@/lib/api-client";
 import { getSessionUser } from "@/lib/auth/session";
-import { permissionsFor } from "@/lib/auth/permissions";
+import { permissionsFor, regionViolation } from "@/lib/auth/permissions";
 import { COUNTRIES } from "@/lib/config/commerce";
 import { readLocale } from "@/lib/i18n/server";
 import {
@@ -55,17 +55,17 @@ function asApiProduct(product: CountryOriginProduct): ApiProduct {
 function SourceList({ theme }: { theme: { sources: Array<{ id: string; title: string; publisher: string | null; url: string; accessedAt: string }> } }) {
   return (
     <details className="mt-2 rounded-lg border border-[#e2e9de] bg-[#f7faf4] px-2.5 py-2">
-      <summary className="cursor-pointer text-[9.5px] font-extrabold uppercase tracking-[0.1em] text-[#0b5c33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]">
+      <summary className="cursor-pointer text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#0b5c33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]">
         Sources ({theme.sources.length})
       </summary>
       <ul className="mt-1.5 space-y-1.5">
         {theme.sources.map((source) => (
-          <li key={source.id} className="text-[9.5px] leading-4 text-[#566359]">
+          <li key={source.id} className="text-[11px] leading-5 text-[#3f5246]">
             <a href={source.url} target="_blank" rel="noreferrer noopener" className="font-bold text-[#0b5c33] underline">
               {source.title}
             </a>
             {source.publisher ? <span> · {source.publisher}</span> : null}
-            <span className="block text-[9px] text-[#566359]">Accessed {source.accessedAt.slice(0, 10)}</span>
+            <span className="block text-[11px] text-[#3f5246]">Accessed {source.accessedAt.slice(0, 10)}</span>
           </li>
         ))}
       </ul>
@@ -80,9 +80,14 @@ export default async function CountryPage({ params, searchParams }: Props) {
   if (!country) {
     const user = await getSessionUser();
     const canPreview = user ? permissionsFor(user).includes("countries:editorial:read") : false;
-    if (canPreview && searchParams?.preview === "1") {
-      country = await getCountryForPreview(params.slug);
-      previewing = Boolean(country);
+    if (user && canPreview && searchParams?.preview === "1") {
+      const draft = await getCountryForPreview(params.slug);
+      // A regional editor may preview drafts only inside their own market. A
+      // foreign draft slug is indistinguishable from a missing page.
+      if (draft && !regionViolation(user, { countryCode: draft.code })) {
+        country = draft;
+        previewing = true;
+      }
     }
   }
   if (!country) notFound();
@@ -128,10 +133,10 @@ export default async function CountryPage({ params, searchParams }: Props) {
                   height={34}
                   className="h-8 w-12 rounded-[4px] border border-white/20 object-cover shadow"
                 />
-                <span className="rounded-full bg-white/10 px-2.5 py-1 text-[9.5px] font-extrabold uppercase tracking-[0.14em] text-[#c7e2cb]">
+                <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10.5px] font-extrabold uppercase tracking-[0.14em] text-[#c7e2cb]">
                   {country.region}
                 </span>
-                <span className="rounded-full border border-white/20 px-2.5 py-1 text-[9.5px] font-extrabold uppercase tracking-[0.12em] text-[#f5d78f]">
+                <span className="rounded-full border border-white/20 px-2.5 py-1 text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-[#f5d78f]">
                   {country.code}
                 </span>
               </div>
@@ -149,18 +154,18 @@ export default async function CountryPage({ params, searchParams }: Props) {
               ) : null}
               <p className="mt-3 max-w-3xl text-[12px] leading-6 text-[#d7e8d9] sm:text-[13px] sm:leading-7">{country.introduction}</p>
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f5b52e] px-3 py-1.5 text-[10px] font-extrabold text-[#14241b]">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f5b52e] px-3 py-1.5 text-[11px] font-extrabold text-[#14241b]">
                   <BookOpenCheck className="h-3.5 w-3.5" aria-hidden />
                   Editorial guide · sources shown
                 </span>
                 {country.editorialStatus === "REVIEWED" ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 px-3 py-1.5 text-[10px] font-extrabold text-[#d7e8d9]">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 px-3 py-1.5 text-[11px] font-extrabold text-[#d7e8d9]">
                     <CheckCircle2 className="h-3.5 w-3.5 text-[#8ed14b]" aria-hidden />
                     Editorial review complete
                   </span>
                 ) : null}
               </div>
-              <p className="mt-4 flex items-start gap-2 rounded-xl bg-white/[0.07] px-3 py-2 text-[10px] leading-5 text-[#c7e2cb]">
+              <p className="mt-4 flex items-start gap-2 rounded-xl bg-white/[0.07] px-3 py-2 text-[11px] leading-5 text-[#c7e2cb]">
                 <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#f5b52e]" aria-hidden />
                 <span>
                   Your current delivery market is <strong className="text-white">{deliveryName}</strong>. Browsing this guide does not change your
@@ -176,7 +181,7 @@ export default async function CountryPage({ params, searchParams }: Props) {
                       <img src={theme.imageUrl} alt={theme.imageAlt || theme.label} loading="eager" className="h-full w-full object-cover" />
                     ) : null}
                   </span>
-                  <figcaption className="px-1.5 py-1 text-[9px] font-extrabold leading-3 text-white">{theme.label}</figcaption>
+                  <figcaption className="px-1.5 py-1 text-[10.5px] font-extrabold leading-4 text-white">{theme.label}</figcaption>
                 </figure>
               ))}
             </div>
@@ -186,7 +191,7 @@ export default async function CountryPage({ params, searchParams }: Props) {
         <section aria-labelledby="known-for-heading" className="mt-6">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div>
-              <p className="text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-[#0f7a4a]">Country associations</p>
+              <p className="text-[10.5px] font-extrabold uppercase tracking-[0.18em] text-[#0b5c33]">Country associations</p>
               <h2 id="known-for-heading" className="mt-1 font-display text-[26px] font-extrabold tracking-tight text-[#14241b]">
                 Known for
               </h2>
@@ -213,7 +218,7 @@ export default async function CountryPage({ params, searchParams }: Props) {
                   </span>
                   <div className="min-w-0">
                     <h3 className="text-[13.5px] font-extrabold leading-5 text-[#14241b]">{theme.label}</h3>
-                    <p className="mt-0.5 line-clamp-4 text-[10px] leading-4 text-[#4b5b51]">{theme.association}</p>
+                    <p className="mt-0.5 line-clamp-4 text-[11px] leading-5 text-[#4b5b51]">{theme.association}</p>
                   </div>
                 </div>
                 <SourceList theme={theme} />
@@ -225,7 +230,7 @@ export default async function CountryPage({ params, searchParams }: Props) {
         <section data-country-inventory aria-labelledby="country-inventory-heading" className="mt-7 rounded-[26px] border border-[#dfe8dc] bg-white p-4 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-[#0f7a4a]">Recorded origin only</p>
+              <p className="text-[10.5px] font-extrabold uppercase tracking-[0.18em] text-[#0b5c33]">Recorded origin only</p>
               <h2 id="country-inventory-heading" className="mt-1 font-display text-[25px] font-extrabold tracking-tight text-[#14241b]">
                 Available on NaijaDeals
               </h2>
@@ -234,7 +239,7 @@ export default async function CountryPage({ params, searchParams }: Props) {
                 qualify, and a cultural or style association is not evidence of manufacture.
               </p>
             </div>
-            <span className="rounded-full bg-[#eef5eb] px-3 py-1 text-[10px] font-extrabold text-[#0b5c33]">
+            <span className="rounded-full bg-[#eef5eb] px-3 py-1 text-[11px] font-extrabold text-[#0b5c33]">
               {products.length} listing{products.length === 1 ? "" : "s"} · {verifiedCount} independently verified
             </span>
           </div>
@@ -243,7 +248,7 @@ export default async function CountryPage({ params, searchParams }: Props) {
             <ul className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {products.map((product) => (
                 <li key={product.id} className="min-w-0">
-                  <p className="mb-1 flex items-center gap-1 text-[9.5px] font-extrabold uppercase tracking-[0.08em] text-[#0b5c33]">
+                  <p className="mb-1 flex items-center gap-1 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[#0b5c33]">
                     <ShieldCheck className="h-3 w-3" aria-hidden />
                     {product.originBasis === "VERIFIED" ? "Independently verified origin" : "Seller-declared origin"}
                   </p>
@@ -281,12 +286,12 @@ export default async function CountryPage({ params, searchParams }: Props) {
                   <ul className="mt-2 space-y-1.5">
                     {sellers.map((seller) => (
                       <li key={seller.id} className="text-[10.5px] font-semibold text-[#4b5b51]">
-                        {seller.name} <span className="text-[#6a7a6e]">· {seller.market}</span>
+                        {seller.name} <span className="text-[#4b5b51]">· {seller.market}</span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-1 text-[10px] text-[#566359]">No seller currently has a {country.name}-origin listing.</p>
+                  <p className="mt-1 text-[11px] text-[#3f5246]">No seller currently has a {country.name}-origin listing.</p>
                 )}
               </div>
               <div className="rounded-2xl border border-[#e2e9de] bg-[#f7faf4] p-3">
@@ -300,7 +305,7 @@ export default async function CountryPage({ params, searchParams }: Props) {
                       <li key={category.id}>
                         <Link
                           href={`/naijashop/c/${category.slug}`}
-                          className="inline-flex rounded-full border border-[#c7d7c2] bg-white px-2.5 py-1 text-[10px] font-extrabold text-[#0b5c33] hover:bg-[#eef5eb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
+                          className="inline-flex rounded-full border border-[#c7d7c2] bg-white px-2.5 py-1 text-[11px] font-extrabold text-[#0b5c33] hover:bg-[#eef5eb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
                         >
                           {category.name}
                         </Link>
@@ -308,7 +313,7 @@ export default async function CountryPage({ params, searchParams }: Props) {
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-1 text-[10px] text-[#566359]">No recorded-origin category yet. No unrelated category is substituted.</p>
+                  <p className="mt-1 text-[11px] text-[#3f5246]">No recorded-origin category yet. No unrelated category is substituted.</p>
                 )}
               </div>
             </div>
@@ -342,7 +347,7 @@ export default async function CountryPage({ params, searchParams }: Props) {
           </div>
         </section>
 
-        <p className="mt-4 text-[10px] leading-5 text-[#566359]">
+        <p className="mt-4 text-[11.5px] leading-5 text-[#4b5b51]">
           Country themes are editorial information with the listed sources. They do not establish NaijaDeals supply, product origin, certification,
           price, stock or delivery availability. The commerce registry and checkout remain authoritative for the markets NaijaDeals actually serves.
         </p>

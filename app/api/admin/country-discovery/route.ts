@@ -15,8 +15,8 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     assertSameOrigin(request);
-    await requireAdminPermission("countries:editorial:read");
-    return NextResponse.json(jsonSafe(await listAdminCountries()));
+    const admin = await requireAdminPermission("countries:editorial:read");
+    return NextResponse.json(jsonSafe(await listAdminCountries(admin.scopeCountryCode ?? null)));
   } catch (error) {
     return jsonError(error);
   }

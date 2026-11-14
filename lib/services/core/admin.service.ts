@@ -1006,6 +1006,7 @@ const ROLE_NAMES = [
   "vendor",
   "courier",
   "driver",
+  "country_editor",
   "country_publisher",
   "country_origin_reviewer"
 ];

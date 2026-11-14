@@ -70,12 +70,12 @@ function ThemeGrid({ country }: { country: CountryCardSummary }) {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span className="grid h-full place-items-center px-1 text-center text-[9px] font-bold text-[#566359]">
+                <span className="grid h-full place-items-center px-1 text-center text-[10.5px] font-bold text-[#3f5246]">
                   Image pending
                 </span>
               )}
             </span>
-            <figcaption className="min-h-[2rem] px-1.5 py-1 text-[9.5px] font-extrabold leading-4 text-[#253b2d]">
+            <figcaption className="min-h-[2.25rem] px-1.5 py-1 text-[11px] font-extrabold leading-4 text-[#253b2d]">
               {theme.label}
             </figcaption>
           </figure>
@@ -118,7 +118,13 @@ export function CountryDiscoveryRow({ countries }: { countries: CountryCardSumma
       if (!card) return;
       const gap = 12;
       const distance = card.getBoundingClientRect().width + gap;
-      track.scrollBy({ left: direction * distance, behavior: reducedMotion ? "auto" : "smooth" });
+      const max = Math.max(0, track.scrollWidth - track.clientWidth);
+      // Clamp so one arrow press can never overshoot past the final card. When the
+      // requested step reaches or passes the maximum scroll, land exactly on max.
+      const target = Math.max(0, Math.min(track.scrollLeft + direction * distance, max));
+      track.scrollTo({ left: target, behavior: reducedMotion ? "auto" : "smooth" });
+      if (target >= max - 1) setBounds((current) => (current.end ? current : { ...current, end: true }));
+      if (target <= 1) setBounds((current) => (current.start ? current : { ...current, start: true }));
     },
     [reducedMotion]
   );
@@ -159,7 +165,7 @@ export function CountryDiscoveryRow({ countries }: { countries: CountryCardSumma
     <section data-country-discovery aria-labelledby="discover-africa-heading" className="mt-8 min-w-0">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-[#0f7a4a]">Editorial discovery</p>
+          <p className="text-[10.5px] font-extrabold uppercase tracking-[0.18em] text-[#0b5c33]">Editorial discovery</p>
           <h2 id="discover-africa-heading" className="mt-1 font-display text-[25px] font-extrabold tracking-tight text-[#14241b] sm:text-[30px]">
             Discover Africa, country by country
           </h2>
@@ -167,7 +173,7 @@ export function CountryDiscoveryRow({ countries }: { countries: CountryCardSumma
             Six things each country is known for, with sources. These are editorial associations, not claims that NaijaDeals supplies them.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
           <Link
             href="/naijashop/countries"
             className="inline-flex h-10 items-center gap-1.5 rounded-full border border-[#b9cbb4] px-4 text-[11.5px] font-extrabold text-[#0b5c33] transition hover:bg-[#eef5eb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
@@ -175,23 +181,25 @@ export function CountryDiscoveryRow({ countries }: { countries: CountryCardSumma
             View all {countries.length} countries
             <ArrowRight className="h-3.5 w-3.5" aria-hidden />
           </Link>
-          <div className="flex items-center gap-1" aria-label="Scroll country cards">
+          <div className="relative z-10 flex shrink-0 items-center gap-1" role="group" aria-label="Scroll country cards">
             <button
               type="button"
+              data-carousel-prev
               onClick={() => step(-1)}
               aria-controls={trackId}
               aria-disabled={bounds.start}
-              className={`grid h-10 w-10 place-items-center rounded-full border border-[#c7d7c2] bg-white text-[#0b5c33] transition hover:bg-[#eef5eb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] ${bounds.start ? "opacity-45" : ""}`}
+              className={`grid h-10 w-10 place-items-center rounded-full border border-[#c7d7c2] bg-white text-[#0b5c33] transition hover:bg-[#eef5eb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2 ${bounds.start ? "cursor-default opacity-45" : ""}`}
             >
               <ArrowLeft className="h-4 w-4" aria-hidden />
               <span className="sr-only">Previous countries</span>
             </button>
             <button
               type="button"
+              data-carousel-next
               onClick={() => step(1)}
               aria-controls={trackId}
               aria-disabled={bounds.end}
-              className={`grid h-10 w-10 place-items-center rounded-full border border-[#c7d7c2] bg-white text-[#0b5c33] transition hover:bg-[#eef5eb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] ${bounds.end ? "opacity-45" : ""}`}
+              className={`grid h-10 w-10 place-items-center rounded-full border border-[#c7d7c2] bg-white text-[#0b5c33] transition hover:bg-[#eef5eb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2 ${bounds.end ? "cursor-default opacity-45" : ""}`}
             >
               <ArrowRight className="h-4 w-4" aria-hidden />
               <span className="sr-only">Next countries</span>
@@ -204,6 +212,7 @@ export function CountryDiscoveryRow({ countries }: { countries: CountryCardSumma
         <ul
           ref={trackRef}
           id={trackId}
+          data-country-track
           tabIndex={0}
           onKeyDown={onKeyDown}
           onScroll={updateBounds}
@@ -224,24 +233,24 @@ export function CountryDiscoveryRow({ countries }: { countries: CountryCardSumma
                   <div className="flex items-start gap-3">
                     <CountryFlag country={country} className="mt-0.5" />
                     <div className="min-w-0">
-                      <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">{country.region}</p>
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#0b5c33]">{country.region}</p>
                       <h3 className="break-words font-display text-[23px] font-extrabold leading-tight tracking-tight text-[#14241b]">
                         {firstName(country)}
                       </h3>
                       {(() => {
                         const secondary = secondaryName(country);
                         return secondary ? (
-                          <p lang={secondary.lang} dir={secondary.dir} className="break-words text-[10px] font-semibold text-[#566359]">
+                          <p lang={secondary.lang} dir={secondary.dir} className="break-words text-[11px] font-semibold text-[#4b5b51]">
                             {secondary.text}
                           </p>
                         ) : null;
                       })()}
                     </div>
                   </div>
-                  <p className="mt-2 line-clamp-3 text-[10.5px] leading-5 text-[#4b5b51]">{country.introduction}</p>
+                  <p className="mt-2 line-clamp-3 text-[11.5px] leading-5 text-[#4b5b51]">{country.introduction}</p>
                 </div>
                 <div className="flex flex-1 flex-col p-3">
-                  <p className="mb-2 text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#566359]">Known for</p>
+                  <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#3f5246]">Known for</p>
                   <ThemeGrid country={country} />
                   <Link
                     href={`/naijashop/countries/${country.slug}`}
@@ -259,13 +268,13 @@ export function CountryDiscoveryRow({ countries }: { countries: CountryCardSumma
         {!bounds.end ? (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 right-0 flex w-16 items-center justify-end bg-gradient-to-l from-[#f7faf4] to-transparent pr-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#0b5c33]"
+            className="pointer-events-none absolute inset-y-0 right-0 flex w-12 items-center justify-end bg-gradient-to-l from-[#f7faf4] to-transparent pr-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#0b5c33] sm:w-16"
           >
             More →
           </div>
         ) : null}
       </div>
-      <p className="mt-1 text-[10px] font-semibold text-[#566359]">
+      <p className="mt-1 text-[11.5px] font-semibold text-[#4b5b51]">
         Swipe, use the scrollbar, or focus the row and press the arrow keys. {countries.length} country guides are published.
       </p>
     </section>
@@ -297,7 +306,7 @@ export function CountryDirectory({ countries }: { countries: CountryCardSummary[
   return (
     <div className="bg-[#f7faf4]">
       <div className="mx-auto max-w-[1320px] px-4 py-6 sm:px-6 lg:px-8">
-        <nav aria-label="Breadcrumb" className="text-[10.5px] font-semibold text-[#566359]">
+        <nav aria-label="Breadcrumb" className="text-[11px] font-semibold text-[#4b5b51]">
           <Link href="/naijashop" className="hover:underline">
             Shop
           </Link>
@@ -306,7 +315,7 @@ export function CountryDirectory({ countries }: { countries: CountryCardSummary[
         </nav>
         <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
           <div className="min-w-0">
-            <p className="text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-[#0f7a4a]">Discover Africa</p>
+            <p className="text-[10.5px] font-extrabold uppercase tracking-[0.18em] text-[#0b5c33]">Discover Africa</p>
             <h1 className="mt-1 font-display text-[30px] font-extrabold leading-tight tracking-tight text-[#14241b] sm:text-[38px]">
               Every country, one guide
             </h1>
@@ -379,20 +388,20 @@ export function CountryDirectory({ countries }: { countries: CountryCardSummary[
                   <div className="flex items-start gap-3">
                     <CountryFlag country={country} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-extrabold uppercase tracking-[0.15em] text-[#0f7a4a]">{country.region}</p>
+                      <p className="text-[10.5px] font-extrabold uppercase tracking-[0.15em] text-[#0b5c33]">{country.region}</p>
                       <h2 className="break-words text-[16px] font-extrabold leading-tight text-[#14241b]">{firstName(country)}</h2>
                       {(() => {
                         const secondary = secondaryName(country);
                         return secondary ? (
-                          <p lang={secondary.lang} dir={secondary.dir} className="break-words text-[10px] font-semibold text-[#566359]">
+                          <p lang={secondary.lang} dir={secondary.dir} className="break-words text-[11px] font-semibold text-[#4b5b51]">
                             {secondary.text}
                           </p>
                         ) : null;
                       })()}
                     </div>
                   </div>
-                  <p className="mt-2 line-clamp-2 text-[10.5px] leading-5 text-[#4b5b51]">{country.introduction}</p>
-                  <p className="mt-2 line-clamp-2 text-[10px] font-semibold leading-4 text-[#253b2d]">
+                  <p className="mt-2 line-clamp-2 text-[11.5px] leading-5 text-[#4b5b51]">{country.introduction}</p>
+                  <p className="mt-2 line-clamp-2 text-[11px] font-semibold leading-5 text-[#253b2d]">
                     {country.themes.map((theme) => theme.label).join(" · ")}
                   </p>
                   <Link
@@ -413,7 +422,7 @@ export function CountryDirectory({ countries }: { countries: CountryCardSummary[
           </div>
         )}
 
-        <div className="mt-6 rounded-2xl border border-[#dfe8dc] bg-white p-4 text-[10.5px] leading-5 text-[#566359]">
+        <div className="mt-6 rounded-2xl border border-[#dfe8dc] bg-white p-4 text-[11.5px] leading-5 text-[#4b5b51]">
           <p className="flex items-start gap-2">
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#0f7a4a]" aria-hidden />
             <span>

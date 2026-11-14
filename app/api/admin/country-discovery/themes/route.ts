@@ -29,6 +29,13 @@ export async function PATCH(request: NextRequest) {
       association: typeof body.association === "string" ? body.association : undefined,
       imageUrl: body.imageUrl === null ? null : typeof body.imageUrl === "string" ? body.imageUrl : undefined,
       imageAlt: body.imageAlt === null ? null : typeof body.imageAlt === "string" ? body.imageAlt : undefined,
+      imageKind: body.imageKind === null ? null : typeof body.imageKind === "string" ? body.imageKind : undefined,
+      imageProvenance:
+        body.imageProvenance === null
+          ? null
+          : typeof body.imageProvenance === "string"
+            ? body.imageProvenance
+            : undefined,
       sortOrder: body.sortOrder === undefined ? undefined : Number(body.sortOrder),
       editorialStatus:
         body.editorialStatus === "NEEDS_REVIEW" || body.editorialStatus === "REVIEWED"

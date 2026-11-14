@@ -78,6 +78,27 @@ type OriginProduct = {
   category: { name: string; slug: string };
 };
 
+type OriginPage = {
+  rows: OriginProduct[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  summary: { total: number; recorded: number; unrecorded: number; verified: number; declared: number };
+  markets: string[];
+  countries: Array<{ code: string; name: string }>;
+};
+
+type OriginFilters = {
+  search: string;
+  origin: "all" | "recorded" | "unrecorded";
+  basis: "all" | "VERIFIED" | "SELLER_DECLARED";
+  market: string;
+};
+
+const ORIGIN_PAGE_SIZE = 25;
+const EMPTY_ORIGIN_FILTERS: OriginFilters = { search: "", origin: "all", basis: "all", market: "all" };
+
 type AuditRow = {
   id: string;
   action: string;
@@ -134,10 +155,13 @@ export function CountryWorkspace({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [draft, setDraft] = useState({ introduction: "", editorialStatus: "NEEDS_REVIEW" as EditorialStatus, homeFeatured: false, sortOrder: 0 });
-  const [themeDrafts, setThemeDrafts] = useState<Record<string, { label: string; association: string; imageUrl: string; imageAlt: string; editorialStatus: EditorialStatus; sources: Array<{ title: string; publisher: string; url: string; accessedAt: string }> }>>({});
+  const [themeDrafts, setThemeDrafts] = useState<Record<string, { label: string; association: string; imageUrl: string; imageAlt: string; imageKind: string; imageProvenance: string; editorialStatus: EditorialStatus; sources: Array<{ title: string; publisher: string; url: string; accessedAt: string }> }>>({});
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [origins, setOrigins] = useState<OriginProduct[]>([]);
-  const [originSearch, setOriginSearch] = useState("");
+  const [originMeta, setOriginMeta] = useState<OriginPage | null>(null);
+  const [originLoading, setOriginLoading] = useState(false);
+  const [originPage, setOriginPage] = useState(1);
+  const [originFilters, setOriginFilters] = useState<OriginFilters>(EMPTY_ORIGIN_FILTERS);
   const [originSelected, setOriginSelected] = useState("");
   const [originDraft, setOriginDraft] = useState({ originCountryCode: "", originBasis: "SELLER_DECLARED", originNote: "" });
 
@@ -156,24 +180,42 @@ export function CountryWorkspace({
     }
   }, [canRead]);
 
-  const loadOrigins = useCallback(async () => {
-    if (!canOrigin) return;
-    try {
-      const rows = await request<OriginProduct[]>("/api/admin/country-discovery/origin");
-      setOrigins(rows);
-      setOriginSelected((current) => current || rows[0]?.id || "");
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Origin review rows could not be loaded.");
-    }
-  }, [canOrigin]);
+  const loadOrigins = useCallback(
+    async (page: number) => {
+      if (!canOrigin) return;
+      setOriginLoading(true);
+      try {
+        const params = new URLSearchParams({ page: String(page), pageSize: String(ORIGIN_PAGE_SIZE) });
+        if (originFilters.search.trim()) params.set("search", originFilters.search.trim());
+        if (originFilters.origin !== "all") params.set("origin", originFilters.origin);
+        if (originFilters.basis !== "all") params.set("basis", originFilters.basis);
+        if (originFilters.market !== "all") params.set("market", originFilters.market);
+        const result = await request<OriginPage>(`/api/admin/country-discovery/origin?${params.toString()}`);
+        setOrigins(result.rows);
+        setOriginMeta(result);
+        setOriginSelected((current) =>
+          result.rows.some((product) => product.id === current) ? current : result.rows[0]?.id ?? ""
+        );
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Origin review rows could not be loaded.");
+      } finally {
+        setOriginLoading(false);
+      }
+    },
+    [canOrigin, originFilters]
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
 
   useEffect(() => {
-    if (tab === "origin" && origins.length === 0) void loadOrigins();
-  }, [tab, origins.length, loadOrigins]);
+    if (tab !== "origin" || !canOrigin) return;
+    const timer = setTimeout(() => {
+      void loadOrigins(originPage);
+    }, originFilters.search.trim() ? 350 : 0);
+    return () => clearTimeout(timer);
+  }, [tab, canOrigin, originPage, loadOrigins]);
 
   const current = useMemo(() => countries.find((country) => country.code === selected) ?? null, [countries, selected]);
 
@@ -192,6 +234,8 @@ export function CountryWorkspace({
         association: theme.association,
         imageUrl: theme.imageUrl ?? "",
         imageAlt: theme.imageAlt ?? "",
+        imageKind: theme.imageKind ?? "",
+        imageProvenance: theme.imageProvenance ?? "",
         editorialStatus: theme.editorialStatus,
         sources: theme.sources.map((source) => ({
           title: source.title,
@@ -263,6 +307,8 @@ export function CountryWorkspace({
           ...themeDraft,
           imageUrl: themeDraft.imageUrl || null,
           imageAlt: themeDraft.imageAlt || null,
+          imageKind: themeDraft.imageKind || null,
+          imageProvenance: themeDraft.imageProvenance || null,
           sources: themeDraft.sources.filter((source) => source.title.trim() && source.url.trim())
         })
       });
@@ -313,22 +359,13 @@ export function CountryWorkspace({
       });
       setOrigins((rows) => rows.map((row) => (row.id === updated.id ? { ...row, ...updated } : row)));
       setNotice(`Origin record for ${selectedOrigin.name} saved.`);
+      void loadOrigins(originPage);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Origin record could not be saved.");
     } finally {
       setBusy("");
     }
   };
-
-  const filteredOrigins = useMemo(() => {
-    const needle = originSearch.trim().toLowerCase();
-    if (!needle) return origins;
-    return origins.filter((product) =>
-      `${product.name} ${product.vendor.name} ${product.countryCode} ${product.originCountryCode ?? ""} ${product.category.name}`
-        .toLowerCase()
-        .includes(needle)
-    );
-  }, [origins, originSearch]);
 
   if (!canRead) {
     return (
@@ -357,7 +394,7 @@ export function CountryWorkspace({
             type="button"
             onClick={() => {
               void load();
-              if (tab === "origin") void loadOrigins();
+              if (tab === "origin") void loadOrigins(originPage);
             }}
             className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#c7d7c2] bg-white px-3 text-[10.5px] font-extrabold text-[#0b5c33] hover:bg-[#eef5eb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33]"
           >
@@ -409,7 +446,7 @@ export function CountryWorkspace({
           }`}
         >
           <PackageSearch className="h-3.5 w-3.5" aria-hidden />
-          Origin evidence ({origins.length || "—"})
+          Origin evidence ({originMeta?.total ?? "—"})
         </button>
         {tab === "countries" ? (
           <span className="ml-auto self-center text-[10px] font-semibold text-[#b9cbb4]">
@@ -674,6 +711,35 @@ export function CountryWorkspace({
                                 className="mt-0.5 h-8 w-full rounded-md border border-[#c7d7c2] bg-white px-2 text-[10.5px] font-semibold normal-case tracking-normal"
                               />
                             </label>
+                            <label className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#566359]">
+                              Image kind
+                              <select
+                                value={value.imageKind}
+                                onChange={(event) =>
+                                  setThemeDrafts((drafts) => ({ ...drafts, [theme.id]: { ...value, imageKind: event.target.value } }))
+                                }
+                                className="mt-0.5 h-8 w-full rounded-md border border-[#c7d7c2] bg-white px-2 text-[10.5px] font-semibold normal-case tracking-normal"
+                              >
+                                <option value="">Not recorded</option>
+                                <option value="GENERATED">Generated</option>
+                                <option value="APPROVED_EXISTING">Approved existing</option>
+                                <option value="ILLUSTRATION">Code-native illustration</option>
+                              </select>
+                            </label>
+                            <label className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#566359] sm:col-span-2">
+                              Image provenance (required with an image change)
+                              <input
+                                value={value.imageProvenance}
+                                onChange={(event) =>
+                                  setThemeDrafts((drafts) => ({
+                                    ...drafts,
+                                    [theme.id]: { ...value, imageProvenance: event.target.value }
+                                  }))
+                                }
+                                placeholder="Model/prompt and date, or the approved asset source"
+                                className="mt-0.5 h-8 w-full rounded-md border border-[#c7d7c2] bg-white px-2 text-[10.5px] font-normal normal-case tracking-normal"
+                              />
+                            </label>
                           </div>
                         </div>
 
@@ -801,26 +867,93 @@ export function CountryWorkspace({
           <section className="min-w-0 rounded-2xl border border-[#dfe8dc] bg-white p-3">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-[13px] font-extrabold">Product origin records</h2>
-              <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-[#566359]">{origins.length} rows</span>
+              <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-[#566359]">
+                {originMeta ? `${originMeta.total} matching rows` : "—"}
+              </span>
             </div>
+            {originMeta ? (
+              <p className="mt-1 text-[9.5px] font-semibold text-[#566359]">
+                {originMeta.summary.recorded} recorded · {originMeta.summary.unrecorded} unrecorded · {originMeta.summary.verified} verified ·{" "}
+                {originMeta.summary.declared} seller-declared
+              </p>
+            ) : null}
             <div className="mt-2 flex h-9 items-center gap-2 rounded-full border border-[#c7d7c2] px-2.5">
               <Search className="h-3.5 w-3.5 shrink-0 text-[#566359]" aria-hidden />
               <input
                 type="search"
-                value={originSearch}
-                onChange={(event) => setOriginSearch(event.target.value)}
-                placeholder="Product, seller, country"
+                value={originFilters.search}
+                onChange={(event) => {
+                  setOriginFilters((filters) => ({ ...filters, search: event.target.value }));
+                  setOriginPage(1);
+                }}
+                placeholder="Product, seller, category"
                 aria-label="Search origin products"
                 className="min-w-0 flex-1 bg-transparent text-[11px] font-semibold outline-none"
               />
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-1.5">
+              <label className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#566359]">
+                Origin status
+                <select
+                  value={originFilters.origin}
+                  onChange={(event) => {
+                    setOriginFilters((filters) => ({ ...filters, origin: event.target.value as OriginFilters["origin"] }));
+                    setOriginPage(1);
+                  }}
+                  className="mt-0.5 h-8 w-full rounded-md border border-[#c7d7c2] bg-white px-1.5 text-[10px] font-semibold normal-case tracking-normal"
+                >
+                  <option value="all">All records</option>
+                  <option value="recorded">Recorded</option>
+                  <option value="unrecorded">Unrecorded</option>
+                </select>
+              </label>
+              <label className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#566359]">
+                Evidence basis
+                <select
+                  value={originFilters.basis}
+                  onChange={(event) => {
+                    setOriginFilters((filters) => ({ ...filters, basis: event.target.value as OriginFilters["basis"] }));
+                    setOriginPage(1);
+                  }}
+                  className="mt-0.5 h-8 w-full rounded-md border border-[#c7d7c2] bg-white px-1.5 text-[10px] font-semibold normal-case tracking-normal"
+                >
+                  <option value="all">All bases</option>
+                  <option value="VERIFIED">Verified</option>
+                  <option value="SELLER_DECLARED">Seller-declared</option>
+                </select>
+              </label>
+              <label className="col-span-2 text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#566359]">
+                Fulfilment market
+                <select
+                  value={originFilters.market}
+                  onChange={(event) => {
+                    setOriginFilters((filters) => ({ ...filters, market: event.target.value }));
+                    setOriginPage(1);
+                  }}
+                  className="mt-0.5 h-8 w-full rounded-md border border-[#c7d7c2] bg-white px-1.5 text-[10px] font-semibold normal-case tracking-normal"
+                >
+                  <option value="all">All markets in scope</option>
+                  {(originMeta?.markets ?? []).map((market) => (
+                    <option key={market} value={market}>
+                      {market}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
             {!canOrigin ? (
               <p className="mt-2 rounded-lg border border-[#e5dfcf] bg-[#fbf4e4] p-2 text-[10px] font-semibold text-[#6b4a00]">
                 You can see this tab only with countries:origin:review. Seller location is never used as an origin substitute.
               </p>
             ) : null}
-            <ul className="mt-2 max-h-[720px] space-y-1 overflow-y-auto pr-1">
-              {filteredOrigins.map((product) => (
+            {originLoading ? (
+              <p role="status" className="mt-2 flex items-center gap-2 text-[10px] font-semibold text-[#566359]">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                Loading origin rows…
+              </p>
+            ) : null}
+            <ul aria-label="Product origin review results" aria-busy={originLoading} className="mt-2 max-h-[620px] space-y-1 overflow-y-auto pr-1">
+              {origins.map((product) => (
                 <li key={product.id}>
                   <button
                     type="button"
@@ -842,7 +975,40 @@ export function CountryWorkspace({
                 </li>
               ))}
             </ul>
+            {!originLoading && canOrigin && origins.length === 0 ? (
+              <p className="mt-2 rounded-lg border border-[#e2e9de] bg-[#f7faf4] p-2 text-[10px] font-semibold text-[#566359]">
+                No product matches these filters. All eligible products remain reachable by clearing the filters or paging.
+              </p>
+            ) : null}
+            {originMeta && originMeta.total > 0 ? (
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-[#eef2ea] pt-2">
+                <button
+                  type="button"
+                  onClick={() => setOriginPage((page) => Math.max(1, page - 1))}
+                  disabled={originLoading || originMeta.page <= 1}
+                  aria-label="Previous origin page"
+                  className="inline-flex h-7 items-center rounded-full border border-[#c7d7c2] px-2.5 text-[9.5px] font-extrabold text-[#0b5c33] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <span className="text-[9px] font-semibold text-[#566359]">
+                  Page {originMeta.page} of {originMeta.totalPages} ·{" "}
+                  {(originMeta.page - 1) * originMeta.pageSize + 1}–
+                  {Math.min(originMeta.page * originMeta.pageSize, originMeta.total)} of {originMeta.total}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setOriginPage((page) => page + 1)}
+                  disabled={originLoading || originMeta.page >= originMeta.totalPages}
+                  aria-label="Next origin page"
+                  className="inline-flex h-7 items-center rounded-full border border-[#c7d7c2] px-2.5 text-[9.5px] font-extrabold text-[#0b5c33] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            ) : null}
           </section>
+
 
           <section className="min-w-0 rounded-2xl border border-[#dfe8dc] bg-white p-4">
             {selectedOrigin ? (
@@ -873,7 +1039,7 @@ export function CountryWorkspace({
                       className="mt-1 h-9 w-full rounded-lg border border-[#c7d7c2] bg-white px-2 text-[11px] font-semibold normal-case tracking-normal"
                     >
                       <option value="">Not recorded</option>
-                      {countries.map((country) => (
+                      {(originMeta?.countries ?? countries).map((country) => (
                         <option key={country.code} value={country.code}>
                           {country.name} ({country.code})
                         </option>

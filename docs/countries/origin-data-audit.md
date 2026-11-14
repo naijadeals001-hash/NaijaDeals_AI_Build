@@ -48,3 +48,20 @@ At this baseline: **0 products have a recorded origin**. Demo products remain de
 ## Dispatch location
 
 Dispatch is not separately modelled. `Product.countryCode` is the marketplace fulfilment market, not a dispatch warehouse or origin. This is a documented gap; it must not be presented as a dispatch-location feature until a real dispatch field and operational data exist.
+
+## Review authorization and paging (2026-11-13)
+
+Origin review is authorised against the **product's marketplace scope**, not against equality between the origin country and the reviewer's market:
+
+- A reviewer scoped to NG may record a GH origin (or any registered discovery-country origin) for an NG-market product. A product legitimately may have an origin different from its seller's market or fulfilment country.
+- A GH-scoped reviewer is refused (`403 region_forbidden`) when attempting to set **or clear** an NG product's origin. The route resolves the product and enforces its `countryCode`; the service repeats the check under a row lock.
+- `GET /api/admin/country-discovery/origin` is server-paginated (`page`, `pageSize` up to 100, default 25) with `total`, `totalPages`, per-status summary counts and filters for search, origin status (`recorded` / `unrecorded`), evidence basis (`VERIFIED` / `SELLER_DECLARED`) and fulfilment market. Every eligible product is reachable by paging; there is no 1000-row client-side cap.
+- Set and clear both record the before/after origin fields in `AuditLog`. `VERIFIED` requires an evidence note of at least 20 characters; the origin must be a registered discovery country.
+- The tests use a run-owned NG-market product and remove it afterwards. No accepted product's origin was changed; the recorded-origin inventory remains 0 at this baseline.
+
+| Reviewer | Product market | Requested origin | Observed |
+|---|---|---|---|
+| NG-scoped origin reviewer | NG | GH | Allowed (declared and verified) |
+| GH-scoped origin reviewer | NG | GH | `403 region_forbidden`, record unchanged |
+| NG-scoped origin reviewer | NG | clear | Allowed |
+| GH-scoped origin reviewer | NG | clear | `403 region_forbidden`, record unchanged |

@@ -47,3 +47,34 @@ Every row in `CountryProfile` with `publicationStatus = PUBLISHED` is reachable 
 - 54 flag SVGs (flagcdn public-domain set)
 - Country-guide editorial review status: 54/54 `REVIEWED`
 - Commerce activation is unchanged; this registry adds no live vertical, price, stock or delivery claim
+- Recorded product-origin inventory: 0 (the origin tests use a run-owned product that is removed)
+
+## Permission separation (2026-11-13)
+
+Discover Africa publication, editorial editing and origin verification are separate capabilities:
+
+| Role | Read | Edit | Publish / unpublish | Origin review |
+|---|---|---|---|---|
+| `country_editor` (new) | yes | yes | **no** | **no** |
+| `country_publisher` | yes | no | yes | no |
+| `country_origin_reviewer` | yes | no | no | yes |
+| `admin` | yes | yes | **no** | **no** |
+| `super_admin` | yes | yes | yes | yes |
+
+- `country_editor` is in `STAFF_ROLES` and the assignable-role allowlist; it follows the existing explicit Plus+ role pattern.
+- Region scope applies to every route: a GH-scoped editor may edit GH but receives `403` for another market's country, theme, audit or origin record. The admin country list itself is scope-filtered.
+- Role assignment cannot delegate `roles:write`; an editor cannot grant roles.
+
+## Publication invariants (2026-11-13)
+
+- Every country mutation takes the `CountryProfile` row lock first. Publication validates themes, sources, images, alt text, image kind/provenance and review status inside that lock, so a concurrent edit cannot invalidate a just-published country. A concurrent edit either commits before validation or waits and then sees `published_country_locked`.
+- A published theme cannot lose its image, alt text, image provenance or last source. Removing any of them returns `409 published_country_locked`; a partially invalid update is rejected without changing the theme.
+- Changing a published theme image requires matching alt text, an image kind (`GENERATED`, `APPROVED_EXISTING` or `ILLUSTRATION`) and recorded provenance in the same update. The service rejects the whole update otherwise.
+- Source replacement validates the complete set (HTTP(S) URL, title, access date, no duplicates) before writing, then deletes and inserts inside one serialized transaction. Concurrent replacements leave exactly one complete set.
+- The seed script uses the same lock order and replaces each country's profile, themes and sources in one transaction, removing themes not present in the reviewed registry. A mid-write failure rolls the country back; no delete-then-crash partial state.
+- No migration was required: `CountryThemeSource` already has `@@unique([themeId, url])`; serialization comes from the profile row lock.
+- Audit rows for theme and profile edits record before/after **content** (image path, alt, kind, provenance, review status and source titles/URLs/access dates), including unpublished drafts. Audit is written in the mutation transaction.
+
+## REVIEW database guard (2026-11-13)
+
+Every mutating Discover Africa script requires an explicit `REVIEW_DATABASE_URL`. `DATABASE_URL` and `.env` are never used as a fallback. The shared `scripts/lib/country-review-db.ts` guard verifies the URL target, live `current_database()`, a deny list, the required country tables and an explicit `DatabaseClassification` REVIEW row before any write. The acceptance script loads the same guard through `tsx/cjs`, creates a run-owned DRAFT country and product, and never unpublishes an accepted country.
