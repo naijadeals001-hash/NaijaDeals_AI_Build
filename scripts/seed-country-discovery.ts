@@ -91,7 +91,7 @@ const EXISTING: Record<string, { url: string; alt: string }> = {
   "illustration-flower": { url: `${COUNTRIES}/illustration-flower.svg`, alt: "Vector illustration of a flower" },
   "illustration-bottle": { url: `${COUNTRIES}/illustration-bottle.svg`, alt: "Vector illustration of a bottle and glass" },
   "illustration-water": { url: `${COUNTRIES}/illustration-water.svg`, alt: "Vector illustration of a water bottle" },
-  "illustration-auto": { url: `${COUNTRIES}/illustration-auto.svg`, alt: "Vector illustration of automotive components" },
+  "illustration-auto": { url: `${COUNTRIES}/illustration-auto.svg?v=2`, alt: "Vector illustration of an automotive wiring harness and connectors" },
   "illustration-factory": { url: `${COUNTRIES}/illustration-factory.svg`, alt: "Vector illustration of a factory" },
   "illustration-boat": { url: `${COUNTRIES}/illustration-boat.svg`, alt: "Vector illustration of a boat under construction" },
   "illustration-hydropower": { url: `${COUNTRIES}/illustration-hydropower.svg`, alt: "Vector illustration of a hydropower dam" },
