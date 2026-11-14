@@ -29,7 +29,7 @@ import { Client } from "pg";
  * windows are used instead of gap clustering.
  *
  * Batch 2 is deliberately one batch, not a taxonomy batch alias: the label
- * must appear exactly once so the 57-product arithmetic cannot double count it.
+ * must appear exactly once so the active-product arithmetic cannot double count it.
  */
 const EXPECTED_BATCHES: ReadonlyArray<{
   label: string;
@@ -41,10 +41,11 @@ const EXPECTED_BATCHES: ReadonlyArray<{
   { label: "batch-a", expected: 6, from: "2026-11-13T18:00:00.000Z", to: "2026-11-13T18:40:00.000Z" },
   { label: "batch-b", expected: 4, from: "2026-11-13T18:40:00.000Z", to: "2026-11-13T19:30:00.000Z" },
   { label: "taxonomy-batch", expected: 8, from: "2026-11-13T19:30:00.000Z", to: "2026-11-13T21:00:00.000Z" },
-  { label: "batch-2", expected: 8, from: "2026-11-13T21:00:00.000Z", to: null }
+  { label: "batch-2", expected: 8, from: "2026-11-13T21:00:00.000Z", to: "2026-11-15T01:39:59.000Z" },
+  { label: "batch-3", expected: 6, from: "2026-11-15T01:39:59.000Z", to: null }
 ];
 
-const EXPECTED_ACTIVE_TOTAL = 57;
+const EXPECTED_ACTIVE_TOTAL = 63;
 const EXPECTED_PRE_BATCH2_TOTAL = 49;
 const FIXTURE_PATTERN =
   /(^|[^a-z])(qa|test|fixture|acceptance|dummy|sample|placeholder|probe)([^a-z]|$)/i;
@@ -286,8 +287,9 @@ async function main(): Promise<void> {
       problems.push("Batch 2 must appear exactly once in the accepted batches");
     }
 
+    const batch2Index = batches.findIndex((batch) => /^batch-2$/.test(batch.label));
     const preBatch2 = batches
-      .slice(0, -1)
+      .slice(0, batch2Index < 0 ? batches.length : batch2Index)
       .reduce((sum, batch) => sum + batch.count, 0);
     if (preBatch2 !== EXPECTED_PRE_BATCH2_TOTAL) {
       problems.push(
@@ -386,6 +388,7 @@ async function main(): Promise<void> {
         expectedPreBatch2: EXPECTED_PRE_BATCH2_TOTAL,
         taxonomyBatch: batches.find((batch) => batch.label === "taxonomy-batch")?.count ?? 0,
         batch2: batches.find((batch) => batch.label === "batch-2")?.count ?? 0,
+        batch3: batches.find((batch) => batch.label === "batch-3")?.count ?? 0,
         demo: rows.filter((row) => row.isDemo).length,
         live: rows.filter((row) => !row.isDemo).length
       },
@@ -444,7 +447,7 @@ async function main(): Promise<void> {
       console.log(
         `Totals: ${summary.active.total} active (${summary.active.demo} DEMO, ${summary.active.live} LIVE); ` +
           `pre-Batch-2 ${summary.active.preBatch2}; taxonomy batch ${summary.active.taxonomyBatch}; ` +
-          `Batch 2 ${summary.active.batch2}`
+          `Batch 2 ${summary.active.batch2}; Batch 3 ${summary.active.batch3}`
       );
       console.log(
         `Product statuses: ${summary.statuses
@@ -469,8 +472,8 @@ async function main(): Promise<void> {
         console.error("Result: FAIL");
       } else {
         console.log(
-          "Result: PASS — 57 active = 31 accepted baseline + 6 Batch A + 4 Batch B + 8 taxonomy batch " +
-            "+ 8 Batch 2; Batch 2 appears once; no acceptance fixture is ACTIVE; " +
+          `Result: PASS — ${summary.active.total} active = ${batches.map((batch) => `${batch.count} ${batch.label}`).join(" + ")}; ` +
+            "Batch 2 appears once; no acceptance fixture is ACTIVE; " +
             "drafts and archived rows are reported separately; CRF category names = 0."
         );
       }

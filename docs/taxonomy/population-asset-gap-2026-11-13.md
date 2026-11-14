@@ -1,6 +1,6 @@
 # Publishable-leaf population — asset gap and bounded batch proposal (2026-11-13)
 
-Status: **BLOCKED on original imagery — no credits spent, no provider call made, no listing created.**
+Status: **COMPLETE (2026-11-14)** — six authorized images generated, reviewed and published as DEMO listings. Observed 6 credits/image, 36 credits total; no purchase or top-up.
 Owner: catalogue/imagery specialist, NaijaDeals Shop increment. Run token: `TAXAMB-20261113`.
 
 ## 1. Why no listing was created in this slice
@@ -57,7 +57,7 @@ specification or real stock beyond the DEMO label.
 The 6-credit rate is observed ledger evidence, not a verified current price. Kie model
 availability and pricing must be re-checked before submission.
 
-## 4. Exact next executable step after authorization
+## 4. Executed after authorization (2026-11-14)
 
 1. Confirm the current Kie model id, 1K price and commercial terms; record the checked date.
 2. Create `scripts/taxonomy-batch3-products.cjs` by extending
@@ -70,5 +70,7 @@ availability and pricing must be re-checked before submission.
 5. Re-run `scripts/taxonomy-coverage-report.ts` and `scripts/taxonomy-reconcile-products.ts`
    and extend the reconcile batch arithmetic before publishing more than six products.
 
-Nothing in this document authorizes spending; `--publish` must not run until the coordinator
-approves the batch and the credits.
+The coordinator approved the existing-credit batch. `scripts/generate-taxonomy-batch3-images.mjs` generated the six
+images; `scripts/taxonomy-batch3-products.cjs` published the six DEMO listings. The second `--publish` run reused all six
+listings with no duplicates. Current coverage is computed, not copied: 63 active products, 41/100 publishable leaves
+populated, 0 ambiguous products. See `coverage.md` and `product-leaf-mapping.json`.

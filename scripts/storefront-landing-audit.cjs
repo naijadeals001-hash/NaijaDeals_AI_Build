@@ -49,6 +49,7 @@ const EXPECTED_AFRICAN_CATEGORIES = new Set([
   "traditional-cleansers-black-soap"
 ]);
 const BANNED_SHELF_HEADING = /best\s?sellers|trending|recommended|price\s?drops/i;
+const EXPECTED_ACTIVE_PRODUCTS = require("../docs/taxonomy/product-leaf-mapping.json").products.length;
 const ORIGIN_CLAIM = /made in|manufactured in|produced in|product of|imported from/i;
 
 const checks = [];
@@ -112,7 +113,12 @@ function money(value) {
   const allTaxonomySlugs = new Set(taxonomySlugs(taxonomy?.departments ?? []));
   const shelfLimit = Math.min(Math.max(Number(storefront?.shelfLimit) || 4, 1), 8);
 
-  check("api", "catalogue returns the 57 active review listings", products.length === 57, `received ${products.length}`);
+  check(
+    "api",
+    `catalogue returns the ${EXPECTED_ACTIVE_PRODUCTS} active review listings`,
+    products.length === EXPECTED_ACTIVE_PRODUCTS,
+    `received ${products.length}`
+  );
   check("api", "taxonomy exposes published departments", allTaxonomySlugs.size > 40, `${allTaxonomySlugs.size} slugs`);
   check("api", "storefront shelf limit is 1–8", Number.isFinite(shelfLimit) && shelfLimit >= 1 && shelfLimit <= 8, `shelfLimit=${storefront?.shelfLimit}`);
 
@@ -162,7 +168,7 @@ function money(value) {
       }
       const viewportProductBySlug = new Map(viewportProducts.map((product) => [product.slug, product]));
       const viewportPublishedSlugs = new Set(viewportProducts.map((product) => product.slug));
-      check(scope, "page catalogue snapshot contains the review listings", viewportProducts.length >= 57, `${viewportProducts.length} rows`);
+      check(scope, "page catalogue snapshot contains the review listings", viewportProducts.length >= EXPECTED_ACTIVE_PRODUCTS, `${viewportProducts.length} rows`);
 
       await page.waitForSelector("[data-storefront-shelf]", { timeout: 180000 });
       await page.waitForSelector("[data-category-card]", { timeout: 60000 });

@@ -228,6 +228,10 @@ correctly classified at level 1 and `activeOnLevelOne = 5` is the expected state
 - The taxonomy seed was not re-run in this slice. Its REVIEW expectations are re-baselined
   to the 57-active state, but the coverage report and reconciliation script are the current
   count authority. The seed does not move products.
+- Batch 3 (2026-11-14) added six DEMO listings on previously empty leaves: rice-grains,
+  palm-cooking-oils, cleaning-supplies, writing-drawing-instruments, baby-toddler-toys and
+  yoga-fitness-accessories. Current computed state is 63 active / 63 on leaves / 0 ambiguous;
+  mapping plan, attestation and product-leaf-mapping.json all agree.
 - 82 selectable leaves are empty: 65 publishable and 17 NG-blocked (non-publishable).
   Empty publishable
   leaves render honest empty states and are deliberately not padded with duplicate

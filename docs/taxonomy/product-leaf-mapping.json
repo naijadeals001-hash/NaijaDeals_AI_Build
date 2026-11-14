@@ -6,12 +6,12 @@
   "applied": true,
   "note": "Applied in audited batches by scripts/taxonomy-apply-mapping.ts; 34 products currently in their proposed leaves, 7 ambiguous retained, 16 kept. On 2026-11-13 the reviewed ambiguous resolution (docs/taxonomy/ambiguous-resolution-2026-11-13.json, run TAXAMB-20261113, applied by scripts/taxonomy-resolve-ambiguous.ts) moved the wired gaming mouse to Gaming Accessories and the portable solar battery charging station to Generators & Backup Power, leaving 5 products on selectable level-1 categories pending four requested leaves.",
   "summary": {
-    "total": 57,
+    "total": 63,
     "mapped": 41,
     "ambiguous": 0,
     "alreadyOnProposedLeaf": 8,
     "proposedMoves": 41,
-    "kept": 16
+    "kept": 22
   },
   "products": [
     {
@@ -1104,6 +1104,126 @@
       "confidence": "high",
       "ambiguous": false,
       "reason": "Created directly in the correct selectable leaf during Batch 2."
+    },
+    {
+      "productId": "cmwgvdgdk000av4a04s42azpi",
+      "name": "DEMO — Long-grain white rice, 5kg",
+      "currentCategory": {
+        "key": "rice-grains",
+        "slug": "rice-grains",
+        "name": "Rice & Other Grains",
+        "path": "Food & Everyday Essentials / Grains & Flours / Rice & Other Grains"
+      },
+      "proposedLeaf": {
+        "key": "rice-grains",
+        "slug": "rice-grains",
+        "name": "Rice & Other Grains",
+        "path": "Food & Everyday Essentials / Grains & Flours / Rice & Other Grains"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 3."
+    },
+    {
+      "productId": "cmwgvdgh1000zv4a0t81d2xiy",
+      "name": "DEMO — Red palm oil, 1 litre",
+      "currentCategory": {
+        "key": "palm-cooking-oils",
+        "slug": "palm-cooking-oils",
+        "name": "Palm Oil & Cooking Oils",
+        "path": "Food & Everyday Essentials / Oils, Soups & Seasonings / Palm Oil & Cooking Oils"
+      },
+      "proposedLeaf": {
+        "key": "palm-cooking-oils",
+        "slug": "palm-cooking-oils",
+        "name": "Palm Oil & Cooking Oils",
+        "path": "Food & Everyday Essentials / Oils, Soups & Seasonings / Palm Oil & Cooking Oils"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 3."
+    },
+    {
+      "productId": "cmwgvdgjz001ov4a0mscnxcro",
+      "name": "DEMO — Household cleaning set",
+      "currentCategory": {
+        "key": "cleaning-supplies",
+        "slug": "cleaning-supplies",
+        "name": "Cleaning Supplies",
+        "path": "Home & Living / Household & Cleaning / Cleaning Supplies"
+      },
+      "proposedLeaf": {
+        "key": "cleaning-supplies",
+        "slug": "cleaning-supplies",
+        "name": "Cleaning Supplies",
+        "path": "Home & Living / Household & Cleaning / Cleaning Supplies"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 3."
+    },
+    {
+      "productId": "cmwgvdgmo002dv4a0gjm10k4l",
+      "name": "DEMO — Pen, pencil and ruler set",
+      "currentCategory": {
+        "key": "writing-drawing-instruments",
+        "slug": "writing-drawing-instruments",
+        "name": "Writing & Drawing Instruments",
+        "path": "Books & Stationery / Stationery & Office / Writing & Drawing Instruments"
+      },
+      "proposedLeaf": {
+        "key": "writing-drawing-instruments",
+        "slug": "writing-drawing-instruments",
+        "name": "Writing & Drawing Instruments",
+        "path": "Books & Stationery / Stationery & Office / Writing & Drawing Instruments"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 3."
+    },
+    {
+      "productId": "cmwgvdgpi0032v4a0f9ebosxv",
+      "name": "DEMO — Wooden stacking toy with soft ball",
+      "currentCategory": {
+        "key": "baby-toddler-toys",
+        "slug": "baby-toddler-toys",
+        "name": "Baby & Toddler Toys",
+        "path": "Baby, Kids & Toys / Toys & Play / Baby & Toddler Toys"
+      },
+      "proposedLeaf": {
+        "key": "baby-toddler-toys",
+        "slug": "baby-toddler-toys",
+        "name": "Baby & Toddler Toys",
+        "path": "Baby, Kids & Toys / Toys & Play / Baby & Toddler Toys"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 3."
+    },
+    {
+      "productId": "cmwgvdgsa003rv4a0756m8lif",
+      "name": "DEMO — Yoga mat, cork block and resistance band set",
+      "currentCategory": {
+        "key": "yoga-fitness-accessories",
+        "slug": "yoga-fitness-accessories",
+        "name": "Yoga & Fitness Accessories",
+        "path": "Sports & Outdoors / Fitness & Strength / Yoga & Fitness Accessories"
+      },
+      "proposedLeaf": {
+        "key": "yoga-fitness-accessories",
+        "slug": "yoga-fitness-accessories",
+        "name": "Yoga & Fitness Accessories",
+        "path": "Sports & Outdoors / Fitness & Strength / Yoga & Fitness Accessories"
+      },
+      "action": "keep",
+      "confidence": "high",
+      "ambiguous": false,
+      "reason": "Created directly in the correct selectable leaf during Batch 3."
     }
   ],
   "appliedAt": "2026-11-13"

@@ -51,24 +51,26 @@ Scope: 11 departments / 37 categories / 113 leaves. 17 NG-blocked leaves are exc
 
 Batch 2 added eight representative DEMO products across eight departments, each with one original Kie image: First-Aid Supplies (Health & Wellness), Bottles/Teats/Sterilisers (Baby, Kids & Toys), Football & Basketball (Sports & Outdoors), Car Care & Cleaning (Automotive & Motorcycle), Drills & Drivers (Tools & Building Materials), Notebooks & Paper (Books & Stationery), Cassava Products (Food & Everyday Essentials) and Bags & Accessories (Fashion & Beauty). No regulated leaf was populated.
 
+Batch 3 added six representative DEMO products on six empty publishable leaves: Long-grain white rice, Red palm oil, Household cleaning set, Pen/pencil/ruler set, Wooden stacking toy and Yoga mat set. Six original Kie images were generated with `gpt-image-2-5-flare-text-to-image` at 1K/1:1, visually inspected and reviewed, and published through the existing seller DRAFT → Control Center alt/DEMO → validate → publish workflow. Observed cost was 6 credits per image, **36 credits total** (balance 10,920.8 → 10,884.8); no purchase or top-up was made. Provenance and task ids are in `generation-ledger.json` under `taxonomy-batch3`.
+
 ### Department summary
 
 | Department | Publishable leaves | Populated leaves | Active products on leaves | Images | Empty publishable leaves | Excluded NG-blocked leaves |
 |---|---:|---:|---:|---:|---:|---:|
 | Electronics & Technology | 15 | 10 | 21 | 21 | 5 | 0 |
-| Home & Living | 9 | 5 | 5 | 5 | 4 | 0 |
+| Home & Living | 9 | 6 | 6 | 6 | 3 | 0 |
 | Fashion & Beauty | 12 | 9 | 13 | 13 | 3 | 0 |
-| Food & Everyday Essentials | 9 | 4 | 11 | 11 | 5 | 0 |
+| Food & Everyday Essentials | 9 | 6 | 13 | 13 | 3 | 0 |
 | Agriculture & Business | 8 | 1 | 1 | 1 | 7 | 3 |
 | Health & Wellness | 1 | 1 | 1 | 1 | 0 | 5 |
-| Baby, Kids & Toys | 9 | 1 | 1 | 1 | 8 | 2 |
-| Sports & Outdoors | 10 | 1 | 1 | 1 | 9 | 0 |
+| Baby, Kids & Toys | 9 | 2 | 2 | 2 | 7 | 2 |
+| Sports & Outdoors | 10 | 2 | 2 | 2 | 8 | 0 |
 | Automotive & Motorcycle | 7 | 1 | 1 | 1 | 6 | 6 |
 | Tools & Building Materials | 10 | 1 | 1 | 1 | 9 | 1 |
-| Books & Stationery | 10 | 1 | 1 | 1 | 9 | 0 |
-| **Total** | **100** | **35** | **57** | **57** | **65** | **17** |
+| Books & Stationery | 10 | 2 | 2 | 2 | 8 | 0 |
+| **Total** | **100** | **41** | **63** | **63** | **59** | **17** |
 
-All 57 active products now sit on selectable leaves; the previously ambiguous headphones, two perfumes, DSLR camera and smartwatch moved to the four newly approved leaves.
+All 63 active products now sit on selectable leaves; the previously ambiguous headphones, two perfumes, DSLR camera and smartwatch moved to the four newly approved leaves. Batch 3 added one DEMO listing to each of Rice & Other Grains, Palm Oil & Cooking Oils, Cleaning Supplies, Writing & Drawing Instruments, Baby & Toddler Toys and Yoga & Fitness Accessories.
 
 ### Publishable-leaf manifest
 
