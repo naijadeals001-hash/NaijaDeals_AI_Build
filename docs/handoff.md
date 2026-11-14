@@ -5388,3 +5388,83 @@ taxonomy seed, no deployment.
   departments) and still reports REVIEW REQUIRED against the current 57/11 taxonomy; it is not the
   landing gate. The current `storefront-landing-audit.cjs` passes 95/95 with image requirements
   unchanged.
+
+
+## 2026-11-14 — Reproducible committed candidate and taxonomy/market findings
+
+**Served artifact:** canonical 3047 from clean worktree
+`C:/Users/User/naijadeals-clean-20261114-135010`, commit **`aa389c4`**, build
+**`F63diRco7qCTGB1et1FMD`**, PID 27132, REVIEW `naijadeals_review` via the guarded launcher.
+
+### Reproducibility
+
+- The admin-dashboard homepage prop fix was already committed in main at `3f171e7`; the separate
+  `naijadeals-live` worktree contains an equivalent uncommitted owner copy and was left untouched.
+- Taxonomy/market contract: `da378ec`; fallback-permission removal: `10822cb`; honest drawer copy:
+  `aa389c4`. The integration/docs commit `f342ddf` changed only `.gitignore` and
+  `docs/taxonomy/api-contract.md`.
+- Clean worktree `git status` empty at `aa389c4`; `npx tsc --noEmit` exit 0; production build exit 0;
+  no source file newer than `BUILD_ID`; canonical 3047 serves from that worktree. The build was
+  produced before the final commit but from the identical tree; the reviewer verified
+  `git diff aa389c4 -- app lib components` is empty.
+
+### Admin regulated-state enforcement
+
+- Existing Control Center/API path retained: `products:moderate`, country scope, create/update
+  `isRegulated`, before/after audit with actor scope; scoped admins cannot change or declassify the
+  platform-wide flag and no write/audit occurs on refusal.
+- Independent HTTP probe: platform admin create/declassify/reclassify PASS; scoped create and
+  scoped declassify 403 `region_forbidden`; anonymous 401, customer 403; no writes.
+- Independent admin publication probe: NG-denied and unresolved regulated categories reject
+  `409 product_not_publishable`; products remain DRAFT; no publication audit.
+- Suites: Aura/admin 9/9, market 18/18.
+
+### NG/GH search and counts
+
+- `/api/categories` explicit NG: 200, 11 roots, 57 total counts; GH: 200, 11 roots, 0 counts.
+- Locale-resolved GH: 0; locale NG: 57. No-cookie response uses shared `readLocale` (NG), not a
+  catalogue-service fallback. Invalid country/city return 400.
+- GH browsing remains available (37 browsing categories) while GH delivery/checkout remains
+  separately refused `503 delivery_unconfigured`; no cross-market delivery implication.
+- Market suite 18/18 includes NG/GH search isolation, locale fallback, malformed responses,
+  delayed previous-market responses, seller/admin rejection and unauthorized writes.
+
+### Malformed-response handling
+
+- Public client validates required `browsingVisible`/`canPublish` booleans, root arrays, node
+  identity, children arrays and response market; malformed payloads throw
+  `502 malformed_taxonomy_response`; valid empty arrays remain honest empty states.
+- Rail mapper and seller client fail closed; no `canPublish:true`/`browsingVisible:true` defaults
+  remain in public rail/storefront paths. Product-derived navigation fallback was removed.
+- Browser intercepts at 390/1440 show honest unavailable rail/directory/All-departments states
+  with zero synthesized links; stale copy replaced with "The published department navigation could
+  not be loaded. Nothing is inferred in its place."
+- Response-contract suite 18/18; market 18/18; visibility 16/16; aggregation 34/34; landing 95/95;
+  activation 30/30 on the final build; Aura 9/9; image 13/13; basket 10/10; financial 46/46.
+
+### Credential hygiene
+
+`.tmp-review-db-url` is absent in main and the clean worktree, untracked, and ignored by
+`.gitignore:15`. Its contents were never read or printed. Older `naijadeals-live`/
+`naijadeals-customer` worktrees predate the ignore rule and do not contain the file.
+
+### Agents
+
+- Taxonomy/market implementation: `agent_d229b939-042e-41ac-9679-7494b2e7487c`.
+- Integration/reproducibility: `agent_264856b4-aa94-4673-907c-ba987152cc68`.
+- Independent reviewer: `agent_14f6e2a0-f86f-46f8-858e-8db5709353f9` — exact-build PASS,
+  including admin enforcement, NG/GH counts, malformed/stale handling, fallback removal and
+  credential status.
+
+### Remaining findings
+
+- Informational: four pre-declared editorial category links remain during a taxonomy outage
+  (`home-kitchen` shelf link and three African-discovery links); they are not product-derived
+  navigation or eligibility flags.
+- Informational: `shop-header.tsx` still treats missing `isSelectable` as true for navigation
+  selection semantics; it cannot grant browsing or publication eligibility and the server supplies
+  the field.
+- Activation was independently skipped earlier because it creates an unpaid order; the coordinator
+  ran it 30/30 on the final build.
+- No push/deployment. The clean worktree is retained for inspection; GitHub remains blocked by the
+  rejected preservation credential.
