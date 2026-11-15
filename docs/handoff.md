@@ -5775,3 +5775,48 @@ provider charge, purchase, top-up or live financial action occurred.
   accepted catalogue rows and content are unchanged.
 - No push or deployment. Local commits remain the preservation path because the known GitHub
   credential remains rejected; it was not retried.
+
+## 2026-11-15 — Consolidated Shop completion attempt
+
+**Served artifact:** canonical `http://localhost:3047`, final build **`8CTjw5MV-9MCKuV66hkoY`**, source commit **`251810f`**, parent `1005a7a`, on branch `naijashop-marketplace`. Launched through `scripts/start-review-preview.cmd` against `naijadeals_review` (REVIEW). Migrations `20261114120000_order_item_restock` and `20261114121000_inventory_nonnegative_constraints` are applied. REVIEW final state: 54 country profiles / 324 themes / 362 sources; 259 products / 63 ACTIVE / 0 variants / 0 origins; 0 activation rows. No production deployment, live transaction or provider charge occurred.
+
+### Agents (actual IDs)
+
+- Integration/history/reproducibility: `agent_5b59c60f-d105-470e-be67-092d77de5ace`
+- Inventory/refund/recovery integrity: `agent_bfd68b6d-2353-4404-bf90-decb16beafef`
+- Admin completeness/catalogue discovery: `agent_bc8b0899-6117-4ad8-97c5-f7ea841b1b5e`
+- Country imagery completion: `agent_b73cff12-d497-47ee-93ec-5d57dc792aac`
+- Independent acceptance reviewer: `agent_1e12d6bc-8c7e-4cb1-ae42-3f5c721f4328`
+
+### Completed and independently retested
+
+- **One consolidated Shop matrix** in `docs/programme/completion-matrix.md` §1.2 and `docs/naiqashop/requirement-matrix.md`: 21 areas with customer/seller/admin behaviour, permissions/scope, evidence, revision and remaining dependencies. Status is 16 INDEPENDENTLY TESTED, 4 IMPLEMENTED, 1 NOT IMPLEMENTED, 0 OPERATIONALLY READY, 0 LIVE. The 14-versus-18 distinction is explicit; DEMO/REVIEW is not launch readiness.
+- **Branch reconciliation:** `873aa37`, market/image fixes, clean-build, variant, paused-Shop and country commits are ancestors of HEAD. `50a0b57` (D1 gallery) is not an ancestor (merge base `873aa37`); the current strict contract rejects per-variant `imageId`/`imageUrl` and the gallery is product-level. D1 is deferred, not merged or served.
+- **Refund/restock:** new `OrderItemRestock` per-item ledger; `RESTORED` terminal, `SUPPRESSED` durable and retryable, `LEGACY_RECORDED` terminal. Refund completion is distinct from physical recovery. Committed recovery service and admin GET/POST route (`orders:read`/`orders:write`, same-origin POST, region scope). TEST restock 35/35 (baseline 25/27); recovery route probe 16/16.
+- **Activation recovery:** restore/discard now re-diff and mutate in one transaction under `LOCK TABLE "VerticalActivation" IN EXCLUSIVE MODE`, with exact force fingerprints and audit. 8/8 snapshot tests; full activation 30/30; concurrent operator row preserved.
+- **Saved items:** safe projection enforces Shop activation, publication, seller, market, contact-only and availability rules; no raw variant/vendor payload. 11/11 TEST projection; 14/14 availability view; account page now passes `nd_country`/`nd_city`, and reviewer verified GH selection shows “Not available in your market”.
+- **Inventory:** CHECK constraints applied after a zero-violation preflight; manual TEST writes rejected with SQLSTATE 23514. No historical rows repaired.
+- **Admin catalogue:** `/api/admin/products` is server-paginated with total/search/status/sort/region; 12/12 tests including oldest-product reachability, 390/768/1440 UI, GH scope and 401/403/400 refusals. Legacy array compatibility remains for old callers.
+- **Cart availability:** server `availability` is rendered for active and saved lines; checkout is blocked for unavailable lines; 3/3 tests and 390/768/1440 screenshots; server still returns 409 `item_unavailable`.
+- **Country:** 57 overrides applied; final 54-card/324-image and 54-page/324-image capture has 0 broken, 0 URL/alt mismatch and 0 overflow; country acceptance 67/67; origin workflow 10/10 including seller-declared, verified, foreign-origin, scoped refusal and removal/public exclusion. Country counts restored.
+- **Shop preservation:** basket 10/10, variant management 32/32, concurrency 109/109 (0 blocked/failed), product detail 101/101, financial refusal 46/46 with 0 provider calls. Accepted catalogue restored to 259/63/0.
+- **Product/catalogue/accessibility:** product-detail suite now asserts the chosen product-level gallery contract; `/` has `aria-label="Primary"`; saved and cart views are responsive.
+
+### Open gates / limitations
+
+1. **G3 is OPEN, not passed.** The full historical `scripts/marketplace-tests.ts` on TEST is 4/13. Failures are stale test/fixture assumptions: seller-created product expected ACTIVE (current policy is admin-published DRAFT), test expects ≥12 seeded active products but the TEST public catalogue has 6, and the historical shell assertion does not match all Shop routes; dependent steps then 404/308. The suite is now guarded to require explicit `TEST_DATABASE_URL`. It was not weakened to manufacture a pass.
+2. **Country imagery is not complete.** 39 NON_PHOTOGRAPHIC vector product-theme rows and 44 BROAD rows remain (0 MATERIAL_FAIL). The Kie MCP host approval was explicitly declined; no provider task was created, no REST fallback was used and **0 credits** were spent. The 66-image/396-credit completion plan is recorded in `qa-artifacts/visual/discover-africa-final/completion-plan.json`; this is a tooling/approval gate.
+3. **Support is still NOT IMPLEMENTED** (help page only; no ticket/case intake, queue or SLA). Its help copy overstates support.
+4. **Broader owner/business gates remain:** real seller/inventory, payment provider and LIVE gate, admin returns queue plus receive-and-refund funding policy, seller payouts/staff/receipts, non-NG price/FX/entity/tax readiness, completed accessibility (manual screen reader and remaining routes), and remote preservation.
+5. **Reviewer F3 residual:** the specific `/` marker is fixed, but the older marketplace shell assertion also expects `Primary` on `/naijashop`, `/cart`, `/checkout` and `/orders`, whose Shop shell uses different semantic labels. This is part of the stale G3 contract, not a new Shop regression.
+6. **TEST-only side effect:** the restock suite’s shared SYSTEM wallet moved from -128,000,000 to -134,000,000 kobo through balanced test journals; REVIEW money was untouched. The variant suite leaves 8 audit rows for deleted run-owned products; accepted rows/data are unchanged.
+7. **Preservation:** `github-preservation/naijashop-marketplace` is `e80a0f9`; local HEAD is 417 commits ahead. No push was attempted because the known credential remains rejected. No force-push.
+
+### Reproduction / evidence
+
+- Build log: `qa-artifacts/shop-consolidation/final-build-251810f.log`; final server log `final-3047-251810f.log`.
+- Integrity: `restock-tests.log` 35/35, `activation-recovery-tests.log` 8/8, `activation-tests.log` 30/30, `saved-items-tests.log` 11/11, `availability-view-tests.log` 14/14.
+- Shop: `variant-management-tests.log` 32/32, `variant-concurrency-tests.log` 109/109, `product-detail-final.log` 101/101, `basket-tests.log` 10/10, `financial-refusal.log` 46/46.
+- Admin/cart TEST: `admin-products-tests.log` 12/12, `cart-availability-tests.log` 3/3.
+- Country: `country-acceptance.log` 67/67, `country-visual.log` 175/175, `country-54-final.log` 54 cards/324 and 54 pages/324, `country-origin-final.log` 10/10.
+- Independent review: `qa-artifacts/review-acceptance/` (F1 route probe 16/16; F2 cookie bridge; baselines; screenshots); prior full review `qa-artifacts/` evidence as cited by `agent_1e12d6bc-8c7e-4cb1-ae42-3f5c721f4328`.

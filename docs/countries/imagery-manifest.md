@@ -1,6 +1,6 @@
 # Discover Africa — imagery manifest
 
-Date: 2026-11-14. Final served build: `H9mMmDLBrIv4jMFc6Co0M`. Model: `gpt-image-2-5-flare-text-to-image` via the connected Kie.ai MCP, `flare`, `1K`, `1:1`. Price recorded by the MCP plan: **6 credits per image** (rate card `2026-10-28`; USD conversion shown by the tool was $0.03 at the tool's published $0.005/credit basis). **No credits were purchased and no top-up was performed.**
+Date: 2026-11-15. Final served build: `8CTjw5MV-9MCKuV66hkoY`. Model: `gpt-image-2-5-flare-text-to-image` via the connected Kie.ai MCP, `flare`, `1K`, `1:1`. Price recorded by the MCP plan: **6 credits per image** (rate card `2026-10-28`; USD conversion shown by the tool was $0.03 at the tool's published $0.005/credit basis). **No credits were purchased and no top-up was performed.**
 
 ## Original generated photography (29 images, 174 credits)
 
@@ -98,14 +98,91 @@ They are **not** photographs, do not depict a specific country landmark or produ
 
 ## Final applied coverage
 
-Final verification: 2026-11-14, served build `H9mMmDLBrIv4jMFc6Co0M` on `http://localhost:3047`. The REVIEW database was reseeded with `lib/data/country-theme-image-overrides.ts` wired into `scripts/seed-country-discovery.ts`. Verified counts: 54 published profiles, 324 themes, 362 sources, 111 distinct theme images and 174 GENERATED tile assignments. All 324 rows have alt text, kind and provenance; no alt contains a duplicated label sentence.
+Final verification: 2026-11-15, served build `8CTjw5MV-9MCKuV66hkoY` on `http://localhost:3047`. The REVIEW database was reseeded with `lib/data/country-theme-image-overrides.ts` wired into `scripts/seed-country-discovery.ts`. Verified counts: 54 published profiles, 324 themes, 362 sources, 113 distinct theme images and 174 GENERATED tile assignments. All 324 rows have alt text, kind and provenance; no alt contains a duplicated label sentence.
 
-All 47 override rows are applied with the exact URL, alt, kind and provenance from the module. All 324 rows match `docs/countries/imagery-remediation-audit.json`. The two prior reseed regressions are corrected:
+All 57 override rows are applied with the exact URL, alt, kind and provenance from the module. All 324 rows match `docs/countries/imagery-remediation-audit.json`. The two prior reseed regressions are corrected:
 
 - `DZ/couscous` uses `public/generated/countries/theme-couscous.webp` (GENERATED), alt "Steamed couscous. Illustrative image for the Couscous theme." — PASS.
 - `ER/potato` uses `public/generated/fresh/prod-irish-potatoes.webp` (APPROVED_EXISTING), alt "Irish potatoes. Illustrative image for the Potato theme." — PASS.
 - `CV/horticulture` keeps the mixed-vegetable image: BROAD — horticulture is shown, maize is absent; acceptable and not promoted.
 
-Final audit: **268 PASS / 56 BROAD / 0 MATERIAL_FAIL**, independently verified on build `H9mMmDLBrIv4jMFc6Co0M` at commit `37172e5`. The independent reviewer checked all 324 rendered rows, 54 cards and 54 pages, found 0 material failures, 0 broken images and 0 URL/alt mismatches, and confirmed the acceptance harness did not mutate accepted Ghana content or audit. The 56 BROAD rows remain honest partial matches — typically one of several named crops, a generic illustration where no accurate photograph exists, or a concept (tourism, services, blue economy) that a single still cannot cover. Each is listed with its exact note rather than promoted to PASS.
+Final audit: **241 PASS / 44 BROAD / 39 NON_PHOTOGRAPHIC / 0 MATERIAL_FAIL** at the owner photographic standard. The coordinator captured all 54 cards and 54 pages on build `8CTjw5MV-9MCKuV66hkoY`: 324 card and 324 page images, 0 broken, 0 URL/alt mismatches, 0 duplicated alt labels. This is **not** a completed photographic set: 39 product/service themes remain vector illustrations and 44 are partial photographic matches. New generation was blocked by an explicit Kie MCP host approval rejection, not bypassed through REST.
 
-Visual evidence captured on build H9: 54 card screenshots (324 theme images) and 54 full-page country screenshots (324 theme images) at `qa-artifacts/visual/discover-africa-remediation/final-54/` (`cards/`, `pages/`, `sections/`, `cards-sheet-1..6.png`, `pages-sheet-1..6.png`, `verification.json`). The run recorded 0 broken images, 0 URL/alt mismatches and 0 duplicated alt labels across both sets; the corrected Algeria Couscous and Eritrea Potato tiles were inspected and show the intended subjects. No stock image was substituted for a required original asset, and no country name, product label or brand is baked into a generated image.
+Visual evidence captured on build `8CTjw5MV-9MCKuV66hkoY`: 54 card screenshots (324 theme images) and 54 full-page country screenshots (324 theme images) at `qa-artifacts/visual/discover-africa-final/` (`cards/`, `pages/`, `sections/`, `cards-sheet-1..6.png`, `pages-sheet-1..6.png`, `verification.json`). The run recorded 0 broken images, 0 URL/alt mismatches and 0 duplicated alt labels across both sets; the corrected Algeria Couscous and Eritrea Potato tiles were inspected and show the intended subjects. No stock image was substituted for a required original asset, and no country name, product label or brand is baked into a generated image.
+
+## Photographic-design completion pass (2026-11-15)
+
+Status: **PARTIAL — 10 zero-credit reuse corrections applied; 39 non-photographic vector theme rows remain; Kie.ai generation blocked at the MCP authorization boundary.** No provider task was created and no credits were spent. The account balance was 10,710.8 credits before and after the attempt.
+
+### Kie.ai verification and rejection
+
+- Connected Kie.ai MCP model: `gpt-image-2-5-flare` (`toolName: gpt_image`, model `gpt-image-2-5-flare-text-to-image`), 1K, 1:1.
+- Current price verified 2026-11-15 at `https://kie.ai/pricing`: from **6 credits per image** (the MCP plan quoted 6 credits and $0.03 at the tool's published $0.005/credit basis; that USD figure is a conversion, not a provider-quoted price).
+- `prepare_media_generation` plan `6f520d33-0e17-44a5-800d-26495cb226ae` returned `status: "prepared"`, `approved: false`, `reason: "Host declined the approval request."`, `message: "No provider task was created. This plan remains unapproved and cannot be submitted."`
+- Per the assignment, the MCP path was stopped on that rejection. No REST call or other interface was used to bypass it, and no retry, purchase, top-up or provider switch was made.
+
+### Applied approved-photo reuse corrections (10 rows, 0 credits)
+
+All four source assets were inspected at full size and contain no visible text, brand, flag or landmark. They are referenced directly; no original was deleted or overwritten.
+
+| Slots | Reused asset | Verdict |
+|---|---|---|
+| MG/raffia | `public/generated/taxonomy/raffia-tote.webp` | PASS — woven raffia tote directly depicts raffia weaving |
+| SC/raffia-bamboo | `public/generated/taxonomy/raffia-tote.webp` | BROAD — raffia shown, bamboo absent |
+| MA/leatherwork | `public/generated/shop/product-red-patent-leather-baby-shoes.webp` | BROAD — finished leather goods shown, crafting/hides not depicted |
+| ZW/leather | `public/generated/shop/product-red-patent-leather-baby-shoes.webp` | PASS — finished leather goods |
+| NG/leather | `public/generated/shop/product-red-patent-leather-baby-shoes.webp` | PASS — finished leather goods |
+| GH/handwoven-textiles | `public/generated/taxonomy/kente-cloth.webp` | BROAD — handwoven kente shown, fugu not specifically depicted |
+| AO/maize | `public/generated/fresh/cat-grains-beans.webp` | PASS — yellow maize and red beans both shown |
+| ER/cereals | `public/generated/fresh/cat-grains-beans.webp` | PASS — cereals and pulses both shown |
+| BJ/rice-and-maize | `public/generated/fresh/cat-grains-beans.webp` | PASS — white rice and yellow maize both shown |
+| GN/rice-and-maize | `public/generated/fresh/cat-grains-beans.webp` | PASS — white rice and yellow maize both shown |
+
+The ten exact override entries (URL, alt, kind, provenance) are in `lib/data/country-theme-image-overrides.ts`. The module now has **57 entries**; all 57 are applied in the final REVIEW seed and build. The ten reuse rows are ER/cereals, MG/raffia, SC/raffia-bamboo, MA/leatherwork, AO/maize, ZW/leather, BJ/rice-and-maize, GH/handwoven-textiles, GN/rice-and-maize and NG/leather.
+
+### Current audit totals (324 rows, 54 countries)
+
+The audit now applies the owner's photographic standard: a non-photographic product-theme substitution is not PASS, and a partial subject match is BROAD.
+
+| Measure | Count |
+|---|---|
+| Photographic PASS | 241 |
+| Photographic BROAD | 44 |
+| NON_PHOTOGRAPHIC (vector product-theme rows) | 39 |
+| MATERIAL_FAIL (subject/broken asset) | 0 |
+| Subject-level PASS (including subject-passing vectors) | 270 |
+| Subject-level BROAD (including subject-partial vectors) | 54 |
+| Override entries / applied in final build / pending reseed | 57 / 57 / 0 |
+| Distinct final assets after reseed | 113 (baseline 111) |
+
+All 324 final asset URLs resolve. All 58 `public/generated/countries/theme-*.webp` assets are 900×900. The four reused approved assets are 1024×1024 or 1024×1120 originals referenced directly, so no upscaling or resolution claim is implied.
+
+The 39 remaining non-photographic rows use 21 distinct original vector assets. They are listed exactly in `docs/countries/imagery-remediation-audit.json` under `photographicAudit.nonPhotographicRows`, with each row's retained `subjectVerdict` and `subjectNote`.
+
+### Completion plan (recorded, not executed)
+
+`qa-artifacts/visual/discover-africa-final/completion-plan.json` contains 66 exact prompts, asset names and slot mappings, grouped as:
+
+- **Required:** 32 images / 39 rows / 192 credits — replaces every remaining vector product theme.
+- **Recommended:** 31 images / 36 rows / 186 credits — replaces the remaining photographic BROAD multi-item/product combos.
+- **Optional:** 3 images / 3 rows / 18 credits — upgrades the three reused photographic partials (SC raffia + bamboo, MA leatherwork, GH fugu).
+- **Total:** 66 images / 78 rows / 396 credits; expected balance 10,314.8 credits if approved and all tasks succeed.
+
+Five concept rows remain BROAD by design because a single still cannot fully represent the named value chain: `ST/agroforestry-food-crops`, `CV/export-services`, `GW/services`, `SN/agri-food`, `TG/agro-food`. The plan records 76 target PASS and 2 target BROAD slots (`KE/export-manufacturing` because export flow is not depicted, and `SL/tourism` because heritage is not depicted). These are targets only; actual verdicts require post-generation inspection, and no partial match is pre-labeled PASS.
+
+### Reseed and visual recheck
+
+The ten reuse changes are applied in the final seed/build. The coordinator captured 54 country-directory cards and 54 country pages: 324/324 card images and 324/324 page images, 0 broken, 0 URL/alt mismatches, 0 duplicate labels, 0 overflow. The evidence is `qa-artifacts/visual/discover-africa-final/verification.json`. The remaining 39 non-photographic and 44 BROAD rows are explicitly not final photographic acceptance.
+
+### Country-origin verification
+
+Executed with an explicit `REVIEW_DATABASE_URL`: `scripts/country-origin-tests.ts` **10/10 PASS**. Run-owned DEMO fixtures verified seller-declared, verified, foreign-origin, cross-market refusal, the 20-character evidence note, audit before/after, and removal; the public country inventory excluded the fixture after removal. No accepted product's origin changed and REVIEW returned to 259 products.
+
+The executed test verified the four required contracts:
+
+- Seller-declared basis is stored as `SELLER_DECLARED` and the public page renders **“Seller-declared origin”** (`app/naijashop/countries/[slug]/page.tsx`).
+- Verified basis requires an evidence note of at least 20 characters, records `originVerifiedAt`/`originVerifiedBy`, writes a `product.origin.verify` audit entry, and renders **“Independently verified origin”**.
+- Inventory exclusion: `listCountryOriginProducts` filters `originCountryCode = code` and `originBasis IN (SELLER_DECLARED, VERIFIED)`; clearing origin sets both fields and the verification fields to null, so the listing is excluded. Seller location (`vendor.countryCode`) is deliberately not used as origin.
+- Unauthorized/scoped rejection: `updateProductOrigin` locks the product and calls `assertProductMarketScope(actor, product.countryCode)`; a reviewer outside the product's marketplace receives 403 `region_forbidden`. The existing run-owned test also covers a scoped reviewer recording a foreign origin for an in-scope product, plus cross-market refusal and clear.
+
+The origin workflow is now executed on isolated fixtures; the accepted origin inventory remains 0.

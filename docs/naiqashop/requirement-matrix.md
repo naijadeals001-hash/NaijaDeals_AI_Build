@@ -1,34 +1,66 @@
-# NaijaShop requirement matrix (2026-11-12)
+# NaijaShop requirement matrix (revised 2026-11-15)
 
-Status ladder kept separate: architecture-supported, configured, tested, approved, live. No NaijaShop requirement is live; no non-Nigeria market is approved.
+Authoritative Shop status lives in `docs/programme/completion-matrix.md` §1.2 (consolidated Shop
+completion matrix). This file is the requirement-level view used by Shop work; it does not override
+that matrix. It replaces the 2026-11-14 revision with the integrated results at `251810f`.
 
-| Area | Requirement | Existing state | Gap | Acceptance | Dependency |
-|---|---|---|---|---|---|
-| Storefront | Header with real account/location | Misleading sign-in copy | Load session user; inline location | Signed-in name renders; cart count matches | Session/address APIs |
-| Storefront | Search suggestions | Missing | Suggest API + keyboard UI | Only real matches suggested | Search index |
-| Storefront | Filters/sort/pagination | Working (discovery slice `4f951ab`) | Facets limited; in-memory pagination | Each filter changes results; totals truthful | Catalog SQL pagination |
-| Storefront | Deals integrity | Misleading | No discount filter | Every deal has real compare-at | Catalog fields |
-| Product | Variant-aware CTA | Broken on grid | Route to detail/options | Variant product purchasable from grid | None |
-| Product | Seller identity/profile | Missing profile | Public seller route | Seller name links to real catalogue | Vendor model |
-| Product | Delivery/returns disclosure | Partial | No ETA/window | Fee and window before checkout | Delivery zones/policy |
-| Customer | Receipt/invoice | Missing | New receipt route | Owner downloads receipt; non-owner 403 | Order/payment |
-| Customer | Returns | Partial | Whole-order, seller-only, no admin queue | Line-level return + admin queue | Returns logistics |
-| Customer | Disputes | Missing | No intake route | Paid undelivered order opens dispute | Dispute service |
-| Customer | Support | Missing | No ticket queue; copy misleading | Ticket linked to order; support resolves | Support model/RBAC |
-| Seller | Variants/price editing | Missing UI | Editor + audit | Edits reflect on storefront | Seller API |
-| Seller | Payout request/history | Missing | Vendor request + admin creation | Payout debits wallet, ledger reconciles | Payout lifecycle |
-| Seller | Staff access | Missing | Model + scoped roles | Staff sees only granted capabilities | Auth/RBAC |
-| Fulfilment | Courier assignment UI | Broken | Control Center assign dialog | Courier sees assigned delivery | Existing API |
-| Admin | Review moderation | Missing UI | Reviews tab | Approved review updates rating | Existing API |
-| Admin | Coupon/returns queues | Missing | Returns and coupon tabs | Queues show real rows/actions | Services |
-| Admin | Storefront controls wired | Misleading | Consume saved fields | Change visible publicly | Storefront config |
-| Financial | Refund-aware completion/dispute | Fixed in escrow workstream | Provider refund status API absent | Conservation tests pass | Provider API |
-| Country | NG only delivery | Configured | No other country price list/currency | Checkout blocked outside supported | Business decision |
-| Country | Pan-African expansion | Unverified | Currencies, catalogues, providers, logistics, legal | Readiness checklist per country | Business decisions |
+## Verified baseline
+
+| Item | Value |
+| --- | --- |
+| Branch / local HEAD | `naijashop-marketplace`, `251810fa30cc074206c1fb97680a3f779784a16e` ("Fix Shop reviewer findings and test contracts", 2026-11-15); parent `1005a7a` |
+| Final build | `8CTjw5MV-9MCKuV66hkoY` (`.next-programme/BUILD_ID`, commit `251810f`; `qa-artifacts/shop-consolidation/final-build-251810f.log`). Supersedes interim `jwDsK2Ru5RpdPSdRU29w8` and `H9mMmDLBrIv4jMFc6Co0M`. |
+| Migrations applied to REVIEW | `20261114120000_order_item_restock`, `20261114121000_inventory_nonnegative_constraints`; 84 migrations, none pending (`qa-artifacts/shop-consolidation/migrations-review.log`) |
+| Catalogue | 259 products / 63 ACTIVE (all DEMO) / 0 variants / 0 activation rows; restored 259/63/0 after the variant and country runs |
+| Taxonomy | 11 departments / 37 categories / 117 leaves / 165 nodes; 100 publishable, 17 NG-regulated; 41/100 populated |
+| Discover Africa | 54 profiles / 324 themes / 362 sources; 57 override rows; visual 175/175 with 57/57 overrides; acceptance 67/67; remaining 39 NON_PHOTOGRAPHIC + 44 BROAD, 0 MATERIAL_FAIL; no new images, 0 credits (Kie MCP approval declined) |
+| Remote | `github-preservation/naijashop-marketplace` = `e80a0f9`; local HEAD is 417 commits ahead |
+| Working tree | Documentation/evidence edits for this reconciliation plus pre-existing `tsconfig.json` and line-ending-only script changes; the admin restock-recovery route, saved-market UI, primary nav label, product-detail and origin-removal tests are committed in `251810f`. No untracked code route remains. Unrelated research assets are untouched. |
+| Method | Integrated results supplied by the coordinator and checked against the logs below; no test, database write, migration, browser run or preview restart was performed for this revision |
+
+Status ladder: **INDEPENDENTLY TESTED** (recorded executed run at a named revision),
+**IMPLEMENTED** (code exists; no current area acceptance run or a blocked regression),
+**NOT IMPLEMENTED** (absent), **OPERATIONALLY READY** / **LIVE** (none for Shop).
+REVIEW/demo evidence is never launch readiness.
+
+| Area | Requirement | Existing state | Gap | Acceptance evidence (command / artifact) | Dependency | Status |
+|---|---|---|---|---|---|---|
+| Landing | Retail-first storefront with real controls and honest states | Hero, shortcuts, eight shelves, Discover Africa row, paused panel, DEMO labels | Persisted announcement, hero copy, `visibleCategories`, `showDemoProducts` and `heroSlides` are not all consumed by the live `/naijashop` storefront; country imagery incomplete | `storefront-landing-audit.cjs` 95/95 (`qa-artifacts/review-basket-review/product-activation-final/landing-audit-final.log`); homepage activation 17/17; country/cards 175/175 (`qa-artifacts/shop-consolidation/country-visual.log`) | Storefront-control wiring; country imagery | INDEPENDENTLY TESTED |
+| Category rail / directory | Full department rail and searchable directory from effective taxonomy | 37 level-2 categories under 11 departments, counts/images, keyboard/swipe/arrows | 2 all-regulated categories use fallback icons | `category-rail-audit.cjs`: 150/150, 0 failed (`qa-artifacts/visual/category-rail/result.json`) | Approved tile art for 2 categories | INDEPENDENTLY TESTED |
+| Taxonomy | Three-level taxonomy with attributes, rules and seller requests | 117 leaves; aliases, attributes, country rules; 17 regulated leaves gated | 59 publishable leaves empty; 22 ACTIVE products kept at existing leaves | `taxonomy-response-contract-tests.ts` 18/18; `taxonomy-market-browsing-tests.ts` 18/18; visibility 16/16; aggregation 34/34; image persistence 13/13; coverage PASS (`qa-artifacts/visual/catalogue-batch3/coverage.log`) | Approved original product assets | INDEPENDENTLY TESTED |
+| Search | Real search/filter/sort/page | Server token-AND matching, market isolation, DB fallback | No suggestions; in-memory pagination; search engine unavailable in REVIEW | Market/search isolation 18/18; landing search journeys 95/95 | Search engine/scale decision; suggestions API | IMPLEMENTED |
+| Product detail / gallery | Accurate detail, gallery, reviews, related, seller context | Gallery with keyboard viewer; variant price/stock; selected variant leaves the product-level gallery unchanged; approved reviews only; related failure isolated | Per-variant gallery switching intentionally deferred (`preferredUrl={null}`; API excludes variant images) | `qa-artifacts/shop-consolidation/product-detail-final.log` 101/101, 0 failed on final build `8CTjw5MV-9MCKuV66hkoY` at `251810f`, asserting the product-level gallery | Decided variant-image contract (D1 branch not merged) | INDEPENDENTLY TESTED |
+| Variants | One authoritative stock source; strict server contract | Seller/admin create-edit; product stock must be 0; locks serialize transitions; image fields rejected 400; DB CHECK constraints added | Legacy variant images remain in non-catalogue snapshots (current data 0) | `qa-artifacts/shop-consolidation/variant-concurrency-tests.log` 109/109, 0 blocked/failed (build `jwDsK2Ru5RpdPSdRU29w8`, restored 259/63/0); management 32/32; CHECK migration applied after zero-violation preflight | Legacy-image cleanup; per-variant image decision | INDEPENDENTLY TESTED |
+| Saved items | Save/unsave, saved-for-later, availability-aware add | Safe public projection: activation/publication/market/seller/contact/availability reasons; no raw variants; saved-for-later; account page sends selected `nd_country`/`nd_city` | No post-fix `/account#saved` browser journey found | `qa-artifacts/shop-consolidation/saved-items-tests.log` 11/11 on TEST (`SIP-MWHQ55K9-A7C72A`); `availability-view-tests.log` 14/14; F2 wiring in `251810f` (`getSaved(market)`), pre-fix mismatch in `qa-artifacts/review-acceptance/market-saved-probe.log` | Post-fix browser journey | INDEPENDENTLY TESTED |
+| Basket | Server-priced, ownership-checked basket with truthful unavailable lines | Per-line availability, market refusal, saved lines, authoritative count; unavailable lines presented at 390/768/1440 | No two-device edit test | `basket-tests.log` 10/10; `cart-availability-tests.log` 3/3 (API + checkout refusal `item_unavailable` + UI at three viewports) | None for current scope | INDEPENDENTLY TESTED |
+| Checkout / payments | Server-validated totals, escrow, refunds, provider | Wallet checkout, delivery fee, escrow, idempotency, REVIEW refusal; targeted refund/lock suites pass | **Full marketplace suite 4/13 OPEN/BLOCKED** on stale expectations; no live provider; non-NG currency safety; city not enforced | Closure/refund 13/13 and 10/10; financial refusal 46/46; marketplace 4/13 with exact causes in `qa-artifacts/shop-consolidation/marketplace-tests.log` | Updated marketplace suite; payment provider; price lists/FX; entity/tax | IMPLEMENTED |
+| Orders | Real order history and lifecycle | List/detail, confirm, cancel, snapshot after unpublish | No receipt/invoice; no customer dispute intake | `review-order-snapshot-journey.cjs` 8/8; closure 13/13 | Invoice format; dispute intake decision | INDEPENDENTLY TESTED |
+| Delivery / tracking | Assignment, courier states, tracking | `assignCourier` + committed Control Center panel; tracking page; custody rules | No current UI end-to-end; no GPS/ETA; courier statement | Assignment races in `closure-lock-custody-acceptance.ts` 13/13; committed `admin-delivery-assignment.tsx` | Courier UI journey; GPS provider decision | IMPLEMENTED |
+| Returns / refunds | Customer return case and durable stock recovery | `/returns`; seller approve/reject/receive; `OrderItemRestock` per item (`RESTORED`/`SUPPRESSED`/`LEGACY_RECORDED`), `order.stock_recovery_pending`, retry service; **committed** guarded admin recovery route; financial refund separate | No admin returns queue; whole-order only; no evidence field; receive-and-refund not re-executed | `returns-case-tests.ts` 18/18 (handoff record); visual QA pass; `qa-artifacts/shop-consolidation/restock-tests.log` 35/35 on TEST (baseline 25/27); route committed at `251810f` with `orders:read`/`orders:write` + `assertOrderRegion` | Admin queue; return-leg funding policy | INDEPENDENTLY TESTED |
+| Seller lifecycle | Apply → approve → list → fulfil → get paid | Application, dashboard, products, variants, orders, returns, earnings; admin publish gate; server-paginated products tab | No seller payouts, staff roles, receipts or analytics; no real seller supply | `review-catalogue-workflow.cjs` 142/142 twice; seller variants 32/32; admin products 12/12 incl. oldest reachable (`qa-artifacts/shop-consolidation/admin-products-tests.log`) | Payout/commission policy; real seller | INDEPENDENTLY TESTED |
+| Moderation | Review and catalogue moderation | Reviews tab approve/reject; product suspend/reactivate; scoped moderator with audit and cross-region 403 | Review moderation suite still has no run artifact | Product/vendor suspend 7/7; admin products 12/12 includes scoped moderation; review moderation unverified | Recorded review-moderation run | IMPLEMENTED |
+| Plus+ | Honest membership surface and admin configuration | Availability page, awareness cards, admin plans/promotions with approval gates | No purchase, billing, entitlement or redemption | Handoff 2026-11-12: honesty 20/20, lifecycle 37/37, admin 19/19; screenshots `qa-artifacts/plus-review-final/` | Owner price/country/benefit decisions | INDEPENDENTLY TESTED |
+| Affiliates | Shop attribution and settlement | Enrolment, links, consent, conversion, settlement/reversal/recovery; Shop-only registry | No multi-vertical attribution, external payout or tax; refund integration unverified | Recorded suites 12/12, 11/11, 10/10, 6, 9, 5 checks; code unchanged since `15d9173` | Multi-vertical policy; payout provider | INDEPENDENTLY TESTED |
+| Country discovery | Editorial country guides, separate from commerce | 54 profiles/pages, 324 themes/362 sources, 57 overrides, directory, admin publish/origin workflow | Imagery not complete: 39 NON_PHOTOGRAPHIC + 44 BROAD; 0 recorded origins | `country-discovery-acceptance.cjs` 67/67; visual 175/175 with 57/57 overrides (`qa-artifacts/shop-consolidation/country-visual.log`); final 54-card/324-image pass with 0 defects (`country-54-final.log`); origin removal 10/10 (`country-origin-final.log`) asserts public inventory exclusion; audit reconciled 57/57 applied, 0 pending; 0 MATERIAL_FAIL | Kie/tooling approval; real origin evidence | INDEPENDENTLY TESTED |
+| Support | Real customer support operation | Help topic page only; read-only `support` staff role | No ticket/chat/case intake, queue, SLA or history; copy overstates support | Source inspection: no `/support` route or ticket model | Support domain/helpdesk decision | NOT IMPLEMENTED |
+| Activation | Super-admin pause/preview of Shop | GLOBAL/COUNTRY/CITY precedence, audit, paused presentation, server first paint; restore/discard one exclusive transaction with re-diff, force fingerprints and audit | SIGKILL needs operator recovery; paused homepage RSC path not re-executed | `qa-artifacts/shop-consolidation/activation-tests.log` 30/30 and `activation-recovery-tests.log` 8/8 | Operator recovery drill | INDEPENDENTLY TESTED |
+| Accessibility | Accessible Shop journeys | Keyboard rail/gallery, focus, labels, reduced motion, no overflow; app-shell nav `aria-label="Primary"` (`251810f`) | axe only on storefront/directory/landing/admin countries; no manual SR pass | axe 0 violations at 390/1440 (`qa-artifacts/visual/discover-africa/axe.json`, `axe-admin-final.json`); rail 150/150; landing 95/95; country visual 175/175 | axe on remaining routes; manual SR | INDEPENDENTLY TESTED (partial) |
+| Recovery / preservation | Durable run recovery and remote preservation | Transactional activation restore/discard, per-item restock ledger, committed admin recovery route, workflow cleanup, seed guards | Remote 417 commits behind; SIGKILL fallback | `activation-recovery-tests.log` 8/8; `restock-tests.log` 35/35; workflows 142/142 twice; `git ls-remote` = `e80a0f9` vs local `251810f` | Push to authorised non-deploying branch | INDEPENDENTLY TESTED |
 
 ## Readiness
-- Architecture-supported: countryCode fields, country/city activation, per-country currency, provider `supportsCountry`, region-scoped admin.
-- Configured: NG delivery zones, NGN catalogue, six catalogue country entries.
-- Tested: discovery 17/17 and browser 21/21 (this slice); financial suites per handoff.
-- Approved: existing platform decisions only; no expansion or non-NG selling.
-- Live: none — no live provider credentials, no deployment.
+
+- Architecture-supported: country/currency fields, market-scoped catalogue, region-scoped admin, activation precedence, variant/stock contract with DB constraints, escrow and ledger.
+- Configured: NG delivery zones, NGN catalogue, 54 editorial country profiles, Plus+ and affiliate configuration.
+- Tested: the areas marked INDEPENDENTLY TESTED above, on REVIEW/TEST databases with DEMO inventory. The full marketplace suite is **not** one of them: it is 4/13 and OPEN/BLOCKED.
+- Approved: existing platform decisions only. No non-NG selling, provider, commission, payout, return-leg, Plus+ price or country imagery completion is approved.
+- LIVE: none. No live provider, no real seller, no real inventory, no deployment.
+
+## Finite completion gates
+
+G1 real seller/inventory; G2 payment provider and LIVE gate; **G3 full marketplace regression —
+OPEN/BLOCKED at 4/13 on stale expectations, not a software pass**; G4 support operation; G5 returns
+operation (admin queue and executed receive-and-refund); G6 seller payouts/staff/receipts; G7
+remaining variant-image/legacy-exposure decisions (stock constraints and restock recovery now
+fixed); G8 non-NG commerce readiness; G9 accessibility completion; G10 remote preservation (417
+commits). Full definitions are in
+`docs/programme/completion-matrix.md` §1.2.

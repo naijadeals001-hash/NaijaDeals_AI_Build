@@ -1,23 +1,48 @@
 {
-  "generatedAt": "2026-11-14",
+  "generatedAt": "2026-11-15",
   "source": "REVIEW database naijadeals_review (CountryTheme rows) plus corrected override mapping",
-  "status": "FINAL_APPLIED_AND_INDEPENDENTLY_VERIFIED",
-  "note": "Exact final REVIEW mapping: 54 published profiles, 324 themes, 362 sources, 111 distinct images, 174 GENERATED assignments, 0 null alt/kind/provenance. All 47 override rows are applied with exact URL/alt/kind/provenance; all 324 rows match this audit and the served DOM. The 54 cards (324 theme images) and 54 country pages (324 theme rows) were captured on build H9mMmDLBrIv4jMFc6Co0M. Independent reviewer agent_7f13b059-cfc8-4f54-946a-1a8d4e7c9ab5 verified 0 MATERIAL_FAIL, 0 mismatches, 0 broken images and no accepted-country mutation; acceptance was 67/67 with 0 failed/blocked.",
+  "status": "PARTIAL_APPLIED_AND_VISUALLY_INSPECTED; GENERATION_BLOCKED_MCP_APPROVAL; SHOP_G3_OPEN",
+  "note": "The 57 override rows are applied to REVIEW and the final candidate was reseeded. The 54 cards and 54 country pages were captured on build 8CTjw5MV-9MCKuV66hkoY: 324 card and 324 page theme images, 0 broken, 0 URL/alt mismatches, 0 duplicate alt labels. The photographic audit intentionally counts 39 NON_PHOTOGRAPHIC vector theme rows and 44 BROAD partial matches; 0 MATERIAL_FAIL. New Kie generation was blocked by an explicit host approval rejection (no provider task, 0 credits); the completion plan is recorded in qa-artifacts/visual/discover-africa-final/completion-plan.json and must not be bypassed through REST.",
   "totals": {
     "rows": 324,
     "countries": 54,
-    "changed": 47,
+    "changed": 57,
     "dbRemapped": 1,
+    "pendingReseed": 0,
     "materialFail": 0,
-    "PASS": 268,
-    "BROAD": 56
+    "PASS": 241,
+    "BROAD": 44,
+    "NON_PHOTOGRAPHIC": 39,
+    "subjectPASS": 270,
+    "subjectBROAD": 54,
+    "overrideRowsAppliedInBuild": 57,
+    "distinctImages": 113
   },
   "credits": {
     "generatedTasks": 29,
     "creditsPerTask": 6,
     "totalCredits": 174,
     "purchased": 0,
-    "toppedUp": 0
+    "toppedUp": 0,
+    "currentIncrement": {
+      "date": "2026-11-15",
+      "providerTasksCreated": 0,
+      "creditsSpent": 0,
+      "accountBalanceBefore": 10710.8,
+      "accountBalanceAfter": 10710.8,
+      "purchased": 0,
+      "toppedUp": 0,
+      "mcpPlanAttempt": {
+        "planId": "6f520d33-0e17-44a5-800d-26495cb226ae",
+        "tool": "gpt_image",
+        "model": "gpt-image-2-5-flare-text-to-image",
+        "creditsQuoted": 6,
+        "status": "prepared",
+        "approved": false,
+        "reason": "Host declined the approval request.",
+        "providerTaskCreated": false
+      }
+    }
   },
   "rows": [
     {
@@ -394,9 +419,11 @@
       "finalAsset": "/generated/countries/illustration-rubber.svg",
       "finalAlt": "Vector illustration of rubber tapping. Illustrative image for the Rubber theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "Rubber tapping illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-rubber.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "Rubber tapping illustration; direct match."
     },
     {
       "region": "Central Africa",
@@ -730,9 +757,11 @@
       "finalAsset": "/generated/countries/illustration-mushroom.svg",
       "finalAlt": "Vector illustration of wild mushrooms. Illustrative image for the Wild mushrooms theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "Wild mushrooms; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-mushroom.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "Wild mushrooms; direct match."
     },
     {
       "region": "East Africa",
@@ -881,12 +910,12 @@
       "slug": "eritrea",
       "themeKey": "cereals",
       "label": "Cereals and pulses",
-      "finalAsset": "/generated/countries/theme-wheat.webp",
-      "finalAlt": "Wheat and barley. Illustrative image for the Cereals and pulses theme.",
-      "kind": "GENERATED",
-      "verdict": "BROAD",
-      "note": "Wheat and barley are shown; pulses are absent.",
-      "changed": false
+      "finalAsset": "/generated/fresh/cat-grains-beans.webp",
+      "finalAlt": "Rice, maize, beans and other grains in woven market sacks. Illustrative image for the Cereals and pulses theme.",
+      "kind": "APPROVED_EXISTING",
+      "verdict": "PASS",
+      "note": "Cereals (rice, maize, other grains) and pulses (beans, black-eyed peas) are directly depicted.",
+      "changed": true
     },
     {
       "region": "East Africa",
@@ -1066,9 +1095,11 @@
       "finalAsset": "/generated/countries/illustration-flower.svg",
       "finalAlt": "Vector illustration of a flower. Illustrative image for the Cut flowers theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A stylised flower; direct match for cut flowers.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-flower.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A stylised flower; direct match for cut flowers."
     },
     {
       "region": "East Africa",
@@ -1094,9 +1125,11 @@
       "finalAsset": "/generated/countries/illustration-factory.svg",
       "finalAlt": "Vector illustration of a factory. Illustrative image for the Export manufacturing theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A factory illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-factory.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A factory illustration; direct match."
     },
     {
       "region": "East Africa",
@@ -1122,9 +1155,11 @@
       "finalAsset": "/generated/countries/illustration-flower.svg",
       "finalAlt": "Vector illustration of a flower. Illustrative image for the Ylang-ylang theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "BROAD",
-      "note": "A generic flower is shown; the named flower or plant product is not identified.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-flower.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "BROAD",
+      "subjectNote": "A generic flower is shown; the named flower or plant product is not identified."
     },
     {
       "region": "East Africa",
@@ -1273,12 +1308,12 @@
       "slug": "madagascar",
       "themeKey": "raffia",
       "label": "Raffia weaving",
-      "finalAsset": "/generated/countries/illustration-weaving.svg",
-      "finalAlt": "Vector illustration of a handloom. Illustrative image for the Raffia weaving theme.",
-      "kind": "ILLUSTRATION",
+      "finalAsset": "/generated/taxonomy/raffia-tote.webp",
+      "finalAlt": "A woven raffia tote bag with a geometric green band. Illustrative image for the Raffia weaving theme.",
+      "kind": "APPROVED_EXISTING",
       "verdict": "PASS",
-      "note": "A handloom illustration; direct match for weaving and handwoven cloth.",
-      "changed": false
+      "note": "A woven raffia tote directly depicts raffia weaving; approved existing project photography reused at zero credits.",
+      "changed": true
     },
     {
       "region": "East Africa",
@@ -1332,9 +1367,11 @@
       "finalAsset": "/generated/countries/illustration-bottle.svg",
       "finalAlt": "Vector illustration of a bottle and glass. Illustrative image for the Rum and spirits theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A bottle and glass illustration; direct match for wine and spirits.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-bottle.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A bottle and glass illustration; direct match for wine and spirits."
     },
     {
       "region": "East Africa",
@@ -1430,9 +1467,11 @@
       "finalAsset": "/generated/countries/illustration-imigongo.svg",
       "finalAlt": "Vector illustration of a geometric Imigongo panel. Illustrative image for the Imigongo art theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "An Imigongo panel illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-imigongo.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "An Imigongo panel illustration; direct match."
     },
     {
       "region": "East Africa",
@@ -1525,12 +1564,12 @@
       "slug": "seychelles",
       "themeKey": "raffia-bamboo",
       "label": "Raffia and bamboo materials",
-      "finalAsset": "/generated/countries/illustration-weaving.svg",
-      "finalAlt": "Vector illustration of a handloom. Illustrative image for the Raffia and bamboo materials theme.",
-      "kind": "ILLUSTRATION",
+      "finalAsset": "/generated/taxonomy/raffia-tote.webp",
+      "finalAlt": "A woven raffia tote bag with a geometric green band. Illustrative image for the Raffia and bamboo materials theme.",
+      "kind": "APPROVED_EXISTING",
       "verdict": "BROAD",
-      "note": "A handloom is shown; raffia and bamboo materials are not depicted.",
-      "changed": false
+      "note": "Raffia weaving is shown; bamboo is absent. Photographic partial match, not a material substitution.",
+      "changed": true
     },
     {
       "region": "East Africa",
@@ -1850,9 +1889,11 @@
       "finalAsset": "/generated/countries/illustration-weaving.svg",
       "finalAlt": "Vector illustration of a handloom. Illustrative image for the Barkcloth theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "BROAD",
-      "note": "A handloom illustrates weaving, but the named textile tradition is not identified.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-weaving.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "BROAD",
+      "subjectNote": "A handloom illustrates weaving, but the named textile tradition is not identified."
     },
     {
       "region": "East Africa",
@@ -1934,9 +1975,11 @@
       "finalAsset": "/generated/countries/illustration-carpet.svg",
       "finalAlt": "Vector illustration of a woven carpet. Illustrative image for the Woven carpets theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A woven carpet illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-carpet.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A woven carpet illustration; direct match."
     },
     {
       "region": "North Africa",
@@ -1948,9 +1991,11 @@
       "finalAsset": "/generated/countries/illustration-pottery.svg",
       "finalAlt": "Vector illustration of handmade pottery. Illustrative image for the Pottery and ceramics theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A pottery vessel; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-pottery.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A pottery vessel; direct match."
     },
     {
       "region": "North Africa",
@@ -2018,9 +2063,11 @@
       "finalAsset": "/generated/countries/illustration-furniture.svg",
       "finalAlt": "Vector illustration of wooden furniture. Illustrative image for the Furniture theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A wooden furniture illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-furniture.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A wooden furniture illustration; direct match."
     },
     {
       "region": "North Africa",
@@ -2116,9 +2163,11 @@
       "finalAsset": "/generated/countries/illustration-pottery.svg",
       "finalAlt": "Vector illustration of handmade pottery. Illustrative image for the Gharyan pottery theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A pottery vessel; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-pottery.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A pottery vessel; direct match."
     },
     {
       "region": "North Africa",
@@ -2144,9 +2193,11 @@
       "finalAsset": "/generated/countries/illustration-bottle.svg",
       "finalAlt": "Vector illustration of a bottle and glass. Illustrative image for the Argan theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "BROAD",
-      "note": "A bottle and glass communicate oil, but argan nuts and the specific oil are not identified.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-bottle.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "BROAD",
+      "subjectNote": "A bottle and glass communicate oil, but argan nuts and the specific oil are not identified."
     },
     {
       "region": "North Africa",
@@ -2183,12 +2234,12 @@
       "slug": "morocco",
       "themeKey": "leatherwork",
       "label": "Leatherwork",
-      "finalAsset": "/generated/countries/illustration-leather.svg",
-      "finalAlt": "Vector illustration of a leather hide and tool. Illustrative image for the Leatherwork theme.",
-      "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A leather hide illustration; direct match for leather themes.",
-      "changed": false
+      "finalAsset": "/generated/shop/product-red-patent-leather-baby-shoes.webp",
+      "finalAlt": "Red patent leather baby shoes on a neutral background. Illustrative image for the Leatherwork theme.",
+      "kind": "APPROVED_EXISTING",
+      "verdict": "BROAD",
+      "note": "Finished leather goods are shown; leather crafting, hides and tools are not depicted. Photographic partial match.",
+      "changed": true
     },
     {
       "region": "North Africa",
@@ -2200,9 +2251,11 @@
       "finalAsset": "/generated/countries/illustration-weaving.svg",
       "finalAlt": "Vector illustration of a handloom. Illustrative image for the Woven textiles theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A handloom illustration; direct match for weaving and handwoven cloth.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-weaving.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A handloom illustration; direct match for weaving and handwoven cloth."
     },
     {
       "region": "North Africa",
@@ -2256,9 +2309,11 @@
       "finalAsset": "/generated/countries/illustration-flower.svg",
       "finalAlt": "Vector illustration of a flower. Illustrative image for the Henna theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "BROAD",
-      "note": "A generic flower is shown; the named flower or plant product is not identified.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-flower.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "BROAD",
+      "subjectNote": "A generic flower is shown; the named flower or plant product is not identified."
     },
     {
       "region": "North Africa",
@@ -2340,9 +2395,11 @@
       "finalAsset": "/generated/countries/illustration-carpet.svg",
       "finalAlt": "Vector illustration of a woven carpet. Illustrative image for the Carpets and flat-weave textiles theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A woven carpet illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-carpet.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A woven carpet illustration; direct match."
     },
     {
       "region": "North Africa",
@@ -2354,9 +2411,11 @@
       "finalAsset": "/generated/countries/illustration-pottery.svg",
       "finalAlt": "Vector illustration of handmade pottery. Illustrative image for the Ceramics theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A pottery vessel; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-pottery.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A pottery vessel; direct match."
     },
     {
       "region": "North Africa",
@@ -2421,12 +2480,12 @@
       "slug": "angola",
       "themeKey": "maize",
       "label": "Maize and beans",
-      "finalAsset": "/generated/fresh/prod-maize.webp",
-      "finalAlt": "Maize cobs. Illustrative image for the Maize and beans theme.",
+      "finalAsset": "/generated/fresh/cat-grains-beans.webp",
+      "finalAlt": "Yellow maize and red beans in woven market sacks. Illustrative image for the Maize and beans theme.",
       "kind": "APPROVED_EXISTING",
-      "verdict": "BROAD",
-      "note": "Maize is shown; the other named crop(s) are absent.",
-      "changed": false
+      "verdict": "PASS",
+      "note": "Yellow maize and red beans are both directly depicted; approved existing project photography reused.",
+      "changed": true
     },
     {
       "region": "Southern Africa",
@@ -2522,9 +2581,11 @@
       "finalAsset": "/generated/countries/illustration-auto.svg?v=2",
       "finalAlt": "Vector illustration of an automotive wiring harness and connectors. Illustrative image for the Vehicle wiring sets theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "An automotive wiring harness illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-auto.svg?v=2). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "An automotive wiring harness illustration; direct match."
     },
     {
       "region": "Southern Africa",
@@ -2564,9 +2625,11 @@
       "finalAsset": "/generated/countries/illustration-wool.svg",
       "finalAlt": "Vector illustration of a ball of wool. Illustrative image for the Wool theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "Wool and yarn illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-wool.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "Wool and yarn illustration; direct match."
     },
     {
       "region": "Southern Africa",
@@ -2578,9 +2641,11 @@
       "finalAsset": "/generated/countries/illustration-wool.svg",
       "finalAlt": "Vector illustration of a ball of wool. Illustrative image for the Mohair theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "Wool and yarn illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-wool.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "Wool and yarn illustration; direct match."
     },
     {
       "region": "Southern Africa",
@@ -2592,9 +2657,11 @@
       "finalAsset": "/generated/countries/illustration-water.svg",
       "finalAlt": "Vector illustration of a water bottle. Illustrative image for the Highland water theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A water bottle illustration; direct match for highland water.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-water.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A water bottle illustration; direct match for highland water."
     },
     {
       "region": "Southern Africa",
@@ -2620,9 +2687,11 @@
       "finalAsset": "/generated/countries/illustration-auto.svg?v=2",
       "finalAlt": "Vector illustration of an automotive wiring harness and connectors. Illustrative image for the Automotive components theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "An automotive wiring harness illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-auto.svg?v=2). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "An automotive wiring harness illustration; direct match."
     },
     {
       "region": "Southern Africa",
@@ -2648,9 +2717,11 @@
       "finalAsset": "/generated/countries/illustration-leaf.svg",
       "finalAlt": "Vector illustration of a tobacco leaf. Illustrative image for the Tobacco theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A tobacco leaf illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-leaf.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A tobacco leaf illustration; direct match."
     },
     {
       "region": "Southern Africa",
@@ -2900,9 +2971,11 @@
       "finalAsset": "/generated/countries/illustration-candle.svg",
       "finalAlt": "Vector illustration of handcrafted candles. Illustrative image for the Handcrafted candles theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "Handcrafted candles; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-candle.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "Handcrafted candles; direct match."
     },
     {
       "region": "Southern Africa",
@@ -2984,9 +3057,11 @@
       "finalAsset": "/generated/countries/illustration-bottle.svg",
       "finalAlt": "Vector illustration of a bottle and glass. Illustrative image for the Wine theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A bottle and glass illustration; direct match for wine and spirits.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-bottle.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A bottle and glass illustration; direct match for wine and spirits."
     },
     {
       "region": "Southern Africa",
@@ -3012,9 +3087,11 @@
       "finalAsset": "/generated/countries/illustration-wool.svg",
       "finalAlt": "Vector illustration of a ball of wool. Illustrative image for the Mohair theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "Wool and yarn illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-wool.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "Wool and yarn illustration; direct match."
     },
     {
       "region": "Southern Africa",
@@ -3138,9 +3215,11 @@
       "finalAsset": "/generated/countries/illustration-leaf.svg",
       "finalAlt": "Vector illustration of a tobacco leaf. Illustrative image for the Tobacco theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A tobacco leaf illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-leaf.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A tobacco leaf illustration; direct match."
     },
     {
       "region": "Southern Africa",
@@ -3166,9 +3245,11 @@
       "finalAsset": "/generated/countries/illustration-craft.svg",
       "finalAlt": "Vector illustration of a carved stone sculpture. Illustrative image for the Stone sculpture and crafts theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A carved stone sculpture illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-craft.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A carved stone sculpture illustration; direct match."
     },
     {
       "region": "Southern Africa",
@@ -3177,12 +3258,12 @@
       "slug": "zimbabwe",
       "themeKey": "leather",
       "label": "Leather goods",
-      "finalAsset": "/generated/countries/illustration-leather.svg",
-      "finalAlt": "Vector illustration of a leather hide and tool. Illustrative image for the Leather goods theme.",
-      "kind": "ILLUSTRATION",
+      "finalAsset": "/generated/shop/product-red-patent-leather-baby-shoes.webp",
+      "finalAlt": "Red patent leather baby shoes on a neutral background. Illustrative image for the Leather goods theme.",
+      "kind": "APPROVED_EXISTING",
       "verdict": "PASS",
-      "note": "A leather hide illustration; direct match for leather themes.",
-      "changed": false
+      "note": "Finished leather goods are shown; direct photographic match for leather goods.",
+      "changed": true
     },
     {
       "region": "Southern Africa",
@@ -3345,12 +3426,12 @@
       "slug": "benin",
       "themeKey": "rice-and-maize",
       "label": "Rice and maize",
-      "finalAsset": "/generated/fresh/prod-local-rice.webp",
-      "finalAlt": "Local rice. Illustrative image for the Rice and maize theme.",
+      "finalAsset": "/generated/fresh/cat-grains-beans.webp",
+      "finalAlt": "White rice and yellow maize in woven market sacks. Illustrative image for the Rice and maize theme.",
       "kind": "APPROVED_EXISTING",
-      "verdict": "BROAD",
-      "note": "Rice is shown; the other named crop is absent.",
-      "changed": false
+      "verdict": "PASS",
+      "note": "White rice and yellow maize are both directly depicted; approved existing project photography reused.",
+      "changed": true
     },
     {
       "region": "West Africa",
@@ -3460,9 +3541,11 @@
       "finalAsset": "/generated/countries/illustration-energy.svg",
       "finalAlt": "Vector illustration of energy infrastructure. Illustrative image for the Oil and gas theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "BROAD",
-      "note": "An oil pumpjack is shown; gas infrastructure is absent.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-energy.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "BROAD",
+      "subjectNote": "An oil pumpjack is shown; gas infrastructure is absent."
     },
     {
       "region": "West Africa",
@@ -3570,12 +3653,12 @@
       "slug": "ghana",
       "themeKey": "handwoven-textiles",
       "label": "Fugu and handwoven cloth",
-      "finalAsset": "/generated/countries/illustration-weaving.svg",
-      "finalAlt": "Vector illustration of a handloom. Illustrative image for the Fugu and handwoven cloth theme.",
-      "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A handloom illustration; direct match for weaving and handwoven cloth.",
-      "changed": false
+      "finalAsset": "/generated/taxonomy/kente-cloth.webp",
+      "finalAlt": "Folded handwoven kente cloth with geometric patterns. Illustrative image for the Fugu and handwoven cloth theme.",
+      "kind": "APPROVED_EXISTING",
+      "verdict": "BROAD",
+      "note": "Ghanaian handwoven kente cloth is shown; fugu is not specifically depicted. Photographic partial match.",
+      "changed": true
     },
     {
       "region": "West Africa",
@@ -3713,9 +3796,11 @@
       "finalAsset": "/generated/countries/illustration-tourism.svg",
       "finalAlt": "Vector illustration of an African savanna landscape. Illustrative image for the Tourism theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "BROAD",
-      "note": "A stylised landscape communicates place, but tourism activity and heritage are not depicted.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-tourism.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "BROAD",
+      "subjectNote": "A stylised landscape communicates place, but tourism activity and heritage are not depicted."
     },
     {
       "region": "West Africa",
@@ -3780,12 +3865,12 @@
       "slug": "guinea",
       "themeKey": "rice-and-maize",
       "label": "Rice and maize",
-      "finalAsset": "/generated/fresh/prod-local-rice.webp",
-      "finalAlt": "Local rice. Illustrative image for the Rice and maize theme.",
+      "finalAsset": "/generated/fresh/cat-grains-beans.webp",
+      "finalAlt": "White rice and yellow maize in woven market sacks. Illustrative image for the Rice and maize theme.",
       "kind": "APPROVED_EXISTING",
-      "verdict": "BROAD",
-      "note": "Rice is shown; the other named crop is absent.",
-      "changed": false
+      "verdict": "PASS",
+      "note": "White rice and yellow maize are both directly depicted; approved existing project photography reused.",
+      "changed": true
     },
     {
       "region": "West Africa",
@@ -3797,9 +3882,11 @@
       "finalAsset": "/generated/countries/illustration-hydropower.svg",
       "finalAlt": "Vector illustration of a hydropower dam. Illustrative image for the Hydropower theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A hydropower dam illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-hydropower.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A hydropower dam illustration; direct match."
     },
     {
       "region": "West Africa",
@@ -3895,9 +3982,11 @@
       "finalAsset": "/generated/countries/illustration-rubber.svg",
       "finalAlt": "Vector illustration of rubber tapping. Illustrative image for the Rubber theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "Rubber tapping illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-rubber.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "Rubber tapping illustration; direct match."
     },
     {
       "region": "West Africa",
@@ -4049,9 +4138,11 @@
       "finalAsset": "/generated/countries/illustration-weaving.svg",
       "finalAlt": "Vector illustration of a handloom. Illustrative image for the Bogolan theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "BROAD",
-      "note": "A handloom illustrates weaving, but the named textile tradition is not identified.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-weaving.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "BROAD",
+      "subjectNote": "A handloom illustrates weaving, but the named textile tradition is not identified."
     },
     {
       "region": "West Africa",
@@ -4119,9 +4210,11 @@
       "finalAsset": "/generated/countries/illustration-gas.svg",
       "finalAlt": "Vector illustration of a gas pipeline and flame. Illustrative image for the Natural gas theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A gas pipeline and flame illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-gas.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A gas pipeline and flame illustration; direct match."
     },
     {
       "region": "West Africa",
@@ -4133,9 +4226,11 @@
       "finalAsset": "/generated/countries/illustration-tourism.svg",
       "finalAlt": "Vector illustration of an African savanna landscape. Illustrative image for the Tourism theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "BROAD",
-      "note": "A stylised landscape communicates place, but tourism activity and heritage are not depicted.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-tourism.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "BROAD",
+      "subjectNote": "A stylised landscape communicates place, but tourism activity and heritage are not depicted."
     },
     {
       "region": "West Africa",
@@ -4161,9 +4256,11 @@
       "finalAsset": "/generated/countries/illustration-energy.svg",
       "finalAlt": "Vector illustration of energy infrastructure. Illustrative image for the Oil theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "An oil pumpjack illustration; direct match for oil.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-energy.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "An oil pumpjack illustration; direct match for oil."
     },
     {
       "region": "West Africa",
@@ -4284,12 +4381,12 @@
       "slug": "nigeria",
       "themeKey": "leather",
       "label": "Leather",
-      "finalAsset": "/generated/countries/illustration-leather.svg",
-      "finalAlt": "Vector illustration of a leather hide and tool. Illustrative image for the Leather theme.",
-      "kind": "ILLUSTRATION",
+      "finalAsset": "/generated/shop/product-red-patent-leather-baby-shoes.webp",
+      "finalAlt": "Red patent leather baby shoes on a neutral background. Illustrative image for the Leather theme.",
+      "kind": "APPROVED_EXISTING",
       "verdict": "PASS",
-      "note": "A leather hide illustration; direct match for leather themes.",
-      "changed": false
+      "note": "Finished leather goods are shown; direct photographic match for the leather theme.",
+      "changed": true
     },
     {
       "region": "West Africa",
@@ -4357,9 +4454,11 @@
       "finalAsset": "/generated/countries/illustration-boat.svg",
       "finalAlt": "Vector illustration of a boat under construction. Illustrative image for the Marine fisheries theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "BROAD",
-      "note": "A sailboat communicates marine activity, but fishing is not depicted.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-boat.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "BROAD",
+      "subjectNote": "A sailboat communicates marine activity, but fishing is not depicted."
     },
     {
       "region": "West Africa",
@@ -4385,9 +4484,11 @@
       "finalAsset": "/generated/countries/illustration-tourism.svg",
       "finalAlt": "Vector illustration of an African savanna landscape. Illustrative image for the Tourism and heritage theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "BROAD",
-      "note": "A stylised landscape communicates place, but tourism activity and heritage are not depicted.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-tourism.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "BROAD",
+      "subjectNote": "A stylised landscape communicates place, but tourism activity and heritage are not depicted."
     },
     {
       "region": "West Africa",
@@ -4525,9 +4626,11 @@
       "finalAsset": "/generated/countries/illustration-factory.svg",
       "finalAlt": "Vector illustration of a factory. Illustrative image for the Manufacturing theme.",
       "kind": "ILLUSTRATION",
-      "verdict": "PASS",
-      "note": "A factory illustration; direct match.",
-      "changed": false
+      "verdict": "NON_PHOTOGRAPHIC",
+      "note": "Non-photographic vector illustration (/generated/countries/illustration-factory.svg). The owner's photographic design requires a photographic product-theme image. Replacement is blocked by the Kie.ai MCP host approval rejection recorded in this audit; no provider task or credit was used.",
+      "changed": false,
+      "subjectVerdict": "PASS",
+      "subjectNote": "A factory illustration; direct match."
     },
     {
       "region": "West Africa",
@@ -4558,22 +4661,22 @@
       "changed": false
     }
   ],
-  "verifiedAt": "2026-11-15T00:36:47.212Z",
-  "buildId": "H9mMmDLBrIv4jMFc6Co0M",
+  "verifiedAt": "2026-11-15T12:30:00.000Z",
+  "buildId": "8CTjw5MV-9MCKuV66hkoY",
   "verification": {
     "dbRows": 324,
     "publishedProfiles": 54,
     "themes": 324,
     "sources": 362,
-    "distinctImages": 111,
+    "distinctImages": 113,
     "generatedAssignments": 174,
-    "changedOverrideRowsApplied": 47,
+    "changedOverrideRowsApplied": 57,
     "mismatchedRows": 0,
     "materialRegressions": 0,
     "altKindProvenanceComplete": true,
     "duplicatedLabelSentence": false,
     "visual": {
-      "buildId": "H9mMmDLBrIv4jMFc6Co0M",
+      "buildId": "8CTjw5MV-9MCKuV66hkoY",
       "cards": 54,
       "cardThemeImages": 324,
       "cardBroken": 0,
@@ -4582,11 +4685,17 @@
       "pageThemeImages": 324,
       "pageBroken": 0,
       "pageMismatches": 0,
-      "duplicateAltLabels": 0
-    }
+      "duplicateAltLabels": 0,
+      "pendingReseed": false,
+      "finalAcceptance": false,
+      "note": "Photographic completion is blocked at 39 non-photographic rows and 44 BROAD rows; the final visual capture is otherwise complete."
+    },
+    "overrideEntriesInModule": 57,
+    "pendingReseed": 0,
+    "distinctFinalAssetsInAudit": 113
   },
   "visualInspection": {
-    "buildId": "H9mMmDLBrIv4jMFc6Co0M",
+    "buildId": "8CTjw5MV-9MCKuV66hkoY",
     "cards": 54,
     "cardThemeImages": 324,
     "cardBroken": 0,
@@ -4596,19 +4705,134 @@
     "pageBroken": 0,
     "pageMismatches": 0,
     "duplicateAltLabels": 0,
-    "evidence": "qa-artifacts/visual/discover-africa-remediation/final-54/",
+    "evidence": "qa-artifacts/visual/discover-africa-final/",
     "cardsSheets": 6,
     "pagesSheets": 6,
-    "inspectedAt": "2026-11-15T00:36:47.212Z"
+    "inspectedAt": "2026-11-15T12:30:00.000Z",
+    "appliesToBuild": "8CTjw5MV-9MCKuV66hkoY",
+    "pendingReseed": false,
+    "supersededForChangedRows": 0
   },
   "independentReview": {
-    "reviewerAgentId": "agent_7f13b059-cfc8-4f54-946a-1a8d4e7c9ab5",
-    "verdict": "PASS",
-    "buildId": "H9mMmDLBrIv4jMFc6Co0M",
-    "commit": "37172e5",
-    "imagery": "324/324 rows; 0 MATERIAL_FAIL; 0 broken; 0 mismatches; 47 corrected rows",
-    "acceptance": "67/67; 0 failed; 0 blocked; accepted GH content and audit unchanged",
-    "carousel": "390/768/1440; final card fully revealed; no page overflow",
-    "shop": "basket 10/10; variants 32/32; financial 46/46 (0 provider calls); suspend path 7/7"
+    "reviewerAgentId": "agent_1e12d6bc-8c7e-4cb1-ae42-3f5c721f4328",
+    "verdict": "PASS for reviewed software scope; Shop NOT COMPLETE",
+    "buildId": "8CTjw5MV-9MCKuV66hkoY",
+    "commit": "251810f",
+    "imagery": "57/57 overrides; 54 cards/324 images; 0 MATERIAL_FAIL; 39 NON_PHOTOGRAPHIC + 44 BROAD remain",
+    "resolved": "F1 committed recovery route; F2 selected-market saved UI; F4 product-level gallery assertion; F7 origin-removal public exclusion",
+    "open": "F6 country photographic completion blocked by Kie MCP host rejection; G3 full marketplace suite 4/13 stale contract; broader business gates"
+  },
+  "auditedAt": "2026-11-15T10:27:58.654Z",
+  "photographicAudit": {
+    "auditedAt": "2026-11-15T10:27:58.654Z",
+    "standard": "Owner's photographic design: product-theme imagery must be photographic; flags and functional UI icons may remain vector. A partial subject match is BROAD, never PASS. A non-photographic product-theme substitution is NON_PHOTOGRAPHIC, not PASS.",
+    "method": "All 324 rows re-read against label, kind, alt and provenance; every raster asset checked for existence and 900x900 dimensions; every override row compared with its audit row; approved-photo reuse inspected at full size before application.",
+    "reuseCorrectionsApplied": 10,
+    "reuseAssetSources": [
+      "public/generated/taxonomy/raffia-tote.webp",
+      "public/generated/shop/product-red-patent-leather-baby-shoes.webp",
+      "public/generated/taxonomy/kente-cloth.webp",
+      "public/generated/fresh/cat-grains-beans.webp"
+    ],
+    "nonPhotographicRemaining": 39,
+    "nonPhotographicRows": [
+      "GA/rubber",
+      "BI/wild-mushrooms",
+      "KE/cut-flowers",
+      "KE/export-manufacturing",
+      "KM/ylang-ylang",
+      "MU/rum",
+      "RW/imigongo",
+      "UG/barkcloth",
+      "DZ/carpets",
+      "DZ/pottery",
+      "EG/furniture",
+      "LY/gharyan-pottery",
+      "MA/argan",
+      "MA/woven-textiles",
+      "SD/henna",
+      "TN/carpets",
+      "TN/ceramics",
+      "BW/wiring-harnesses",
+      "LS/wool",
+      "LS/mohair",
+      "LS/bottled-water",
+      "LS/automotive-components",
+      "MW/tobacco",
+      "SZ/candles",
+      "ZA/wine",
+      "ZA/mohair",
+      "ZW/tobacco",
+      "ZW/crafts",
+      "CI/hydrocarbons",
+      "GM/tourism",
+      "GN/hydropower",
+      "LR/rubber",
+      "ML/bogolan",
+      "MR/natural-gas",
+      "MR/tourism",
+      "NE/oil",
+      "SL/marine-fisheries",
+      "SL/tourism",
+      "TG/manufacturing"
+    ],
+    "distinctFinalAssetsAfterReseed": 113,
+    "blockedGeneration": {
+      "tool": "gpt_image",
+      "model": "gpt-image-2-5-flare-text-to-image",
+      "resolution": "1K",
+      "aspectRatio": "1:1",
+      "creditsPerImage": 6,
+      "priceBasis": "Kie.ai pricing page, verified 2026-11-15: gpt-image-2-5-flare from 6 credits per image; $0.03 at the tool's published $0.005/credit basis.",
+      "mcpPlanId": "6f520d33-0e17-44a5-800d-26495cb226ae",
+      "mcpResult": "prepared; approved=false; reason='Host declined the approval request.'; no provider task created."
+    },
+    "completionPlanPath": "qa-artifacts/visual/discover-africa-final/completion-plan.json",
+    "completionPlanSummary": {
+      "required": {
+        "images": 32,
+        "rows": 39,
+        "credits": 192
+      },
+      "recommended": {
+        "images": 31,
+        "rows": 36,
+        "credits": 186
+      },
+      "optional": {
+        "images": 3,
+        "rows": 3,
+        "credits": 18
+      },
+      "total": {
+        "images": 66,
+        "rows": 78,
+        "credits": 396,
+        "expectedBalanceAfter": 10314.8
+      },
+      "coverage": {
+        "remainingNonPhotographic": 39,
+        "remainingNonPhotographicCovered": 39,
+        "photographicBroadRows": 44,
+        "broadRowsCoveredByPlan": 39,
+        "broadRowsLeftByDesign": [
+          "ST/agroforestry-food-crops",
+          "CV/export-services",
+          "GW/services",
+          "SN/agri-food",
+          "TG/agro-food"
+        ],
+        "note": "The five concept rows (ST agroforestry-food-crops, CV export-services, GW services, SN agri-food, TG agro-food) remain BROAD by design; a single still cannot fully represent the named value chain. The three reused partials are optional upgrades."
+      }
+    }
+  },
+  "currentState": {
+    "buildId": "8CTjw5MV-9MCKuV66hkoY",
+    "reseedRequired": false,
+    "seedCommandOwner": "coordinator",
+    "changedRowsPendingReseed": [],
+    "overrideModule": "lib/data/country-theme-image-overrides.ts",
+    "overrideEntries": 57,
+    "evidencePlan": "qa-artifacts/visual/discover-africa-final/ (completion-plan.json; reseed recheck mapping)"
   }
 }
