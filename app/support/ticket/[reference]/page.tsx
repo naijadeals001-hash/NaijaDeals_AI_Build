@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/session";
-import { GUEST_ACCESS_COOKIE, SUPPORT_STATUS_LABELS, getCustomerTicket } from "@/lib/services/core/support.service";
+import { GUEST_ACCESS_COOKIE, SUPPORT_STATUS_LABELS, getCustomerTicket, guestCookieName } from "@/lib/services/core/support.service";
 import { TicketConversation } from "@/components/support/ticket-conversation";
 
 export const metadata: Metadata = {
@@ -14,7 +14,10 @@ export const dynamic = "force-dynamic";
 
 export default async function SupportTicketPage({ params }: { params: { reference: string } }) {
   const user = await getSessionUser();
-  const guestToken = cookies().get(GUEST_ACCESS_COOKIE)?.value ?? null;
+  const guestToken =
+    cookies().get(guestCookieName(params.reference))?.value ??
+    cookies().get(GUEST_ACCESS_COOKIE)?.value ??
+    null;
   let ticket;
   try {
     ticket = await getCustomerTicket(params.reference, { userId: user?.id ?? null, guestToken });
