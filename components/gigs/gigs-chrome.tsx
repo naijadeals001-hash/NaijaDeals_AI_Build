@@ -24,6 +24,16 @@ import {
   ReceiptText,
   User as UserIcon
 } from "lucide-react";
+import { contactAddress, mailtoFor, type ContactKey } from "@/lib/data/contact-directory";
+
+type PublicContactKey = Exclude<ContactKey, "accounts">;
+
+const FOOTER_CONTACTS: Array<{ label: string; contact: PublicContactKey }> = [
+  { label: "Customer support", contact: "support" },
+  { label: "Professional and business enquiries", contact: "partners" },
+  { label: "Report fraud or prohibited content", contact: "abuse" },
+  { label: "Careers", contact: "careers" }
+];
 
 export type GigsHeaderUser = {
   name: string;
@@ -297,6 +307,21 @@ export function GigsFooter() {
           <ul className="mt-3 space-y-2 text-[13px] text-white/75">
             {ecosystem.slice(0, 5).map((item) => (
               <li key={item.label}><Link href={item.href} className="hover:text-white">{item.label}</Link></li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <div className="border-t border-white/10">
+        <div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:px-10">
+          <h3 className="text-[12px] font-bold uppercase tracking-[0.16em] text-white/50">Contact</h3>
+          <ul className="mt-3 grid gap-x-8 gap-y-2 text-[13px] text-white/75 sm:grid-cols-2">
+            {FOOTER_CONTACTS.map((entry) => (
+              <li key={entry.contact}>
+                {entry.label}:{" "}
+                <a href={mailtoFor(entry.contact)} className="hover:text-white hover:underline">
+                  {contactAddress(entry.contact)}
+                </a>
+              </li>
             ))}
           </ul>
         </div>

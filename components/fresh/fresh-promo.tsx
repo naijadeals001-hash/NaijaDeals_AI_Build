@@ -2,6 +2,16 @@
 
 import Link from "next/link";
 import { Apple, BadgeCheck, Bike, CalendarDays, CheckCircle2, ChefHat, Leaf, MapPin, Play, Sprout, Store, Truck, Wallet } from "lucide-react";
+import { mailtoFor, type ContactKey } from "@/lib/data/contact-directory";
+
+type PublicContactKey = Exclude<ContactKey, "accounts">;
+
+const LEGAL_LINKS: Array<{ label: string; contact: PublicContactKey; subject: string }> = [
+  { label: "Terms of Service", contact: "legal", subject: "Terms of Service" },
+  { label: "Privacy Policy", contact: "privacy", subject: "Privacy Policy" },
+  { label: "Food Safety & Quality", contact: "support", subject: "Food safety and quality" },
+  { label: "Partner Terms", contact: "partners", subject: "Partner terms" }
+];
 
 const STEPS = [
   { n: 1, icon: Sprout, title: "Farmer Lists Harvest", body: "Farmers add their fresh produce and prices." },
@@ -150,10 +160,10 @@ export function FreshAppBanner({ image }: { image: string | null }) {
 
 const FOOTER_COLUMNS = [
   { title: "Shop", links: [{ href: "/naijafresh/shop", label: "All Produce" }, { href: "/naijafresh/shop?category=vegetables-ugu", label: "By Category" }, { href: "/naijafresh/farmers", label: "By Farmer" }, { href: "/naijafresh/seasonal", label: "Seasonal Harvests" }, { href: "/naijafresh/offers", label: "Offers & Deals" }] },
-  { title: "For Farmers", links: [{ href: "/naijafresh/farmers/apply", label: "Register as a Farmer" }, { href: "/naijafresh/how-it-works", label: "Farmer Dashboard" }, { href: "/naijafresh/how-it-works", label: "How to Sell" }, { href: "/naijafresh/how-it-works", label: "Fees & Charges" }, { href: "/support", label: "Farmer Support" }] },
+  { title: "For Farmers", links: [{ href: "/naijafresh/farmers/apply", label: "Register as a Farmer" }, { href: "/naijafresh/how-it-works", label: "Farmer Dashboard" }, { href: "/naijafresh/how-it-works", label: "How to Sell" }, { href: "/naijafresh/how-it-works", label: "Fees & Charges" }, { href: mailtoFor("support", { subject: "NaijaFresh farmer support" }), label: "Farmer Support" }] },
   { title: "For Businesses", links: [{ href: "/naijafresh/business", label: "Bulk Orders" }, { href: "/naijafresh/business", label: "Wholesale Supply" }, { href: "/naijafresh/business", label: "Corporate & Institutional Orders" }, { href: "/naijafresh/business", label: "Business Support" }] },
-  { title: "Company", links: [{ href: "/about", label: "About NaijaFresh" }, { href: "/naijafresh/how-it-works", label: "How It Works" }, { href: "/naijafresh/farmers", label: "Our Farmers" }, { href: "/naijashop/plus", label: "NaijaDeals Plus+" }, { href: "/support", label: "Contact Us" }] },
-  { title: "Support", links: [{ href: "/support", label: "Help Center" }, { href: "/support", label: "Contact Us" }, { href: "/naijafresh/orders", label: "Track Order" }, { href: "/support", label: "Returns & Refunds" }, { href: "/support", label: "Report an Issue" }] }
+  { title: "Company", links: [{ href: "/naijafresh", label: "About NaijaFresh" }, { href: "/naijafresh/how-it-works", label: "How It Works" }, { href: "/naijafresh/farmers", label: "Our Farmers" }, { href: "/naijashop/plus", label: "NaijaDeals Plus+" }, { href: mailtoFor("hello"), label: "Contact Us" }, { href: mailtoFor("careers", { subject: "Careers at NaijaDeals" }), label: "Careers" }] },
+  { title: "Support", links: [{ href: mailtoFor("support", { subject: "NaijaFresh help" }), label: "Help Center" }, { href: mailtoFor("hello"), label: "Contact Us" }, { href: "/naijafresh/orders", label: "Track Order" }, { href: mailtoFor("payments", { subject: "NaijaFresh refund" }), label: "Returns & Refunds" }, { href: mailtoFor("support", { subject: "NaijaFresh issue" }), label: "Report an Issue" }] }
 ];
 
 /** P — the complete footer from the approved mockup. */
@@ -179,7 +189,11 @@ export function FreshFooter() {
             <ul className="mt-1.5 space-y-1">
               {column.links.map((link) => (
                 <li key={`${column.title}-${link.label}`}>
-                  <Link href={link.href} className="text-[10.5px] text-white/80 hover:text-white hover:underline">{link.label}</Link>
+                  {link.href.startsWith("mailto:") ? (
+                    <a href={link.href} className="break-words text-[10.5px] text-white/80 hover:text-white hover:underline">{link.label}</a>
+                  ) : (
+                    <Link href={link.href} className="text-[10.5px] text-white/80 hover:text-white hover:underline">{link.label}</Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -202,8 +216,8 @@ export function FreshFooter() {
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 px-4 py-3 text-[10px] text-white/70">
           <p>© {new Date().getFullYear()} NaijaDeals. NaijaFresh is a NaijaDeals Company. All rights reserved.</p>
           <div className="flex flex-wrap items-center gap-3">
-            {["Terms of Service", "Privacy Policy", "Food Safety & Quality", "Partner Terms"].map((label) => (
-              <Link key={label} href="/legal" className="hover:text-white hover:underline">{label}</Link>
+            {LEGAL_LINKS.map((entry) => (
+              <a key={entry.label} href={mailtoFor(entry.contact, { subject: entry.subject })} className="hover:text-white hover:underline">{entry.label}</a>
             ))}
             <span className="flex items-center gap-2 rounded-full bg-white/10 px-2 py-0.5">
               <span className="flex items-center gap-1"><MapPin className="h-3 w-3" aria-hidden /> Pan-African</span>

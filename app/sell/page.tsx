@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ShieldCheck, Store, Truck } from "lucide-react";
 import { getSessionUser, isVendor } from "@/lib/auth/session";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 
 export const metadata: Metadata = {
   title: "Sell on NaijaDeals",
@@ -63,6 +64,24 @@ export default async function Page() {
             </>
           )}
         </div>
+      </section>
+
+      <section aria-label="Seller contacts" className="rounded-2xl border border-border-soft bg-canvas p-5 text-sm text-muted">
+        <p>
+          Partner with NaijaDeals:{" "}
+          <a
+            href={mailtoFor("partners", { subject: "Selling on NaijaDeals" })}
+            className="font-bold text-primary underline-offset-2 hover:underline"
+          >
+            {contactAddress("partners")}
+          </a>
+        </p>
+        <p className="mt-1">
+          Support:{" "}
+          <a href={mailtoFor("support")} className="font-bold text-primary underline-offset-2 hover:underline">
+            {contactAddress("support")}
+          </a>
+        </p>
       </section>
     </div>
   );

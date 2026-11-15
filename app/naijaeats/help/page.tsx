@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ContactLine } from "@/components/contact/contact-line";
 import { EatsFooter } from "@/components/eats/eats-footer";
 import { EatsBottomNav } from "@/components/eats/eats-bottom-nav";
 
@@ -27,6 +28,14 @@ export default function EatsHelpPage() {
             </li>
           ))}
         </ul>
+        <section aria-labelledby="eats-contact-heading" className="mt-5 rounded-xl bg-[#f4f8f3] p-4">
+          <h2 id="eats-contact-heading" className="text-[13px] font-extrabold text-[#14241b]">Contact us</h2>
+          <div className="mt-1 space-y-1">
+            <ContactLine contact="support" label="Orders, refunds and food-safety reports" subject="NaijaEats order help" className="text-[11.5px] leading-6 text-[#6b7a70]" />
+            <ContactLine contact="partners" label="Restaurant and partner enquiries" subject="Restaurant partnership" className="text-[11.5px] leading-6 text-[#6b7a70]" />
+            <ContactLine contact="drivers" label="Courier enquiries" subject="Courier onboarding" className="text-[11.5px] leading-6 text-[#6b7a70]" />
+          </div>
+        </section>
         <p className="mt-6 text-[11px] leading-6 text-[#8a938d]">
           This page lists only the channels the platform operates today. Telephone numbers and response-time promises are published once approved.
         </p>

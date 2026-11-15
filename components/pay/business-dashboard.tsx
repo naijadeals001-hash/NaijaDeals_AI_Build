@@ -20,6 +20,7 @@ import {
   Wallet
 } from "lucide-react";
 import { koboToNaira } from "@/lib/api-client";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 
 type BusinessData = {
   vendor: { id: string; name: string; status: string };
@@ -353,6 +354,29 @@ export function NaijaPayBusinessDashboard() {
           </div>
         </>
       )}
+
+      <section aria-label="Business help" className="rounded-2xl border border-black/5 bg-white p-4 text-sm text-pay-ink-muted shadow-soft sm:p-5">
+        <p className="space-y-1.5">
+          <span className="block">
+            Business and partnership enquiries:{" "}
+            <a href={mailtoFor("partners")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+              {contactAddress("partners")}
+            </a>
+          </span>
+          <span className="block">
+            Payout, settlement or refund issue:{" "}
+            <a href={mailtoFor("payments")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+              {contactAddress("payments")}
+            </a>
+          </span>
+          <span className="block">
+            General support:{" "}
+            <a href={mailtoFor("support")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+              {contactAddress("support")}
+            </a>
+          </span>
+        </p>
+      </section>
     </div>
   );
 }

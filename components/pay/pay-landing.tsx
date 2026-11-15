@@ -25,6 +25,7 @@ import {
   Zap
 } from "lucide-react";
 import { apiClient, ApiRequestError, koboToNaira } from "@/lib/api-client";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 import { readBalanceVisibility, writeBalanceVisibility } from "@/lib/pay/balance-visibility";
 import { PhoneScreens } from "./pay-phone-screens";
 import { DesktopPanels } from "./pay-desktop-panels";
@@ -600,6 +601,32 @@ export function PayLanding() {
             </li>
           ))}
         </ul>
+
+        {/* Contact stays restrained on a marketing landing: the addresses come
+            from the shared contact directory, so no literal appears here. */}
+        <div className="mt-6 border-t border-black/5 pt-4 text-[11px] leading-5 text-pay-ink/70">
+          <p className="font-extrabold uppercase tracking-widest text-pay-ink/60">Need help?</p>
+          <ul className="mt-1.5 grid gap-1 sm:grid-cols-2">
+            <li>
+              Payment and refund enquiries:{" "}
+              <a
+                href={mailtoFor("payments")}
+                className="font-semibold text-pay-green underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
+              >
+                {contactAddress("payments")}
+              </a>
+            </li>
+            <li>
+              Customer support:{" "}
+              <a
+                href={mailtoFor("support")}
+                className="font-semibold text-pay-green underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
+              >
+                {contactAddress("support")}
+              </a>
+            </li>
+          </ul>
+        </div>
       </section>
 
       {/* Business band */}

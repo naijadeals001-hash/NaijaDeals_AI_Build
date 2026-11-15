@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2 } from "lucide-react";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 
 const serviceModes = ["LOCAL", "REMOTE", "PROJECT"] as const;
 const modeLabels: Record<string, string> = { LOCAL: "Local (in person)", REMOTE: "Remote", PROJECT: "Project based" };
@@ -114,6 +115,21 @@ function ProfessionalApplyPage() {
           >
             Continue to dashboard
           </Link>
+          <p className="mt-6 text-xs leading-5 text-[#6B7A72]">
+            Professional and partner enquiries:{" "}
+            <a
+              href={mailtoFor("partners", { subject: "NaijaGigs professional onboarding" })}
+              className="font-semibold text-[#0F7A4A] underline underline-offset-2"
+            >
+              {contactAddress("partners")}
+            </a>
+          </p>
+          <p className="mt-1 text-xs leading-5 text-[#6B7A72]">
+            Support:{" "}
+            <a href={mailtoFor("support")} className="font-semibold text-[#0F7A4A] underline underline-offset-2">
+              {contactAddress("support")}
+            </a>
+          </p>
         </div>
       </div>
     );
@@ -355,6 +371,24 @@ function ProfessionalApplyPage() {
               payouts settle into your NaijaPay wallet.
             </p>
           </div>
+
+          <section aria-label="NaijaGigs professional contacts" className="mt-4 rounded-xl border border-[#DFDEDB] p-4 text-xs leading-5 text-[#6B7A72]">
+            <p>
+              Professional and partner enquiries:{" "}
+              <a
+                href={mailtoFor("partners", { subject: "NaijaGigs professional onboarding" })}
+                className="font-semibold text-[#0F7A4A] underline underline-offset-2"
+              >
+                {contactAddress("partners")}
+              </a>
+            </p>
+            <p className="mt-1">
+              Support:{" "}
+              <a href={mailtoFor("support")} className="font-semibold text-[#0F7A4A] underline underline-offset-2">
+                {contactAddress("support")}
+              </a>
+            </p>
+          </section>
         </div>
       </main>
     </div>

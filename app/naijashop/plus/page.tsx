@@ -20,6 +20,7 @@ import { PlusCountryGrid } from "@/components/plus/plus-country-grid";
 import { PlusEmptyState } from "@/components/plus/plus-empty-state";
 import { PlusFaq } from "@/components/plus/plus-faq";
 import { PlusPromotionCard } from "@/components/plus/plus-promotion-card";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 import {
   loadPlusPublicData,
   plusFaqs,
@@ -499,6 +500,46 @@ export default async function PlusPage() {
           />
           <div className="mt-5 max-w-4xl">
             <PlusFaq items={plusFaqs} />
+          </div>
+        </section>
+
+        <section aria-labelledby="plus-help-heading" className={SECTION_PAD}>
+          <div className="rounded-2xl border border-[#dbe6d8] bg-white p-5 sm:p-6">
+            <h2 id="plus-help-heading" className="font-display text-[18px] font-extrabold leading-tight text-[#14241b]">
+              Membership help
+            </h2>
+            <p className="mt-1 text-[12px] leading-6 text-[#4b5b51]">
+              This page has no Plus+ checkout. For membership questions, contact the right team:
+            </p>
+            <ul className="mt-3 space-y-1 text-[12px] leading-6 text-[#4b5b51]">
+              <li>
+                Subscription and invoice help:{" "}
+                <a
+                  href={mailtoFor("billing", { subject: "Plus membership billing" })}
+                  className="font-bold text-[#0b5c33] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
+                >
+                  {contactAddress("billing")}
+                </a>
+              </li>
+              <li>
+                Payment or refund issue:{" "}
+                <a
+                  href={mailtoFor("payments")}
+                  className="font-bold text-[#0b5c33] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
+                >
+                  {contactAddress("payments")}
+                </a>
+              </li>
+              <li>
+                General membership help:{" "}
+                <a
+                  href={mailtoFor("support")}
+                  className="font-bold text-[#0b5c33] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
+                >
+                  {contactAddress("support")}
+                </a>
+              </li>
+            </ul>
           </div>
         </section>
 

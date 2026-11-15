@@ -26,6 +26,12 @@ export type NotificationMessage = {
   to: string;
   subject?: string;
   body: string;
+  /**
+   * Reply-To header value: the shared inbound support address. It is a contact
+   * address, not a sender identity; no From address is set here because this
+   * project has no verified outbound sender.
+   */
+  replyTo?: string;
   data?: Record<string, unknown>;
 };
 
@@ -92,6 +98,7 @@ export class EmailCaptureTransport implements NotificationTransport {
         notificationId: message.notificationId,
         to: maskAddress(message.to),
         subject: message.subject,
+        replyTo: message.replyTo ?? null,
         bodySha256: createHash("sha256").update(message.body).digest("hex")
       };
       if (process.env.EMAIL_CAPTURE_BODIES === "1") record.body = message.body;

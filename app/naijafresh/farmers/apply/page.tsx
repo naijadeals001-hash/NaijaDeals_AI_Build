@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { FarmerApplyForm } from "@/components/fresh/farmer-apply-form";
 import { FreshHeading, FreshPage } from "@/components/fresh/fresh-page";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,23 @@ export default function FarmerApplyPage() {
         </div>
         <FarmerApplyForm />
       </div>
+      <section aria-label="Farmer and support contacts" className="mt-3 rounded-xl bg-white p-3 text-[11px] leading-5 text-[#5d6d64] ring-1 ring-[#eef1ef]">
+        <p>
+          Farmer and producer partnerships:{" "}
+          <a
+            href={mailtoFor("partners", { subject: "NaijaFresh farmer onboarding" })}
+            className="font-semibold text-[#0b5c33] underline underline-offset-2"
+          >
+            {contactAddress("partners")}
+          </a>
+        </p>
+        <p className="mt-1">
+          Support:{" "}
+          <a href={mailtoFor("support")} className="font-semibold text-[#0b5c33] underline underline-offset-2">
+            {contactAddress("support")}
+          </a>
+        </p>
+      </section>
     </FreshPage>
   );
 }

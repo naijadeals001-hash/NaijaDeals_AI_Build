@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ContactLine } from "@/components/contact/contact-line";
 import { DriveFooter, DriveHeader } from "@/components/drive/drive-chrome";
 import { getSessionUser, isDriver } from "@/lib/auth/session";
 
@@ -76,6 +77,9 @@ export default async function DriveHelpPage() {
               Your activity
             </Link>
           </div>
+          <div className="mt-2">
+            <ContactLine contact="support" label="Rider support" subject="NaijaDrive help" className="text-[11.5px] leading-6 text-[#5d6d64]" />
+          </div>
         </section>
 
         <section id="drivers" className="mt-3 scroll-mt-24 rounded-2xl bg-white p-4 ring-1 ring-[#e6ece6]">
@@ -86,6 +90,9 @@ export default async function DriveHelpPage() {
             cannot guarantee location updates while the screen is locked or the app is closed; the
             workspace says so and marks the last-known position as stale.
           </p>
+          <div className="mt-2">
+            <ContactLine contact="drivers" label="Driver and courier enquiries" subject="Driver onboarding" className="text-[11.5px] leading-6 text-[#5d6d64]" />
+          </div>
         </section>
 
         <section id="privacy" className="mt-3 scroll-mt-24 rounded-2xl bg-white p-4 ring-1 ring-[#e6ece6]">
@@ -101,6 +108,9 @@ export default async function DriveHelpPage() {
             This page describes how the application handles data. It is not a claim of legal or regulatory
             compliance, and a formal retention schedule still requires owner approval.
           </p>
+          <div className="mt-2">
+            <ContactLine contact="privacy" label="Privacy and personal-data requests" subject="Privacy request" className="text-[11.5px] leading-6 text-[#5d6d64]" />
+          </div>
         </section>
 
         <section id="location" className="mt-3 scroll-mt-24 rounded-2xl bg-white p-4 ring-1 ring-[#e6ece6]">
@@ -127,6 +137,9 @@ export default async function DriveHelpPage() {
             This summary reflects the implemented behaviour. It is not a substitute for owner-approved
             legal terms.
           </p>
+          <div className="mt-2">
+            <ContactLine contact="legal" label="Legal correspondence" subject="NaijaDrive legal enquiry" className="text-[11.5px] leading-6 text-[#5d6d64]" />
+          </div>
         </section>
       </main>
       <DriveFooter />

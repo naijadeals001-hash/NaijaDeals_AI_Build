@@ -1,4 +1,5 @@
 import type { NotificationCategory, NotificationChannel } from "@prisma/client";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 /**
  * Code-defined notification templates.
@@ -95,7 +96,7 @@ export const TEMPLATES: Record<string, TemplateDefinition> = {
     },
     email: {
       subject: "Your NaijaPay wallet was credited",
-      body: "Hello,\n\n{{amount}} was added to your NaijaPay wallet. If you did not request this, contact support.\n\nNaijaDeals"
+      body: `Hello,\n\n{{amount}} was added to your NaijaPay wallet. If you did not request this, email ${contactAddress("support")}.\n\nNaijaDeals`
     },
     sms: { body: "NaijaDeals: {{amount}} credited to your NaijaPay wallet." },
     push: { title: "Wallet credited", body: "+{{amount}}" }

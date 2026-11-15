@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { ContactLine } from "@/components/contact/contact-line";
 import { StayBottomNav, StayHeader } from "@/components/stay/stay-shell";
 import { StayFooter } from "@/components/stay/stay-home";
 
@@ -29,10 +29,11 @@ export default function HelpPage() {
             </div>
           ))}
         </dl>
-        <p className="mt-3 rounded-xl bg-[#f2f9f0] p-3 text-[11px] leading-5 text-[#3f4d45]">
-          Disputes and damage claims are handled by the NaijaDeals support team with your reservation reference.
-          <Link href="/support" className="ml-1 font-bold text-[#0b5c33] underline">Open a support case</Link>
-        </p>
+        <div className="mt-3 rounded-xl bg-[#f2f9f0] p-3 text-[11px] leading-5 text-[#3f4d45]">
+          <p>Disputes and damage claims are handled by the NaijaDeals support team with your reservation reference.</p>
+          <ContactLine contact="support" label="Email support" subject="NaijaStay reservation dispute" className="mt-1" />
+          <ContactLine contact="partners" label="Host and property-partner enquiries" subject="Hosting on NaijaStay" className="mt-1" />
+        </div>
       </main>
       <StayFooter />
       <StayBottomNav />

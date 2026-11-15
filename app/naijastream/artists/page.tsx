@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BadgeCheck } from "lucide-react";
 import { listArtists } from "@/lib/services/stream/service";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,26 @@ export default async function ArtistsPage() {
           ))}
         </ul>
       )}
+      <section aria-label="Artist and support contacts" className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-[12px] leading-6 text-white/55">
+        <p>
+          Artist and label partnerships:{" "}
+          <a
+            href={mailtoFor("partners", { subject: "NaijaStream artist onboarding" })}
+            className="font-semibold text-emerald-300 underline underline-offset-2 hover:text-emerald-200"
+          >
+            {contactAddress("partners")}
+          </a>
+        </p>
+        <p className="mt-1">
+          Support:{" "}
+          <a
+            href={mailtoFor("support")}
+            className="font-semibold text-emerald-300 underline underline-offset-2 hover:text-emerald-200"
+          >
+            {contactAddress("support")}
+          </a>
+        </p>
+      </section>
     </main>
   );
 }

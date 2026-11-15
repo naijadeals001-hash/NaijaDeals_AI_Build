@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Circle, ShieldCheck } from "lucide-react";
 import { apiClient, ApiRequestError, koboToNaira } from "@/lib/api-client";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 import { EscrowWorkspace } from "./escrow-workspace";
 
 type EscrowEvent = { id: string; from: string | null; to: string; note: string | null; createdAt: string };
@@ -180,6 +181,23 @@ export function NaijaPayEscrowPage() {
       )}
       </>
       )}
+
+      <section aria-label="Escrow help" className="rounded-2xl border border-black/5 bg-white p-4 text-sm text-pay-ink-muted shadow-soft sm:p-5">
+        <p className="space-y-1.5">
+          <span className="block">
+            Payment or refund issue:{" "}
+            <a href={mailtoFor("payments")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+              {contactAddress("payments")}
+            </a>
+          </span>
+          <span className="block">
+            Customer support:{" "}
+            <a href={mailtoFor("support")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+              {contactAddress("support")}
+            </a>
+          </span>
+        </p>
+      </section>
     </div>
   );
 }

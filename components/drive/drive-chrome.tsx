@@ -4,6 +4,16 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Car, ChevronDown, MapPin, Menu, UserRound, X } from "lucide-react";
 import { DRIVE_CITY } from "@/lib/config/drive";
+import { contactAddress, mailtoFor, type ContactKey } from "@/lib/data/contact-directory";
+
+type PublicContactKey = Exclude<ContactKey, "accounts">;
+
+const FOOTER_CONTACTS: Array<{ label: string; contact: PublicContactKey }> = [
+  { label: "Rider support", contact: "support" },
+  { label: "Driver and courier enquiries", contact: "drivers" },
+  { label: "Privacy requests", contact: "privacy" },
+  { label: "Legal", contact: "legal" }
+];
 
 const focus =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b5c33]";
@@ -253,6 +263,21 @@ export function DriveFooter() {
             </ul>
           </div>
         ))}
+      </div>
+      <div className="border-t border-white/15">
+        <div className="mx-auto max-w-[1320px] px-4 py-4 sm:px-6 lg:px-8">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#8ed14b]">Contact</p>
+          <ul className="mt-2 grid gap-x-6 gap-y-1.5 text-[11.5px] text-white/75 sm:grid-cols-2">
+            {FOOTER_CONTACTS.map((entry) => (
+              <li key={entry.contact}>
+                {entry.label}:{" "}
+                <a href={mailtoFor(entry.contact)} className="hover:text-white hover:underline">
+                  {contactAddress(entry.contact)}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
       <div className="border-t border-white/15">
         <div className="mx-auto flex max-w-[1320px] flex-col items-center justify-between gap-2 px-4 py-3 text-[10.5px] text-white/60 sm:flex-row sm:px-6 lg:px-8">

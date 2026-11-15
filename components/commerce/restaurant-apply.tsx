@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 
 interface Application {
   id: string;
@@ -13,6 +14,28 @@ interface Application {
   phone: string;
   status: "SUBMITTED" | "APPROVED" | "REJECTED";
   note: string | null;
+}
+
+function OnboardingContacts() {
+  return (
+    <section aria-label="Restaurant onboarding contacts" className="mt-4 rounded-2xl border border-border-soft bg-canvas p-5 text-sm text-muted">
+      <p>
+        Restaurant partnerships:{" "}
+        <a
+          href={mailtoFor("partners", { subject: "Restaurant onboarding" })}
+          className="font-bold text-primary underline-offset-2 hover:underline"
+        >
+          {contactAddress("partners")}
+        </a>
+      </p>
+      <p className="mt-1">
+        Onboarding help:{" "}
+        <a href={mailtoFor("support")} className="font-bold text-primary underline-offset-2 hover:underline">
+          {contactAddress("support")}
+        </a>
+      </p>
+    </section>
+  );
 }
 
 export function RestaurantApply() {
@@ -71,28 +94,34 @@ export function RestaurantApply() {
 
   if (restaurant) {
     return (
-      <section className="rounded-2xl border border-border-soft bg-canvas p-6">
-        <p className="text-xs font-black uppercase tracking-wide text-primary">Kitchen approved</p>
-        <h1 className="font-display text-2xl font-extrabold">{restaurant.name}</h1>
-        <p className="mt-1 text-sm text-muted">Your kitchen is live. Publish your first menu item.</p>
-        <button type="button" onClick={() => router.push("/restaurant")} className="mt-4 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white">Open kitchen workspace</button>
-      </section>
+      <>
+        <section className="rounded-2xl border border-border-soft bg-canvas p-6">
+          <p className="text-xs font-black uppercase tracking-wide text-primary">Kitchen approved</p>
+          <h1 className="font-display text-2xl font-extrabold">{restaurant.name}</h1>
+          <p className="mt-1 text-sm text-muted">Your kitchen is live. Publish your first menu item.</p>
+          <button type="button" onClick={() => router.push("/restaurant")} className="mt-4 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white">Open kitchen workspace</button>
+        </section>
+        <OnboardingContacts />
+      </>
     );
   }
 
   if (application && application.status === "SUBMITTED") {
     return (
-      <section className="rounded-2xl border border-border-soft bg-canvas p-6">
-        <p className="text-xs font-black uppercase tracking-wide text-primary">Application received</p>
-        <h1 className="font-display text-2xl font-extrabold">{application.kitchenName}</h1>
-        <p className="mt-1 text-sm text-muted">An administrator is reviewing your kitchen. You will get an update when it is approved.</p>
-        <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-          <div><dt className="text-xs font-bold uppercase text-muted">Cuisine</dt><dd>{application.cuisine}</dd></div>
-          <div><dt className="text-xs font-bold uppercase text-muted">Delivery area</dt><dd>{application.market}</dd></div>
-          <div><dt className="text-xs font-bold uppercase text-muted">Address</dt><dd>{application.address}</dd></div>
-          <div><dt className="text-xs font-bold uppercase text-muted">Phone</dt><dd>{application.phone}</dd></div>
-        </dl>
-      </section>
+      <>
+        <section className="rounded-2xl border border-border-soft bg-canvas p-6">
+          <p className="text-xs font-black uppercase tracking-wide text-primary">Application received</p>
+          <h1 className="font-display text-2xl font-extrabold">{application.kitchenName}</h1>
+          <p className="mt-1 text-sm text-muted">An administrator is reviewing your kitchen. You will get an update when it is approved.</p>
+          <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+            <div><dt className="text-xs font-bold uppercase text-muted">Cuisine</dt><dd>{application.cuisine}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-muted">Delivery area</dt><dd>{application.market}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-muted">Address</dt><dd>{application.address}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-muted">Phone</dt><dd>{application.phone}</dd></div>
+          </dl>
+        </section>
+        <OnboardingContacts />
+      </>
     );
   }
 
@@ -134,6 +163,7 @@ export function RestaurantApply() {
       <p className="text-center text-xs text-muted">
         Already approved? <Link href="/restaurant" className="font-bold text-primary underline">Open your kitchen</Link>
       </p>
+      <OnboardingContacts />
     </div>
   );
 }

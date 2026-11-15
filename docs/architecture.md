@@ -151,3 +151,51 @@ property, streaming media or AI conversations — those verticals are not functi
 7. `npm audit` reports 23 advisories in pre-existing tooling (eslint plugins, prisma config,
    browserslist, esbuild, `next`); the six packages added for infrastructure introduced none, and one
    advisory is critical.
+
+## Corporate contact directory (2026-11-15)
+
+`lib/data/contact-directory.ts` is the single typed source of the twelve
+published contact addresses. Components import `contactAddress(key)` /
+`mailtoFor(key, {subject, body})`; no page writes an address literal, and
+`scripts/contact-directory-tests.ts` fails if one appears outside the module.
+The service-registration address lives in `lib/data/internal-contacts.ts`
+instead, so it cannot reach a browser bundle; the same suite asserts that no
+client component imports it and that no built chunk contains it.
+
+All thirteen addresses are delivery aliases of the main mailbox
+`office@naijadeals.com`. They are contact addresses only — not separate
+mailboxes, employee accounts, administrator identities or application
+permissions — and none is used for authentication or as a recipient identity
+for a user.
+
+| Key | Address | Use |
+| --- | --- | --- |
+| office | office@naijadeals.com | Main office and corporate correspondence |
+| hello | hello@naijadeals.com | General enquiries |
+| support | support@naijadeals.com | Customer support, orders and help |
+| accounts | accounts@naijadeals.com | **Internal only, separate module** (`lib/data/internal-contacts.ts`): hosting, Cloudflare R2, Backblaze B2 and other service registrations |
+| billing | billing@naijadeals.com | Invoices and subscription billing |
+| payments | payments@naijadeals.com | Payment enquiries, refunds and payouts |
+| partners | partners@naijadeals.com | Vendors, restaurants, artists and business partners |
+| drivers | drivers@naijadeals.com | Driver and courier enquiries |
+| legal | legal@naijadeals.com | Legal correspondence and the "Terms of Service" links where no terms page exists |
+| privacy | privacy@naijadeals.com | Privacy and personal-data requests |
+| security | security@naijadeals.com | Security reports |
+| abuse | abuse@naijadeals.com | Fraud, scams and prohibited content |
+| careers | careers@naijadeals.com | Recruitment |
+
+`accounts` is not part of the public `ContactKey` union at all. It belongs in
+infrastructure documentation and service-registration forms only, never in the
+public footer; `ACCOUNTS_CONTACT` and `BILLING_CONTACT` are the exports for
+those fields.
+
+### Outbound email state
+
+The only email transport in this build is `EmailCaptureTransport`
+(`lib/notifications/transports.ts`): it writes a privacy-minimised local record
+and never contacts a provider. There is **no verified outbound sender**, so no
+`From` address is asserted anywhere. `deliverNotification` attaches
+`replyTo: support@naijadeals.com` to EMAIL messages, which the capture record
+stores; a real provider must be configured and the domain/sender verified
+before any address is used as a sender. `lib/data/contact-directory.ts` is the
+one place to change if the owner later designates a different Reply-To.

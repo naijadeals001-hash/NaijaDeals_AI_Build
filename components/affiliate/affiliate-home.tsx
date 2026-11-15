@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 
 type Profile = {
   id: string;
@@ -58,6 +59,37 @@ function naira(value: string | bigint): string {
 
 function sumStates(byState: Record<string, { amountKobo: string }>, states: string[]): bigint {
   return states.reduce((total, state) => total + (byState[state] ? BigInt(byState[state].amountKobo) : 0n), 0n);
+}
+
+/**
+ * Programme contact block. Rendered in each state of this surface so a visitor
+ * who has not applied yet can still reach the programme team. Addresses come
+ * from the shared contact directory, never from a literal.
+ */
+function AffiliateContact() {
+  return (
+    <section
+      aria-label="Affiliate programme help"
+      className="space-y-1 rounded-2xl border border-border-soft bg-canvas p-5 text-sm text-muted"
+    >
+      <h2 className="font-display text-base font-extrabold text-ink">Programme help</h2>
+      <p>
+        Programme and partnership enquiries:{" "}
+        <a
+          href={mailtoFor("partners", { subject: "Affiliate programme" })}
+          className="font-bold text-primary underline-offset-2 hover:underline"
+        >
+          {contactAddress("partners")}
+        </a>
+      </p>
+      <p>
+        Account or commission help:{" "}
+        <a href={mailtoFor("support")} className="font-bold text-primary underline-offset-2 hover:underline">
+          {contactAddress("support")}
+        </a>
+      </p>
+    </section>
+  );
 }
 
 export function AffiliateHome() {
@@ -188,6 +220,7 @@ export function AffiliateHome() {
         <Link href="/login?next=/affiliate" className="inline-block rounded-xl bg-primary px-5 py-3 font-bold text-white">
           Sign in to continue
         </Link>
+        <AffiliateContact />
       </div>
     );
   }
@@ -253,6 +286,8 @@ export function AffiliateHome() {
             {busy ? "Submitting…" : "Submit application"}
           </button>
         </section>
+
+        <AffiliateContact />
       </div>
     );
   }
@@ -274,7 +309,22 @@ export function AffiliateHome() {
               : profile.status === "APPLIED"
                 ? "Your application is awaiting review."
                 : profile.status === "SUSPENDED"
-                  ? `Suspended: ${profile.suspendedReason ?? "contact support"}`
+                  ? (
+                    <>
+                      Suspended:{" "}
+                      {profile.suspendedReason ?? (
+                        <>
+                          contact{" "}
+                          <a
+                            href={mailtoFor("support", { subject: "Affiliate account suspension" })}
+                            className="font-bold text-primary underline-offset-2 hover:underline"
+                          >
+                            {contactAddress("support")}
+                          </a>
+                        </>
+                      )}
+                    </>
+                  )
                   : "Your application was not approved."}
           </p>
         </div>
@@ -419,6 +469,8 @@ export function AffiliateHome() {
           </div>
         )}
       </section>
+
+      <AffiliateContact />
     </div>
   );
 }

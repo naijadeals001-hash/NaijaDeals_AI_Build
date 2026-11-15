@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { AlertCircle, ArrowRight, Bot, ChefHat, Headphones, PackageCheck, ShieldCheck, ShoppingBag, Truck, Wrench } from "lucide-react";
 import { NaijaEatsPage, NaijaFreshPage, NaijaPayPage, NaijaSendPage, NaijaShopPage, OrdersPageApi, SearchPage, ShopCartPage, ShopCheckoutPage } from "@/components/commerce/naijashop";
 import { verticals } from "@/lib/data/ecosystem";
+import { ContactLine } from "@/components/contact/contact-line";
 import { AuraAiLanding, NaijaGigsLanding, NaijaPayLanding, NaijaStayLanding, NaijaStreamLanding } from "./vertical-landings";
 
 const configuredShopRoutes = new Set(["categories", "product-listing"]);
@@ -155,10 +156,15 @@ function HelpPage() {
         </Link>
       </section>
       <section className="rounded-2xl border border-border-soft bg-canvas p-5">
-        <h2 className="font-display text-xl font-extrabold">Live support configuration</h2>
-        <p className="mt-2 text-sm text-muted">
-          No live chat, email or SMS provider is configured in this environment. Support automation is therefore not
-          available rather than simulated. Configure an email or messaging provider to enable outbound support.
+        <h2 className="font-display text-xl font-extrabold">Contact support</h2>
+        <div className="mt-2 space-y-1 text-sm text-muted">
+          <ContactLine contact="support" label="Order, delivery and returns help" subject="NaijaDeals order help" />
+          <ContactLine contact="payments" label="Wallet payments, refunds and payouts" subject="Payment enquiry" />
+          <ContactLine contact="hello" label="General enquiries" />
+        </div>
+        <p className="mt-3 text-sm text-muted">
+          These are monitored inbound addresses. No automated chat, email or SMS support provider is configured in
+          this environment, so automated replies, ticket numbers and response times are not promised.
         </p>
       </section>
     </div>

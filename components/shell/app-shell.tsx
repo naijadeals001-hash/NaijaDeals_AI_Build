@@ -23,6 +23,7 @@ import { publicServices } from "@/lib/data/public-services";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { LocaleSwitcher } from "@/components/shell/locale-switcher";
 import type { SessionUser } from "@/lib/api-client";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 
 const HEADER_LINKS = [
   { href: "/affiliate", label: "Earn" },
@@ -580,6 +581,42 @@ function SiteFooter({ offsetForSidebar }: { offsetForSidebar: boolean }) {
               ))}
             </ul>
           </nav>
+
+          <nav aria-label="Footer contact">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-primary-live">Contact</p>
+            <ul className="mt-3 space-y-2">
+              <li>
+                <a href={mailtoFor("support", { subject: "NaijaDeals help" })} className="block text-[12px] text-white/75 transition hover:text-white hover:underline">
+                  Customer support
+                  <span className="mt-0.5 block break-all text-[10.5px] font-normal text-white/45">{contactAddress("support")}</span>
+                </a>
+              </li>
+              <li>
+                <a href={mailtoFor("hello")} className="block text-[12px] text-white/75 transition hover:text-white hover:underline">
+                  General enquiries
+                  <span className="mt-0.5 block break-all text-[10.5px] font-normal text-white/45">{contactAddress("hello")}</span>
+                </a>
+              </li>
+              <li>
+                <a href={mailtoFor("partners", { subject: "Partner with NaijaDeals" })} className="block text-[12px] text-white/75 transition hover:text-white hover:underline">
+                  Partner with us
+                  <span className="mt-0.5 block break-all text-[10.5px] font-normal text-white/45">{contactAddress("partners")}</span>
+                </a>
+              </li>
+              <li>
+                <a href={mailtoFor("office")} className="block text-[12px] text-white/75 transition hover:text-white hover:underline">
+                  Corporate office
+                  <span className="mt-0.5 block break-all text-[10.5px] font-normal text-white/45">{contactAddress("office")}</span>
+                </a>
+              </li>
+              <li>
+                <a href={mailtoFor("drivers")} className="block text-[12px] text-white/75 transition hover:text-white hover:underline">
+                  Driver and courier enquiries
+                  <span className="mt-0.5 block break-all text-[10.5px] font-normal text-white/45">{contactAddress("drivers")}</span>
+                </a>
+              </li>
+            </ul>
+          </nav>
         </div>
 
         <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-5 text-[11px] text-white/50 sm:flex-row sm:items-center sm:justify-between">
@@ -594,6 +631,15 @@ function SiteFooter({ offsetForSidebar }: { offsetForSidebar: boolean }) {
             <Link href="/payments" className="transition hover:text-white hover:underline">
               Payments
             </Link>
+            <a href={mailtoFor("legal", { subject: "Terms of Service" })} className="transition hover:text-white hover:underline">
+              Terms of Service
+            </a>
+            <a href={mailtoFor("privacy", { subject: "Privacy Policy" })} className="transition hover:text-white hover:underline">
+              Privacy Policy
+            </a>
+            <a href={mailtoFor("security")} className="transition hover:text-white hover:underline">
+              Report a security issue
+            </a>
           </div>
         </div>
       </div>

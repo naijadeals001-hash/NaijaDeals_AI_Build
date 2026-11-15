@@ -3,6 +3,16 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, BedDouble, CalendarCheck, Check, ChevronLeft, ChevronRight, CreditCard, Globe2, Handshake, Headset, Heart, House, LandPlot, MapPin, Search, ShieldCheck, Sparkles, Store, TreePalm, Users, KeyRound, UserPlus, Star } from "lucide-react";
+import { mailtoFor, type ContactKey } from "@/lib/data/contact-directory";
+
+type PublicContactKey = Exclude<ContactKey, "accounts">;
+
+const LEGAL_CONTACTS: Array<{ label: string; contact: PublicContactKey; subject: string }> = [
+  { label: "Terms of Service", contact: "legal", subject: "Terms of Service" },
+  { label: "Privacy Policy", contact: "privacy", subject: "Privacy Policy" },
+  { label: "Listing Policy", contact: "legal", subject: "Listing policy" },
+  { label: "Disputes & Claims", contact: "support", subject: "Dispute or claim" }
+];
 
 function naira(kobo: string | null) {
   if (kobo === null) return null;
@@ -396,9 +406,8 @@ export function StayFooter() {
     { title: "For Guests", links: [["Find Stays", "/naijastay/stays"], ["Travel Guides", "/naijastay/destinations"], ["Deals & Offers", "/naijastay/search"], ["Help & Support", "/naijastay/help"]] },
     { title: "For Property Owners", links: [["List a Property", "/naijastay/host"], ["Manage Bookings", "/naijastay/host/dashboard"], ["Earnings & Payouts", "/naijastay/host/dashboard"], ["Host Resources", "/naijastay/how-it-works"]] },
     { title: "For Real Estate Agents", links: [["List Properties", "/naijastay/host"], ["Generate Leads", "/naijastay/host"], ["Agent Tools", "/naijastay/agents"], ["Partner with Us", "/naijastay/agents"]] },
-    { title: "Company", links: [["About NaijaStay", "/about"], ["How It Works", "/naijastay/how-it-works"], ["Our Partners", "/about"], ["Careers", "/about"]] },
-    { title: "Support", links: [["Help Center", "/naijastay/help"], ["Contact Us", "/naijastay/help"], ["Report an Issue", "/naijastay/help"], ["Trust & Safety", "/naijastay/safety"]] },
-    { title: "Legal", links: [["Terms of Service", "/legal"], ["Privacy Policy", "/legal"], ["Listing Policy", "/legal"], ["Disputes & Claims", "/support"]] }
+    { title: "Company", links: [["About NaijaStay", "/naijastay"], ["How It Works", "/naijastay/how-it-works"], ["Our Partners", "/naijastay/host"], ["Careers", mailtoFor("careers", { subject: "Careers at NaijaDeals" })] ] },
+    { title: "Support", links: [["Help Center", "/naijastay/help"], ["Contact Us", "/naijastay/help"], ["Report an Issue", "/naijastay/help"], ["Trust & Safety", "/naijastay/safety"]] }
   ];
   return (
     <footer className="mt-6 bg-[#0b5c33] pb-20 text-white lg:pb-8">
@@ -410,9 +419,19 @@ export function StayFooter() {
         {cols.map((col) => (
           <nav key={col.title} aria-label={col.title}>
             <p className="text-[11px] font-extrabold text-[#8ed14b]">{col.title}</p>
-            <ul className="mt-1.5 space-y-1">{col.links.map(([label, href]) => <li key={label}><Link href={href} className="text-[10.5px] text-white/80 hover:text-white hover:underline">{label}</Link></li>)}</ul>
+            <ul className="mt-1.5 space-y-1">{col.links.map(([label, href]) => <li key={label}>{href.startsWith("mailto:") ? <a href={href} className="break-words text-[10.5px] text-white/80 hover:text-white hover:underline">{label}</a> : <Link href={href} className="text-[10.5px] text-white/80 hover:text-white hover:underline">{label}</Link>}</li>)}</ul>
           </nav>
         ))}
+        <nav aria-label="Legal">
+          <p className="text-[11px] font-extrabold text-[#8ed14b]">Legal</p>
+          <ul className="mt-1.5 space-y-1">
+            {LEGAL_CONTACTS.map((entry) => (
+              <li key={entry.label}>
+                <a href={mailtoFor(entry.contact, { subject: entry.subject })} className="text-[10.5px] text-white/80 hover:text-white hover:underline">{entry.label}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
       <div className="border-t border-white/15">
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 px-4 py-3 text-[10px] text-white/70">

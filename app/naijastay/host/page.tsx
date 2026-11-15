@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { StayBottomNav, StayHeader } from "@/components/stay/stay-shell";
 import { StayFooter } from "@/components/stay/stay-home";
 import { HostApplyForm } from "@/components/stay/host-apply-form";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,24 @@ export default async function HostPage() {
         ) : (
           <HostApplyForm />
         )}
+
+        <section aria-label="Host contacts" className="mt-3 rounded-2xl bg-white p-4 text-[11.5px] leading-6 text-[#5d6d64] ring-1 ring-[#eef1ef]">
+          <p>
+            Host and property-partner enquiries:{" "}
+            <a
+              href={mailtoFor("partners", { subject: "Hosting on NaijaStay" })}
+              className="font-semibold text-[#0b5c33] underline underline-offset-2"
+            >
+              {contactAddress("partners")}
+            </a>
+          </p>
+          <p className="mt-1">
+            Support:{" "}
+            <a href={mailtoFor("support")} className="font-semibold text-[#0b5c33] underline underline-offset-2">
+              {contactAddress("support")}
+            </a>
+          </p>
+        </section>
       </main>
       <StayFooter />
       <StayBottomNav />

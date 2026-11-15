@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BadgeCheck, Clock, MapPin, Sprout, Truck } from "lucide-react";
 import { getFarmBySlug } from "@/lib/services/fresh/catalogue";
 import { ProduceCard } from "@/components/fresh/fresh-sections";
 import { farmImage, produceImage } from "@/lib/services/fresh/images";
 import { FreshEmpty, FreshPage } from "@/components/fresh/fresh-page";
+import { mailtoFor } from "@/lib/data/contact-directory";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +67,7 @@ export default async function FreshFarmPage({ params }: { params: { slug: string
       </section>
       <p className="mt-4 flex items-center gap-1.5 text-[11px] text-[#6b7a70]">
         <Sprout className="h-3.5 w-3.5" aria-hidden /> Farm details are published by the farm owner and verified by NaijaFresh.{" "}
-        <Link href="/support" className="font-semibold text-[#0b5c33] underline">Report inaccurate details</Link>
+        <a href={mailtoFor("support", { subject: "NaijaFresh farm details correction" })} className="font-semibold text-[#0b5c33] underline">Report inaccurate details</a>
       </p>
     </FreshPage>
   );

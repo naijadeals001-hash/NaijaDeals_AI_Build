@@ -1,6 +1,18 @@
 import Link from "next/link";
 import { ArrowUpRight, ShieldCheck, ShoppingBag, Truck } from "lucide-react";
 import { NaijaDealsLogo } from "@/components/brand/naijadeals-logo";
+import { contactAddress, mailtoFor, type ContactKey } from "@/lib/data/contact-directory";
+
+type PublicContactKey = Exclude<ContactKey, "accounts">;
+
+type ContactLink = { label: string; contact: PublicContactKey; subject?: string };
+
+const CONTACT_LINKS: ContactLink[] = [
+  { label: "General enquiries", contact: "hello" },
+  { label: "Help and order issues", contact: "support", subject: "NaijaShop help" },
+  { label: "Sell and partner with us", contact: "partners", subject: "Partner with NaijaDeals" },
+  { label: "Careers", contact: "careers" }
+];
 
 const SHOP_LINKS: Array<[string, string]> = [
   ["All departments", "/naijashop/categories"],
@@ -47,7 +59,7 @@ export function ShopSiteFooter({ shopPaused = false }: { shopPaused?: boolean })
   return (
     <footer className="mt-12 bg-[#07351f] text-white">
       <div className="mx-auto max-w-[1440px] px-4 pb-28 pt-10 sm:px-6 lg:px-8 lg:pb-12 lg:pt-12">
-        <div className={`grid gap-9 sm:grid-cols-2 ${shopPaused ? "lg:grid-cols-[1.35fr_1fr]" : "lg:grid-cols-[1.35fr_1fr_1fr_1fr]"}`}>
+        <div className={`grid gap-9 sm:grid-cols-2 ${shopPaused ? "lg:grid-cols-[1.35fr_1fr_1.5fr]" : "lg:grid-cols-[1.35fr_1fr_1fr_1fr_1.5fr]"}`}>
           <div>
             <Link href="/naijashop" aria-label="NaijaDeals Marketplace home" className="inline-flex flex-col">
               <NaijaDealsLogo tone="onDark" size="lg" />
@@ -73,6 +85,7 @@ export function ShopSiteFooter({ shopPaused = false }: { shopPaused?: boolean })
           {!shopPaused ? <FooterColumn title="Shop" links={SHOP_LINKS} /> : null}
           {!shopPaused ? <FooterColumn title="Sell and move" links={SELL_LINKS} /> : null}
           <FooterColumn title="Help" links={HELP_LINKS} />
+          <FooterColumn title="Contact" contacts={CONTACT_LINKS} />
         </div>
 
         <div className="mt-9 border-t border-white/10 pt-6">
@@ -89,7 +102,15 @@ export function ShopSiteFooter({ shopPaused = false }: { shopPaused?: boolean })
         </div>
 
         <div className="mt-6 flex flex-col gap-2 border-t border-white/10 pt-5 text-[11px] text-[#9fc3a9] sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 NaijaDeals.com — one ecosystem for Africa.</p>
+          <div className="space-y-1">
+            <p>© 2026 NaijaDeals.com — one ecosystem for Africa.</p>
+            <p>
+              Corporate correspondence:{" "}
+              <a href={mailtoFor("office")} className="font-bold text-[#d6e7d7] hover:text-white hover:underline">
+                {contactAddress("office")}
+              </a>
+            </p>
+          </div>
           <p className="flex items-center gap-3">
             <span>NGN · Nigeria</span>
             {!shopPaused ? (
@@ -104,7 +125,15 @@ export function ShopSiteFooter({ shopPaused = false }: { shopPaused?: boolean })
   );
 }
 
-function FooterColumn({ title, links }: { title: string; links: Array<[string, string]> }) {
+function FooterColumn({
+  title,
+  links = [],
+  contacts = []
+}: {
+  title: string;
+  links?: Array<[string, string]>;
+  contacts?: ContactLink[];
+}) {
   return (
     <nav aria-label={title}>
       <h2 className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-white">{title}</h2>
@@ -114,6 +143,14 @@ function FooterColumn({ title, links }: { title: string; links: Array<[string, s
             <Link href={href} className="text-[11.5px] text-[#b9d5bd] hover:text-white hover:underline">
               {label}
             </Link>
+          </li>
+        ))}
+        {contacts.map((entry) => (
+          <li key={entry.contact} className="text-[11.5px] text-[#b9d5bd]">
+            {entry.label}:{" "}
+            <a href={mailtoFor(entry.contact, { subject: entry.subject })} className="hover:text-white hover:underline">
+              {contactAddress(entry.contact)}
+            </a>
           </li>
         ))}
       </ul>

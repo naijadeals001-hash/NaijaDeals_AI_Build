@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, ArrowLeft, ArrowRight, Check, Loader2, Lock, Send, ShieldCheck } from "lucide-react";
 import { apiClient, ApiRequestError, koboToNaira } from "@/lib/api-client";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 
 type Step = "form" | "review" | "sending" | "done" | "failed";
 type BalanceState = { availableKobo?: string | number; currency?: string } | null;
@@ -368,6 +369,23 @@ export function NaijaPaySendPage() {
           </div>
         </section>
       )}
+
+      <section aria-label="Send money help" className="mt-4 rounded-2xl border border-black/5 bg-white p-4 text-sm text-pay-ink-muted shadow-soft sm:p-5">
+        <p className="space-y-1.5">
+          <span className="block">
+            Transfer or refund issue:{" "}
+            <a href={mailtoFor("payments")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+              {contactAddress("payments")}
+            </a>
+          </span>
+          <span className="block">
+            Customer support:{" "}
+            <a href={mailtoFor("support")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+              {contactAddress("support")}
+            </a>
+          </span>
+        </p>
+      </section>
     </div>
   );
 }

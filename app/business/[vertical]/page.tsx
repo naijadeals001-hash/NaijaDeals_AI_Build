@@ -4,6 +4,7 @@ import { ArrowRight, BarChart3, BadgeCheck, Banknote, PackageCheck } from "lucid
 import { onboardingFlows, verticals } from "@/lib/data/ecosystem";
 import { MetricCard } from "@/components/sections/cards";
 import { TrustBadge } from "@/components/ui/badge";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 
 export function generateStaticParams() {
   return verticals.map((vertical) => ({ vertical: vertical.key }));
@@ -65,6 +66,24 @@ export default function BusinessPage({ params }: { params: { vertical: string } 
             </Link>
           ))}
         </div>
+      </section>
+
+      <section aria-label="Business contacts" className="rounded-2xl border border-border-soft bg-canvas p-5 text-sm text-muted">
+        <p>
+          Business and partnership enquiries:{" "}
+          <a
+            href={mailtoFor("partners", { subject: "Business procurement" })}
+            className="font-bold text-primary underline-offset-2 hover:underline"
+          >
+            {contactAddress("partners")}
+          </a>
+        </p>
+        <p className="mt-1">
+          Support:{" "}
+          <a href={mailtoFor("support")} className="font-bold text-primary underline-offset-2 hover:underline">
+            {contactAddress("support")}
+          </a>
+        </p>
       </section>
     </div>
   );

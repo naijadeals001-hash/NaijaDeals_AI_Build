@@ -354,7 +354,7 @@ export function AccountPage() {
           <Link href="/orders" className="flex items-center gap-2 py-3 font-semibold"><PackageCheck className="h-4 w-4" /> Your Orders</Link>
           <Link href="/orders" className="flex items-center gap-2 py-3 font-semibold"><RotateCcw className="h-4 w-4" /> Your Returns</Link>
           <Link href="/naijashop" className="flex items-center gap-2 py-3 font-semibold"><PackageCheck className="h-4 w-4" /> Buy Again</Link>
-          <Link href="/support" className="flex items-center gap-2 py-3 font-semibold"><Headphones className="h-4 w-4" /> Customer Service</Link>
+          <Link href="/help" className="flex items-center gap-2 py-3 font-semibold"><Headphones className="h-4 w-4" /> Customer Service</Link>
           <button
             type="button"
             className="flex w-full items-center gap-2 py-3 text-left font-semibold"

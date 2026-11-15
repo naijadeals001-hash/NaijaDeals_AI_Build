@@ -1,6 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { contactAddress, mailtoFor, type ContactKey } from "@/lib/data/contact-directory";
+
+type PublicContactKey = Exclude<ContactKey, "accounts">;
+
+const CONTACTS: Array<{ label: string; contact: PublicContactKey }> = [
+  { label: "Customer support", contact: "support" },
+  { label: "Payments, refunds and payouts", contact: "payments" },
+  { label: "General enquiries", contact: "hello" },
+  { label: "Partner with us", contact: "partners" }
+];
 
 const MODULES: Array<[string, string]> = [
   ["NaijaEats", "/naijaeats"],
@@ -51,7 +61,7 @@ const COLUMNS = [
     links: [
       ["Sign in", "/login"],
       ["Create an account", "/register"],
-      ["Support", "/support"],
+      ["Support", "/help"],
       ["Your addresses", "/account"],
       ["Saved items", "/account"]
     ]
@@ -70,7 +80,7 @@ export function ShopFooter() {
       </button>
 
       <div className="bg-[#232f3e]">
-        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-2 lg:grid-cols-5">
           {COLUMNS.map((column) => (
             <div key={column.title}>
               <h2 className="text-sm font-extrabold">{column.title}</h2>
@@ -83,6 +93,19 @@ export function ShopFooter() {
               </ul>
             </div>
           ))}
+          <div>
+            <h2 className="text-sm font-extrabold">Contact us</h2>
+            <ul className="mt-2 space-y-1.5 text-xs text-white/75">
+              {CONTACTS.map((entry) => (
+                <li key={entry.contact}>
+                  {entry.label}:{" "}
+                  <a href={mailtoFor(entry.contact)} className="hover:text-white hover:underline">
+                    {contactAddress(entry.contact)}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <div className="border-t border-white/10 py-5">

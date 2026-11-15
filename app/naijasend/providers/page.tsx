@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { SendEmpty, SendHeading, SendPage } from "@/components/send/send-page";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,20 @@ export default async function ProvidersPage() {
         <SendEmpty title="No verified providers yet" body="Providers appear here once the Control Center verifies their licence and insurance details." cta={{ href: "/naijasend/transporter/apply", label: "Register as a transporter" }} />
       )}
       <p className="mt-4 text-[11px] text-[#6b7a70]">Want a quote from these providers? <Link href="/naijasend/ship" className="font-semibold text-[#0b5c33] underline">Request a shipment</Link>.</p>
+      <section aria-label="Provider contacts" className="mt-3 rounded-2xl bg-white p-4 text-[12px] leading-6 text-[#5d6d64] ring-1 ring-[#eef1ef]">
+        <p>
+          Courier and driver enquiries:{" "}
+          <a href={mailtoFor("drivers")} className="font-semibold text-[#0b5c33] underline underline-offset-2">
+            {contactAddress("drivers")}
+          </a>
+        </p>
+        <p className="mt-1">
+          Business and freight partnerships:{" "}
+          <a href={mailtoFor("partners")} className="font-semibold text-[#0b5c33] underline underline-offset-2">
+            {contactAddress("partners")}
+          </a>
+        </p>
+      </section>
     </SendPage>
   );
 }

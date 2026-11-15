@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, ArrowLeft, Check, KeyRound, Loader2, Lock, MonitorSmartphone, ShieldCheck } from "lucide-react";
+import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
 
 type SessionRow = { id: string; userAgent: string | null; createdAt: string; expiresAt: string; current: boolean };
 
@@ -164,6 +165,35 @@ export function NaijaPaySecurityPage() {
           </section>
         </>
       )}
+
+      {/* Reporting is informational, so it is shown whether or not a session is
+          present. No response time, certification or bounty programme is claimed. */}
+      <section className="mt-4 rounded-3xl border border-black/5 bg-white p-5 shadow-soft sm:p-6">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-5 w-5 text-pay-green" aria-hidden="true" />
+          <h2 className="font-display text-lg font-extrabold text-pay-ink">Reporting</h2>
+        </div>
+        <ul className="mt-3 space-y-1.5 text-sm text-pay-ink-muted">
+          <li>
+            Report a security vulnerability:{" "}
+            <a href={mailtoFor("security", { subject: "Security report" })} className="font-bold text-pay-green underline-offset-2 hover:underline">
+              {contactAddress("security")}
+            </a>
+          </li>
+          <li>
+            Report fraud or a scam:{" "}
+            <a href={mailtoFor("abuse", { subject: "Fraud report" })} className="font-bold text-pay-green underline-offset-2 hover:underline">
+              {contactAddress("abuse")}
+            </a>
+          </li>
+          <li>
+            Payment or refund issue:{" "}
+            <a href={mailtoFor("payments")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+              {contactAddress("payments")}
+            </a>
+          </li>
+        </ul>
+      </section>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ContactLine } from "@/components/contact/contact-line";
 
 export const metadata: Metadata = { title: "Help & customer service — NaijaShop", description: "Delivery, payments, returns and account help." };
 
@@ -57,6 +58,18 @@ export default function ShopHelpPage() {
               </li>
             ))}
           </ul>
+          <section aria-labelledby="contact-support-heading" className="mt-6 rounded-lg p-4 ring-1 ring-[#e3e6e6]">
+            <h2 id="contact-support-heading" className="text-[14px] font-bold">Contact us</h2>
+            <div className="mt-1 space-y-1 text-[12.5px] leading-6 text-[#565959]">
+              <ContactLine contact="support" label="Orders, delivery and returns" subject="NaijaShop order help" />
+              <ContactLine contact="payments" label="Wallet payments, refunds and payouts" subject="NaijaShop payment enquiry" />
+              <ContactLine contact="partners" label="Selling on NaijaDeals" subject="Partner with NaijaDeals" />
+              <ContactLine contact="hello" label="General enquiries" />
+            </div>
+            <p className="mt-2 text-[11.5px] leading-5 text-[#565959]">
+              Email opens a message in your own mail app. Order pages, return requests and wallet statements remain the supported in-app channels.
+            </p>
+          </section>
           <p className="mt-6 text-[12px] leading-6 text-[#565959]">
             This page lists only the support channels the platform operates today; no phone numbers or response-time promises are published until they are approved.
           </p>

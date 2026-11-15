@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { StayBottomNav, StayHeader } from "@/components/stay/stay-shell";
 import { StayFooter } from "@/components/stay/stay-home";
+import { mailtoFor } from "@/lib/data/contact-directory";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,7 @@ export default async function MessagesPage() {
 
         <p className="mt-3 rounded-xl bg-[#fff3e8] p-3 text-[10.5px] leading-5 text-[#a3480f]">
           Sending messages inside NaijaStay is not enabled yet. Until it is, contact the NaijaDeals support team and they will reach the host for you —
-          <Link href="/support" className="ml-1 font-bold underline">open a support case</Link> with your reservation reference.
+          <a href={mailtoFor("support", { subject: "NaijaStay reservation help" })} className="ml-1 font-bold underline">email support</a> with your reservation reference.
         </p>
       </main>
       <StayFooter />

@@ -19,6 +19,7 @@ import {
   X,
   Zap
 } from "lucide-react";
+import { mailtoFor } from "@/lib/data/contact-directory";
 
 /**
  * Canonical `/naijaeats` landing page.
@@ -176,6 +177,15 @@ const FOOTER_COLUMNS = [
       { label: "FAQs", href: "#faq" },
       { label: "Order tracking", href: "/naijaeats/orders" },
       { label: "Payment options", href: "/pay" }
+    ]
+  },
+  {
+    title: "Contact",
+    links: [
+      { label: "Customer support", href: mailtoFor("support", { subject: "NaijaEats help" }) },
+      { label: "Restaurant partners", href: mailtoFor("partners", { subject: "Restaurant partnership" }) },
+      { label: "Courier enquiries", href: mailtoFor("drivers", { subject: "Courier onboarding" }) },
+      { label: "Careers", href: mailtoFor("careers", { subject: "Careers at NaijaDeals" }) }
     ]
   }
 ] as const;
@@ -884,12 +894,21 @@ export function EatsLanding2026({ categories, cuisines, restaurantCount, feature
                 <ul className="mt-1 space-y-0.5">
                   {column.links.map((link) => (
                     <li key={link.label}>
-                      <Link
-                        href={link.href}
-                        className={`inline-flex min-h-11 items-center text-[11.5px] text-white/70 hover:text-white hover:underline lg:min-h-0 lg:py-1 ${focusRing()}`}
-                      >
-                        {link.label}
-                      </Link>
+                      {link.href.startsWith("mailto:") ? (
+                        <a
+                          href={link.href}
+                          className={`inline-flex min-h-11 max-w-full items-center break-words text-[11.5px] text-white/70 hover:text-white hover:underline lg:min-h-0 lg:py-1 ${focusRing()}`}
+                        >
+                          {link.label}
+                        </a>
+                      ) : (
+                        <Link
+                          href={link.href}
+                          className={`inline-flex min-h-11 items-center text-[11.5px] text-white/70 hover:text-white hover:underline lg:min-h-0 lg:py-1 ${focusRing()}`}
+                        >
+                          {link.label}
+                        </Link>
+                      )}
                     </li>
                   ))}
                 </ul>

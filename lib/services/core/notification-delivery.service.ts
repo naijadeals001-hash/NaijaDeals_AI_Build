@@ -1,6 +1,7 @@
 import type { Notification, NotificationCategory, NotificationChannel, Prisma } from "@prisma/client";
 import { join } from "node:path";
 import { prisma } from "@/lib/prisma";
+import { contactAddress } from "@/lib/data/contact-directory";
 import { recordAudit } from "./audit.service";
 import { QUEUE_NAMES, enqueue, isQueueConfigured } from "@/lib/infra/queue";
 import { log } from "@/lib/infra/logger";
@@ -285,6 +286,7 @@ export async function deliverNotification(notificationId: string): Promise<Deliv
       to: recipient ?? "unknown",
       subject: notification.title,
       body: notification.body,
+      replyTo: notification.channel === "EMAIL" ? contactAddress("support") : undefined,
       data: (notification.data ?? {}) as Record<string, unknown>
     });
 

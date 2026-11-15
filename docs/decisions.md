@@ -206,3 +206,28 @@ under the Sahrawi Arab Democratic Republic) and is not silently merged into Moro
 - Unpublishing preserves the profile, themes, sources, products, origin records and historical orders.
 - Editorial drafting, publication and origin verification are separate server permissions; the
   ordinary `admin` role is withheld publication and origin review. `super_admin` still holds all.
+
+## 2026-11-15 — One typed contact directory, aliases are not identities
+
+**Decision.** All public contact addresses come from
+`lib/data/contact-directory.ts`. The thirteen `@naijadeals.com` addresses are
+delivery aliases of `office@naijadeals.com`; they are contact addresses, not
+mailboxes, employee accounts, administrator identities or permissions.
+`accounts@` is marked internal and excluded from the public key type so it
+cannot be rendered in the interface. Pages use the address that matches their
+purpose and do not list all thirteen everywhere.
+
+**Consequences.**
+- A page cannot introduce an address literal: the acceptance suite rejects any
+  `@naijadeals.com` literal outside the directory (seeded demo users excepted).
+- Where a dedicated legal, privacy, terms, support or careers page does not
+  exist, the existing surface links to the relevant address instead of a dead
+  route. No empty pages were created for this change.
+- Dead `/support`, `/legal`, `/partner` and `/about` links were replaced by the
+  matching address or an existing real route; `/support` and `/legal` had been
+  returning the default 404 body with HTTP 200.
+- Transactional email keeps no invented `From`. The capture transport records
+  `replyTo: support@naijadeals.com`; a provider and verified sender remain an
+  external configuration step.
+- An active receiving alias does not by itself authorise sending through the
+  application provider.

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Bike, Boxes, Building2, Car, Check, Container, Factory, Globe2, Headset, Landmark, Package, Refrigerator, ShieldCheck, Sprout, Store, Truck, Warehouse, Wheat, Plane, TrainFront, User, Clock, CreditCard, Navigation } from "lucide-react";
+import { mailtoFor } from "@/lib/data/contact-directory";
 
 /** Horizontal rail with arrow controls, as in the approved mockup. */
 export function SendRail({ title, href, seeAll, children }: { title?: string; href?: string; seeAll?: string; children: React.ReactNode }) {
@@ -355,8 +356,8 @@ export function SendFooter() {
     { title: "Ship", links: [["Book a Shipment", "/naijasend/ship"], ["Track Shipment", "/naijasend/track"], ["Get a Quote", "/naijasend/quote"], ["Shipping Rates", "/naijasend/quote"], ["Delivery Areas", "/naijasend/providers"]] },
     { title: "Transporters", links: [["Become a Transporter", "/naijasend/transporter/apply"], ["Transporter Dashboard", "/naijasend/transporter/dashboard"], ["Earnings & Payouts", "/naijasend/transporter/dashboard"], ["Vehicle Verification", "/naijasend/transporter/apply"], ["Driver Support", "/naijasend/help"]] },
     { title: "Business", links: [["Enterprise Logistics", "/naijasend/enterprise"], ["Bulk & Freight Shipping", "/naijasend/enterprise"], ["Warehousing", "/naijasend/quote?mode=warehouse"], ["Supply Chain Solutions", "/naijasend/enterprise"], ["Government Services", "/naijasend/enterprise"]] },
-    { title: "Company", links: [["About NaijaSend", "/about"], ["How It Works", "/naijasend/how-it-works"], ["Our Network", "/naijasend/providers"], ["Newsroom", "/about"], ["Careers", "/about"]] },
-    { title: "Support", links: [["Help Center", "/naijasend/help"], ["Contact Us", "/naijasend/help"], ["Report an Issue", "/naijasend/help"], ["Disputes & Claims", "/support"], ["Returns & Refunds", "/support"]] }
+    { title: "Company", links: [["How It Works", "/naijasend/how-it-works"], ["Our Network", "/naijasend/providers"], ["Careers", mailtoFor("careers", { subject: "Careers at NaijaDeals" })]] },
+    { title: "Support", links: [["Help Center", "/naijasend/help"], ["Contact Us", "/naijasend/help"], ["Report an Issue", mailtoFor("support", { subject: "NaijaSend issue" })], ["Disputes & Claims", mailtoFor("support", { subject: "NaijaSend dispute" })], ["Returns & Refunds", mailtoFor("payments", { subject: "NaijaSend refund" })]] }
   ];
   return (
     <footer className="mt-6 bg-[#0b5c33] pb-20 text-white lg:pb-8">
@@ -369,7 +370,15 @@ export function SendFooter() {
           <nav key={col.title} aria-label={col.title}>
             <p className="text-[11px] font-extrabold text-[#8ed14b]">{col.title}</p>
             <ul className="mt-1.5 space-y-1">
-              {col.links.map(([label, href]) => <li key={label}><Link href={href} className="text-[10.5px] text-white/80 hover:text-white hover:underline">{label}</Link></li>)}
+              {col.links.map(([label, href]) => (
+                <li key={label}>
+                  {href.startsWith("mailto:") ? (
+                    <a href={href} className="break-words text-[10.5px] text-white/80 hover:text-white hover:underline">{label}</a>
+                  ) : (
+                    <Link href={href} className="text-[10.5px] text-white/80 hover:text-white hover:underline">{label}</Link>
+                  )}
+                </li>
+              ))}
             </ul>
           </nav>
         ))}
@@ -386,7 +395,10 @@ export function SendFooter() {
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 px-4 py-3 text-[10px] text-white/70">
           <p>© {new Date().getFullYear()} NaijaDeals. NaijaSend is a NaijaDeals Company. All rights reserved.</p>
           <div className="flex flex-wrap items-center gap-3">
-            {["Terms of Service", "Transporter Policy", "Shipping Policy", "Partner Terms"].map((label) => <Link key={label} href="/legal" className="hover:text-white hover:underline">{label}</Link>)}
+            <a href={mailtoFor("legal", { subject: "Terms of Service" })} className="hover:text-white hover:underline">Terms of Service</a>
+            <a href={mailtoFor("legal", { subject: "Transporter Policy" })} className="hover:text-white hover:underline">Transporter Policy</a>
+            <a href={mailtoFor("legal", { subject: "Shipping Policy" })} className="hover:text-white hover:underline">Shipping Policy</a>
+            <a href={mailtoFor("partners", { subject: "Partner Terms" })} className="hover:text-white hover:underline">Partner Terms</a>
             <span className="rounded-full bg-white/10 px-2 py-0.5">NGN</span>
           </div>
         </div>

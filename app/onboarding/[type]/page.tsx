@@ -3,6 +3,20 @@ import { CheckCircle2 } from "lucide-react";
 import { onboardingFlows } from "@/lib/data/ecosystem";
 import { TrustBadge } from "@/components/ui/badge";
 import { OnboardingForm } from "@/components/functional/onboarding-form";
+import { contactAddress, mailtoFor, type ContactKey } from "@/lib/data/contact-directory";
+
+/**
+ * Contact routing per supported onboarding flow. The flows themselves are
+ * defined in `onboardingFlows`; this map only chooses the published address and
+ * subject, never eligibility or programme terms.
+ */
+const onboardingContacts: Record<string, { key: ContactKey; label: string; subject: string }> = {
+  vendor: { key: "partners", label: "Vendor and partner enquiries", subject: "Vendor onboarding" },
+  driver: { key: "drivers", label: "Driver and courier enquiries", subject: "Driver onboarding" },
+  restaurant: { key: "partners", label: "Restaurant partnerships", subject: "Restaurant onboarding" },
+  creator: { key: "partners", label: "Creator and artist partnerships", subject: "Creator onboarding" },
+  host: { key: "partners", label: "Host and property-partner enquiries", subject: "Host onboarding" }
+};
 
 export function generateStaticParams() {
   return onboardingFlows.map((flow) => ({ type: flow.slug }));
@@ -18,6 +32,7 @@ export function generateMetadata({ params }: { params: { type: string } }): Meta
 
 export default function OnboardingPage({ params }: { params: { type: string } }) {
   const flow = onboardingFlows.find((item) => item.slug === params.type) ?? onboardingFlows[0];
+  const partnerContact = onboardingContacts[flow.slug] ?? onboardingContacts.vendor;
   const Icon = flow.icon;
 
   return (
@@ -43,6 +58,24 @@ export default function OnboardingPage({ params }: { params: { type: string } })
         </div>
       </section>
       <OnboardingForm type={params.type} />
+
+      <section aria-label="Onboarding contacts" className="rounded-2xl border border-border-soft bg-canvas p-5 text-sm text-muted">
+        <p>
+          {partnerContact.label}:{" "}
+          <a
+            href={mailtoFor(partnerContact.key, { subject: partnerContact.subject })}
+            className="font-bold text-primary underline-offset-2 hover:underline"
+          >
+            {contactAddress(partnerContact.key)}
+          </a>
+        </p>
+        <p className="mt-1">
+          Onboarding help:{" "}
+          <a href={mailtoFor("support")} className="font-bold text-primary underline-offset-2 hover:underline">
+            {contactAddress("support")}
+          </a>
+        </p>
+      </section>
     </div>
   );
 }

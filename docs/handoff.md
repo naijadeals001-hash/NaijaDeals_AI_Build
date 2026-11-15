@@ -5976,3 +5976,83 @@ contact sheets under `qa-artifacts/visual/` (ignored by Git, present on disk).
 (unchanged, documented in the audit). The preview process was restarted for this
 rebuild after confirming no acceptance run was active; the previous build
 `8CTjw5MV-9MCKuV66hkoY` was replaced by `RsT43GlLBsdJsCT8Li0HN`.
+
+## 2026-11-15 — Official contact addresses centralised
+
+**Scope.** Every published corporate contact address now comes from one typed
+module. The thirteen addresses are delivery aliases of `office@naijadeals.com`
+and are contact addresses only — not mailboxes, employee accounts,
+administrator identities or permissions.
+
+**Shared configuration.**
+- `lib/data/contact-directory.ts` — the 12 publishable addresses plus
+  `contactAddress()`, `mailtoFor({subject, body})` with correct encoding, and
+  `OFFICIAL_EMAIL_ADDRESSES` as the drift check.
+- `lib/data/internal-contacts.ts` — `accounts@naijadeals.com` (hosting,
+  Cloudflare R2, Backblaze B2 and service registrations) and the separate
+  `billing@` billing-contact value. Kept out of the public module so it cannot
+  reach a browser bundle.
+- `components/contact/contact-line.tsx` — one accessible "Label: address"
+  line used by help centres and the generic help page.
+
+**Where each address appears.**
+| Surface | Addresses |
+| --- | --- |
+| Shared shell footer (all public pages incl. `/`) | support, hello, partners, office, drivers; legal, privacy, security |
+| Shop footer + `/naijashop/help` | hello, support, partners, careers, office, payments |
+| `/help` (generic) | support, payments, hello |
+| NaijaEats landing + help | support, partners, drivers, careers |
+| NaijaDrive landing footer + `/naijadrive/help` | support, drivers, privacy, legal |
+| NaijaSend landing + help | support, payments, drivers, careers; legal/privacy/partner terms |
+| NaijaStay landing + help + safety | support, partners, legal, privacy, careers |
+| NaijaGigs landing + `/naijagigs/government` | support, partners, abuse, careers |
+| NaijaFresh landing + footer, farmer page | support, hello, payments, partners, careers |
+| NaijaPay landing, `/pay/security`, escrow/send/receive/business | payments, support, security, abuse, partners |
+| `/wallet`, `/sell`, `/seller`, `/business/[vertical]` | payments, support, partners |
+| Onboarding: `/onboarding/[type]`, `/restaurant/apply`, `/naijasend/transporter/apply`, `/naijasend/providers`, `/naijagigs/pro/apply`, `/naijastay/host`, `/naijastream/artists`, `/naijafresh/farmers/apply` | partners; drivers for driver/courier types |
+| `/naijashop/plus` | billing, payments, support |
+| `/affiliate` | partners, support |
+| `/returns` case view | support, payments |
+| Notification templates | wallet-credit body names support@ |
+
+`accounts@` appears nowhere in `app/` or `components/` and in no built chunk.
+`eramics` is unrelated to this task; no such string exists. No contact form or
+enquiry-category router exists in this build, so none was invented.
+
+**Dead links replaced, not masked.** `/support`, `/legal`, `/partner` and
+`/about` returned the default not-found body with HTTP 200. Existing surfaces
+now point at the matching address (or an existing real route such as
+`/restaurant/apply`, `/naijagigs/pro/apply`, `/help`, `/naijastay`,
+`/naijastay/host`, `/naijafresh`). No empty pages were created.
+
+**Transactional email.** The only transport is `EmailCaptureTransport`; there is
+no outbound provider and therefore no verified sender. `deliverNotification`
+attaches `replyTo: support@naijadeals.com` for EMAIL and the capture record
+stores it. No `From` address is asserted, no credentials were added, and
+password-reset recipients and auth identities are untouched.
+
+**Verification (build `aFdRusoJPY236pVAS_0ej`, port 3047, `naijadeals_review`):**
+- `scripts/contact-directory-tests.ts --base-url=http://localhost:3047`
+  **50/50**, covering: the 12 public addresses match the owner directory
+  exactly; the internal module holds accounts/billing; `mailtoFor` encoding of
+  spaces, `&`, `?`, `#` and newlines; no address literal outside the modules;
+  no `accounts@` in app/components or any built chunk; no client import of the
+  internal module; 20 audited routes render their purpose-matched address; every
+  `mailto:` on those pages targets an approved public address; capture
+  transport records the support Reply-To; wallet-credit template names support@.
+- Scoped type check over all 57 changed files: clean. `next lint` on the same
+  files: 0 errors (only pre-existing `<img>` warnings).
+- Browser: `/` footer at 390 shows label+address pairs, 0 horizontal overflow,
+  all 8 mailto anchors focusable; `/naijashop/help` contact block 4 addresses at
+  390 and 1440; `/naijadrive/help` support/drivers/privacy/legal anchors;
+  `/pay` "Need help?" renders payments/support. Screenshots under
+  `qa-artifacts/visual/contact-2026-11-15/`.
+
+**External configuration still required.** A transactional email provider and a
+verified sending domain/sender must be configured before the application sends
+mail; until then only the capture transport exists and the receiving aliases
+work for inbound mail. No DNS, mailbox forwarding or provider account was
+changed.
+
+**Preservation.** Local commit only; `github-preservation` push remains refused
+for the configured credential (HTTP 403), so the remote branch is unchanged.

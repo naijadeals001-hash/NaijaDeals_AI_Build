@@ -108,7 +108,7 @@ export function EatsLandingExtras() {
           <div className="p-5">
             <h2 className="font-display text-xl font-extrabold text-[#14241b]">Your kitchen. More customers.</h2>
             <p className="mt-1 text-sm text-[#6b7a70]">List your restaurant on NaijaEats and reach more food lovers in your city.</p>
-            <Link href="/partner" className="mt-3 inline-flex rounded-full bg-[#0b5c33] px-5 py-2.5 text-sm font-extrabold text-white">Partner your restaurant</Link>
+            <Link href="/restaurant/apply" className="mt-3 inline-flex rounded-full bg-[#0b5c33] px-5 py-2.5 text-sm font-extrabold text-white">Partner your restaurant</Link>
           </div>
         </div>
         <div className="rounded-2xl border border-[#e4e9e5] bg-white p-5">
