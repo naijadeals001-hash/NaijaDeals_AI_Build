@@ -913,9 +913,11 @@ export async function updateProductOrigin(actor: SessionUser, input: OriginInput
 
     const country = await tx.countryProfile.findUnique({
       where: { code: input.originCountryCode },
-      select: { code: true }
+      select: { code: true, publicationStatus: true }
     });
-    if (!country) throw new ApiError(400, "validation_error", "Origin must be a registered African discovery country.");
+    if (!country || country.publicationStatus !== "PUBLISHED") {
+      throw new ApiError(400, "validation_error", "Origin must be a published African discovery country.");
+    }
     if (input.originBasis !== "SELLER_DECLARED" && input.originBasis !== "VERIFIED") {
       throw new ApiError(400, "validation_error", "Origin basis must be SELLER_DECLARED or VERIFIED.");
     }

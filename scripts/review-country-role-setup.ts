@@ -37,6 +37,7 @@ const ACCOUNTS: AccountSpec[] = [
   { key: "origin", role: "country_origin_reviewer", scopeCountryCode: null, label: "Platform origin reviewer" },
   { key: "admin", role: "admin", scopeCountryCode: null, label: "Ordinary administrator probe" },
   { key: "editor-gh", role: "country_editor", scopeCountryCode: "GH", label: "Ghana-scoped editor" },
+  { key: "editor-qt", role: "country_editor", scopeCountryCode: "QT", label: "Run-owned fixture-scoped editor" },
   { key: "publisher-gh", role: "country_publisher", scopeCountryCode: "GH", label: "Ghana-scoped publisher" },
   { key: "origin-ng", role: "country_origin_reviewer", scopeCountryCode: "NG", label: "Nigeria-scoped origin reviewer" },
   { key: "origin-gh", role: "country_origin_reviewer", scopeCountryCode: "GH", label: "Ghana-scoped origin reviewer" }

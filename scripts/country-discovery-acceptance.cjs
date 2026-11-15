@@ -312,11 +312,12 @@ async function main() {
     const originCred = roleCredentials(credentialsDir, "origin");
     const adminProbeCred = roleCredentials(credentialsDir, "admin");
     const editorGhCred = roleCredentials(credentialsDir, "editor-gh");
+    const editorQtCred = roleCredentials(credentialsDir, "editor-qt");
     const publisherGhCred = roleCredentials(credentialsDir, "publisher-gh");
     const originNgCred = roleCredentials(credentialsDir, "origin-ng");
     const originGhCred = roleCredentials(credentialsDir, "origin-gh");
     const platformRoleCreds = [editorCred, publisherCred, originCred, adminProbeCred];
-    const scopedRoleCreds = [editorGhCred, publisherGhCred, originNgCred, originGhCred];
+    const scopedRoleCreds = [editorGhCred, editorQtCred, publisherGhCred, originNgCred, originGhCred];
 
     if (platformRoleCreds.some((value) => !value) || scopedRoleCreds.some((value) => !value)) {
       blocked(
@@ -329,6 +330,7 @@ async function main() {
       const originCookie = await login(originCred);
       const adminProbeCookie = await login(adminProbeCred);
       const editorGhCookie = await login(editorGhCred);
+      const editorQtCookie = await login(editorQtCred);
       const publisherGhCookie = await login(publisherGhCred);
       const originNgCookie = await login(originNgCred);
       const originGhCookie = await login(originGhCred);
@@ -420,17 +422,28 @@ async function main() {
         body: JSON.stringify({ code: fixtureCode, introduction: fixture.profile.introduction })
       });
       check("GH-scoped editor cannot edit another market", editorGhFixtureEdit.status === 403, String(editorGhFixtureEdit.status));
-      const ghProfile = profiles.find((row) => row.code === "GH");
-      const editorGhEdit = await req("/api/admin/country-discovery", editorGhCookie, {
+      const editorQtList = await req("/api/admin/country-discovery", editorQtCookie);
+      const editorQtRows = await editorQtList.json();
+      check(
+        "fixture-scoped editor list is limited to the run-owned fixture market",
+        editorQtList.status === 200 && Array.isArray(editorQtRows) && editorQtRows.length === 1 && editorQtRows[0]?.code === fixtureCode,
+        `${editorQtList.status} rows=${Array.isArray(editorQtRows) ? editorQtRows.length : "?"}`
+      );
+      const editorQtEdit = await req("/api/admin/country-discovery", editorQtCookie, {
         method: "PATCH",
-        body: JSON.stringify({ code: "GH", introduction: ghProfile.introduction })
+        body: JSON.stringify({ code: fixtureCode, introduction: fixture.profile.introduction })
       });
-      check("GH-scoped editor can edit GH", editorGhEdit.status === 200, String(editorGhEdit.status));
-      const editorGhPublish = await req("/api/admin/country-discovery", editorGhCookie, {
+      check("fixture-scoped editor can edit its own market", editorQtEdit.status === 200, String(editorQtEdit.status));
+      const editorQtForeignEdit = await req("/api/admin/country-discovery", editorQtCookie, {
         method: "PATCH",
-        body: JSON.stringify({ code: "GH", action: "publish" })
+        body: JSON.stringify({ code: "GH", introduction: "Outside the fixture scope." })
       });
-      check("GH-scoped editor cannot publish", editorGhPublish.status === 403, String(editorGhPublish.status));
+      check("fixture-scoped editor cannot edit GH", editorQtForeignEdit.status === 403, String(editorQtForeignEdit.status));
+      const editorQtPublish = await req("/api/admin/country-discovery", editorQtCookie, {
+        method: "PATCH",
+        body: JSON.stringify({ code: fixtureCode, action: "publish" })
+      });
+      check("fixture-scoped editor cannot publish", editorQtPublish.status === 403, String(editorQtPublish.status));
       check("GH-scoped editor cannot read DZ audit", (await req("/api/admin/country-discovery/audit?code=DZ", editorGhCookie)).status === 403);
       check("GH-scoped editor can read GH audit", (await req("/api/admin/country-discovery/audit?code=GH", editorGhCookie)).status === 200);
       const publisherGhPublish = await req("/api/admin/country-discovery", publisherGhCookie, {
@@ -474,6 +487,16 @@ async function main() {
         filteredOrigins.status === 200 && filteredBody?.total === 1 && filteredBody?.rows?.[0]?.id === productFixture.product.id,
         `status=${filteredOrigins.status} total=${filteredBody?.total}`
       );
+      const draftOrigin = await req("/api/admin/country-discovery/origin", originNgCookie, {
+        method: "PATCH",
+        body: JSON.stringify({
+          productId: productFixture.product.id,
+          originCountryCode: fixtureCode,
+          originBasis: "SELLER_DECLARED",
+          originNote: "Run-owned draft country must not be an origin."
+        })
+      });
+      check("a draft country cannot be recorded as an origin", draftOrigin.status === 400, String(draftOrigin.status));
       const crossOrigin = await req("/api/admin/country-discovery/origin", originGhCookie, {
         method: "PATCH",
         body: JSON.stringify({

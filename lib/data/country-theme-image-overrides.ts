@@ -419,6 +419,21 @@ export const COUNTRY_THEME_IMAGE_OVERRIDES: Record<string, CountryThemeImageOver
     credits: 6,
     prompt: "A woven basket of wild African fruits and nuts including baobab pods, marula fruits, wild figs and shea nuts on a rustic wooden table.",
   },
+  "DZ/couscous": {
+    url: "/generated/countries/theme-couscous.webp",
+    alt: "Steamed couscous. Illustrative image for the Couscous theme.",
+    kind: "GENERATED",
+    provenance: "GENERATED: Kie.ai gpt-image-2-5-flare-text-to-image, 1K, 1:1, task e720ec03776cb83144d8ed63fd95d563, 6 credits, generated 2026-11-14. Editorial illustration only; not a country-specific product, stock or origin claim. Prompt recorded in docs/countries/imagery-manifest.md.",
+    taskId: "e720ec03776cb83144d8ed63fd95d563",
+    credits: 6,
+    prompt: "Steamed couscous"
+  },
+  "ER/potato": {
+    url: "/generated/fresh/prod-irish-potatoes.webp",
+    alt: "Irish potatoes. Illustrative image for the Potato theme.",
+    kind: "APPROVED_EXISTING",
+    provenance: "APPROVED_EXISTING: project asset fresh/prod-irish-potatoes.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim."
+  },
   "SZ/flavourings": {
     url: "/generated/fresh/cat-herbs-spices.webp",
     alt: "Bowls of whole and ground spices. Illustrative image for the Flavouring compounds theme.",
