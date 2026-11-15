@@ -33,11 +33,11 @@ if (Test-Port $N8nPort) {
     $env:N8N_BASIC_AUTH_ACTIVE = "true"
     $env:N8N_BASIC_AUTH_USER = "staging"
     $env:N8N_BASIC_AUTH_PASSWORD = $map["n8nBasicPassword"]
-    Start-Process -FilePath "node" -ArgumentList "`"$n8nCli`" start" `
+    Start-Process -FilePath "node" -ArgumentList "`"$n8nCli`" start" -WorkingDirectory $StagingRoot `
       -RedirectStandardOutput (Join-Path (Get-StagingLog "n8n") "stdout.log") `
       -RedirectStandardError (Join-Path (Get-StagingLog "n8n") "stderr.log") `
       -WindowStyle Hidden | Out-Null
-    if (Wait-Port $N8nPort 90) { Write-StagingEvent "n8n_started" @{ port = $N8nPort } }
+    if (Wait-Port $N8nPort 120) { Write-StagingEvent "n8n_started" @{ port = $N8nPort } }
     else { Write-StagingEvent "n8n_failed" @{ port = $N8nPort } }
   } else {
     Write-StagingEvent "n8n_not_installed" @{ path = $n8nCli }
@@ -48,15 +48,18 @@ if (Test-Port $N8nPort) {
 if (Test-Port $AppPort) {
   Write-StagingEvent "app_already_running" @{ port = $AppPort }
 } else {
-  if (-not (Test-Path (Join-Path $AppDir ".next\BUILD_ID"))) { throw "No production build in $AppDir; run 'npm run build' there first." }
+  $buildIdFile = Join-Path $AppDir ".next\BUILD_ID"
+  if (-not (Test-Path $buildIdFile)) { throw "No production build in $AppDir; build it first." }
+  $nextBin = Join-Path $AppDir "node_modules\next\dist\bin\next"
+  if (-not (Test-Path $nextBin)) { throw "next binary missing in $AppDir; install dependencies there." }
   $env:PORT = "$AppPort"
   $env:DATABASE_URL = $map["DATABASE_URL"]
-  Start-Process -FilePath "npx" -ArgumentList "next start -p $AppPort" -WorkingDirectory $AppDir `
+  Start-Process -FilePath "node" -ArgumentList "`"$nextBin`" start -p $AppPort" -WorkingDirectory $AppDir `
     -RedirectStandardOutput (Join-Path (Get-StagingLog "app") "stdout.log") `
     -RedirectStandardError (Join-Path (Get-StagingLog "app") "stderr.log") `
     -WindowStyle Hidden | Out-Null
   if (-not (Wait-Port $AppPort 60)) { throw "App did not start on $AppPort; see logs/app/stdout.log" }
-  Write-StagingEvent "app_started" @{ port = $AppPort; buildId = (Get-Content (Join-Path $AppDir ".next\BUILD_ID") -Raw).Trim() }
+  Write-StagingEvent "app_started" @{ port = $AppPort; buildId = (Get-Content $buildIdFile -Raw).Trim() }
 }
 
 Write-Output "staging up: app http://localhost:$AppPort, n8n http://127.0.0.1:$N8nPort, postgres 127.0.0.1:55432/$ExpectedDatabase"

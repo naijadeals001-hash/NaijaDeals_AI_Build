@@ -3,7 +3,10 @@ const nextConfig = {
   // Allow a separate build directory so a local dev server and a production
   // preview can run side by side without overwriting each other's artifacts.
   distDir: process.env.NEXT_DIST_DIR || ".next",
-  output: "standalone",
+  // Staging builds set NEXT_OUTPUT_MODE= (empty) because the standalone
+  // bundling step cannot write a node_modules symlink when dependencies are
+  // shared by junction; the default remains standalone.
+  output: process.env.NEXT_OUTPUT_MODE !== undefined ? (process.env.NEXT_OUTPUT_MODE || undefined) : "standalone",
   async redirects() {
     // "/drive" was reaching the generic [slug] placeholder; the ride experience
     // lives at /naijadrive, so send visitors to the real service.

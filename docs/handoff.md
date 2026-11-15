@@ -6056,3 +6056,42 @@ changed.
 
 **Preservation.** Local commit only; `github-preservation` push remains refused
 for the configured credential (HTTP 403), so the remote branch is unchanged.
+
+## 2026-11-15 — D: staging environment, R2 buckets and B2 recovery
+
+Staging lives entirely on `D:\NaijaDeals-Staging` and is separate from the
+development checkout (which was not moved, stopped or cleaned).
+
+- **Paths:** `app\` (git worktree, build `c4mTDy3qepAZ0NIihmfXO`), `pgdata\`,
+  `n8n\`, `logs\`, `backups\prep\`, `restore-verify\`, `secrets\`, `env\`.
+- **Ports:** app `3200`, PostgreSQL `127.0.0.1:55432` (database
+  `naijadeals_staging`, role `nd_staging`), n8n `127.0.0.1:5680` (not installed
+  — see blockers).
+- **R2:** `naijadeals-staging-public` (public dev URL
+  `https://pub-0759d3c9562f48b0be07f23c1c259db0.r2.dev`, CORS for the two local
+  origins) and `naijadeals-staging-private` (public access disabled). Bucket
+  settings verified through the Cloudflare API; no objects were uploaded
+  because no R2 S3 key exists yet (blocked owner action).
+- **B2:** `naijadeals-staging-backups`, bucket-scoped key; encrypted upload,
+  download, byte comparison and delete verified.
+- **Code:** `lib/infra/config.ts` + `lib/infra/storage.ts` now support
+  public/private buckets and presigned private reads; `scripts/backup/run.mjs`
+  gained `upload` and `fetch <key>` (checksum → decrypt → disposable restore →
+  row counts → drop) and uses a separate CREATEDB restore role;
+  `scripts/staging/*.ps1` start/stop the stack, assert the database identity,
+  run the mutexed backup with retries and register the scheduled tasks.
+- **Schedule:** `NaijaDeals-Staging-Backup-0200` and `-1200`, `Ready`,
+  StartWhenAvailable, no overlap, 3 retries. A manual run of the 12:00 task
+  completed unattended (backup_ok, 158 s) and its remote object restored
+  successfully.
+- **Persistence:** a marker row survived a full stop/start; the app came back on
+  3200.
+- **Incident:** a PostgreSQL log captured a restore-role password during a
+  failed statement. The password was rotated, the log deleted and the stack
+  restarted; logs and the browser bundle now contain no staging secret.
+- **Caveat:** D: is exFAT (no ACLs, no junctions, readlink quirks), so the
+  compile ran once on an NTFS worktree and the output was copied to D:. The
+  served checkout remains on D:.
+- **Blocked:** R2 S3 credentials; n8n installation (25 GB partial install
+  removed; needs Node 22/NTFS or Docker). Items 2–5 of the end-to-end list stay
+  BLOCKED until the R2 token exists.

@@ -28,7 +28,7 @@ import { config } from "dotenv";
 config();
 
 const ROOT = process.cwd();
-const DIR = join(ROOT, "backups");
+const DIR = process.env.BACKUP_DIR ?? join(ROOT, "backups");
 const MANIFEST = join(DIR, "manifest.json");
 const MAGIC = Buffer.from("NDB1");
 const KEEP = Number(process.env.BACKUP_KEEP ?? 7);
