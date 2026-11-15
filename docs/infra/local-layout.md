@@ -46,3 +46,24 @@ live on **D:**.
 - Verified workflow: "NaijaDeals local file test" (manual trigger → Code node)
   executed through the CLI, wrote `D:\NaijaDeals-Storage\output\n8n-test.txt`
   (50 bytes, sha256 `b40b0ce1…`), and persisted across an n8n restart.
+
+## Independent acceptance (2026-11-15)
+
+An independent, read-only reviewer re-verified every runtime gate and returned
+PASS for: staging :3200 serving build `j3ZZjPZtovmXdoiL_a_zO` from worktree
+`38f952e`; PostgreSQL on C: with 86 migrations and staging-only sessions; both
+R2 buckets reachable with no `_verify/` leftovers and `putObjectIn`/
+`getObjectFrom`/`presignGetFrom` present; B2 dump `sha256 7a194ab0…` (508,104 B)
+and objects archive (2 objects, per-object checksums, 8/8 restore checks);
+n8n 2.47.7 on Node 24 with the inactive test workflow and its D: output file;
+and all scheduled tasks ready with C: actions.
+
+Reviewer follow-ups recorded:
+- Scheduled tasks run under an **interactive** principal, so they do not run
+  while the user is logged out; `StartWhenAvailable` replays after logon.
+- The n8n settings endpoint now reports `showSetupOnFirstLoad=false` with one
+  existing user account. The owner must sign in with the account they created;
+  no credentials were recorded here, and no reset was attempted.
+- The staging database holds no business rows, so the database restore proves
+  schema and migration recovery, not business-data recovery.
+- A parked session from the earlier migration was terminated during this pass.

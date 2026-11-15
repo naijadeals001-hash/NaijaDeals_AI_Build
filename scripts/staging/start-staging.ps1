@@ -1,4 +1,4 @@
-# Start the staging stack: PostgreSQL (D: data dir), n8n, then the built app.
+# Start the staging stack on C:: PostgreSQL, n8n, then the built app.
 # Idempotent: an already-running component is left alone.
 . "$PSScriptRoot\common.ps1"
 

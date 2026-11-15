@@ -17,7 +17,7 @@ if ($n8n) {
   Write-StagingEvent "n8n_stopped" @{ pid = $n8n.OwningProcess }
 }
 
-# PostgreSQL: fast shutdown of the staging cluster only (D: data directory).
+# PostgreSQL: fast shutdown of the staging cluster only (C: data directory).
 $env:PGPASSWORD = ($map["DATABASE_URL"] -replace '^.*://[^:]+:([^@]+)@.*$', '$1')
 & (Join-Path $PgBin "pg_ctl.exe") -D $PgData -m fast -w stop | Out-Null
 Write-StagingEvent "postgres_stopped" @{ data = $PgData }

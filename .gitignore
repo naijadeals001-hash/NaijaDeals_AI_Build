@@ -60,3 +60,8 @@ backups/
 
 # Keep large generation originals out of Git; published WebP derivatives are committed.
 public/generated/taxonomy/*.png
+
+# Credential and env copies, including notes files that paste secrets
+.env.*
+!.env.example
+*.env.md
