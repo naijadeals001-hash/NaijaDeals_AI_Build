@@ -237,3 +237,21 @@ CHANGES-REQUIRED for the support feature: global anonymous rate-limit bucket
 (H2), 8-hour guest session vs the advertised 7-day link (M8), and a no-op
 unassigned-reply notification dedupe key (M9), plus LOW items. These are
 outstanding; they do not affect the staging/storage gates above.
+
+### Post-move verification (2026-11-15, final)
+
+- Database: `naijadeals_staging` as `nd_staging` on the C: cluster, 86 applied
+  migrations, schema present; app on http://localhost:3200 returns 200.
+- Backup after the move: encrypted dump 506,356 bytes -> B2
+  `staging/postgres/postgres-2026-11-15T19-59-14-682Z.dump.enc` -> download,
+  sha256 match, disposable restore, row counts equal, database dropped.
+- Scheduled task `NaijaDeals-Staging-Backup-1200` executed from the C: path and
+  returned `LastTaskResult=0` / `Ready`.
+- Secrets: 271 files across the C:/D: staging logs and the built browser bundle
+  contained 0 current staging secret values. The rollout cluster recreated the
+  old D: PostgreSQL log with one invalidated role statement; that log was
+  removed and the scan evidence is in
+  `C:\NaijaDeals-Staging\logs\events\credential-scan-2026-11-15.json`. The
+  leaked password had been rotated before deletion and no longer authenticates.
+- Still blocked: R2 S3 credentials (management token only), so application
+  upload/presign/denial and uploaded-file recovery remain untested.
