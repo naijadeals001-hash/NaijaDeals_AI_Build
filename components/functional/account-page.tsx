@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Headphones, Loader2, LogOut, MapPin, PackageCheck, RotateCcw, Store, UserCircle, Wallet } from "lucide-react";
-import { ApiRequestError, apiClient, koboToNaira, type ApiProduct } from "@/lib/api-client";
-import { availabilityProjection } from "@/lib/services/core/availability";
+import { ApiRequestError, apiClient, koboToNaira, type ApiSavedItem } from "@/lib/api-client";
 
 type Address = {
   id: string;
@@ -35,13 +34,36 @@ type Account = {
 
 const emptyAddress = { label: "Home", countryCode: "NG", state: "Lagos", city: "Ikeja", line1: "", line2: "", phone: "", postalCode: "" };
 
+const SAVED_UNAVAILABLE_COPY: Record<NonNullable<ApiSavedItem["product"]["unavailableReason"]>, string> = {
+  shop_not_available: "Shop is not available in this market",
+  not_published: "This listing is no longer published",
+  seller_unavailable: "This seller is not available",
+  not_in_market: "Not available in your market",
+  contact_seller: "Contact the seller to buy this item",
+  availability_unknown: "Availability unavailable",
+  out_of_stock: "Out of stock",
+  choose_variant: "Choose an option to buy"
+};
+
+function savedStockLabel(product: ApiSavedItem["product"]): string {
+  // `choose_variant` is not "unavailable": the listing has stock, the customer
+  // just has to pick an option first. Say both.
+  if (product.unavailableReason === "choose_variant" && product.availability.available > 0) {
+    return "In stock — choose an option";
+  }
+  if (product.unavailableReason) return SAVED_UNAVAILABLE_COPY[product.unavailableReason];
+  if (!product.availability.known) return "Availability unavailable";
+  return product.availability.available > 0 ? "In stock" : "Out of stock";
+}
+
 /**
  * One saved-item card.
  *
- * Variant-managed products never auto-select a variant here: the customer is
- * sent to the product page to choose an option. Stock copy comes from the
- * shared availability projection so a missing stock record is reported as
- * unavailable rather than as zero units.
+ * The server sends only the safe saved projection: one image, public
+ * vendor/category summary, the shared availability state and a truthful
+ * unavailable reason. Variant-managed products never auto-select a variant
+ * here; the customer is sent to the product page to choose an option. The add
+ * control is enabled only when the server marked this exact line purchasable.
  */
 export function SavedItemCard({
   item,
@@ -49,22 +71,26 @@ export function SavedItemCard({
   onAdd,
   onRemove
 }: {
-  item: { id: string; product: ApiProduct };
+  item: ApiSavedItem;
   busy: boolean;
-  onAdd: (product: ApiProduct) => void;
+  onAdd: (product: ApiSavedItem["product"]) => void;
   onRemove: (productId: string) => void;
 }) {
   const product = item.product;
-  const availability = availabilityProjection({ variants: product.variants, stock: product.stock });
-  const stockLabel = !availability.known
-    ? "Availability unavailable"
-    : availability.available > 0
-      ? "In stock"
-      : "Out of stock";
+  const stockLabel = savedStockLabel(product);
+  const requiresChoice = product.availability.requiresVariantSelection && product.unavailableReason === "choose_variant";
   return (
     <div className="rounded-xl bg-surface-low p-3">
       <Link href={`/product/${product.slug}`} className="flex gap-3">
-        <img src={product.images[0]?.url} alt="" className="h-16 w-16 rounded-lg object-cover" />
+        {product.image ? (
+          <img
+            src={product.image.url}
+            alt={product.image.alt ?? ""}
+            className="h-16 w-16 rounded-lg object-cover"
+          />
+        ) : (
+          <div className="h-16 w-16 rounded-lg bg-surface-high" aria-hidden="true" />
+        )}
         <div>
           <p className="line-clamp-2 text-sm font-bold">{product.name}</p>
           <p className="text-sm font-black text-primary">{koboToNaira(product.priceKobo)}</p>
@@ -72,7 +98,7 @@ export function SavedItemCard({
         </div>
       </Link>
       <div className="mt-2 flex gap-3 text-xs font-bold">
-        {availability.requiresVariantSelection ? (
+        {requiresChoice ? (
           <Link
             href={`/product/${product.slug}`}
             className="text-primary underline"
@@ -83,9 +109,12 @@ export function SavedItemCard({
         ) : (
           <button
             type="button"
-            disabled={busy || !availability.known || availability.available <= 0}
+            disabled={busy || !product.purchasable}
             onClick={() => onAdd(product)}
             className="text-primary underline disabled:opacity-50"
+            aria-label={
+              product.purchasable ? `Add ${product.name} to cart` : `${product.name} is not available to add to cart`
+            }
           >
             Add to cart
           </button>
@@ -107,7 +136,7 @@ export function AccountPage() {
   const router = useRouter();
   const [account, setAccount] = useState<Account | null>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
-  const [saved, setSaved] = useState<Array<{ id: string; product: ApiProduct }>>([]);
+  const [saved, setSaved] = useState<ApiSavedItem[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error" | "signed-out">("loading");
   const [error, setError] = useState("");
   const [addressForm, setAddressForm] = useState(emptyAddress);
@@ -212,15 +241,18 @@ export function AccountPage() {
     finally { setAddressBusy(""); }
   }
 
-  async function moveSavedToCart(product: ApiProduct) {
+  async function moveSavedToCart(product: ApiSavedItem["product"]) {
     setError(""); setAddressBusy(product.id);
     try {
-      const availability = availabilityProjection({ variants: product.variants, stock: product.stock });
-      if (!availability.known) throw new Error("Availability is unavailable for this saved item.");
-      if (availability.requiresVariantSelection) {
-        throw new Error("Choose an option on the product page before adding this saved item.");
+      // The server already evaluated publication, market, seller, Shop
+      // activation and stock. Do not re-derive a purchasable state here.
+      if (!product.purchasable) {
+        throw new Error(
+          product.unavailableReason
+            ? SAVED_UNAVAILABLE_COPY[product.unavailableReason]
+            : "This saved item is not available to add to cart."
+        );
       }
-      if (availability.available <= 0) throw new Error("This saved item is out of stock.");
       await apiClient.addCartItem(product.id, 1, null);
       setNotice("Added to cart.");
     } catch (err) { setError(err instanceof Error ? err.message : "Could not add saved item to cart."); }

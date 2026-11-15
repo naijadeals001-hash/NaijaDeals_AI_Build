@@ -29,6 +29,7 @@ export default async function Page({
         orders={data.orders}
         applications={data.applications}
         products={data.products}
+        productsTotal={data.productsTotal}
         payments={data.payments}
         disputes={data.disputes}
         freight={data.freight}

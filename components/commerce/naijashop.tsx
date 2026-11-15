@@ -49,6 +49,8 @@ import {
   koboToNaira,
   statusLabel,
   type ApiCart,
+  type ApiCartItem,
+  type ApiCartLineAvailability,
   type ApiCategory,
   type ApiOrder,
   type ApiPaymentMethod,
@@ -62,6 +64,48 @@ import { useLocale } from "@/lib/i18n/locale-provider";
 /** Authoritative cart badge count: active lines only, saved-for-later excluded. */
 function activeCartCount(cart: ApiCart | null | undefined) {
   return (cart?.items ?? []).filter((item) => !item.savedForLater).reduce((sum, item) => sum + item.quantity, 0);
+}
+
+const CART_UNAVAILABLE_COPY: Record<NonNullable<ApiCartLineAvailability["reason"]>, string> = {
+  product_unavailable: "This listing is no longer available.",
+  vendor_unavailable: "This seller is not accepting orders.",
+  variant_unavailable: "The selected option is no longer available.",
+  variant_required: "This listing now sells by option. Remove it and choose an option from the product page.",
+  out_of_stock: "Out of stock."
+};
+
+/** Why a cart line cannot be bought as currently configured, or null. */
+function cartLineUnavailableReason(item: ApiCartItem): string | null {
+  const availability = item.availability;
+  if (!availability) return null;
+  if (!availability.purchasable) {
+    return availability.reason ? CART_UNAVAILABLE_COPY[availability.reason] : "This item is unavailable.";
+  }
+  return null;
+}
+
+/**
+ * An active line is only checkout-ready when the server says it is purchasable
+ * and the requested quantity fits the units that can still be added. Unknown
+ * availability (an older payload without the field) is left to the server's
+ * checkout refusal rather than being guessed.
+ */
+function activeCartLineBlocked(item: ApiCartItem): boolean {
+  const availability = item.availability;
+  if (!availability) return false;
+  if (!availability.purchasable) return true;
+  return item.quantity > availability.available;
+}
+
+function activeCartLineReason(item: ApiCartItem): string | null {
+  const availability = item.availability;
+  if (!availability) return null;
+  const copy = cartLineUnavailableReason(item);
+  if (copy) return copy;
+  if (item.quantity > availability.available) {
+    return `Only ${availability.available} unit${availability.available === 1 ? "" : "s"} can be added. Reduce the quantity.`;
+  }
+  return null;
 }
 
 function ErrorBox({ message, action }: { message: string; action?: React.ReactNode }) {
@@ -1228,6 +1272,7 @@ export function ShopCartPage() {
   const active = cart.items.filter((item) => !item.savedForLater);
   const units = active.reduce((sum, item) => sum + item.quantity, 0);
   const saved = cart.items.filter((item) => item.savedForLater);
+  const blockedActive = active.filter(activeCartLineBlocked);
 
   return (
     <div className="space-y-5">
@@ -1259,7 +1304,12 @@ export function ShopCartPage() {
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
           <div className="space-y-3">
             {active.map((item) => (
-              <article key={item.id} className="flex gap-3 rounded-2xl border border-border-soft bg-canvas p-3">
+              <article
+                key={item.id}
+                className={`flex gap-3 rounded-2xl border bg-canvas p-3 ${
+                  activeCartLineBlocked(item) ? "border-crimson/40" : "border-border-soft"
+                }`}
+              >
                 <img src={item.product.images[0]?.url} alt="" className="h-24 w-24 rounded-xl object-cover" />
                 <div className="min-w-0 flex-1">
                   <Link href={`/product/${item.product.slug}`} className="font-bold hover:text-primary">
@@ -1269,6 +1319,14 @@ export function ShopCartPage() {
                   <p className="mt-1 text-sm font-bold text-primary">
                     {koboToNaira(item.variant?.priceKobo ?? item.product.priceKobo)}
                   </p>
+                  {activeCartLineReason(item) ? (
+                    <p
+                      role="status"
+                      className="mt-2 inline-flex rounded-lg border border-crimson/30 bg-crimson-soft px-2 py-1 text-xs font-bold text-crimson"
+                    >
+                      Unavailable — {activeCartLineReason(item)}
+                    </p>
+                  ) : null}
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <div className="inline-flex items-center rounded-lg border border-border-soft">
                       <button
@@ -1282,9 +1340,9 @@ export function ShopCartPage() {
                       <span className="min-w-8 text-center text-sm font-bold">{item.quantity}</span>
                       <button
                         aria-label="Increase quantity"
-                        disabled={busy === item.id}
+                        disabled={busy === item.id || activeCartLineBlocked(item)}
                         onClick={() => void update(item.id, item.quantity + 1)}
-                        className="min-h-9 min-w-9 text-lg font-bold"
+                        className="min-h-9 min-w-9 text-lg font-bold disabled:opacity-40"
                       >
                         +
                       </button>
@@ -1316,10 +1374,42 @@ export function ShopCartPage() {
                 <dd className="font-bold">1% at checkout</dd>
               </div>
             </dl>
-            <Link href="/checkout" className="mt-5 flex min-h-12 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white">
-              Proceed to checkout
-            </Link>
-            <p className="mt-3 text-xs text-muted">Final total is recalculated on the server before payment.</p>
+            {blockedActive.length > 0 ? (
+              <div className="mt-4 rounded-xl border border-crimson/30 bg-crimson-soft p-3 text-xs font-semibold text-crimson">
+                <p role="status">
+                  {blockedActive.length === 1
+                    ? "1 item in your cart is unavailable or exceeds the quantity that can be added."
+                    : `${blockedActive.length} items in your cart are unavailable or exceed the quantity that can be added.`}
+                </p>
+                <p className="mt-1">Remove or reduce those items above to continue. The subtotal still includes them.</p>
+                <button
+                  type="button"
+                  onClick={() => void remove(blockedActive[0].id)}
+                  disabled={busy === blockedActive[0].id}
+                  className="mt-2 min-h-9 rounded-lg border border-crimson/40 px-3 font-bold text-crimson disabled:opacity-50"
+                >
+                  Remove {blockedActive[0].product.name}
+                </button>
+              </div>
+            ) : null}
+            {blockedActive.length > 0 ? (
+              <button
+                type="button"
+                disabled
+                aria-describedby="checkout-blocked-reason"
+                className="mt-5 flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-xl bg-primary text-sm font-bold text-white opacity-50"
+              >
+                Proceed to checkout
+              </button>
+            ) : (
+              <Link href="/checkout" className="mt-5 flex min-h-12 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white">
+                Proceed to checkout
+              </Link>
+            )}
+            <p id="checkout-blocked-reason" className="mt-3 text-xs text-muted">
+              Final total is recalculated on the server before payment. Unavailable items are refused by checkout
+              even if this page is out of date.
+            </p>
           </aside>
         </div>
       )}
@@ -1327,20 +1417,45 @@ export function ShopCartPage() {
         <section className="rounded-2xl border border-border-soft bg-canvas p-4">
           <h2 className="font-display text-lg font-extrabold">Saved for later ({saved.length})</h2>
           <div className="mt-3 space-y-2">
-            {saved.map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-surface-low p-3">
-                <div>
-                  <p className="text-sm font-bold">{item.product.name}</p>
-                  <p className="text-xs text-muted">{koboToNaira(item.variant?.priceKobo ?? item.product.priceKobo)}</p>
+            {saved.map((item) => {
+              const reason = cartLineUnavailableReason(item);
+              const unavailable = item.availability ? !item.availability.purchasable : false;
+              return (
+                <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface-low p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold">{item.product.name}</p>
+                    <p className="text-xs text-muted">
+                      {item.variant ? `${item.variant.name} · ` : ""}
+                      {koboToNaira(item.variant?.priceKobo ?? item.product.priceKobo)}
+                    </p>
+                    {reason ? (
+                      <p role="status" className="mt-1 inline-flex rounded border border-crimson/30 bg-crimson-soft px-2 py-0.5 text-[11px] font-bold text-crimson">
+                        Unavailable — {reason}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void update(item.id, 1, false)}
+                      disabled={unavailable || busy === item.id}
+                      title={unavailable ? "This saved item cannot be moved to the cart while it is unavailable." : undefined}
+                      className="min-h-9 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Move to cart
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void remove(item.id)}
+                      disabled={busy === item.id}
+                      className="min-h-9 rounded-lg border border-border-soft px-3 py-2 text-xs font-bold text-crimson disabled:opacity-40"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => void update(item.id, 1, false)}
-                  className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-white"
-                >
-                  Move to cart
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       ) : null}
@@ -1408,6 +1523,33 @@ export function ShopCheckoutPage() {
   const [accountName, setAccountName] = useState("");
   const [accountPhone, setAccountPhone] = useState("");
   const [selectedSavedId, setSelectedSavedId] = useState("");
+  const [cartGate, setCartGate] = useState<{ state: "checking" | "ok" | "blocked" | "unknown"; items: string[] }>({
+    state: "checking",
+    items: []
+  });
+
+  // Checkout is refused server-side for unavailable lines; this client gate
+  // keeps a customer from filling an address form for a cart that cannot pass.
+  // A failed cart read is "unknown" so the server refusal remains authoritative.
+  useEffect(() => {
+    let active = true;
+    apiClient
+      .getCart()
+      .then((cart) => {
+        if (!active) return;
+        const blocked = cart.items.filter((item) => !item.savedForLater && activeCartLineBlocked(item));
+        setCartGate({
+          state: blocked.length > 0 ? "blocked" : "ok",
+          items: blocked.map((item) => `${item.product.name}${item.variant ? ` — ${item.variant.name}` : ""}`)
+        });
+      })
+      .catch(() => {
+        if (active) setCartGate({ state: "unknown", items: [] });
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     apiClient
@@ -1458,6 +1600,7 @@ export function ShopCheckoutPage() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (cartGate.state === "checking") return;
     setStatus("submitting");
     setError("");
     try {
@@ -1503,6 +1646,32 @@ export function ShopCheckoutPage() {
     } finally {
       setPayingOrder("");
     }
+  }
+
+  if (cartGate.state === "blocked") {
+    return (
+      <div className="mx-auto max-w-3xl space-y-5">
+        <header>
+          <p className="text-[10.5px] font-extrabold uppercase tracking-[0.16em] text-[#0f7a4a]">NaijaDeals Marketplace</p>
+          <h1 className="font-display text-3xl font-extrabold">Checkout</h1>
+        </header>
+        <div role="alert" className="rounded-2xl border border-crimson/30 bg-crimson-soft p-5 text-sm text-crimson">
+          <h2 className="font-display text-lg font-extrabold">Some items in your cart are unavailable</h2>
+          <p className="mt-1 font-semibold">Checkout is blocked until these lines are removed or changed:</p>
+          <ul className="mt-2 list-inside list-disc space-y-1 font-semibold">
+            {cartGate.items.map((label) => (
+              <li key={label}>{label}</li>
+            ))}
+          </ul>
+          <Link
+            href="/cart"
+            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-bold text-white"
+          >
+            Review cart
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (!result) {
@@ -1606,11 +1775,11 @@ export function ShopCheckoutPage() {
           <div className="sm:col-span-2">
             <button
               type="submit"
-              disabled={status === "submitting"}
+              disabled={status === "submitting" || cartGate.state === "checking"}
               className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-white disabled:opacity-60"
             >
               {status === "submitting" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-              Review order and choose payment
+              {cartGate.state === "checking" ? "Checking cart…" : "Review order and choose payment"}
             </button>
           </div>
         </form>

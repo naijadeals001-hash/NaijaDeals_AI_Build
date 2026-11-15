@@ -505,7 +505,8 @@ model Order {
   payments        Payment[]
   returnRequests  ReturnRequest[]
   reviews         Review[]
-  refunds Refund[]
+  refunds         Refund[]
+  itemRestocks    OrderItemRestock[]
 }
 
 model OrderItem {
@@ -522,6 +523,50 @@ model OrderItem {
   order       Order           @relation(fields: [orderId], references: [id])
   product     Product         @relation(fields: [productId], references: [id])
   variant     ProductVariant? @relation(fields: [variantId], references: [id])
+  restock     OrderItemRestock?
+}
+
+/// Durable per-item physical-stock recovery state for one order item.
+///
+/// The order-level `order.stock_restocked` SystemEvent is only the legacy
+/// exactly-once marker. This row is the authoritative per-item record:
+///  - RESTORED means the units were incremented back into their authoritative
+///    source exactly once and can never be incremented again;
+///  - SUPPRESSED means the restore was refused because the source was not
+///    resolvable at that moment (variant_managed / stock_row_missing /
+///    variant_missing). The units are NOT back, and a later authorized retry
+///    may restore them once the source is resolvable;
+///  - LEGACY_RECORDED means a pre-ledger receipt already accounted for the
+///    physical units without an auditable quantity movement. It is terminal
+///    and never retried.
+enum OrderItemRestockStatus {
+  RESTORED
+  SUPPRESSED
+  LEGACY_RECORDED
+}
+
+model OrderItemRestock {
+  id          String                @id @default(cuid())
+  orderId     String
+  orderItemId String                @unique
+  productId   String
+  /// Historical variant reference, retained even when the variant row is gone.
+  variantId   String?
+  quantity    Int
+  status      OrderItemRestockStatus
+  /// Suppression reason, or the prior reason retained when a retry fails again.
+  reason      String?
+  attempts    Int                   @default(1)
+  lastSource  String?
+  lastActorId String?
+  restoredAt  DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  order       Order                 @relation(fields: [orderId], references: [id])
+  orderItem   OrderItem             @relation(fields: [orderItemId], references: [id])
+
+  @@index([orderId, status])
+  @@index([status, updatedAt])
 }
 
 model OrderStatusEvent {

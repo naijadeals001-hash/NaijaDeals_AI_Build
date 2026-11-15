@@ -295,34 +295,174 @@ export async function releaseReservedStock(tx: Db, orderId: string) {
   }
 }
 
-/** Durable marker that an order's physical units were put back exactly once. */
+/**
+ * Legacy order-level marker that an order restock was attempted exactly once.
+ *
+ * Kept for compatibility with receipts and reconciliation written before the
+ * per-item ledger. New decisions read `OrderItemRestock`; the marker alone can
+ * no longer be treated as proof that every unit was physically restored.
+ */
 export const ORDER_RESTOCK_EVENT = "order.stock_restocked";
+/** An authorized retry changed per-item recovery state after the first attempt. */
+export const ORDER_RESTOCK_RECOVERED_EVENT = "order.stock_restock_recovered";
+
+export type RestockSuppressionReason = "variant_managed" | "stock_row_missing" | "variant_missing";
+
+export type RestockItemRecord = {
+  orderItemId: string;
+  productId: string;
+  variantId: string | null;
+  quantity: number;
+  status: "RESTORED" | "SUPPRESSED" | "LEGACY_RECORDED";
+  reason: string | null;
+  attempts: number;
+};
 
 export type OrderRestockResult = {
-  /** True only when this call performed the restore. */
+  /** True only when this call physically restored at least one item. */
   restored: boolean;
-  /** True when an earlier receipt/refund already restored these units. */
+  /**
+   * True when an earlier restock attempt was already recorded for this order.
+   * This does NOT mean every item was restored: inspect
+   * `pendingSuppressedItems` and `restockComplete`.
+   */
   alreadyRestocked: boolean;
   /** Set when the caller only needed the marker (legacy `restocked` receipt). */
   recordedOnly: boolean;
   restoredItems: Array<{ orderItemId: string; productId: string; variantId: string | null; quantity: number }>;
   suppressedItems: Array<{ orderItemId: string; productId: string; quantity: number; reason: string }>;
+  /** Every item still waiting for physical recovery after this call. */
+  pendingSuppressedItems: Array<{ orderItemId: string; productId: string; quantity: number; reason: string }>;
+  /** True when every order item is RESTORED or LEGACY_RECORDED. */
+  restockComplete: boolean;
+  /**
+   * True when a historical order-level marker exists but its payload cannot
+   * prove the per-item outcome. Those units are deliberately not retried:
+   * incrementing them could double-restock an order whose restore succeeded
+   * before the ledger existed. They stay visible for reconciliation.
+   */
+  legacyMarkerOnly: boolean;
+  /** True when the per-item ledger was derived from a complete historical marker. */
+  legacyLedgerRecovered: boolean;
+  /** Current per-item ledger after this call. */
+  items: RestockItemRecord[];
+};
+
+type RestockOrderItem = {
+  id: string;
+  productId: string;
+  variantId: string | null;
+  quantity: number;
+};
+
+type RestockAttempt = { ok: true } | { ok: false; reason: RestockSuppressionReason };
+
+/**
+ * Restore one order item into its authoritative stock source.
+ *
+ * `OrderItem.variantId` decides the source. Variant units always return to
+ * their own variant row, even when that variant is now inactive. A
+ * product-level item is only added back to `InventoryStock` while the listing
+ * still uses product-level stock; after a conversion to variants, the pool is
+ * no longer on sale and the item is suppressed.
+ *
+ * Callers must hold the order row lock and `lockOrderInventoryRows`.
+ */
+async function restoreOneOrderItem(tx: Db, item: RestockOrderItem): Promise<RestockAttempt> {
+  if (item.variantId) {
+    const updated = await tx.productVariant.updateMany({
+      where: { id: item.variantId },
+      data: { stock: { increment: item.quantity } }
+    });
+    return updated.count === 0 ? { ok: false, reason: "variant_missing" } : { ok: true };
+  }
+  // Lock the product-level row before deciding: `syncProductVariants` takes the
+  // same lock before zeroing/adding variants, so a concurrent transition cannot
+  // make this increment unsafe.
+  const stock = await tx.$queryRaw<Array<{ quantity: number; reserved: number }>>`
+    SELECT "quantity", "reserved" FROM "InventoryStock" WHERE "productId" = ${item.productId} FOR UPDATE
+  `;
+  const activeVariants = await tx.productVariant.count({
+    where: { productId: item.productId, isActive: true }
+  });
+  if (activeVariants > 0) return { ok: false, reason: "variant_managed" };
+  if (stock.length === 0) return { ok: false, reason: "stock_row_missing" };
+  await tx.inventoryStock.update({
+    where: { productId: item.productId },
+    data: { quantity: { increment: item.quantity } }
+  });
+  return { ok: true };
+}
+
+type LegacyMarkerLedgerRow = {
+  orderItemId: string;
+  status: "RESTORED" | "SUPPRESSED";
+  reason: string | null;
 };
 
 /**
- * Restore the authoritative stock source for an order exactly once.
+ * Derive the per-item ledger from a historical `order.stock_restocked` payload.
+ *
+ * Only a payload that names every current order item with the exact stored
+ * quantity is accepted. Anything else (older payload shape, a `recordOnly`
+ * marker with empty lists, or an order whose items changed) is unprovable and
+ * must not be guessed.
+ */
+function parseLegacyRestockLedger(payload: unknown, items: RestockOrderItem[]): LegacyMarkerLedgerRow[] | null {
+  if (!payload || typeof payload !== "object") return null;
+  const candidate = payload as { restoredItems?: unknown; suppressedItems?: unknown };
+  if (!Array.isArray(candidate.restoredItems) || !Array.isArray(candidate.suppressedItems)) return null;
+  const expected = new Map(items.map((item) => [item.id, item.quantity]));
+  const seen = new Set<string>();
+  const rows: LegacyMarkerLedgerRow[] = [];
+
+  const readRows = (
+    source: unknown[],
+    status: "RESTORED" | "SUPPRESSED"
+  ): LegacyMarkerLedgerRow[] | null => {
+    const parsed: LegacyMarkerLedgerRow[] = [];
+    for (const raw of source) {
+      if (!raw || typeof raw !== "object") return null;
+      const row = raw as { orderItemId?: unknown; quantity?: unknown; reason?: unknown };
+      const orderItemId = typeof row.orderItemId === "string" ? row.orderItemId : "";
+      if (!expected.has(orderItemId) || seen.has(orderItemId)) return null;
+      if (row.quantity !== expected.get(orderItemId)) return null;
+      if (status === "SUPPRESSED" && typeof row.reason !== "string") return null;
+      seen.add(orderItemId);
+      parsed.push({
+        orderItemId,
+        status,
+        reason: status === "SUPPRESSED" ? String(row.reason) : null
+      });
+    }
+    return parsed;
+  };
+
+  const restored = readRows(candidate.restoredItems, "RESTORED");
+  const suppressed = readRows(candidate.suppressedItems, "SUPPRESSED");
+  if (!restored || !suppressed) return null;
+  rows.push(...restored, ...suppressed);
+  return seen.size === expected.size ? rows : null;
+}
+
+/**
+ * Restore the authoritative stock source for an order with per-item durability.
  *
  * The order row lock is taken here (re-entrant inside the refund/return
- * transaction that already holds it). The `SystemEvent`/`AuditLog` pair written
- * in the same transaction is the durable idempotency marker, so a refund, a
- * seller return receipt and a retry cannot each increment stock for the same
- * order.
+ * transaction that already holds it), so refunds, seller receipts and manual
+ * recoveries cannot interleave. The order-level `SystemEvent` remains the
+ * legacy exactly-once attempt marker; `OrderItemRestock` is the authoritative
+ * per-item record:
  *
- * `OrderItem.variantId` decides the source. A product-level order item whose
- * listing has since become variant-managed is never incremented back into
- * `InventoryStock` (that pool is not on sale any more); the suppression is
- * recorded instead. Variant units always return to their variant row, even if
- * that variant is now inactive.
+ *  - RESTORED is terminal: the units were incremented back exactly once;
+ *  - SUPPRESSED records a restore that was refused because the source was not
+ *    resolvable. The units are NOT back and stay visible for reconciliation;
+ *  - LEGACY_RECORDED marks a pre-ledger receipt that was accounted without a
+ *    stock movement; it is terminal and never retried.
+ *
+ * A later authorized retry (`retrySuppressed: true`, or a seller return receipt
+ * whose source is `return`) re-evaluates SUPPRESSED items only. RESTORED items
+ * are never incremented again.
  *
  * `recordOnly` marks a legacy return that was received before this contract
  * existed without touching stock, so a later refund cannot double-restore it.
@@ -330,49 +470,135 @@ export type OrderRestockResult = {
 export async function restockOrderItemsOnce(
   tx: Db,
   orderId: string,
-  input: { actorId?: string | null; source: "refund" | "return" | "manual"; reason?: string; recordOnly?: boolean }
+  input: {
+    actorId?: string | null;
+    source: "refund" | "return" | "manual";
+    reason?: string;
+    recordOnly?: boolean;
+    /**
+     * Re-evaluate previously SUPPRESSED items. A seller return receipt is
+     * itself evidence that the physical units are back, so it retries by
+     * default; a refund and other callers must opt in explicitly.
+     */
+    retrySuppressed?: boolean;
+    /** Restrict new attempts to these order item ids (explicit recovery). */
+    onlyOrderItemIds?: string[];
+  }
 ): Promise<OrderRestockResult> {
   await lockOrderRow(tx, orderId);
-  const existing = await tx.systemEvent.findFirst({
-    where: { type: ORDER_RESTOCK_EVENT, entity: "Order", entityId: orderId },
-    select: { id: true }
-  });
-  if (existing) {
-    return {
-      restored: false,
-      alreadyRestocked: true,
-      recordedOnly: false,
-      restoredItems: [],
-      suppressedItems: []
-    };
-  }
-
   const items = await tx.orderItem.findMany({ where: { orderId }, orderBy: { id: "asc" } });
   await lockOrderInventoryRows(tx, items);
+
+  const marker = await tx.systemEvent.findFirst({
+    where: { type: ORDER_RESTOCK_EVENT, entity: "Order", entityId: orderId },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, payload: true }
+  });
+  let ledger = await tx.orderItemRestock.findMany({ where: { orderId }, orderBy: { orderItemId: "asc" } });
+  let legacyLedgerRecovered = false;
+  let legacyMarkerOnly = false;
+
+  if (marker && ledger.length === 0 && items.length > 0) {
+    const derived = parseLegacyRestockLedger(marker.payload, items);
+    if (derived) {
+      const byId = new Map(items.map((item) => [item.id, item]));
+      await tx.orderItemRestock.createMany({
+        data: derived.map((row) => ({
+          orderId,
+          orderItemId: row.orderItemId,
+          productId: byId.get(row.orderItemId)!.productId,
+          variantId: byId.get(row.orderItemId)!.variantId,
+          quantity: byId.get(row.orderItemId)!.quantity,
+          status: row.status,
+          reason: row.reason,
+          attempts: 1,
+          lastSource: "legacy-marker",
+          lastActorId: null,
+          restoredAt: row.status === "RESTORED" ? new Date() : null
+        }))
+      });
+      ledger = await tx.orderItemRestock.findMany({ where: { orderId }, orderBy: { orderItemId: "asc" } });
+      legacyLedgerRecovered = true;
+    } else {
+      legacyMarkerOnly = true;
+    }
+  } else if (marker && ledger.length > 0 && ledger.length < items.length) {
+    // Partially backfilled history: the unrecorded items have no provable
+    // outcome and must not be incremented again.
+    legacyMarkerOnly = true;
+  }
+
+  const rowByItem = new Map(ledger.map((row) => [row.orderItemId, row]));
+  const source = input.source;
+  const retrySuppressed = input.retrySuppressed ?? source === "return";
   const result: OrderRestockResult = {
     restored: false,
-    alreadyRestocked: false,
+    alreadyRestocked: Boolean(marker || ledger.length > 0),
     recordedOnly: Boolean(input.recordOnly),
     restoredItems: [],
-    suppressedItems: []
+    suppressedItems: [],
+    pendingSuppressedItems: [],
+    restockComplete: false,
+    legacyMarkerOnly,
+    legacyLedgerRecovered,
+    items: []
   };
+  const attempted = new Set<string>();
 
-  if (!input.recordOnly) {
+  if (input.recordOnly) {
+    if (!marker && ledger.length === 0 && items.length > 0) {
+      await tx.orderItemRestock.createMany({
+        data: items.map((item) => ({
+          orderId,
+          orderItemId: item.id,
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+          status: "LEGACY_RECORDED" as const,
+          reason: null,
+          attempts: 1,
+          lastSource: source,
+          lastActorId: input.actorId ?? null,
+          restoredAt: null
+        }))
+      });
+    }
+  } else {
+    const only = input.onlyOrderItemIds ? new Set(input.onlyOrderItemIds) : null;
     for (const item of items) {
-      if (item.variantId) {
-        const updated = await tx.productVariant.updateMany({
-          where: { id: item.variantId },
-          data: { stock: { increment: item.quantity } }
-        });
-        if (updated.count === 0) {
-          result.suppressedItems.push({
+      if (only && !only.has(item.id)) continue;
+      const row = rowByItem.get(item.id);
+      if (row?.status === "RESTORED" || row?.status === "LEGACY_RECORDED") continue;
+      if (row?.status === "SUPPRESSED" && !retrySuppressed) continue;
+      // An unprovable legacy marker owns the outcome of unrecorded items.
+      if (!row && legacyMarkerOnly) continue;
+      attempted.add(item.id);
+      const attempt = await restoreOneOrderItem(tx, item);
+      if (attempt.ok) {
+        await tx.orderItemRestock.upsert({
+          where: { orderItemId: item.id },
+          create: {
+            orderId,
             orderItemId: item.id,
             productId: item.productId,
+            variantId: item.variantId,
             quantity: item.quantity,
-            reason: "variant_missing"
-          });
-          continue;
-        }
+            status: "RESTORED",
+            reason: null,
+            attempts: 1,
+            lastSource: source,
+            lastActorId: input.actorId ?? null,
+            restoredAt: new Date()
+          },
+          update: {
+            status: "RESTORED",
+            reason: null,
+            attempts: { increment: 1 },
+            lastSource: source,
+            lastActorId: input.actorId ?? null,
+            restoredAt: new Date()
+          }
+        });
         result.restoredItems.push({
           orderItemId: item.id,
           productId: item.productId,
@@ -380,63 +606,104 @@ export async function restockOrderItemsOnce(
           quantity: item.quantity
         });
       } else {
-        // Lock the product-level row before deciding: `syncProductVariants`
-        // takes the same lock before zeroing/adding variants, so a concurrent
-        // transition cannot make this increment unsafe.
-        const stock = await tx.$queryRaw<Array<{ quantity: number; reserved: number }>>`
-          SELECT "quantity", "reserved" FROM "InventoryStock" WHERE "productId" = ${item.productId} FOR UPDATE
-        `;
-        const activeVariants = await tx.productVariant.count({
-          where: { productId: item.productId, isActive: true }
-        });
-        if (activeVariants > 0) {
-          result.suppressedItems.push({
+        await tx.orderItemRestock.upsert({
+          where: { orderItemId: item.id },
+          create: {
+            orderId,
             orderItemId: item.id,
             productId: item.productId,
+            variantId: item.variantId,
             quantity: item.quantity,
-            reason: "variant_managed"
-          });
-          continue;
-        }
-        if (stock.length === 0) {
-          result.suppressedItems.push({
-            orderItemId: item.id,
-            productId: item.productId,
-            quantity: item.quantity,
-            reason: "stock_row_missing"
-          });
-          continue;
-        }
-        await tx.inventoryStock.update({
-          where: { productId: item.productId },
-          data: { quantity: { increment: item.quantity } }
+            status: "SUPPRESSED",
+            reason: attempt.reason,
+            attempts: 1,
+            lastSource: source,
+            lastActorId: input.actorId ?? null,
+            restoredAt: null
+          },
+          update: {
+            status: "SUPPRESSED",
+            reason: attempt.reason,
+            attempts: { increment: 1 },
+            lastSource: source,
+            lastActorId: input.actorId ?? null,
+            restoredAt: null
+          }
         });
-        result.restoredItems.push({
+        result.suppressedItems.push({
           orderItemId: item.id,
           productId: item.productId,
-          variantId: null,
-          quantity: item.quantity
+          quantity: item.quantity,
+          reason: attempt.reason
         });
       }
     }
     result.restored = result.restoredItems.length > 0;
   }
 
-  await recordAudit({
-    tx,
-    actorId: input.actorId ?? null,
-    action: ORDER_RESTOCK_EVENT,
-    entity: "Order",
-    entityId: orderId,
-    metadata: {
-      orderId,
-      source: input.source,
-      reason: input.reason ?? null,
-      recordOnly: result.recordedOnly,
-      restoredItems: result.restoredItems,
-      suppressedItems: result.suppressedItems
-    }
-  });
+  ledger = await tx.orderItemRestock.findMany({ where: { orderId }, orderBy: { orderItemId: "asc" } });
+  result.items = ledger.map((row) => ({
+    orderItemId: row.orderItemId,
+    productId: row.productId,
+    variantId: row.variantId,
+    quantity: row.quantity,
+    status: row.status,
+    reason: row.reason,
+    attempts: row.attempts
+  }));
+  result.pendingSuppressedItems = ledger
+    .filter((row) => row.status === "SUPPRESSED")
+    .map((row) => ({
+      orderItemId: row.orderItemId,
+      productId: row.productId,
+      quantity: row.quantity,
+      reason: row.reason ?? "unknown"
+    }));
+  result.restockComplete =
+    !legacyMarkerOnly &&
+    items.length > 0 &&
+    items.every((item) => {
+      const row = ledger.find((entry) => entry.orderItemId === item.id);
+      return row?.status === "RESTORED" || row?.status === "LEGACY_RECORDED";
+    });
+
+  const summary = {
+    orderId,
+    source,
+    reason: input.reason ?? null,
+    recordOnly: result.recordedOnly,
+    retrySuppressed,
+    restoredItems: result.restoredItems,
+    suppressedItems: result.suppressedItems,
+    pendingSuppressedItems: result.pendingSuppressedItems,
+    restockComplete: result.restockComplete,
+    legacyMarkerOnly: result.legacyMarkerOnly,
+    legacyLedgerRecovered: result.legacyLedgerRecovered
+  };
+
+  if (!marker) {
+    await recordAudit({
+      tx,
+      actorId: input.actorId ?? null,
+      action: ORDER_RESTOCK_EVENT,
+      entity: "Order",
+      entityId: orderId,
+      metadata: summary
+    });
+  } else if (result.restoredItems.length > 0 || (retrySuppressed && attempted.size > 0)) {
+    // The first-attempt marker is immutable history. A later authorized
+    // recovery (or a still-failing retry) is recorded separately so the
+    // reconciliation trail never rewrites the original outcome.
+    await recordAudit({
+      tx,
+      actorId: input.actorId ?? null,
+      action: ORDER_RESTOCK_RECOVERED_EVENT,
+      entity: "Order",
+      entityId: orderId,
+      metadata: summary
+    });
+  }
+
   return result;
 }
 
@@ -1018,6 +1285,15 @@ async function settleRefund(
       where: { orderId: order.id, status: "COMPLETED" },
       _sum: { amountKobo: true }
     });
+    // A replayed refund reports the *current* per-item stock state instead of
+    // inventing a restore. No ledger rows means the order predates the ledger
+    // (or was never restocked); that is reported as unknown, not as restored.
+    const ledger = await tx.orderItemRestock.findMany({ where: { orderId: order.id } });
+    const pending = ledger.filter((row) => row.status === "SUPPRESSED");
+    const complete =
+      ledger.length > 0 &&
+      (await tx.orderItem.count({ where: { orderId: order.id } })) ===
+        ledger.filter((row) => row.status === "RESTORED" || row.status === "LEGACY_RECORDED").length;
     return {
       orderId: order.id,
       refundedKobo: refund.amountKobo.toString(),
@@ -1025,7 +1301,20 @@ async function settleRefund(
       reservedKobo: order.refundedKobo.toString(),
       refundId: refund.id,
       idempotent: true,
-      status: "COMPLETED" as const
+      status: "COMPLETED" as const,
+      stockRecovery: {
+        status: pending.length > 0 ? ("suppressed" as const) : complete ? ("already_recorded" as const) : ("unknown" as const),
+        restockComplete: complete,
+        legacyMarkerOnly: ledger.length === 0,
+        restoredItems: [],
+        suppressedItems: [],
+        pendingSuppressedItems: pending.map((row) => ({
+          orderItemId: row.orderItemId,
+          productId: row.productId,
+          quantity: row.quantity,
+          reason: row.reason ?? "unknown"
+        }))
+      }
     };
   }
   if (refund.status !== "PENDING") {
@@ -1244,6 +1533,30 @@ async function settleRefund(
 
   let custody: Awaited<ReturnType<typeof settleRefundDeliveryCustody>> | null = null;
   let stockRestored = false;
+  let restockOutcome: Awaited<ReturnType<typeof restockOrderItemsOnce>> | null = null;
+  type RefundStockRecoveryStatus =
+    | "not_requested"
+    | "not_restockable"
+    | "restored"
+    | "already_recorded"
+    | "partially_restored"
+    | "suppressed"
+    | "unknown";
+  const stockRecovery: {
+    status: RefundStockRecoveryStatus;
+    restockComplete: boolean;
+    legacyMarkerOnly: boolean;
+    restoredItems: OrderRestockResult["restoredItems"];
+    suppressedItems: OrderRestockResult["suppressedItems"];
+    pendingSuppressedItems: OrderRestockResult["pendingSuppressedItems"];
+  } = {
+    status: "not_requested",
+    restockComplete: false,
+    legacyMarkerOnly: false,
+    restoredItems: [],
+    suppressedItems: [],
+    pendingSuppressedItems: []
+  };
   if (isFullRefund) {
     await tx.payment.update({ where: { id: completedPayment.id }, data: { status: "REFUNDED" } });
     // The order-level payment state must move with the payment record, or a
@@ -1271,7 +1584,7 @@ async function settleRefund(
       reason: `Order refunded in full: ${input.reason}`,
       refundId: refund.id
     });
-    const restockOutcome =
+    restockOutcome =
       Boolean(input.restock) && custody.restockable
         ? await restockOrderItemsOnce(tx, order.id, {
             actorId: refund.actorId,
@@ -1280,6 +1593,44 @@ async function settleRefund(
           })
         : null;
     stockRestored = Boolean(restockOutcome?.restored);
+
+    // The refund is financially complete, but physical recovery can still be
+    // pending. Record that separately and durably so reconciliation does not
+    // have to infer stock state from a successful refund.
+    if (restockOutcome && (restockOutcome.pendingSuppressedItems.length > 0 || !restockOutcome.restockComplete)) {
+      await recordSystemEvent({
+        tx,
+        type: "order.stock_recovery_pending",
+        actorId: refund.actorId,
+        entity: "Order",
+        entityId: order.id,
+        payload: {
+          refundId: refund.id,
+          orderId: order.id,
+          reason: input.reason,
+          restockComplete: restockOutcome.restockComplete,
+          legacyMarkerOnly: restockOutcome.legacyMarkerOnly,
+          suppressedItems: restockOutcome.pendingSuppressedItems
+        }
+      });
+    }
+
+    if (!input.restock) {
+      stockRecovery.status = "not_requested";
+    } else if (!custody.restockable) {
+      stockRecovery.status = "not_restockable";
+    } else if (restockOutcome) {
+      stockRecovery.restockComplete = restockOutcome.restockComplete;
+      stockRecovery.legacyMarkerOnly = restockOutcome.legacyMarkerOnly;
+      stockRecovery.restoredItems = restockOutcome.restoredItems;
+      stockRecovery.suppressedItems = restockOutcome.suppressedItems;
+      stockRecovery.pendingSuppressedItems = restockOutcome.pendingSuppressedItems;
+      if (restockOutcome.restockComplete) {
+        stockRecovery.status = restockOutcome.restored ? "restored" : "already_recorded";
+      } else {
+        stockRecovery.status = restockOutcome.restored ? "partially_restored" : "suppressed";
+      }
+    }
 
     await updateOrderStatus({
       tx,
@@ -1319,7 +1670,13 @@ async function settleRefund(
       provider: completedPayment.provider,
       restocked: stockRestored,
       restockRequested: Boolean(input.restock) && isFullRefund,
-      restockSuppressed: Boolean(input.restock) && isFullRefund && !stockRestored,
+      restockSuppressed:
+        Boolean(input.restock) &&
+        isFullRefund &&
+        (stockRecovery.status === "suppressed" ||
+          stockRecovery.status === "partially_restored" ||
+          stockRecovery.status === "not_restockable"),
+      stockRecovery,
       deliveryCustody: custody?.custody ?? null,
       deliveryOutcomes: custody?.outcomes ?? []
     }
@@ -1333,6 +1690,7 @@ async function settleRefund(
     refundId: refund.id,
     status: "COMPLETED" as const,
     restocked: stockRestored,
+    stockRecovery,
     deliveryCustody: custody?.custody ?? null,
     deliveryOutcomes: custody?.outcomes ?? []
   };

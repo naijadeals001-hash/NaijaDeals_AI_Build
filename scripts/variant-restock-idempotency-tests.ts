@@ -13,37 +13,65 @@
  *   4. A seller return receipt performs the restore when it happens first, and
  *      no subsequent refund can double-restore.
  *   5. Refunding a product-level order after its listing became variant-managed
- *      never increments `InventoryStock`; the suppression is recorded.
- *   6. An unsafe variant transition (product quantity + live reservations) is
+ *      never increments `InventoryStock`; the suppression is recorded per item
+ *      in `OrderItemRestock` and surfaced by `order.stock_recovery_pending`.
+ *   6. A suppressed restore survives the order-level marker: an authorized
+ *      retry restores it once after the source becomes resolvable, an unrelated
+ *      account is refused, and a repeat retry cannot double-increment.
+ *   7. A historical order-level marker is backfilled into the per-item ledger
+ *      without incrementing stock again.
+ *   8. An unsafe variant transition (product quantity + live reservations) is
  *      refused and recorded as `product.variant_transition_blocked`.
- *   7. A saved-for-later line is not purchased by checkout; it is preserved in
+ *   9. A saved-for-later line is not purchased by checkout; it is preserved in
  *      a fresh active cart.
  *
- * Database safety: the script derives its target from the explicit
+ * Database safety: an explicit TEST_DATABASE_URL may name the isolated target
+ * directly. Otherwise the script derives it from the explicit
  * REVIEW_DATABASE_URL by replacing only the database path with
- * `naijadeals_checkout_refund_test`, then verifies via the shared
- * `requireTestDatabase` guard that the target is classified TEST and is not the
- * REVIEW database. The URL is never printed. All financial fixtures are
- * run-tagged and removed in `finally`; the shared SYSTEM wallet projection is
- * left at its post-fixture value (it is not edited directly) and reported.
+ * `naijadeals_checkout_refund_test`. Either way the shared `requireTestDatabase`
+ * guard verifies that the target is classified TEST and is not REVIEW or the
+ * daily `naijadeals_core` database. There is no ambient `.env` fallback. The URL
+ * is never printed. All financial fixtures are run-tagged and removed in
+ * `finally`; the shared SYSTEM wallet projection is left at its post-fixture
+ * value (it is not edited directly) and reported.
  *
  * Usage:
  *   REVIEW_DATABASE_URL=... npx tsx scripts/variant-restock-idempotency-tests.ts
+ *   TEST_DATABASE_URL=...   npx tsx scripts/variant-restock-idempotency-tests.ts
  */
 import { randomBytes } from "node:crypto";
 
-const reviewUrl = process.env.REVIEW_DATABASE_URL?.trim();
-if (!reviewUrl) {
-  console.error("REFUSED: REVIEW_DATABASE_URL must be set explicitly to derive the isolated TEST target.");
-  process.exit(2);
+function parseExplicitUrl(value: string, name: string): URL {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    console.error(`REFUSED: ${name} is not a valid URL (value hidden).`);
+    process.exit(2);
+  }
+  if (parsed.protocol !== "postgresql:" && parsed.protocol !== "postgres:") {
+    console.error(`REFUSED: ${name} must be a postgres URL.`);
+    process.exit(2);
+  }
+  return parsed;
 }
-const derived = new URL(reviewUrl);
-if (derived.protocol !== "postgresql:" && derived.protocol !== "postgres:") {
-  console.error("REFUSED: REVIEW_DATABASE_URL must be a postgres URL.");
-  process.exit(2);
+
+const explicitTestUrl = process.env.TEST_DATABASE_URL?.trim();
+if (explicitTestUrl) {
+  parseExplicitUrl(explicitTestUrl, "TEST_DATABASE_URL");
+} else {
+  const reviewUrl = process.env.REVIEW_DATABASE_URL?.trim();
+  if (!reviewUrl) {
+    console.error(
+      "REFUSED: set TEST_DATABASE_URL explicitly, or REVIEW_DATABASE_URL to derive the isolated TEST target. " +
+        "There is no DATABASE_URL/.env fallback."
+    );
+    process.exit(2);
+  }
+  const derived = parseExplicitUrl(reviewUrl, "REVIEW_DATABASE_URL");
+  derived.pathname = "/naijadeals_checkout_refund_test";
+  process.env.TEST_DATABASE_URL = derived.toString();
 }
-derived.pathname = "/naijadeals_checkout_refund_test";
-process.env.TEST_DATABASE_URL = derived.toString();
 process.env.ENABLE_TEST_PAYMENTS = "true";
 // This acceptance script has no queue worker. `lib/prisma` loads the project
 // .env (which may point at a local Valkey that is not running); an empty value
@@ -101,11 +129,13 @@ async function main() {
   const { PrismaClient } = await import("@prisma/client");
   const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL! } } });
   const { checkout, cancelOrder } = await import("../lib/services/core/checkout.service");
-  const { initializePayment, confirmPayment, refundPayment, ORDER_RESTOCK_EVENT } = await import("../lib/payments/service");
+  const { initializePayment, confirmPayment, refundPayment, restockOrderItemsOnce, ORDER_RESTOCK_EVENT } =
+    await import("../lib/payments/service");
   const { ensureWallet } = await import("../lib/payments/service");
   const { createTopUp, creditTopUp } = await import("../lib/services/core/topup.service");
   const { updateSellerProduct } = await import("../lib/services/core/seller.service");
   const { resolveReturn } = await import("../lib/services/core/seller.service");
+  const { listRestockRecovery, retrySuppressedRestock } = await import("../lib/payments/restock-recovery.service");
 
   const created = {
     userIds: [] as string[],
@@ -140,6 +170,7 @@ async function main() {
       await prisma.refund.deleteMany({ where: { orderId: { in: orderIds } } }).catch(() => undefined);
       await prisma.payment.deleteMany({ where: { orderId: { in: orderIds } } }).catch(() => undefined);
       await prisma.returnRequest.deleteMany({ where: { orderId: { in: orderIds } } }).catch(() => undefined);
+      await prisma.orderItemRestock.deleteMany({ where: { orderId: { in: orderIds } } }).catch(() => undefined);
       const deliveries = await prisma.delivery.findMany({ where: { orderId: { in: orderIds } }, select: { id: true } }).catch(() => []);
       if (deliveries.length > 0) {
         await prisma.trackingEvent.deleteMany({ where: { deliveryId: { in: deliveries.map((row) => row.id) } } }).catch(() => undefined);
@@ -568,7 +599,7 @@ async function main() {
       conversion.variants.filter((variant) => variant.isActive).length === 1 && levelStockAfterConversion.quantity === 0,
       `variants=${conversion.variants.length} quantity=${levelStockAfterConversion.quantity}`
     );
-    await refundPayment({
+    const order3Refund = await refundPayment({
       orderId: order3.orderId,
       actorId,
       reason: "Run-owned full refund after conversion",
@@ -583,6 +614,149 @@ async function main() {
       "refund of a now-variant-managed product never increments InventoryStock",
       levelStockAfterRefund.quantity === 0 && convertedVariant.stock === 3 && suppressed.includes("variant_managed"),
       `inventory=${levelStockAfterRefund.quantity} variantStock=${convertedVariant.stock} suppressed=${suppressed.join(",")}`
+    );
+    const recoveryAwareRefund = (
+      order3Refund as unknown as {
+        restocked?: boolean;
+        stockRecovery?: {
+          status?: string;
+          restockComplete?: boolean;
+          pendingSuppressedItems?: Array<{ reason?: string }>;
+        };
+      }
+    );
+    const stockRecovery = recoveryAwareRefund.stockRecovery;
+    check(
+      "a completed refund reports stock recovery separately instead of implying it",
+      recoveryAwareRefund.restocked === false &&
+        stockRecovery?.status === "suppressed" &&
+        stockRecovery?.restockComplete === false &&
+        (stockRecovery?.pendingSuppressedItems ?? []).some((item) => item.reason === "variant_managed"),
+      `restocked=${recoveryAwareRefund.restocked} stockRecovery=${JSON.stringify(stockRecovery?.status)} pending=${(stockRecovery?.pendingSuppressedItems ?? []).length}`
+    );
+    const pendingEvent = await prisma.systemEvent.findFirst({
+      where: { type: "order.stock_recovery_pending", entity: "Order", entityId: order3.orderId },
+      orderBy: { createdAt: "desc" }
+    });
+    check(
+      "a completed refund with outstanding physical stock writes a durable reconciliation signal",
+      Boolean(pendingEvent) &&
+        ((pendingEvent?.payload as { suppressedItems?: Array<{ reason?: string }> } | null)?.suppressedItems ?? []).some(
+          (item) => item.reason === "variant_managed"
+        ),
+      pendingEvent ? "order.stock_recovery_pending present" : "missing"
+    );
+
+    /* 5b. A suppressed restore stays recoverable and is not silently lost. */
+    const order3Item = await prisma.orderItem.findFirstOrThrow({ where: { orderId: order3.orderId } });
+    const ledgerBeforeRecovery = await prisma.orderItemRestock.findMany({ where: { orderId: order3.orderId } });
+    check(
+      "the suppressed restore is durable per item with its reason and quantity",
+      ledgerBeforeRecovery.length === 1 &&
+        ledgerBeforeRecovery[0].orderItemId === order3Item.id &&
+        ledgerBeforeRecovery[0].status === "SUPPRESSED" &&
+        ledgerBeforeRecovery[0].reason === "variant_managed" &&
+        ledgerBeforeRecovery[0].quantity === order3Item.quantity &&
+        ledgerBeforeRecovery[0].restoredAt === null,
+      JSON.stringify(ledgerBeforeRecovery.map((row) => ({ status: row.status, reason: row.reason, quantity: row.quantity })))
+    );
+    const queueBeforeRecovery = await listRestockRecovery({ orderId: order3.orderId });
+    check(
+      "the reconciliation queue exposes the suppressed item",
+      queueBeforeRecovery.suppressions.length === 1 &&
+        queueBeforeRecovery.suppressions[0].orderItemId === order3Item.id &&
+        queueBeforeRecovery.suppressions[0].reason === "variant_managed",
+      JSON.stringify(queueBeforeRecovery.suppressions.map((row) => ({ item: row.orderItemId, reason: row.reason })))
+    );
+    await expectCode(
+      "an unrelated account cannot retry another seller's stock recovery",
+      () =>
+        retrySuppressedRestock({
+          orderId: order3.orderId,
+          actorId: customer.id,
+          reason: "Run-owned unauthorized recovery attempt"
+        }),
+      "forbidden"
+    );
+
+    const backToProduct = await updateSellerProduct(owner.id, productLevel.id, {
+      quantity: 1,
+      variants: []
+    });
+    const levelStockAfterBack = await prisma.inventoryStock.findUniqueOrThrow({ where: { productId: productLevel.id } });
+    check(
+      "listing can return to product-level stock after the suppressed refund",
+      backToProduct.variants.every((variant) => variant.isActive === false) && levelStockAfterBack.quantity === 1,
+      `variants=${backToProduct.variants.length} quantity=${levelStockAfterBack.quantity}`
+    );
+    const recovery = await retrySuppressedRestock({
+      orderId: order3.orderId,
+      actorId: owner.id,
+      reason: "Run-owned authorized retry after the source became resolvable"
+    });
+    const levelStockAfterRecovery = await prisma.inventoryStock.findUniqueOrThrow({ where: { productId: productLevel.id } });
+    check(
+      "authorized retry restores a previously suppressed product-level item exactly once",
+      recovery.result.restored === true &&
+        recovery.retriedItemIds.length === 1 &&
+        levelStockAfterRecovery.quantity === 2,
+      `restored=${recovery.result.restored} retried=${recovery.retriedItemIds.length} quantity=${levelStockAfterRecovery.quantity}`
+    );
+    const ledgerAfterRecovery = await prisma.orderItemRestock.findFirstOrThrow({ where: { orderItemId: order3Item.id } });
+    check(
+      "the recovered item is terminal and cannot be re-incremented",
+      ledgerAfterRecovery.status === "RESTORED" &&
+        ledgerAfterRecovery.reason === null &&
+        ledgerAfterRecovery.attempts === 2 &&
+        ledgerAfterRecovery.restoredAt !== null,
+      JSON.stringify({ status: ledgerAfterRecovery.status, attempts: ledgerAfterRecovery.attempts })
+    );
+    await expectCode(
+      "a repeated authorized retry is refused because nothing is suppressed",
+      () =>
+        retrySuppressedRestock({
+          orderId: order3.orderId,
+          actorId: owner.id,
+          reason: "Run-owned duplicate retry"
+        }),
+      "no_suppressed_restock"
+    );
+    const levelStockAfterSecond = await prisma.inventoryStock.findUniqueOrThrow({ where: { productId: productLevel.id } });
+    check(
+      "a repeated authorized retry cannot double-restore the same units",
+      levelStockAfterSecond.quantity === 2,
+      `quantity=${levelStockAfterSecond.quantity}`
+    );
+
+    /* 5c. A historical order-level marker is backfilled without re-restocking. */
+    await createOrderCart([{ productId: productVariant.id, variantId: v2.id, quantity: 1 }]);
+    const order4 = await checkoutAndPay("order4");
+    await refundPayment({
+      orderId: order4.orderId,
+      actorId,
+      reason: "Run-owned legacy marker fixture refund",
+      restock: true,
+      idempotencyKey: `${runSlug}-order4-refund`
+    });
+    const v2AfterLegacySetup = await prisma.productVariant.findUniqueOrThrow({ where: { id: v2.id } });
+    // Simulate a marker written before the per-item ledger existed.
+    await prisma.orderItemRestock.deleteMany({ where: { orderId: order4.orderId } });
+    const legacyRecovery = await restockOrderItemsOnce(prisma, order4.orderId, {
+      actorId: owner.id,
+      source: "manual",
+      reason: "Run-owned legacy ledger backfill",
+      retrySuppressed: true
+    });
+    const v2AfterLegacyBackfill = await prisma.productVariant.findUniqueOrThrow({ where: { id: v2.id } });
+    const legacyRows = await prisma.orderItemRestock.findMany({ where: { orderId: order4.orderId } });
+    check(
+      "legacy marker ledger is reconstructed without incrementing stock again",
+      legacyRecovery.legacyLedgerRecovered === true &&
+        legacyRecovery.restored === false &&
+        v2AfterLegacyBackfill.stock === v2AfterLegacySetup.stock &&
+        legacyRows.length === 1 &&
+        legacyRows[0].status === "RESTORED",
+      `recovered=${legacyRecovery.legacyLedgerRecovered} restored=${legacyRecovery.restored} stock=${v2AfterLegacySetup.stock}->${v2AfterLegacyBackfill.stock} rows=${legacyRows.length}`
     );
 
     /* 6. Unsafe transition is refused and recorded. */

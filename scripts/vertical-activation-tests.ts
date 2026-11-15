@@ -27,8 +27,9 @@
  *   TEST_BASE_URL=http://localhost:3059 npx tsx scripts/vertical-activation-tests.ts
  *   npx tsx scripts/vertical-activation-tests.ts            # starts its own dev server
  *
- * Database selection: VERTICAL_TEST_DATABASE_URL, then a non-core DATABASE_URL,
- * otherwise the REVIEW database named in .env. The chosen database is printed by
+ * Database selection: REVIEW_DATABASE_URL or VERTICAL_TEST_DATABASE_URL must be
+ * set explicitly. There is no `.env`/ambient DATABASE_URL fallback because this
+ * suite mutates `VerticalActivation` rows. The chosen database is printed by
  * name only; the connection string is never printed.
  */
 import "dotenv/config";
@@ -101,25 +102,21 @@ const REFUSED_DATABASES = new Set([
 ]);
 
 /**
- * Choose an explicitly named isolated database. `.env` points at the daily
- * build, so when neither VERTICAL_TEST_DATABASE_URL nor an explicit non-core
- * DATABASE_URL is supplied we derive the REVIEW database from the same server.
- * The REVIEW classification is the project's non-live demonstration database.
+ * Choose an explicitly named isolated database.
+ *
+ * This suite mutates `VerticalActivation`; an ambient `.env` DATABASE_URL is
+ * never used as a fallback. The database classification is still verified as
+ * TEST or REVIEW below before the first mutation.
  */
 function resolveDatabaseUrl(): string {
-  const explicit = process.env.VERTICAL_TEST_DATABASE_URL?.trim();
-  if (explicit) return explicit;
-
-  const current = process.env.DATABASE_URL?.trim();
-  if (current && !REFUSED_DATABASES.has(databaseName(current))) return current;
-
-  const envText = readFileSync(join(process.cwd(), ".env"), "utf8");
-  const line = envText.split(/\r?\n/).find((entry) => entry.trim().startsWith("DATABASE_URL="));
-  assert(line, "No DATABASE_URL was found in .env.");
-  const raw = line.slice(line.indexOf("=") + 1).trim().replace(/^"|"$/g, "");
-  const url = new URL(raw);
-  url.pathname = "/naijadeals_review";
-  return url.toString();
+  const explicit = process.env.VERTICAL_TEST_DATABASE_URL?.trim() || process.env.REVIEW_DATABASE_URL?.trim();
+  if (!explicit) {
+    throw new Error(
+      "REFUSED: set REVIEW_DATABASE_URL (preferred) or VERTICAL_TEST_DATABASE_URL explicitly. " +
+        "This mutating activation suite never falls back to DATABASE_URL or .env."
+    );
+  }
+  return explicit;
 }
 
 process.env.DATABASE_URL = resolveDatabaseUrl();

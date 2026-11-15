@@ -85,6 +85,53 @@ export type ApiAdminReview = {
 
 export type ApiAdminReviewList = { reviews: ApiAdminReview[] };
 
+/**
+ * Saved-item projection for the account page.
+ *
+ * Deliberately not an `ApiProduct`: the server returns only the safe fields the
+ * saved card needs (one image, public vendor/category summary, shared
+ * availability projection) plus a truthful unavailable reason. Raw vendor,
+ * category and variant rows are never exposed here.
+ */
+export type ApiSavedItem = {
+  id: string;
+  createdAt: string;
+  product: {
+    id: string;
+    slug: string;
+    name: string;
+    brand: string | null;
+    condition: string;
+    priceKobo: ApiMoney;
+    compareAtKobo: ApiMoney | null;
+    currency: string | null;
+    countryCode: string;
+    saleMode: ApiSaleMode;
+    image: { url: string; alt: string | null } | null;
+    category: { id: string; name: string; slug: string };
+    vendor: { id: string; name: string; slug: string; status: string; trustScore: number };
+    availability: {
+      available: number;
+      onHand: number;
+      activeVariants: number;
+      variantManaged: boolean;
+      requiresVariantSelection: boolean;
+      known: boolean;
+    };
+    purchasable: boolean;
+    unavailableReason:
+      | "shop_not_available"
+      | "not_published"
+      | "seller_unavailable"
+      | "not_in_market"
+      | "contact_seller"
+      | "availability_unknown"
+      | "out_of_stock"
+      | "choose_variant"
+      | null;
+  };
+};
+
 /** Envelope returned when the catalogue is requested with `page`/`pageSize`. */
 export type ApiProductPage = {
   items: ApiProduct[];
@@ -97,6 +144,19 @@ export type ApiProductPage = {
   query: string | null;
 };
 
+/** Envelope returned by the Control Center product list when paginated. */
+export type ApiAdminProductPage = {
+  products: Array<Record<string, unknown>>;
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasMore: boolean;
+  query: string | null;
+  status: string | null;
+  sort: string;
+};
+
 export type ApiCartItem = {
   id: string;
   productId: string;
@@ -105,6 +165,24 @@ export type ApiCartItem = {
   savedForLater: boolean;
   product: ApiProduct;
   variant?: ApiVariant | null;
+  /**
+   * Server-authoritative purchasability for this line. Present on cart reads;
+   * older snapshots may omit it, which is treated as "unknown" rather than
+   * available.
+   */
+  availability?: ApiCartLineAvailability;
+};
+
+export type ApiCartLineAvailability = {
+  available: number;
+  purchasable: boolean;
+  reason:
+    | "product_unavailable"
+    | "vendor_unavailable"
+    | "variant_unavailable"
+    | "variant_required"
+    | "out_of_stock"
+    | null;
 };
 
 export type ApiCart = {
@@ -483,7 +561,13 @@ export const apiClient = {
   createAddress: (input: Record<string, unknown>) =>
     requestJson<Record<string, unknown>>("/api/account/addresses", { method: "POST", body: JSON.stringify(input) }),
   deleteAddress: (id: string) => requestJson<{ deleted: boolean }>(`/api/account/addresses/${id}`, { method: "DELETE" }),
-  getSaved: () => requestJson<Array<{ id: string; product: ApiProduct }>>("/api/account/saved"),
+  getSaved: (market?: { country?: string; city?: string }) => {
+    const query = new URLSearchParams();
+    if (market?.country) query.set("country", market.country);
+    if (market?.city) query.set("city", market.city);
+    const suffix = query.toString();
+    return requestJson<ApiSavedItem[]>(`/api/account/saved${suffix ? `?${suffix}` : ""}`);
+  },
   getSellerApplication: () => requestJson<Record<string, unknown> | null>("/api/account/seller-application"),
   submitSellerApplication: (input: Record<string, unknown>) =>
     requestJson<Record<string, unknown>>("/api/account/seller-application", { method: "POST", body: JSON.stringify(input) }),
@@ -533,6 +617,8 @@ export const apiClient = {
   adminUpdateCountry: (code: string, enabled: boolean, deliveryEnabled: boolean) =>
     requestJson<Record<string, unknown>>("/api/admin/countries", { method: "PATCH", body: JSON.stringify({ code, enabled, deliveryEnabled }) }),
   adminProducts: () => requestJson<Array<Record<string, unknown>>>("/api/admin/products"),
+  adminProductPage: (params?: Record<string, string | undefined>) =>
+    requestJson<ApiAdminProductPage>(withParams("/api/admin/products", params)),
   adminVendors: () => requestJson<Array<Record<string, unknown>>>("/api/admin/vendors"),
   adminUsers: () => requestJson<Array<Record<string, unknown>>>("/api/admin/users"),
   adminAuditLogs: () => requestJson<Array<Record<string, unknown>>>("/api/admin/audit-logs"),

@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/guard";
+import { COUNTRIES } from "@/lib/config/commerce";
 import { recordAudit } from "./audit.service";
+import { availabilityProjection, type AvailabilityProjection } from "./availability";
+import { verticalAccess } from "./vertical-activation.service";
 
 export async function listAddresses(userId: string) {
   return prisma.address.findMany({ where: { userId }, orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }] });
@@ -45,21 +48,165 @@ export async function deleteAddress(userId: string, addressId: string) {
   return { deleted: true };
 }
 
-export async function listSavedItems(userId: string) {
-  return prisma.savedItem.findMany({
-    where: { userId },
-    include: {
-      product: {
-        include: {
-          images: true,
-          vendor: true,
-          stock: true,
-          category: true,
-          variants: { where: { isActive: true } }
+export type SavedItemUnavailableReason =
+  | "shop_not_available"
+  | "not_published"
+  | "seller_unavailable"
+  | "not_in_market"
+  | "contact_seller"
+  | "availability_unknown"
+  | "out_of_stock"
+  | "choose_variant";
+
+export type SavedItemView = {
+  id: string;
+  createdAt: string;
+  product: {
+    id: string;
+    slug: string;
+    name: string;
+    brand: string | null;
+    condition: string;
+    priceKobo: string;
+    compareAtKobo: string | null;
+    /** Null when the stored fulfilment country is not a configured market. */
+    currency: string | null;
+    countryCode: string;
+    saleMode: "escrow" | "contact";
+    image: { url: string; alt: string | null } | null;
+    category: { id: string; name: string; slug: string };
+    vendor: { id: string; name: string; slug: string; status: string; trustScore: number };
+    /** Shared stock projection; the only stock numbers the customer sees. */
+    availability: AvailabilityProjection;
+    /** True only when the customer can add this exact saved line now. */
+    purchasable: boolean;
+    unavailableReason: SavedItemUnavailableReason | null;
+  };
+};
+
+const MARKET_PATTERN = /^[A-Z]{2}$/;
+const CITY_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}$/;
+
+function savedMarket(input: { countryCode?: string | null; cityCode?: string | null }): {
+  countryCode: string;
+  cityCode: string | null;
+} {
+  const countryCode = String(input.countryCode ?? "").trim().toUpperCase();
+  if (countryCode && !MARKET_PATTERN.test(countryCode)) {
+    throw new ApiError(400, "invalid_market", "Country must be a two-letter ISO code.");
+  }
+  const cityCode = String(input.cityCode ?? "").trim().toLowerCase();
+  if (cityCode && !CITY_PATTERN.test(cityCode)) {
+    throw new ApiError(400, "invalid_city", "City code is not valid.");
+  }
+  return { countryCode, cityCode: cityCode || null };
+}
+
+/**
+ * Saved items with a deliberate public-safe projection.
+ *
+ * The account list is not an admin read: it must not return raw vendor,
+ * category or variant rows, and it must never imply that an unpublished,
+ * out-of-market or out-of-stock listing can be bought. Eligibility is the same
+ * decision the catalogue, detail page and checkout use
+ * (`listPublicEligibleProductIds`), so a saved item cannot bypass market,
+ * category, seller or Shop-activation rules.
+ *
+ * Unavailable items stay visible with a truthful reason. The stock projection
+ * is the shared `availabilityProjection`; variant-managed products are never
+ * auto-purchased because the customer has not chosen an option here.
+ */
+export async function listSavedItems(
+  userId: string,
+  options: { countryCode?: string | null; cityCode?: string | null } = {}
+): Promise<SavedItemView[]> {
+  const market = savedMarket(options);
+  const [user, saved] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { countryCode: true } }),
+    prisma.savedItem.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        createdAt: true,
+        product: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            brand: true,
+            condition: true,
+            priceKobo: true,
+            compareAtKobo: true,
+            countryCode: true,
+            status: true,
+            isSample: true,
+            saleMode: true,
+            category: { select: { id: true, name: true, slug: true } },
+            vendor: { select: { id: true, name: true, slug: true, status: true, trustScore: true } },
+            images: {
+              select: { url: true, alt: true },
+              orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+              take: 1
+            },
+            stock: { select: { quantity: true, reserved: true } },
+            variants: {
+              where: { isActive: true },
+              select: { stock: true, reserved: true, isActive: true }
+            }
+          }
         }
+      },
+      orderBy: { createdAt: "desc" }
+    })
+  ]);
+  if (saved.length === 0) return [];
+
+  const countryCode = market.countryCode || (user?.countryCode ?? "NG").trim().toUpperCase() || "NG";
+  const cityCode = market.cityCode;
+  const access = await verticalAccess("shop", { countryCode, cityCode });
+  const wantedIds = saved.map((entry) => entry.product.id);
+  // Dynamic import avoids a static account.service <-> catalog.service cycle
+  // (catalog.service imports listReviews from this module).
+  const { listPublicEligibleProductIds } = await import("./catalog.service");
+  const eligibleIds = access.accessible
+    ? await listPublicEligibleProductIds({ countryCode, cityCode, productIds: wantedIds })
+    : new Set<string>();
+
+  return saved.map((entry) => {
+    const product = entry.product;
+    const availability = availabilityProjection({ variants: product.variants, stock: product.stock });
+    let unavailableReason: SavedItemUnavailableReason | null = null;
+    if (!access.accessible) unavailableReason = "shop_not_available";
+    else if (product.status !== "ACTIVE" || product.isSample) unavailableReason = "not_published";
+    else if (product.vendor.status !== "VERIFIED") unavailableReason = "seller_unavailable";
+    else if (!eligibleIds.has(product.id)) unavailableReason = "not_in_market";
+    else if (product.saleMode === "contact") unavailableReason = "contact_seller";
+    else if (!availability.known) unavailableReason = "availability_unknown";
+    else if (availability.available <= 0) unavailableReason = "out_of_stock";
+    else if (availability.requiresVariantSelection) unavailableReason = "choose_variant";
+
+    return {
+      id: entry.id,
+      createdAt: entry.createdAt.toISOString(),
+      product: {
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        brand: product.brand ?? null,
+        condition: product.condition,
+        priceKobo: product.priceKobo.toString(),
+        compareAtKobo: product.compareAtKobo?.toString() ?? null,
+        currency: COUNTRIES[product.countryCode.toUpperCase()]?.currency ?? null,
+        countryCode: product.countryCode,
+        saleMode: product.saleMode === "contact" ? "contact" : "escrow",
+        image: product.images[0] ? { url: product.images[0].url, alt: product.images[0].alt ?? null } : null,
+        category: product.category,
+        vendor: product.vendor,
+        availability,
+        purchasable: unavailableReason === null,
+        unavailableReason
       }
-    },
-    orderBy: { createdAt: "desc" }
+    } satisfies SavedItemView;
   });
 }
 

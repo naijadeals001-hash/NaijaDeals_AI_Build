@@ -35,6 +35,8 @@ export interface AdminPageData {
   orders: Array<Record<string, unknown>>;
   applications: Array<Record<string, unknown>>;
   products: Array<Record<string, unknown>>;
+  /** Total products matching the Control Center region, from the server envelope. */
+  productsTotal: number;
   payments: Array<Record<string, unknown>>;
   disputes: Array<Record<string, unknown>>;
   freight: Array<Record<string, unknown>>;
@@ -70,6 +72,9 @@ const ENDPOINTS = {
   escrow: "/api/admin/escrow"
 } as const;
 
+/** First page rendered by the Control Center products tab; the tab then pages the API. */
+const PRODUCT_PAGE_SIZE = 20;
+
 type EndpointKey = keyof typeof ENDPOINTS;
 
 async function fetchJson(baseUrl: string, cookie: string, path: string) {
@@ -103,10 +108,20 @@ export async function loadAdminPageData(region: AdminRegion = "ALL"): Promise<Ad
   const keys = Object.keys(ENDPOINTS) as EndpointKey[];
   const loadErrors: string[] = [];
 
+  // The products endpoint is paginated. The initial payload is the first page
+  // for the selected region so the tab can render immediately without loading
+  // an unbounded catalogue; later pages are requested by the client.
+  const productParams = new URLSearchParams({ page: "1", pageSize: String(PRODUCT_PAGE_SIZE) });
+  if (region !== "ALL") productParams.set("country", region);
+  const paths: Record<EndpointKey, string> = {
+    ...ENDPOINTS,
+    products: `${ENDPOINTS.products}?${productParams.toString()}`
+  };
+
   const results = await Promise.all(
     keys.map(async (key) => {
       try {
-        const value = await fetchJson(baseUrl, cookie, ENDPOINTS[key]);
+        const value = await fetchJson(baseUrl, cookie, paths[key]);
         return [key, value] as const;
       } catch (error) {
         loadErrors.push(`${ENDPOINTS[key]}: ${error instanceof Error ? error.message : "request failed"}`);
@@ -117,13 +132,20 @@ export async function loadAdminPageData(region: AdminRegion = "ALL"): Promise<Ad
 
   const raw = Object.fromEntries(results) as Record<EndpointKey, unknown>;
 
+  const productsEnvelope =
+    raw.products && typeof raw.products === "object" && !Array.isArray(raw.products)
+      ? (raw.products as { products?: unknown; total?: unknown })
+      : null;
+  const productsTotalRaw = Number(productsEnvelope?.total ?? 0);
+
   // Region filtering happens on the server so rows outside the selected (or
   // permitted) region never reach the client payload.
   const data: AdminPageData = {
     overview: raw.overview && typeof raw.overview === "object" ? (raw.overview as AdminOverviewData) : null,
     orders: filterRowsByRegion(asArray(raw.orders), region),
     applications: filterRowsByRegion(asArray(raw.applications), region),
-    products: filterRowsByRegion(asArray(raw.products), region),
+    products: filterRowsByRegion(asArray(productsEnvelope ?? raw.products, "products"), region),
+    productsTotal: Number.isFinite(productsTotalRaw) ? productsTotalRaw : 0,
     payments: filterRowsByRegion(asArray(raw.payments), region),
     disputes: asArray(raw.disputes),
     freight: asArray(raw.freight),

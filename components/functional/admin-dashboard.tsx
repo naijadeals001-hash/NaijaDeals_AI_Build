@@ -56,6 +56,7 @@ interface AdminDashboardProps {
   orders: Row[];
   applications: Row[];
   products: Row[];
+  productsTotal: number;
   payments: Row[];
   disputes: Row[];
   freight: Row[];
@@ -530,6 +531,8 @@ export function AdminDashboard(props: AdminDashboardProps) {
           rides={rides}
           payouts={payouts}
           products={products}
+          productsTotal={props.productsTotal}
+          region={region}
           applications={applications}
           payments={payments}
           disputes={disputes}

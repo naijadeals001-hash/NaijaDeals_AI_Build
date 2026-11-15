@@ -54,9 +54,26 @@ try {
 }
 const { acquireReviewTestLease, describeReviewTestLease, formatReviewTestLeaseSummary } = leaseModule;
 
+const REVIEW_URL = process.env.REVIEW_DATABASE_URL?.trim();
+if (!REVIEW_URL) {
+  console.error(
+    "REFUSED: REVIEW_DATABASE_URL must be set explicitly. This mutating suite never falls back to DATABASE_URL or .env."
+  );
+  process.exit(2);
+}
+// Prisma is constructed from the verified URL, not ambient DATABASE_URL.
+process.env.DATABASE_URL = REVIEW_URL;
 const BASE = (process.env.REVIEW_BASE_URL || "http://localhost:3047").replace(/\/+$/, "");
-const EXPECTED_DB = process.env.REVIEW_EXPECTED_DATABASE || "naijadeals_review";
-const prisma = new PrismaClient();
+const EXPECTED_DB =
+  process.env.REVIEW_EXPECTED_DATABASE ||
+  (() => {
+    try {
+      return decodeURIComponent(new URL(REVIEW_URL).pathname.replace(/^\//, ""));
+    } catch {
+      return "naijadeals_review";
+    }
+  })();
+const prisma = new PrismaClient({ datasources: { db: { url: REVIEW_URL } } });
 
 const ADMIN_CREDENTIAL = path.join("qa-artifacts", "review-basket", ".admin-credential");
 const SELLER_CREDENTIAL = path.join("qa-artifacts", "review-basket", ".seller-credential");

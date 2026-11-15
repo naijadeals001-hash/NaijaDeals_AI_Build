@@ -15,6 +15,8 @@ import Link from "next/link";
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   RefreshCw,
   Search,
@@ -24,6 +26,7 @@ import {
 } from "lucide-react";
 import { apiClient, koboToNaira, statusLabel } from "@/lib/api-client";
 import type { AdminTab } from "@/lib/admin/admin-navigation";
+import type { AdminRegion } from "@/lib/admin/region";
 import { COUNTRIES } from "@/lib/config/commerce";
 
 export type Row = Record<string, any>;
@@ -35,6 +38,7 @@ interface WorkspaceTabProps {
   rides: Row[];
   payouts: Row[];
   products: Row[];
+  productsTotal: number;
   applications: Row[];
   payments: Row[];
   disputes: Row[];
@@ -51,6 +55,7 @@ interface WorkspaceTabProps {
   canWriteDeliveries: boolean;
   canModerateProducts: boolean;
   initialQuery: string;
+  region: AdminRegion;
   onRefresh: () => void;
 }
 
@@ -148,6 +153,9 @@ function Toolbar({
   filters,
   filterValue,
   onFilter,
+  sortOptions,
+  sortValue,
+  onSort,
   onRefresh
 }: {
   query: string;
@@ -156,6 +164,9 @@ function Toolbar({
   filters?: string[];
   filterValue?: string;
   onFilter?: (next: string) => void;
+  sortOptions?: Array<{ value: string; label: string }>;
+  sortValue?: string;
+  onSort?: (next: string) => void;
   onRefresh: () => void;
 }) {
   return (
@@ -187,6 +198,25 @@ function Toolbar({
               {filters.map((entry) => (
                 <option key={entry} value={entry}>
                   {statusLabel(entry)}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+        {sortOptions && sortOptions.length > 0 && onSort && (
+          <>
+            <label htmlFor="admin-sort" className="sr-only">
+              Sort by
+            </label>
+            <select
+              id="admin-sort"
+              value={sortValue ?? sortOptions[0].value}
+              onChange={(event) => onSort(event.target.value)}
+              className="h-10 rounded-xl border border-[#21262D] bg-[#0B0E14] px-3 text-sm font-medium text-[#F0F6FC] focus:border-[#00E676] focus:outline-none focus:ring-2 focus:ring-[#00E676]/30"
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -234,7 +264,8 @@ function DataTable({
   onDetail,
   selected,
   onToggleRow,
-  onToggleAll
+  onToggleAll,
+  showPagination = true
 }: {
   columns: Array<{ header: string; cell: (row: Row) => React.ReactNode; className?: string }>;
   rows: Row[];
@@ -243,6 +274,8 @@ function DataTable({
   selected?: Set<string>;
   onToggleRow?: (id: string) => void;
   onToggleAll?: (ids: string[], checked: boolean) => void;
+  /** Server-paginated callers render the whole page and supply their own pager. */
+  showPagination?: boolean;
 }) {
   const [page, setPage] = useState(0);
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -257,7 +290,7 @@ function DataTable({
 
   if (rows.length === 0) return <EmptyState label={emptyLabel} />;
 
-  const visible = rows.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+  const visible = showPagination ? rows.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE) : rows;
   return (
     <>
     <div className="overflow-x-auto">
@@ -318,6 +351,7 @@ function DataTable({
         </tbody>
       </table>
     </div>
+    {showPagination ? (
     <div className="flex flex-col gap-3 border-t border-[#21262D] px-4 py-3 text-xs text-[#8B949E] sm:flex-row sm:items-center sm:justify-between">
       <span>
         Showing {rows.length === 0 ? 0 : safePage * PAGE_SIZE + 1}–{Math.min(rows.length, safePage * PAGE_SIZE + PAGE_SIZE)} of {rows.length}
@@ -344,6 +378,7 @@ function DataTable({
         </button>
       </div>
     </div>
+    ) : null}
     </>
   );
 }
@@ -834,33 +869,126 @@ function RecordDialog({ row, onClose }: { row: Row; onClose: () => void }) {
   );
 }
 
-export function WorkspaceTabContent(props: WorkspaceTabProps) {
-  const { tab, isSuperAdmin, onRefresh, initialQuery } = props;
-  const [query, setQuery] = useState(initialQuery);
+const PRODUCT_PAGE_SIZE = 20;
+const PRODUCT_STATUS_OPTIONS = ["ACTIVE", "SUSPENDED", "DRAFT", "ARCHIVED"];
+const PRODUCT_SORT_OPTIONS = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "name", label: "Name A–Z" },
+  { value: "updated", label: "Recently updated" }
+];
+
+/**
+ * Control Center product catalogue.
+ *
+ * Search, status, sort and pagination are evaluated by the server; the totals
+ * and page count therefore describe the whole authorised catalogue rather than
+ * whichever rows happened to fit in the initial payload. Moderation keeps using
+ * the existing audited endpoint and reloads the current page afterwards.
+ */
+function AdminProductsPanel(props: {
+  initialRows: Row[];
+  initialTotal: number;
+  region: AdminRegion;
+  canModerate: boolean;
+  initialQuery: string;
+  onRefresh: () => void;
+}) {
+  const [rows, setRows] = useState<Row[]>(props.initialRows);
+  const [total, setTotal] = useState(props.initialTotal);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(() => Math.max(1, Math.ceil(props.initialTotal / PRODUCT_PAGE_SIZE)));
+  const [query, setQuery] = useState(props.initialQuery);
+  const [debouncedQuery, setDebouncedQuery] = useState(props.initialQuery);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [busyId, setBusyId] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [detail, setDetail] = useState<Row | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busyId, setBusyId] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
-  const [roleUser, setRoleUser] = useState<Row | null>(null);
-  const [disputeRow, setDisputeRow] = useState<Row | null>(null);
-  const [mobilePage, setMobilePage] = useState(0);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [detail, setDetail] = useState<Row | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+  const requestId = useRef(0);
 
   useEffect(() => {
-    setQuery(initialQuery);
-    setStatusFilter("all");
+    const timer = setTimeout(() => setDebouncedQuery(query), 350);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    setQuery(props.initialQuery);
+    setDebouncedQuery(props.initialQuery);
+    setPage(1);
+    setSelected(new Set());
+  }, [props.initialQuery]);
+
+  useEffect(() => {
+    setPage(1);
+    setSelected(new Set());
+  }, [props.region]);
+
+  useEffect(() => {
+    let active = true;
+    const current = requestId.current + 1;
+    requestId.current = current;
+    setLoading(true);
+    setError("");
+    apiClient
+      .adminProductPage({
+        page: String(page),
+        pageSize: String(PRODUCT_PAGE_SIZE),
+        q: debouncedQuery.trim() || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter,
+        sort,
+        country: props.region === "ALL" ? undefined : props.region
+      })
+      .then((data) => {
+        if (!active || requestId.current !== current) return;
+        setRows(Array.isArray(data.products) ? data.products : []);
+        setTotal(Number.isFinite(data.total) ? data.total : 0);
+        setTotalPages(Math.max(1, Number(data.totalPages) || 1));
+        // A moderation action can remove the last row of the final page.
+        if (page > 1 && (data.products?.length ?? 0) === 0 && data.total > 0) {
+          setPage(Math.min(page - 1, Math.max(1, Number(data.totalPages) || 1)));
+        }
+      })
+      .catch((caught) => {
+        if (!active || requestId.current !== current) return;
+        setError(caught instanceof Error ? caught.message : "The product page could not be loaded.");
+      })
+      .finally(() => {
+        if (!active || requestId.current !== current) return;
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [page, statusFilter, sort, debouncedQuery, props.region, reloadToken]);
+
+  function reload() {
+    setReloadToken((value) => value + 1);
+  }
+
+  async function moderate(row: Row, target: "ACTIVE" | "SUSPENDED") {
+    setBusyId(String(row.id));
     setMessage("");
     setError("");
-    setSelected(new Set());
-  }, [tab, initialQuery]);
+    try {
+      await apiClient.adminModerateProduct(String(row.id), target);
+      setMessage(`${text(row.name)} set to ${statusLabel(target)}. The change is in the audit log.`);
+      setSelected(new Set());
+      props.onRefresh();
+      reload();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The moderation action could not be completed.");
+    } finally {
+      setBusyId("");
+    }
+  }
 
-  useEffect(() => {
-    setMobilePage(0);
-  }, [tab, initialQuery, query, statusFilter]);
-
-  async function bulkModerateProducts(target: "ACTIVE" | "SUSPENDED") {
+  async function bulkModerate(target: "ACTIVE" | "SUSPENDED") {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
     const verb = target === "SUSPENDED" ? "Suspend" : "Activate";
@@ -880,10 +1008,223 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
     }
     setBulkBusy(false);
     setSelected(new Set());
-    if (changed > 0) setMessage(`${changed} product(s) set to ${statusLabel(target)}.`);
+    if (changed > 0) setMessage(`${changed} product(s) set to ${statusLabel(target)}. Changes are in the audit log.`);
     if (failures.length > 0) setError(`${failures.length} product(s) could not be updated: ${failures.slice(0, 3).join("; ")}`);
-    onRefresh();
+    if (changed > 0) {
+      props.onRefresh();
+      reload();
+    }
   }
+
+  const filtered = statusFilter !== "all" || debouncedQuery.trim().length > 0;
+  const emptyLabel =
+    total === 0
+      ? filtered
+        ? "No products match this search or filter."
+        : props.region === "ALL"
+          ? "No products exist yet."
+          : `No products exist in ${props.region}.`
+      : "No products are on this page. Try the previous page.";
+  const firstRow = total === 0 ? 0 : (page - 1) * PRODUCT_PAGE_SIZE + 1;
+  const lastRow = total === 0 ? 0 : firstRow + rows.length - 1;
+
+  return (
+    <>
+      <Panel
+        title="Products"
+        description="Marketplace catalogue. Search, status and paging are applied by the server across the full authorised catalogue. Suspending a product removes it from sale and is written to the audit log."
+      >
+        <Toolbar
+          query={query}
+          onQuery={(next) => {
+            setQuery(next);
+            setPage(1);
+            setSelected(new Set());
+          }}
+          placeholder="Search product, seller or category…"
+          filters={PRODUCT_STATUS_OPTIONS}
+          filterValue={statusFilter}
+          onFilter={(next) => {
+            setStatusFilter(next);
+            setPage(1);
+            setSelected(new Set());
+          }}
+          sortOptions={PRODUCT_SORT_OPTIONS}
+          sortValue={sort}
+          onSort={(next) => {
+            setSort(next);
+            setPage(1);
+            setSelected(new Set());
+          }}
+          onRefresh={() => {
+            props.onRefresh();
+            reload();
+          }}
+        />
+        <ActionFeedback message={message} error={error} />
+        {!props.canModerate ? (
+          <p role="status" className="px-4 pb-3 text-xs font-semibold text-[#8B949E]">
+            Read-only view: the products:moderate permission is required to change a product&apos;s publication state.
+          </p>
+        ) : null}
+        {loading ? (
+          <p role="status" className="flex items-center gap-2 px-4 pb-3 text-xs font-bold text-[#8B949E]">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            Loading products…
+          </p>
+        ) : null}
+        {selected.size > 0 ? (
+          <div role="status" className="flex flex-wrap items-center gap-2 border-b border-[#21262D] bg-[#0B0E14] px-4 py-2.5 text-xs font-bold text-[#F0F6FC]">
+            <span className="mr-1">{selected.size} selected</span>
+            <button
+              type="button"
+              disabled={bulkBusy || !props.canModerate}
+              onClick={() => void bulkModerate("SUSPENDED")}
+              className="rounded-lg border border-crimson/50 bg-crimson/10 px-3 py-1.5 text-crimson hover:bg-crimson/20 disabled:opacity-50"
+            >
+              Suspend selected
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy || !props.canModerate}
+              onClick={() => void bulkModerate("ACTIVE")}
+              className="rounded-lg border border-[#00E676]/50 bg-[#00E676]/10 px-3 py-1.5 text-[#00E676] hover:bg-[#00E676]/20 disabled:opacity-50"
+            >
+              Activate selected
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="rounded-lg border border-[#21262D] px-3 py-1.5 text-[#8B949E] hover:bg-[#21262D]"
+            >
+              Clear
+            </button>
+          </div>
+        ) : null}
+        <DataTable
+          rows={rows}
+          showPagination={false}
+          emptyLabel={emptyLabel}
+          onDetail={setDetail}
+          selected={selected}
+          onToggleRow={(id) =>
+            setSelected((previous) => {
+              const next = new Set(previous);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            })
+          }
+          onToggleAll={(ids, checked) =>
+            setSelected((previous) => {
+              const next = new Set(previous);
+              for (const id of ids) {
+                if (checked) next.add(id);
+                else next.delete(id);
+              }
+              return next;
+            })
+          }
+          columns={[
+            {
+              header: "Product",
+              cell: (row) => (
+                <div>
+                  <p className="font-bold">{text(row.name)}</p>
+                  <p className="text-xs text-[#8B949E]">{text(value(row, "vendor.name"))}</p>
+                </div>
+              )
+            },
+            { header: "Status", cell: (row) => <StatusBadge status={text(row.status)} /> },
+            { header: "Price", cell: (row) => <span className="font-bold">{money(row.priceKobo)}</span>, className: "text-right" },
+            {
+              header: "Stock",
+              cell: (row) => {
+                const stock = row.stock as Row | null | undefined;
+                return <span>{stock && stock.quantity !== undefined ? String(stock.quantity) : "—"}</span>;
+              },
+              className: "text-right"
+            },
+            { header: "Created", cell: (row) => <span className="text-xs text-[#8B949E]">{date(row.createdAt)}</span> },
+            {
+              header: "Action",
+              cell: (row) => {
+                const status = String(row.status);
+                const target = status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
+                const busy = busyId === String(row.id);
+                return (
+                  <button
+                    type="button"
+                    disabled={busy || !props.canModerate || bulkBusy}
+                    title={props.canModerate ? undefined : "The products:moderate permission is required."}
+                    onClick={() => void moderate(row, target)}
+                    className="rounded-lg border border-[#21262D] bg-[#0B0E14] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D] disabled:opacity-50"
+                  >
+                    {busy ? "Working…" : target === "ACTIVE" ? "Activate" : "Suspend"}
+                  </button>
+                );
+              }
+            }
+          ]}
+        />
+        <div className="flex flex-col gap-3 border-t border-[#21262D] px-4 py-3 text-xs text-[#8B949E] sm:flex-row sm:items-center sm:justify-between">
+          <span aria-live="polite">
+            {total === 0 ? "0 products" : `Showing ${firstRow}–${lastRow} of ${total.toLocaleString()} products`}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={loading || page <= 1}
+              aria-label="Previous product page"
+              className="flex h-9 items-center gap-1 rounded-lg border border-[#21262D] px-3 font-bold text-[#F0F6FC] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" /> Previous
+            </button>
+            <span aria-live="polite">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              disabled={loading || page >= totalPages}
+              aria-label="Next product page"
+              className="flex h-9 items-center gap-1 rounded-lg border border-[#21262D] px-3 font-bold text-[#F0F6FC] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      </Panel>
+      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+    </>
+  );
+}
+
+export function WorkspaceTabContent(props: WorkspaceTabProps) {
+  const { tab, isSuperAdmin, onRefresh, initialQuery } = props;
+  const [query, setQuery] = useState(initialQuery);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [busyId, setBusyId] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [detail, setDetail] = useState<Row | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [roleUser, setRoleUser] = useState<Row | null>(null);
+  const [disputeRow, setDisputeRow] = useState<Row | null>(null);
+  const [mobilePage, setMobilePage] = useState(0);
+
+  useEffect(() => {
+    setQuery(initialQuery);
+    setStatusFilter("all");
+    setMessage("");
+    setError("");
+    setSelected(new Set());
+  }, [tab, initialQuery]);
+
+  useEffect(() => {
+    setMobilePage(0);
+  }, [tab, initialQuery, query, statusFilter]);
 
   const run = useCallback(
     async (id: string, action: () => Promise<unknown>, successMessage: string) => {
@@ -1324,121 +1665,17 @@ export function WorkspaceTabContent(props: WorkspaceTabProps) {
   }
 
   if (tab === "products") {
-    const rows = filterRows(props.products).filter((row) => matches(row, ["name", "vendor.name", "status"]));
-    const statuses = Array.from(new Set(props.products.map((row) => String(row.status)))).sort();
     return (
       <>
-      <Panel title="Products" description="Marketplace catalogue. Suspending a product removes it from sale and is written to the audit log.">
-        <Toolbar
-          query={query}
-          onQuery={setQuery}
-          placeholder="Search product or vendor…"
-          filters={statuses}
-          filterValue={statusFilter}
-          onFilter={setStatusFilter}
+        <AdminProductsPanel
+          initialRows={props.products}
+          initialTotal={props.productsTotal}
+          region={props.region}
+          canModerate={props.canModerateProducts}
+          initialQuery={initialQuery}
           onRefresh={onRefresh}
         />
-        <ActionFeedback message={message} error={error} />
-        {selected.size > 0 ? (
-          <div role="status" className="flex flex-wrap items-center gap-2 border-b border-[#21262D] bg-[#0B0E14] px-4 py-2.5 text-xs font-bold text-[#F0F6FC]">
-            <span className="mr-1">{selected.size} selected</span>
-            <button
-              type="button"
-              disabled={bulkBusy}
-              onClick={() => void bulkModerateProducts("SUSPENDED")}
-              className="rounded-lg border border-crimson/50 bg-crimson/10 px-3 py-1.5 text-crimson hover:bg-crimson/20 disabled:opacity-50"
-            >
-              Suspend selected
-            </button>
-            <button
-              type="button"
-              disabled={bulkBusy}
-              onClick={() => void bulkModerateProducts("ACTIVE")}
-              className="rounded-lg border border-[#00E676]/50 bg-[#00E676]/10 px-3 py-1.5 text-[#00E676] hover:bg-[#00E676]/20 disabled:opacity-50"
-            >
-              Activate selected
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelected(new Set())}
-              className="rounded-lg border border-[#21262D] px-3 py-1.5 text-[#8B949E] hover:bg-[#21262D]"
-            >
-              Clear
-            </button>
-          </div>
-        ) : null}
-        <DataTable
-          rows={rows}
-          emptyLabel={props.products.length === 0 ? "No products exist yet." : "No products match this filter."}
-          onDetail={setDetail}
-          selected={selected}
-          onToggleRow={(id) =>
-            setSelected((previous) => {
-              const next = new Set(previous);
-              if (next.has(id)) next.delete(id);
-              else next.add(id);
-              return next;
-            })
-          }
-          onToggleAll={(ids, checked) =>
-            setSelected((previous) => {
-              const next = new Set(previous);
-              for (const id of ids) {
-                if (checked) next.add(id);
-                else next.delete(id);
-              }
-              return next;
-            })
-          }
-          columns={[
-            {
-              header: "Product",
-              cell: (row) => (
-                <div>
-                  <p className="font-bold">{text(row.name)}</p>
-                  <p className="text-xs text-[#8B949E]">{text(value(row, "vendor.name"))}</p>
-                </div>
-              )
-            },
-            { header: "Status", cell: (row) => <StatusBadge status={text(row.status)} /> },
-            { header: "Price", cell: (row) => <span className="font-bold">{money(row.priceKobo)}</span>, className: "text-right" },
-            {
-              header: "Stock",
-              cell: (row) => {
-                const stock = row.stock as Row | null | undefined;
-                return <span>{stock && stock.quantity !== undefined ? String(stock.quantity) : "—"}</span>;
-              },
-              className: "text-right"
-            },
-            {
-              header: "Action",
-              cell: (row) => {
-                const status = String(row.status);
-                const target = status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
-                const busy = busyId === String(row.id);
-                return (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() =>
-                      void run(
-                        String(row.id),
-                        () => apiClient.adminModerateProduct(String(row.id), target),
-                        `${text(row.name)} set to ${statusLabel(target)}.`
-                      )
-                    }
-                    className="rounded-lg border border-[#21262D] bg-[#0B0E14] px-2.5 py-1.5 text-xs font-bold text-[#F0F6FC] hover:bg-[#21262D] disabled:opacity-50"
-                  >
-                    {busy ? "Working…" : target === "ACTIVE" ? "Activate" : "Suspend"}
-                  </button>
-                );
-              }
-            }
-          ]}
-        />
-      </Panel>
-      <AdminStorefrontPanel />
-      {detail ? <RecordDialog row={detail} onClose={() => setDetail(null)} /> : null}
+        <AdminStorefrontPanel />
       </>
     );
   }

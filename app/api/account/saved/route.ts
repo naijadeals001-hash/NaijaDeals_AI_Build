@@ -5,10 +5,22 @@ import { jsonSafe } from "@/lib/services/core/serialize";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+/**
+ * Saved items are a customer read, not an admin projection. The optional
+ * `country`/`city` query parameters select the market the account page is
+ * showing; the service validates them and applies the same public eligibility
+ * rules as the catalogue and checkout. Unavailable items remain in the list with
+ * a truthful reason instead of leaking raw product/variant rows.
+ */
+export async function GET(request: Request) {
   try {
     const user = await requireUser();
-    return NextResponse.json(jsonSafe(await listSavedItems(user.id)));
+    const url = new URL(request.url);
+    const items = await listSavedItems(user.id, {
+      countryCode: url.searchParams.get("country"),
+      cityCode: url.searchParams.get("city")
+    });
+    return NextResponse.json(jsonSafe(items), { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return jsonError(error);
   }

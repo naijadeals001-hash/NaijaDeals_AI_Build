@@ -6,10 +6,13 @@
  * provenance. The seed should prefer an entry here over its algorithmic
  * theme-to-asset mapping, and must not append a second label sentence.
  *
- * Generated entries used only the project's authorized Kie.ai workflow and
- * existing credits (29 images x 6 credits = 174; no purchase or top-up).
- * See docs/countries/imagery-manifest.md and
- * docs/countries/imagery-remediation-audit.json for the full audit.
+ * The 2026-11-14 remediation batch used only the project's authorized Kie.ai
+ * workflow and existing credits (29 images x 6 credits = 174; no purchase or
+ * top-up). The 2026-11-15 photographic-design pass reuses approved project
+ * photography at zero credits. A further Kie.ai generation plan was blocked by
+ * the host approval rejection and is recorded, without any task or spend, in
+ * docs/countries/imagery-manifest.md and
+ * docs/countries/imagery-remediation-audit.json.
  */
 
 export type CountryThemeImageOverride = {
@@ -439,6 +442,70 @@ export const COUNTRY_THEME_IMAGE_OVERRIDES: Record<string, CountryThemeImageOver
     alt: "Bowls of whole and ground spices. Illustrative image for the Flavouring compounds theme.",
     kind: "APPROVED_EXISTING",
     provenance: "APPROVED_EXISTING: project asset fresh/cat-herbs-spices.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim.",
+  },
+
+  // 2026-11-15 photographic-design reuse corrections. These replace
+  // non-photographic product-theme vectors or weak single-item matches with
+  // accurate approved project photography. No provider task or credit was used.
+  "MG/raffia": {
+    url: "/generated/taxonomy/raffia-tote.webp",
+    alt: "A woven raffia tote bag with a geometric green band. Illustrative image for the Raffia weaving theme.",
+    kind: "APPROVED_EXISTING",
+    provenance: "APPROVED_EXISTING: project asset taxonomy/raffia-tote.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim."
+  },
+  "SC/raffia-bamboo": {
+    url: "/generated/taxonomy/raffia-tote.webp",
+    alt: "A woven raffia tote bag with a geometric green band. Illustrative image for the Raffia and bamboo materials theme.",
+    kind: "APPROVED_EXISTING",
+    provenance: "APPROVED_EXISTING: project asset taxonomy/raffia-tote.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim."
+  },
+  "MA/leatherwork": {
+    url: "/generated/shop/product-red-patent-leather-baby-shoes.webp",
+    alt: "Red patent leather baby shoes on a neutral background. Illustrative image for the Leatherwork theme.",
+    kind: "APPROVED_EXISTING",
+    provenance: "APPROVED_EXISTING: project asset shop/product-red-patent-leather-baby-shoes.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim."
+  },
+  "ZW/leather": {
+    url: "/generated/shop/product-red-patent-leather-baby-shoes.webp",
+    alt: "Red patent leather baby shoes on a neutral background. Illustrative image for the Leather goods theme.",
+    kind: "APPROVED_EXISTING",
+    provenance: "APPROVED_EXISTING: project asset shop/product-red-patent-leather-baby-shoes.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim."
+  },
+  "NG/leather": {
+    url: "/generated/shop/product-red-patent-leather-baby-shoes.webp",
+    alt: "Red patent leather baby shoes on a neutral background. Illustrative image for the Leather theme.",
+    kind: "APPROVED_EXISTING",
+    provenance: "APPROVED_EXISTING: project asset shop/product-red-patent-leather-baby-shoes.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim."
+  },
+  "GH/handwoven-textiles": {
+    url: "/generated/taxonomy/kente-cloth.webp",
+    alt: "Folded handwoven kente cloth with geometric patterns. Illustrative image for the Fugu and handwoven cloth theme.",
+    kind: "APPROVED_EXISTING",
+    provenance: "APPROVED_EXISTING: project asset taxonomy/kente-cloth.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim."
+  },
+  "AO/maize": {
+    url: "/generated/fresh/cat-grains-beans.webp",
+    alt: "Yellow maize and red beans in woven market sacks. Illustrative image for the Maize and beans theme.",
+    kind: "APPROVED_EXISTING",
+    provenance: "APPROVED_EXISTING: project asset fresh/cat-grains-beans.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim."
+  },
+  "ER/cereals": {
+    url: "/generated/fresh/cat-grains-beans.webp",
+    alt: "Rice, maize, beans and other grains in woven market sacks. Illustrative image for the Cereals and pulses theme.",
+    kind: "APPROVED_EXISTING",
+    provenance: "APPROVED_EXISTING: project asset fresh/cat-grains-beans.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim."
+  },
+  "BJ/rice-and-maize": {
+    url: "/generated/fresh/cat-grains-beans.webp",
+    alt: "White rice and yellow maize in woven market sacks. Illustrative image for the Rice and maize theme.",
+    kind: "APPROVED_EXISTING",
+    provenance: "APPROVED_EXISTING: project asset fresh/cat-grains-beans.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim."
+  },
+  "GN/rice-and-maize": {
+    url: "/generated/fresh/cat-grains-beans.webp",
+    alt: "White rice and yellow maize in woven market sacks. Illustrative image for the Rice and maize theme.",
+    kind: "APPROVED_EXISTING",
+    provenance: "APPROVED_EXISTING: project asset fresh/cat-grains-beans.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim."
   },
 };
 

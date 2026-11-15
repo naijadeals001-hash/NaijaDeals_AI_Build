@@ -45,6 +45,7 @@ import {
   readShopActivationRows,
   readShopActivationSnapshot,
   restoreShopActivationSnapshot,
+  shopActivationBlockingFingerprint,
   shopActivationSnapshotPath,
   type ShopActivationDatabase,
   type ShopActivationSnapshot
@@ -236,7 +237,8 @@ async function main() {
       const result = await discardRunOwnedShopActivation({
         db,
         runId: discardRun,
-        allRuns: discardAll
+        allRuns: discardAll,
+        currentDatabase: database
       });
       console.log(`Deleted ${result.deleted} run-owned row(s); operator rows were not touched.`);
       console.log(`Effective Shop activation: ${await effectiveShopStatus()}`);
@@ -285,7 +287,16 @@ async function main() {
 
     if (!apply) fail("Dry run only: pass --apply to restore the selected snapshot.");
 
-    const result = await restoreShopActivationSnapshot({ db, snapshot, currentDatabase: database, force });
+    const result = await restoreShopActivationSnapshot({
+      db,
+      snapshot,
+      currentDatabase: database,
+      force,
+      // Only the rows this run actually saw may be forced. A row that appeared
+      // or changed after this plan refuses the restore instead of being
+      // silently overwritten by a concurrent operator's work.
+      expectedBlocking: force ? diff.blocking.map(shopActivationBlockingFingerprint) : undefined
+    });
     console.log(
       `Restored ${result.restored} row(s): added ${result.added}, removed ${result.removed}, overwritten ${result.changedRows}; ` +
         `verified ${result.verification.matched}/${result.verification.expected}.`

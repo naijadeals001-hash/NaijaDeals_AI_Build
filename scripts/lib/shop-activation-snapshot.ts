@@ -87,7 +87,10 @@ export type ShopActivationSnapshotFile = {
 export type ShopActivationDatabase = {
   $queryRawUnsafe<T = unknown>(query: string, ...values: unknown[]): Promise<T>;
   $executeRawUnsafe(query: string, ...values: unknown[]): Promise<number>;
-  $transaction<T>(callback: (tx: ShopActivationDatabase) => Promise<T>): Promise<T>;
+  $transaction<T>(
+    callback: (tx: ShopActivationDatabase) => Promise<T>,
+    options?: { maxWait?: number; timeout?: number }
+  ): Promise<T>;
 };
 
 export type ShopActivationDiff = {
@@ -110,6 +113,16 @@ export type ShopActivationRestoreResult = {
   changedRows: number;
   forced: ShopActivationRow[];
   verification: { ok: boolean; matched: number; expected: number };
+  /** Audit rows written inside the same transaction as the restore. */
+  audit: { action: string; auditId: string; systemEventId: string } | null;
+};
+
+/** Identity of a conflicting row observed by the caller's preflight plan. */
+export type ShopActivationBlockingFingerprint = {
+  id: string;
+  status: string;
+  reason: string | null;
+  updatedAt: string;
 };
 
 export class ShopActivationSnapshotError extends Error {
@@ -480,18 +493,96 @@ async function insertSnapshotRow(tx: ShopActivationDatabase, row: ShopActivation
 }
 
 /**
+ * Serialize activation recovery against every other writer.
+ *
+ * `LOCK TABLE ... IN EXCLUSIVE MODE` conflicts with the ROW EXCLUSIVE lock a
+ * normal INSERT/UPDATE/DELETE takes, so a concurrent operator write either
+ * commits before the restore reads (and is seen by the conflict check) or waits
+ * until the restore commits. A separate read-then-write transaction previously
+ * left a window where an operator row inserted after the check was deleted by
+ * the snapshot restore.
+ *
+ * The statement lock_timeout bounds a stuck queue; the interactive transaction
+ * timeout is raised above it in `$transaction` options.
+ */
+async function lockShopActivationTable(tx: ShopActivationDatabase): Promise<void> {
+  await tx.$executeRawUnsafe(`SET LOCAL lock_timeout = '5s'`);
+  await tx.$executeRawUnsafe(`LOCK TABLE "VerticalActivation" IN EXCLUSIVE MODE`);
+}
+
+function auditId(prefix: string): string {
+  return `${prefix}_${randomBytes(16).toString("hex")}`;
+}
+
+/**
+ * Write the restore/discard decision into the same transaction as the row
+ * change. `AuditLog` and `SystemEvent` are the existing Control Center audit
+ * surfaces; no new table is required for this operational action. The actor is
+ * deliberately null: recovery is an operator action run through the guarded CLI
+ * and the reason/force decision is captured in metadata.
+ */
+async function recordActivationAudit(
+  tx: ShopActivationDatabase,
+  input: {
+    action: "vertical.activation_restored" | "vertical.activation_discarded";
+    entityId: string | null;
+    metadata: Record<string, unknown>;
+  }
+): Promise<{ action: string; auditId: string; systemEventId: string }> {
+  const audit = auditId("act");
+  const event = auditId("evt");
+  const metadata = JSON.stringify(input.metadata);
+  await tx.$executeRawUnsafe(
+    `INSERT INTO "AuditLog" (id, "actorId", action, entity, "entityId", metadata, "createdAt")
+     VALUES ($1, NULL, $2, 'VerticalActivation', $3, $4::jsonb, NOW())`,
+    audit,
+    input.action,
+    input.entityId,
+    metadata
+  );
+  await tx.$executeRawUnsafe(
+    `INSERT INTO "SystemEvent" (id, type, "actorId", entity, "entityId", payload, "createdAt")
+     VALUES ($1, $2, NULL, 'VerticalActivation', $3, $4::jsonb, NOW())`,
+    event,
+    input.action,
+    input.entityId,
+    metadata
+  );
+  return { action: input.action, auditId: audit, systemEventId: event };
+}
+
+export function shopActivationBlockingFingerprint(row: ShopActivationRowInput): ShopActivationBlockingFingerprint {
+  return {
+    id: row.id,
+    status: String(row.status ?? "").toUpperCase(),
+    reason: row.reason ?? null,
+    updatedAt: new Date(row.updatedAt).toISOString()
+  };
+}
+
+/**
  * Restore the exact snapshot rows.
  *
  * `currentDatabase` must be the actual database name (`current_database()`),
  * not a guessed environment value. A mismatch, or a non-run-owned conflict,
- * refuses the restore. Pass `force: true` only after inspecting the reported
- * conflicts; the result lists every row that was forcibly removed or replaced.
+ * refuses the restore.
+ *
+ * The conflict check and the delete/insert now run inside one transaction under
+ * an exclusive table lock, and the row-for-row verification happens before the
+ * commit. An operator write that committed before the lock is included in the
+ * diff; a write that arrives during the restore waits for the commit. Pass
+ * `force: true` only after inspecting the reported conflicts. When
+ * `expectedBlocking` is supplied with force, every forced row must still match
+ * the fingerprint the caller planned against — a row that appeared or changed
+ * after the plan refuses the restore instead of being silently overwritten.
  */
 export async function restoreShopActivationSnapshot(input: {
   db: ShopActivationDatabase;
   snapshot: ShopActivationSnapshot;
   currentDatabase: string;
   force?: boolean;
+  /** Blocking rows the caller saw during its preflight plan. */
+  expectedBlocking?: ShopActivationBlockingFingerprint[];
 }): Promise<ShopActivationRestoreResult> {
   const snapshot = validateSnapshot(input.snapshot, input.snapshot?.runId ? `run ${input.snapshot.runId}` : "(snapshot)");
   if (!input.currentDatabase) fail("database_unknown", "The connected database name is required before restoring.");
@@ -502,54 +593,118 @@ export async function restoreShopActivationSnapshot(input: {
     );
   }
 
-  const before = await readShopActivationRows(input.db);
-  const diff = diffShopActivationRows(before, snapshot);
-  if (diff.blocking.length > 0 && !input.force) {
-    fail(
-      "snapshot_conflict",
-      `Refusing to overwrite ${diff.blocking.length} row(s) not owned by run ${snapshot.runId}: ${describeRows(
-        diff.blocking
-      )}. Inspect and pass force explicitly if removal is intended.`
-    );
-  }
+  return input.db.$transaction(
+    async (tx) => {
+      // Re-read only after the exclusive lock: this read is the authoritative
+      // conflict check, and no operator write can slip between it and the
+      // delete/insert below.
+      await lockShopActivationTable(tx);
+      const before = await readShopActivationRows(tx);
+      const diff = diffShopActivationRows(before, snapshot);
 
-  if (diff.identical) {
-    return {
-      changed: false,
-      restored: snapshot.rows.length,
-      added: 0,
-      removed: 0,
-      changedRows: 0,
-      forced: [],
-      verification: { ok: true, matched: snapshot.rows.length, expected: snapshot.rows.length }
-    };
-  }
+      if (diff.blocking.length > 0) {
+        if (!input.force) {
+          fail(
+            "snapshot_conflict",
+            `Refusing to overwrite ${diff.blocking.length} row(s) not owned by run ${snapshot.runId}: ${describeRows(
+              diff.blocking
+            )}. Inspect and pass force explicitly if removal is intended.`
+          );
+        }
+        if (input.expectedBlocking) {
+          const planned = new Map(input.expectedBlocking.map((row) => [row.id, row]));
+          const unplanned = diff.blocking.filter((row) => {
+            const wanted = planned.get(row.id);
+            const actual = shopActivationBlockingFingerprint(row);
+            return (
+              !wanted ||
+              wanted.status !== actual.status ||
+              wanted.reason !== actual.reason ||
+              wanted.updatedAt !== actual.updatedAt
+            );
+          });
+          if (unplanned.length > 0) {
+            fail(
+              "snapshot_conflict_changed",
+              `Concurrent operator change detected after the preflight plan: ${describeRows(
+                unplanned
+              )}. Nothing was modified. Re-run the plan and inspect the current rows before forcing.`
+            );
+          }
+        }
+      }
 
-  await input.db.$transaction(async (tx) => {
-    await tx.$executeRawUnsafe(`DELETE FROM "VerticalActivation" WHERE "verticalKey" = $1`, SHOP_VERTICAL_KEY);
-    for (const row of snapshot.rows) {
-      await insertSnapshotRow(tx, row);
-    }
-  });
+      if (diff.identical) {
+        return {
+          changed: false,
+          restored: snapshot.rows.length,
+          added: 0,
+          removed: 0,
+          changedRows: 0,
+          forced: [],
+          verification: { ok: true, matched: snapshot.rows.length, expected: snapshot.rows.length },
+          audit: null
+        };
+      }
 
-  const after = await readShopActivationRows(input.db);
-  const verification = shopActivationRowsMatch(after, snapshot.rows);
-  if (!verification.ok) {
-    fail(
-      "restore_verification_failed",
-      `Restoration did not reproduce the snapshot: ${verification.mismatch ?? "unknown mismatch"}. The snapshot file must be kept.`
-    );
-  }
+      const forced = [...diff.extra, ...diff.changed].filter(
+        (row) => runIdFromReason(row.reason) !== snapshot.runId
+      );
+      await tx.$executeRawUnsafe(`DELETE FROM "VerticalActivation" WHERE "verticalKey" = $1`, SHOP_VERTICAL_KEY);
+      for (const row of snapshot.rows) {
+        await insertSnapshotRow(tx, row);
+      }
 
-  return {
-    changed: true,
-    restored: snapshot.rows.length,
-    added: diff.missing.length,
-    removed: diff.extra.length,
-    changedRows: diff.changed.length,
-    forced: diff.blocking,
-    verification: { ok: true, matched: verification.matched, expected: verification.expected }
-  };
+      // A failure here rolls back the delete/insert entirely, so an
+      // interrupted restore leaves the prior rows untouched instead of a
+      // half-restored table.
+      const after = await readShopActivationRows(tx);
+      const verification = shopActivationRowsMatch(after, snapshot.rows);
+      if (!verification.ok) {
+        fail(
+          "restore_verification_failed",
+          `Restoration did not reproduce the snapshot: ${verification.mismatch ?? "unknown mismatch"}. The transaction was rolled back and the snapshot file must be kept.`
+        );
+      }
+
+      const audit = await recordActivationAudit(tx, {
+        action: "vertical.activation_restored",
+        entityId: snapshot.rows[0]?.id ?? null,
+        metadata: {
+          runId: snapshot.runId,
+          database: input.currentDatabase,
+          verticalKey: SHOP_VERTICAL_KEY,
+          capturedAt: snapshot.capturedAt,
+          added: diff.missing.length,
+          removed: diff.extra.length,
+          overwritten: diff.changed.length,
+          restoredRows: snapshot.rows.length,
+          forced: forced.map((row) => ({
+            id: row.id,
+            scopeType: row.scopeType,
+            countryCode: row.countryCode,
+            cityCode: row.cityCode,
+            status: row.status,
+            reason: row.reason,
+            updatedAt: row.updatedAt
+          })),
+          verification: { matched: verification.matched, expected: verification.expected }
+        }
+      });
+
+      return {
+        changed: true,
+        restored: snapshot.rows.length,
+        added: diff.missing.length,
+        removed: diff.extra.length,
+        changedRows: diff.changed.length,
+        forced,
+        verification: { ok: true, matched: verification.matched, expected: verification.expected },
+        audit
+      };
+    },
+    { maxWait: 10_000, timeout: 20_000 }
+  );
 }
 
 export async function restoreShopActivationSnapshotFromFile(input: {
@@ -557,13 +712,15 @@ export async function restoreShopActivationSnapshotFromFile(input: {
   path: string;
   currentDatabase: string;
   force?: boolean;
+  expectedBlocking?: ShopActivationBlockingFingerprint[];
 }): Promise<{ snapshot: ShopActivationSnapshot; result: ShopActivationRestoreResult }> {
   const snapshot = readShopActivationSnapshot(input.path);
   const result = await restoreShopActivationSnapshot({
     db: input.db,
     snapshot,
     currentDatabase: input.currentDatabase,
-    force: input.force
+    force: input.force,
+    expectedBlocking: input.expectedBlocking
   });
   return { snapshot, result };
 }
@@ -583,27 +740,70 @@ export async function discardRunOwnedShopActivation(input: {
   db: ShopActivationDatabase;
   runId?: string;
   allRuns?: boolean;
-}): Promise<{ matched: ShopActivationRow[]; deleted: number }> {
+  /** Actual connected database name, recorded in the audit payload. */
+  currentDatabase?: string;
+}): Promise<{
+  matched: ShopActivationRow[];
+  deleted: number;
+  audit: { action: string; auditId: string; systemEventId: string } | null;
+}> {
   if (!input.runId && !input.allRuns) {
     fail("run_id_required", "Pass an explicit run id or allRuns=true; operator rows are never removed by this helper.");
   }
   if (input.runId && !isValidRunId(input.runId)) fail("invalid_run_id", `Refusing an unsafe run id: ${input.runId}`);
-  const rows = normaliseShopActivationRows(await readShopActivationRows(input.db));
-  const matched = rows.filter((row) => {
-    const tag = runIdFromReason(row.reason);
-    if (input.runId) return tag === input.runId;
-    return tag !== null;
-  });
-  if (matched.length === 0) return { matched: [], deleted: 0 };
-  const ids = matched.map((row) => row.id);
-  await input.db.$transaction(async (tx) => {
-    await tx.$executeRawUnsafe(
-      `DELETE FROM "VerticalActivation" WHERE "verticalKey" = $1 AND id = ANY($2::text[])`,
-      SHOP_VERTICAL_KEY,
-      ids
-    );
-  });
-  return { matched, deleted: ids.length };
+
+  return input.db.$transaction(
+    async (tx) => {
+      // The filter and the delete must observe the same rows. Without the lock
+      // an operator changing a row's reason between them would let this helper
+      // delete a row that is no longer run-owned.
+      await lockShopActivationTable(tx);
+      const rows = normaliseShopActivationRows(await readShopActivationRows(tx));
+      const matched = rows.filter((row) => {
+        const tag = runIdFromReason(row.reason);
+        if (input.runId) return tag === input.runId;
+        return tag !== null;
+      });
+      if (matched.length === 0) return { matched: [], deleted: 0, audit: null };
+      const ids = matched.map((row) => row.id);
+      await tx.$executeRawUnsafe(
+        `DELETE FROM "VerticalActivation" WHERE "verticalKey" = $1 AND id = ANY($2::text[])`,
+        SHOP_VERTICAL_KEY,
+        ids
+      );
+      const remaining = normaliseShopActivationRows(await readShopActivationRows(tx)).filter((row) =>
+        ids.includes(row.id)
+      );
+      if (remaining.length > 0) {
+        fail(
+          "discard_verification_failed",
+          `Run-owned rows ${remaining.map((row) => row.id).join(", ")} remain after the discard. The transaction was rolled back.`
+        );
+      }
+      const audit = await recordActivationAudit(tx, {
+        action: "vertical.activation_discarded",
+        entityId: ids[0] ?? null,
+        metadata: {
+          database: input.currentDatabase ?? null,
+          verticalKey: SHOP_VERTICAL_KEY,
+          runId: input.runId ?? null,
+          allRuns: Boolean(input.allRuns),
+          deleted: ids.length,
+          rows: matched.map((row) => ({
+            id: row.id,
+            scopeType: row.scopeType,
+            countryCode: row.countryCode,
+            cityCode: row.cityCode,
+            status: row.status,
+            reason: row.reason,
+            updatedAt: row.updatedAt
+          }))
+        }
+      });
+      return { matched, deleted: ids.length, audit };
+    },
+    { maxWait: 10_000, timeout: 20_000 }
+  );
 }
 
 export function formatShopActivationSnapshotSummary(snapshot: ShopActivationSnapshot): string {

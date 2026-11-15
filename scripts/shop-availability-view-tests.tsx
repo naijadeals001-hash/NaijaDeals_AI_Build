@@ -8,7 +8,7 @@
  */
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { ApiProduct } from "../lib/api-client";
+import type { ApiSavedItem } from "../lib/api-client";
 import { availabilityProjection } from "../lib/services/core/availability";
 import { homeRailProducts, type HomepageDeal } from "../lib/services/core/home-rail";
 
@@ -23,26 +23,42 @@ function check(name: string, ok: boolean, detail = "") {
   console.log(`${ok ? "PASS" : "FAIL"} ${name}${detail ? ` — ${detail}` : ""}`);
 }
 
-function product(input: {
+/**
+ * A server-shaped saved-item projection. The component consumes only this
+ * public-safe projection (availability + unavailable reason), not a raw
+ * `ApiProduct`, which is exactly what the account-saved route now returns.
+ */
+function savedProduct(input: {
   id?: string;
   slug?: string;
   name?: string;
-  stock?: { quantity: number; reserved: number; lowStockLevel: number } | null;
+  stock?: { quantity: number; reserved: number } | null;
   variants?: Array<{ id: string; name: string; sku: string; priceKobo: string; stock: number; reserved: number; isActive: boolean }>;
-}): ApiProduct {
+  unavailableReason?: ApiSavedItem["product"]["unavailableReason"];
+  saleMode?: ApiSavedItem["product"]["saleMode"];
+}): ApiSavedItem["product"] {
+  const availability = availabilityProjection({
+    variants: input.variants ?? [],
+    stock: input.stock ?? null
+  });
   return {
     id: input.id ?? "product-1",
     slug: input.slug ?? "probe-product",
     name: input.name ?? "Probe product",
-    description: "Probe description",
+    brand: null,
+    condition: "NEW",
     priceKobo: "10000",
-    status: "ACTIVE",
+    compareAtKobo: null,
+    currency: "NGN",
+    countryCode: "NG",
+    saleMode: input.saleMode ?? "escrow",
+    image: { url: "/generated/shop/category-home-kitchen.webp", alt: null },
     category: { id: "category-1", name: "Category", slug: "category" },
-    vendor: { id: "vendor-1", name: "Vendor" },
-    images: [{ id: "image-1", url: "/generated/shop/category-home-kitchen.webp", alt: null, sortOrder: 0 }],
-    stock: input.stock ?? null,
-    variants: input.variants ?? []
-  } as unknown as ApiProduct;
+    vendor: { id: "vendor-1", name: "Vendor", slug: "vendor", status: "VERIFIED", trustScore: 50 },
+    availability,
+    purchasable: !input.unavailableReason,
+    unavailableReason: input.unavailableReason ?? null
+  };
 }
 
 async function main() {
@@ -84,13 +100,15 @@ async function main() {
     <SavedItemCard
       item={{
         id: "saved-variant",
-        product: product({
+        createdAt: "2026-01-01T00:00:00.000Z",
+        product: savedProduct({
           slug: "saved-variant",
           name: "Saved variant product",
-          stock: { quantity: 0, reserved: 0, lowStockLevel: 0 },
+          stock: { quantity: 0, reserved: 0 },
           variants: [
             { id: "variant-1", name: "Small", sku: "SMALL-1", priceKobo: "10000", stock: 2, reserved: 0, isActive: true }
-          ]
+          ],
+          unavailableReason: "choose_variant"
         })
       }}
       busy={false}
@@ -112,12 +130,14 @@ async function main() {
     <SavedItemCard
       item={{
         id: "saved-empty-variant",
-        product: product({
+        createdAt: "2026-01-01T00:00:00.000Z",
+        product: savedProduct({
           slug: "saved-empty-variant",
-          stock: { quantity: 0, reserved: 0, lowStockLevel: 0 },
+          stock: { quantity: 0, reserved: 0 },
           variants: [
             { id: "variant-2", name: "Large", sku: "LARGE-1", priceKobo: "10000", stock: 0, reserved: 0, isActive: true }
-          ]
+          ],
+          unavailableReason: "out_of_stock"
         })
       }}
       busy={false}
@@ -126,10 +146,11 @@ async function main() {
     />
   );
   check(
-    "unavailable variant saved item stays honest and still allows option browsing",
+    "unavailable variant saved item stays honest and disables adding",
     emptyVariantCard.includes("Out of stock") &&
-      emptyVariantCard.includes("Choose options") &&
-      !emptyVariantCard.includes("Add to cart"),
+      !emptyVariantCard.includes("Choose options") &&
+      emptyVariantCard.includes("Add to cart") &&
+      emptyVariantCard.includes('disabled=""'),
     `len=${emptyVariantCard.length}`
   );
 
@@ -137,7 +158,8 @@ async function main() {
     <SavedItemCard
       item={{
         id: "saved-simple",
-        product: product({ slug: "saved-simple", stock: { quantity: 3, reserved: 0, lowStockLevel: 1 } })
+        createdAt: "2026-01-01T00:00:00.000Z",
+        product: savedProduct({ slug: "saved-simple", stock: { quantity: 3, reserved: 0 } })
       }}
       busy={false}
       onAdd={() => undefined}
@@ -155,7 +177,11 @@ async function main() {
 
   const unknownCard = renderToStaticMarkup(
     <SavedItemCard
-      item={{ id: "saved-unknown", product: product({ slug: "saved-unknown", stock: null }) }}
+      item={{
+        id: "saved-unknown",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        product: savedProduct({ slug: "saved-unknown", stock: null, unavailableReason: "availability_unknown" })
+      }}
       busy={false}
       onAdd={() => undefined}
       onRemove={() => undefined}
