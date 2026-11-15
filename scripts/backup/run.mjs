@@ -159,12 +159,15 @@ async function backup() {
 
 async function backupObjects(stamp) {
   const endpoint = process.env.S3_ENDPOINT;
-  const bucket = process.env.S3_BUCKET ?? process.env.S3_PUBLIC_BUCKET;
   const accessKeyId = process.env.S3_ACCESS_KEY_ID;
   const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
+  const buckets = [
+    { scope: "public", name: process.env.S3_PUBLIC_BUCKET ?? process.env.S3_BUCKET },
+    { scope: "private", name: process.env.S3_PRIVATE_BUCKET ?? process.env.S3_BUCKET }
+  ].filter((entry, index, all) => entry.name && all.findIndex((other) => other.name === entry.name) === index);
   // No credentials or no bucket means object backup is honestly skipped; the
   // manifest records that instead of uploading an empty archive.
-  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
+  if (!endpoint || buckets.length === 0 || !accessKeyId || !secretAccessKey) return null;
   const { S3Client, ListObjectsV2Command, GetObjectCommand } = await import("@aws-sdk/client-s3");
   const client = new S3Client({
     region: process.env.S3_REGION ?? "us-east-1",
@@ -176,17 +179,32 @@ async function backupObjects(stamp) {
   // One JSONL record per object: key, size and base64 bytes. No tar binary, so
   // the archive behaves the same on Windows, macOS and Linux.
   const lines = [];
-  let token;
-  do {
-    const page = await client.send(new ListObjectsV2Command({ Bucket: bucket, ContinuationToken: token }));
-    for (const item of page.Contents ?? []) {
-      if (!item.Key) continue;
-      const object = await client.send(new GetObjectCommand({ Bucket: bucket, Key: item.Key }));
-      const bytes = Buffer.from(await object.Body.transformToByteArray());
-      lines.push(JSON.stringify({ key: item.Key, bytes: bytes.length, body: bytes.toString("base64") }));
-    }
-    token = page.IsTruncated ? page.NextContinuationToken : undefined;
-  } while (token);
+  for (const bucketEntry of buckets) {
+    let token;
+    do {
+      const page = await client.send(
+        new ListObjectsV2Command({ Bucket: bucketEntry.name, ContinuationToken: token })
+      );
+      for (const item of page.Contents ?? []) {
+        if (!item.Key) continue;
+        const object = await client.send(new GetObjectCommand({ Bucket: bucketEntry.name, Key: item.Key }));
+        const bytes = Buffer.from(await object.Body.transformToByteArray());
+        lines.push(
+          JSON.stringify({
+            scope: bucketEntry.scope,
+            bucket: bucketEntry.name,
+            key: item.Key,
+            bytes: bytes.length,
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+            contentType: object.ContentType ?? null,
+            etag: object.ETag ?? null,
+            body: bytes.toString("base64")
+          })
+        );
+      }
+      token = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (token);
+  }
 
   const plain = join(DIR, `objects-${stamp}.jsonl`);
   await writeFile(plain, lines.length ? `${lines.join("\n")}\n` : "");

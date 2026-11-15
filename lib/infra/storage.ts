@@ -159,6 +159,26 @@ export async function getObjectBytes(key: string): Promise<Buffer | null> {
   }
 }
 
+/** Read an object from the requested scope's bucket (server-side only). */
+export async function getObjectBytesFrom(scope: StorageScope, key: string): Promise<Buffer | null> {
+  const config = s3Config();
+  const s3 = client();
+  const bucket = bucketFor(scope);
+  if (!config || !s3 || !bucket) return null;
+
+  const startedAt = Date.now();
+  try {
+    const response = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+    if (!response.Body) return null;
+    const bytes = Buffer.from(await response.Body.transformToByteArray());
+    recordOperation("seaweedfs", "get", "ok", Date.now() - startedAt);
+    return bytes;
+  } catch {
+    recordOperation("seaweedfs", "get", "error", Date.now() - startedAt);
+    return null;
+  }
+}
+
 export async function presignGet(key: string, expiresInSeconds = 300): Promise<string | null> {
   return presignGetFrom("private", key, expiresInSeconds);
 }
