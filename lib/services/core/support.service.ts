@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/auth/api-error";
 import type { SessionUser } from "@/lib/auth/session";
 import { recordAudit } from "./audit.service";
-import { notify } from "./notification-delivery.service";
 import { enqueueIntent } from "@/lib/notifications/intent.service";
 import { verticals } from "@/lib/data/ecosystem";
 
@@ -193,6 +192,10 @@ export async function createTicket(input: CreateTicketInput): Promise<CreatedTic
 
   const rawToken = guest ? randomBytes(32).toString("base64url") : null;
   const expiresAt = rawToken ? new Date(Date.now() + GUEST_LINK_TTL_MS) : null;
+  // One country decision for both the stored ticket and the staff fan-out, so a
+  // ticket can never be routed by a country it did not actually record.
+  const ticketCountry =
+    input.actor && input.countryCode ? input.countryCode.trim().toUpperCase().slice(0, 2) || null : null;
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
@@ -206,7 +209,7 @@ export async function createTicket(input: CreateTicketInput): Promise<CreatedTic
             subject,
             // Only a signed-in customer can carry a country, and the route
             // derives it from the account. A guest never selects a queue.
-            countryCode: input.actor && input.countryCode ? input.countryCode.trim().toUpperCase().slice(0, 2) || null : null,
+            countryCode: ticketCountry,
             userId: input.actor?.userId ?? null,
             guestName,
             guestEmail,
@@ -237,8 +240,8 @@ export async function createTicket(input: CreateTicketInput): Promise<CreatedTic
         const staff = await tx.user.findMany({
           where: {
             roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support"] } } } },
-            OR: input.countryCode
-              ? [{ scopeCountryCode: null }, { scopeCountryCode: input.countryCode }]
+            OR: ticketCountry
+              ? [{ scopeCountryCode: null }, { scopeCountryCode: ticketCountry }]
               : [{ scopeCountryCode: null }]
           },
           select: { id: true },
@@ -264,36 +267,6 @@ export async function createTicket(input: CreateTicketInput): Promise<CreatedTic
     }
   }
   throw new ApiError(500, "ticket_creation_failed", "The ticket could not be created. Try again.");
-}
-
-async function notifySupportTeam(ticketId: string, reference: string, vertical: string, subject: string, countryCode: string | null) {
-  // Unscoped staff triage tickets with no known country. A country-scoped agent
-  // is notified only for their own country, so a guest enquiry never vanishes
-  // from every authorised queue while also never being broadcast to every
-  // regional agent.
-  const staff = await prisma.user.findMany({
-    where: {
-      roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support"] } } } },
-      OR: countryCode
-        ? [{ scopeCountryCode: null }, { scopeCountryCode: countryCode }]
-        : [{ scopeCountryCode: null }]
-    },
-    select: { id: true },
-    take: 20
-  });
-  for (const member of staff) {
-    await notify({
-      userId: member.id,
-      templateKey: "support.ticket_created",
-      eventType: "support.ticket_created",
-      entityType: "support_ticket",
-      entityId: ticketId,
-      channel: "IN_APP",
-      category: "ACCOUNT",
-      data: { reference, vertical, subject },
-      dedupeKey: `support:new:${ticketId}:${member.id}`
-    }).catch(() => undefined);
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -490,7 +463,7 @@ export async function postCustomerReply(reference: string, viewer: { userId?: st
   const body = cleanText(bodyInput, "message", SUPPORT_LIMITS.message, 1);
   const ticket = await prisma.supportTicket.findUnique({
     where: { reference },
-    select: { id: true, userId: true, status: true, assignedToId: true, reference: true, subject: true }
+    select: { id: true, userId: true, status: true, assignedToId: true, reference: true, subject: true, countryCode: true }
   });
   if (!ticket) throw new ApiError(404, "ticket_not_found", "That support ticket was not found.");
   const isOwner = Boolean(viewer.userId && ticket.userId === viewer.userId);
@@ -499,39 +472,59 @@ export async function postCustomerReply(reference: string, viewer: { userId?: st
   if (ticket.status === "CLOSED") throw new ApiError(409, "ticket_closed", "This ticket is closed. Open a new enquiry if you need more help.");
 
   const now = new Date();
-  const [, message] = await prisma.$transaction([
-    prisma.supportTicket.update({
+  const message = await prisma.$transaction(async (tx) => {
+    await tx.supportTicket.update({
       where: { id: ticket.id },
       data: {
         status: ticket.status === "RESOLVED" || ticket.status === "PENDING" ? "OPEN" : ticket.status,
         lastActivityAt: now,
         lastCustomerMessageAt: now
       }
-    }),
-    prisma.supportMessage.create({
+    });
+    const created = await tx.supportMessage.create({
       data: { ticketId: ticket.id, authorType: SupportMessageAuthor.CUSTOMER, authorUserId: viewer.userId ?? null, body }
-    }),
-    prisma.supportTicketEvent.create({
+    });
+    await tx.supportTicketEvent.create({
       data: { ticketId: ticket.id, type: "CUSTOMER_REPLY", actorUserId: viewer.userId ?? null }
-    })
-  ]);
+    });
+    // Durable outbox in the same transaction as the message: a rollback removes
+    // both, and the assigned agent is alerted exactly once per message.
+    if (ticket.assignedToId) {
+      await enqueueIntent(tx, {
+        dedupeKey: `support.ticket.customer_reply:${created.id}`,
+        eventType: "support.ticket.customer_reply",
+        entityType: "support_ticket",
+        entityId: ticket.id,
+        recipientUserId: ticket.assignedToId,
+        payload: { version: 1, reference: ticket.reference, subject: ticket.subject }
+      });
+    } else {
+      // Unassigned: a customer reply must still reach the queue, scoped by the
+      // country the ticket actually stored.
+      const staff = await tx.user.findMany({
+        where: {
+          roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support"] } } } },
+          OR: ticket.countryCode
+            ? [{ scopeCountryCode: null }, { scopeCountryCode: ticket.countryCode }]
+            : [{ scopeCountryCode: null }]
+        },
+        select: { id: true },
+        take: 20
+      });
+      for (const member of staff) {
+        await enqueueIntent(tx, {
+          dedupeKey: `support.ticket.queued_reply:${created.id}:${member.id}`,
+          eventType: "support.ticket.queued_reply",
+          entityType: "support_ticket",
+          entityId: ticket.id,
+          recipientUserId: member.id,
+          payload: { version: 1, reference: ticket.reference, subject: ticket.subject }
+        });
+      }
+    }
+    return created;
+  });
 
-  if (ticket.assignedToId) {
-    await notify({
-      userId: ticket.assignedToId,
-      templateKey: "support.reply",
-      eventType: "support.reply",
-      entityType: "support_ticket",
-      entityId: ticket.id,
-      channel: "IN_APP",
-      category: "ACCOUNT",
-      data: { reference: ticket.reference, subject: ticket.subject },
-      dedupeKey: `support:reply:${message.id}`
-    }).catch(() => undefined);
-  } else {
-    // Unassigned: a customer reply must still reach the queue.
-    await notifySupportTeam(ticket.id, ticket.reference, "support", ticket.subject, null).catch(() => undefined);
-  }
   return { id: message.id, createdAt: message.createdAt.toISOString() };
 }
 
@@ -742,6 +735,18 @@ export async function staffReply(
     await tx.supportTicketEvent.create({
       data: { ticketId: ticket.id, type: internal ? "INTERNAL_NOTE" : "STAFF_REPLY", actorUserId: actor.id }
     });
+    // A public staff reply notifies the owner through the durable outbox in the
+    // same transaction. An internal note is staff-only and never enqueues.
+    if (!internal && ticket.userId) {
+      await enqueueIntent(tx, {
+        dedupeKey: `support.ticket.staff_reply:${created.id}`,
+        eventType: "support.ticket.staff_reply",
+        entityType: "support_ticket",
+        entityId: ticket.id,
+        recipientUserId: ticket.userId,
+        payload: { version: 1, reference: ticket.reference, subject: ticket.subject }
+      });
+    }
     return created;
   });
 
@@ -752,19 +757,6 @@ export async function staffReply(
     entityId: ticket.id,
     metadata: { messageId: message.id, internal }
   }).catch(() => undefined);
-
-  if (!internal && ticket.userId) {
-    await notify({
-      userId: ticket.userId,
-      templateKey: "support.reply",
-      eventType: "support.reply",
-      entityType: "support_ticket",
-      channel: "IN_APP",
-      category: "ACCOUNT",
-      data: { reference: ticket.reference, subject: ticket.subject },
-      dedupeKey: `support:staff-reply:${message.id}`
-    }).catch(() => undefined);
-  }
 
   return { id: message.id, createdAt: message.createdAt.toISOString(), internal };
 }
@@ -809,19 +801,32 @@ export async function setTicketStatus(actor: SessionUser, scope: StaffScope, id:
   const ticket = await requireScopedTicket(scope, id);
   if (ticket.status === status) return { status };
 
-  await prisma.$transaction([
-    prisma.supportTicket.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.supportTicket.update({
       where: { id: ticket.id },
       data: {
         status,
         closedAt: status === "CLOSED" ? new Date() : null,
         lastActivityAt: new Date()
       }
-    }),
-    prisma.supportTicketEvent.create({
-      data: { ticketId: ticket.id, type: "STATUS_CHANGED", actorUserId: actor.id, fromValue: ticket.status, toValue: status }
-    })
-  ]);
+    });
+    const event = await tx.supportTicketEvent.create({
+      data: { ticketId: ticket.id, type: "STATUS_CHANGED", actorUserId: actor.id, fromValue: ticket.status, toValue: status },
+      select: { id: true }
+    });
+    // Keyed by the event id, so one status transition produces one intent and a
+    // repeated call (which returns early above) can never notify twice.
+    if (ticket.userId) {
+      await enqueueIntent(tx, {
+        dedupeKey: `support.ticket.status_changed:${event.id}`,
+        eventType: "support.ticket.status_changed",
+        entityType: "support_ticket",
+        entityId: ticket.id,
+        recipientUserId: ticket.userId,
+        payload: { version: 1, reference: ticket.reference, subject: ticket.subject, status }
+      });
+    }
+  });
   await recordAudit({
     actorId: actor.id,
     action: "support.status",
@@ -830,20 +835,6 @@ export async function setTicketStatus(actor: SessionUser, scope: StaffScope, id:
     metadata: { from: ticket.status, to: status }
   }).catch(() => undefined);
 
-  const owner = await prisma.supportTicket.findUnique({ where: { id: ticket.id }, select: { userId: true, reference: true, subject: true } });
-  if (owner?.userId) {
-    await notify({
-      userId: owner.userId,
-      templateKey: "support.reply",
-      eventType: "support.status",
-      entityType: "support_ticket",
-      entityId: ticket.id,
-      channel: "IN_APP",
-      category: "ACCOUNT",
-      data: { reference: owner.reference, subject: owner.subject },
-      dedupeKey: `support:status:${ticket.id}:${status}:${Date.now()}`
-    }).catch(() => undefined);
-  }
   return { status };
 }
 

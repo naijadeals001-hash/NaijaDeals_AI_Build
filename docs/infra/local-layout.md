@@ -96,17 +96,27 @@ Owner actions required:
 
 ## Support automation slice (2026-11-15)
 
-- Event: `support.ticket.created` v1, stored in `NotificationIntent` in the
-  ticket transaction.
+- Events: `support.ticket.created`, `support.ticket.customer_reply`,
+  `support.ticket.queued_reply`, `support.ticket.staff_reply` and
+  `support.ticket.status_changed`, all payload version 1 and stored in
+  `NotificationIntent` inside the same transaction as the support write.
 - Consumer API: `POST /api/automation/notifications/drain`,
   `GET /api/automation/notifications/status` on `http://127.0.0.1:3200`;
   bearer `AUTOMATION_CONSUMER_TOKEN` (stored only in the staging env and the
   n8n env, both ACL-protected). The drain route deliberately has no
   same-origin requirement because it is a bearer-authenticated server-to-server
   call; the token check is mandatory and fails closed when unset.
-- n8n workflow: `1lU7ERGPS0jAW7V4` (manual trigger → HTTP drain), created via the
-  authenticated API and executed via the supported CLI while the server was
-  stopped; executions 3 and 4 recorded success.
+- n8n workflow: `1lU7ERGPS0jAW7V4` (HTTP drain), created via the authenticated
+  API, executed via the supported CLI and then published with a two-minute
+  schedule trigger so pending events drain without a manual run. With n8n
+  stopped, ticket `ND-SUP-QJ4B5Z` committed with a PENDING intent and zero
+  notifications; after restart, scheduled executions 5 and 6 drained it to
+  exactly one notification. The staging starter loads
+  `C:\NaijaDeals-Automation\config\n8n.env` (SQLite path and token) and binds
+  n8n to `127.0.0.1` with `N8N_LISTEN_ADDRESS`.
 - Dead letters are visible to the operator status endpoint; retries are bounded
   by `maxAttempts` with the shared backoff table.
-- Staging build `9Myrkk0S71N84QX7nPCbK` on `127.0.0.1:3200`.
+- Staging build `TnD-FlYMrpjyjWZlsOOh0` on `127.0.0.1:3200`. Delivery evidence:
+  20/20 service-level checks, 23/23 HTTP-consumer checks across all five event
+  types, replay no-op, concurrent drains once-only, expired-lease recovery and
+  an operator-visible DEAD letter.

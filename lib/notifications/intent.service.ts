@@ -136,6 +136,33 @@ async function finish(id: string, token: string, data: Prisma.NotificationIntent
   return result.count === 1;
 }
 
+/**
+ * Shared delivery for the support reply intents. The notification dedupe key
+ * derives from the intent, so a retry after a crash between delivery and
+ * completion cannot create a second notification.
+ */
+async function deliverSupportReply(intent: ClaimedIntent, extra: Record<string, unknown> = {}): Promise<void> {
+  const created = await notify({
+    userId: intent.recipientUserId,
+    channel: "IN_APP",
+    templateKey: "support.reply",
+    eventType: intent.eventType,
+    entityType: intent.entityType,
+    entityId: intent.entityId,
+    data: {
+      reference: String(intent.payload.reference ?? ""),
+      subject: String(intent.payload.subject ?? ""),
+      ...extra
+    },
+    dedupeKey: `notification:${intent.dedupeKey}`
+  });
+  if (created.notification.status === "SUPPRESSED") return;
+  const outcome = await deliverNotification(created.notification.id);
+  if (outcome.status === "FAILED" || outcome.status === "missing") {
+    throw new Error(`notification_delivery_${outcome.status}:${outcome.error ?? "unknown"}`);
+  }
+}
+
 async function deliver(intent: ClaimedIntent): Promise<void> {
   switch (intent.eventType) {
     case "shipment.booked":
@@ -177,6 +204,22 @@ async function deliver(intent: ClaimedIntent): Promise<void> {
       }
       return;
     }
+    case "support.ticket.customer_reply":
+    case "support.ticket.queued_reply":
+    case "support.ticket.staff_reply":
+      // Customer and staff replies share the support.reply template. Each intent
+      // is scoped to one recipient, so the fan-out is decided when the message
+      // commits, not when delivery runs.
+      await deliverSupportReply(intent);
+      return;
+    case "support.ticket.status_changed":
+      await deliverSupportReply(
+        intent,
+        intent.payload.status === undefined || intent.payload.status === null
+          ? {}
+          : { status: String(intent.payload.status) }
+      );
+      return;
     case "order.paid.vendor": {
       // The vendor notification is recorded in the payment transaction as an
       // intent, not written through a nested Prisma client. Delivery happens
