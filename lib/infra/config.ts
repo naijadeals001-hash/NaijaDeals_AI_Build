@@ -12,7 +12,14 @@
 export type S3Config = {
   endpoint: string;
   region: string;
+  /** Legacy/default bucket (development SeaweedFS, or the public bucket). */
   bucket: string;
+  /** Public staging bucket for artwork that is meant to be world-readable. */
+  publicBucket: string;
+  /** Private staging bucket for documents and user uploads; presigned reads only. */
+  privateBucket: string;
+  /** Optional CDN or R2 dev domain used to build public object URLs. */
+  publicBaseUrl: string | null;
   accessKeyId: string;
   secretAccessKey: string;
   forcePathStyle: boolean;
@@ -35,7 +42,10 @@ const clean = (value: string | undefined): string | null => {
 
 export function infraConfig(): InfraConfig {
   const s3Endpoint = clean(process.env.S3_ENDPOINT);
-  const s3Bucket = clean(process.env.S3_BUCKET);
+  const s3LegacyBucket = clean(process.env.S3_BUCKET);
+  const s3PublicBucket = clean(process.env.S3_PUBLIC_BUCKET);
+  const s3PrivateBucket = clean(process.env.S3_PRIVATE_BUCKET);
+  const s3Bucket = s3LegacyBucket ?? s3PublicBucket ?? s3PrivateBucket;
   const s3Access = clean(process.env.S3_ACCESS_KEY_ID);
   const s3Secret = clean(process.env.S3_SECRET_ACCESS_KEY);
 
@@ -51,6 +61,9 @@ export function infraConfig(): InfraConfig {
             endpoint: s3Endpoint,
             region: clean(process.env.S3_REGION) ?? "us-east-1",
             bucket: s3Bucket,
+            publicBucket: s3PublicBucket ?? s3Bucket,
+            privateBucket: s3PrivateBucket ?? s3Bucket,
+            publicBaseUrl: clean(process.env.S3_PUBLIC_BASE_URL),
             accessKeyId: s3Access,
             secretAccessKey: s3Secret,
             forcePathStyle: process.env.S3_FORCE_PATH_STYLE !== "false"

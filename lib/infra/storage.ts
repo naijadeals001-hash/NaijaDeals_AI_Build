@@ -45,6 +45,30 @@ export function isStorageConfigured(): boolean {
   return Boolean(s3Config());
 }
 
+/**
+ * Storage scope.
+ *
+ * `public` objects are meant to be served directly (product and marketing
+ * artwork); `private` objects are user documents and uploads that may only be
+ * reached through a server-authorized, short-lived presigned URL. In
+ * development both scopes resolve to the single SeaweedFS bucket, so existing
+ * behaviour is unchanged.
+ */
+export type StorageScope = "public" | "private";
+
+function bucketFor(scope: StorageScope): string | null {
+  const config = s3Config();
+  if (!config) return null;
+  return scope === "private" ? config.privateBucket : config.publicBucket;
+}
+
+/** Public URL for an object key, or null when no public base URL is configured. */
+export function publicObjectUrl(key: string): string | null {
+  const config = s3Config();
+  if (!config?.publicBaseUrl) return null;
+  return `${config.publicBaseUrl.replace(/\/$/, "")}/${key.replace(/^\//, "")}`;
+}
+
 /** Bucket name comes from configuration, so this cannot create arbitrary buckets. */
 export async function ensureBucket(): Promise<boolean> {
   const config = s3Config();
@@ -83,15 +107,26 @@ export async function putObject(
   body: Buffer,
   contentType: string
 ): Promise<{ key: string; bytes: number; etag: string | null } | null> {
+  return putObjectIn("public", key, body, contentType);
+}
+
+/** Write to the requested scope's bucket. Returns null when not configured. */
+export async function putObjectIn(
+  scope: StorageScope,
+  key: string,
+  body: Buffer,
+  contentType: string
+): Promise<{ key: string; bytes: number; etag: string | null } | null> {
   const config = s3Config();
   const s3 = client();
-  if (!config || !s3) return null;
+  const bucket = bucketFor(scope);
+  if (!config || !s3 || !bucket) return null;
 
   const startedAt = Date.now();
   try {
     const response = await s3.send(
       new PutObjectCommand({
-        Bucket: config.bucket,
+        Bucket: bucket,
         Key: key,
         Body: body,
         ContentType: contentType,
@@ -125,12 +160,25 @@ export async function getObjectBytes(key: string): Promise<Buffer | null> {
 }
 
 export async function presignGet(key: string, expiresInSeconds = 300): Promise<string | null> {
-  const config = s3Config();
+  return presignGetFrom("private", key, expiresInSeconds);
+}
+
+/**
+ * Short-lived download URL for a private object. Callers must authorize the
+ * requester (ownership, staff permission or country scope) *before* calling
+ * this; the URL itself is the only capability it grants.
+ */
+export async function presignGetFrom(
+  scope: StorageScope,
+  key: string,
+  expiresInSeconds = 300
+): Promise<string | null> {
   const s3 = client();
-  if (!config || !s3) return null;
+  const bucket = bucketFor(scope);
+  if (!s3 || !bucket) return null;
 
   try {
-    return await getSignedUrl(s3, new GetObjectCommand({ Bucket: config.bucket, Key: key }), {
+    return await getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: key }), {
       expiresIn: Math.min(Math.max(expiresInSeconds, 30), 3600)
     });
   } catch {
@@ -157,4 +205,30 @@ export async function deleteObject(key: string): Promise<boolean> {
 
 export async function storageHealth(): Promise<boolean> {
   return ensureBucket();
+}
+
+/**
+ * Ensure both staging buckets exist. A bucket that already exists is kept
+ * untouched; nothing is deleted or re-created.
+ */
+export async function ensureStagingBuckets(): Promise<{ public: boolean; private: boolean }> {
+  const config = s3Config();
+  const s3 = client();
+  if (!config || !s3) return { public: false, private: false };
+  const names = [...new Set([config.publicBucket, config.privateBucket])];
+  const results: Record<string, boolean> = {};
+  for (const Bucket of names) {
+    try {
+      await s3.send(new HeadBucketCommand({ Bucket }));
+      results[Bucket] = true;
+    } catch {
+      try {
+        await s3.send(new CreateBucketCommand({ Bucket }));
+        results[Bucket] = true;
+      } catch {
+        results[Bucket] = false;
+      }
+    }
+  }
+  return { public: results[config.publicBucket] === true, private: results[config.privateBucket] === true };
 }
