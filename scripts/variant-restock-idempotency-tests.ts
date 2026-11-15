@@ -153,6 +153,12 @@ async function main() {
     const orderIds = created.orderIds;
     const productIds = created.productIds;
     try {
+      if (process.env.DISPOSABLE_TEST_DATABASE !== "1") {
+        // Preserve the balanced funding and its wallet projections on a shared
+        // TEST database. Deleting the journal without a compensating entry
+        // corrupts reconciliation. A disposable database is dropped instead.
+        return;
+      }
       await prisma.affiliateReversalIntent.deleteMany({ where: { orderId: { in: orderIds } } }).catch(() => undefined);
       const transactions = await prisma.walletTransaction
         .findMany({ where: { OR: [{ orderId: { in: orderIds } }, { walletId: { in: created.walletIds } }] }, select: { id: true } })

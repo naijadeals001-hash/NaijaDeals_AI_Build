@@ -8,7 +8,17 @@ import type { PrismaClient } from "@prisma/client";
  * by the run's email/slug prefix; shared catalogues, wallets and operator rows
  * are never candidates.
  */
-export async function cleanupCheckoutRefundFixtures(db: PrismaClient, runId: string) {
+export async function cleanupCheckoutRefundFixtures(
+  db: PrismaClient,
+  runId: string,
+  options: { disposeFinancial?: boolean } = {}
+) {
+  if (!options.disposeFinancial) {
+    // Deleting journal rows while leaving the SYSTEM projection changed makes
+    // later reconciliation fail. Retain the balanced test funding unless the
+    // caller is an explicitly disposable database that will be dropped.
+    return { retained: true, reason: "financial fixture history retained; use a disposable TEST database" };
+  }
   const emailPrefix = `crf-${runId}`.toLowerCase();
   const vendorPrefix = `crf-vendor-${runId}`.toLowerCase();
   const categoryPrefix = `crf-category-${runId}`.toLowerCase();

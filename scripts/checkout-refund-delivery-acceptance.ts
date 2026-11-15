@@ -695,7 +695,7 @@ async function main() {
       return `reservations=0; journal difference=${report.totals.differenceKobo}; reconcile status=${report.status}; issues=${report.issues.length}`;
     });
   } finally {
-    const cleanup = await cleanupCheckoutRefundFixtures(prisma, RUN_ID).catch((error) => ({ error: error instanceof Error ? error.message : String(error) }));
+    const cleanup = await cleanupCheckoutRefundFixtures(prisma, RUN_ID, { disposeFinancial: process.env.DISPOSABLE_TEST_DATABASE === "1" }).catch((error) => ({ error: error instanceof Error ? error.message : String(error) }));
     if ("error" in cleanup) {
       failures += 1;
       checks.push({ name: "fixture cleanup", status: "FAIL", detail: String(cleanup.error).slice(0, 700) });
