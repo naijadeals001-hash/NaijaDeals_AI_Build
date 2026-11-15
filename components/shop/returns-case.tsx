@@ -1,5 +1,6 @@
 "use client";
 
+import { supportHref } from "@/lib/support/contact-link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -26,7 +27,7 @@ import {
   type ApiVendor,
   type SellerOverview
 } from "@/lib/api-client";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 const OPEN_RETURN_STATUSES = new Set(["REQUESTED", "APPROVED", "RECEIVED"]);
 const RETURN_WINDOW_DAYS = 14;
@@ -1036,14 +1037,14 @@ export function ReturnsCasePage({ showSellerTools = false }: { showSellerTools?:
         <p className="rounded-xl border border-[#eef3ec] bg-white p-3 text-xs leading-6 text-[#566359]">
           A refund attempt that shows as failed needs platform reconciliation.{" "}
           <a
-            href={mailtoFor("support", { subject: "Return case refund reconciliation" })}
+            href={supportHref("support", { subject: "Return case refund reconciliation" })}
             className="font-extrabold text-[#0b5c33] underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
           >
             Email {contactAddress("support")}
           </a>{" "}
           with the case reference, or{" "}
           <a
-            href={mailtoFor("payments", { subject: "Refund reconciliation" })}
+            href={supportHref("payments", { subject: "Refund reconciliation" })}
             className="font-extrabold text-[#0b5c33] underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
           >
             {contactAddress("payments")}

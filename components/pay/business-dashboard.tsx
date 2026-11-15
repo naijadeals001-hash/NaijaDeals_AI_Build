@@ -1,5 +1,6 @@
 "use client";
 
+import { supportHref } from "@/lib/support/contact-link";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -20,7 +21,7 @@ import {
   Wallet
 } from "lucide-react";
 import { koboToNaira } from "@/lib/api-client";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 type BusinessData = {
   vendor: { id: string; name: string; status: string };
@@ -359,19 +360,19 @@ export function NaijaPayBusinessDashboard() {
         <p className="space-y-1.5">
           <span className="block">
             Business and partnership enquiries:{" "}
-            <a href={mailtoFor("partners")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+            <a href={supportHref("partners")} className="font-bold text-pay-green underline-offset-2 hover:underline">
               {contactAddress("partners")}
             </a>
           </span>
           <span className="block">
             Payout, settlement or refund issue:{" "}
-            <a href={mailtoFor("payments")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+            <a href={supportHref("payments")} className="font-bold text-pay-green underline-offset-2 hover:underline">
               {contactAddress("payments")}
             </a>
           </span>
           <span className="block">
             General support:{" "}
-            <a href={mailtoFor("support")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+            <a href={supportHref("support")} className="font-bold text-pay-green underline-offset-2 hover:underline">
               {contactAddress("support")}
             </a>
           </span>

@@ -1,10 +1,11 @@
+import { supportHref } from "@/lib/support/contact-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BarChart3, BadgeCheck, Banknote, PackageCheck } from "lucide-react";
 import { onboardingFlows, verticals } from "@/lib/data/ecosystem";
 import { MetricCard } from "@/components/sections/cards";
 import { TrustBadge } from "@/components/ui/badge";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 export function generateStaticParams() {
   return verticals.map((vertical) => ({ vertical: vertical.key }));
@@ -72,7 +73,7 @@ export default function BusinessPage({ params }: { params: { vertical: string } 
         <p>
           Business and partnership enquiries:{" "}
           <a
-            href={mailtoFor("partners", { subject: "Business procurement" })}
+            href={supportHref("partners", { subject: "Business procurement" })}
             className="font-bold text-primary underline-offset-2 hover:underline"
           >
             {contactAddress("partners")}
@@ -80,7 +81,7 @@ export default function BusinessPage({ params }: { params: { vertical: string } 
         </p>
         <p className="mt-1">
           Support:{" "}
-          <a href={mailtoFor("support")} className="font-bold text-primary underline-offset-2 hover:underline">
+          <a href={supportHref("support")} className="font-bold text-primary underline-offset-2 hover:underline">
             {contactAddress("support")}
           </a>
         </p>

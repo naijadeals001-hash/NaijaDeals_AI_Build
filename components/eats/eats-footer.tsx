@@ -1,5 +1,6 @@
+import { supportHref } from "@/lib/support/contact-link";
 import Link from "next/link";
-import { contactAddress, mailtoFor, type ContactKey } from "@/lib/data/contact-directory";
+import { contactAddress, type ContactKey } from "@/lib/data/contact-directory";
 
 type PublicContactKey = Exclude<ContactKey, "accounts">;
 
@@ -90,7 +91,7 @@ export function EatsFooter() {
             {CONTACTS.map((entry) => (
               <li key={entry.contact}>
                 {entry.label}:{" "}
-                <a href={mailtoFor(entry.contact)} className="hover:text-white hover:underline">
+                <a href={supportHref(entry.contact)} className="hover:text-white hover:underline">
                   {contactAddress(entry.contact)}
                 </a>
               </li>

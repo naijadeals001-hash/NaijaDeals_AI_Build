@@ -1,5 +1,6 @@
 "use client";
 
+import { supportHref } from "@/lib/support/contact-link";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, BedDouble, CalendarCheck, Check, ChevronLeft, ChevronRight, CreditCard, Globe2, Handshake, Headset, Heart, House, LandPlot, MapPin, Search, ShieldCheck, Sparkles, Store, TreePalm, Users, KeyRound, UserPlus, Star } from "lucide-react";
@@ -427,7 +428,7 @@ export function StayFooter() {
           <ul className="mt-1.5 space-y-1">
             {LEGAL_CONTACTS.map((entry) => (
               <li key={entry.label}>
-                <a href={mailtoFor(entry.contact, { subject: entry.subject })} className="text-[10.5px] text-white/80 hover:text-white hover:underline">{entry.label}</a>
+                <a href={supportHref(entry.contact, { subject: entry.subject })} className="text-[10.5px] text-white/80 hover:text-white hover:underline">{entry.label}</a>
               </li>
             ))}
           </ul>

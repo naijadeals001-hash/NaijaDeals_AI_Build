@@ -1,5 +1,6 @@
 "use client";
 
+import { supportHref } from "@/lib/support/contact-link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, Loader2, PackageCheck, Plus, Store, Trash2 } from "lucide-react";
@@ -13,7 +14,7 @@ import {
 } from "@/lib/api-client";
 import { CategoryAttributeFields, CategoryPicker, validateAttributeValues } from "@/components/seller/category-picker";
 import { CategoryRequestForm } from "@/components/seller/category-request-form";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 import { taxonomyErrorMessage, type SellerCategory } from "@/lib/taxonomy-api";
 
 const sellerActions: Record<string, Array<{ status: "accepted" | "preparing" | "ready_for_pickup"; label: string }>> = {
@@ -1213,19 +1214,19 @@ export function SellerDashboard() {
       <section aria-label="Seller contacts" className="rounded-2xl border border-border-soft bg-canvas p-5 text-sm text-muted">
         <p>
           Seller support:{" "}
-          <a href={mailtoFor("support")} className="font-bold text-primary underline-offset-2 hover:underline">
+          <a href={supportHref("support")} className="font-bold text-primary underline-offset-2 hover:underline">
             {contactAddress("support")}
           </a>
         </p>
         <p className="mt-1">
           Payments, payouts and settlements:{" "}
-          <a href={mailtoFor("payments")} className="font-bold text-primary underline-offset-2 hover:underline">
+          <a href={supportHref("payments")} className="font-bold text-primary underline-offset-2 hover:underline">
             {contactAddress("payments")}
           </a>
         </p>
         <p className="mt-1">
           Partnership enquiries:{" "}
-          <a href={mailtoFor("partners")} className="font-bold text-primary underline-offset-2 hover:underline">
+          <a href={supportHref("partners")} className="font-bold text-primary underline-offset-2 hover:underline">
             {contactAddress("partners")}
           </a>
         </p>

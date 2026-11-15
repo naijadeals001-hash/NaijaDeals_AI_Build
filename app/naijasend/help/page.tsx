@@ -1,7 +1,8 @@
+import { supportHref } from "@/lib/support/contact-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SendHeading, SendPage } from "@/components/send/send-page";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 export const dynamic = "force-static";
 
@@ -32,13 +33,13 @@ export default function HelpPage() {
           <h2 className="font-display text-[14px] font-extrabold">Still stuck?</h2>
           <p className="mt-1 text-[11.5px] leading-5 text-[#5d6d64]">Disputes and claims are handled by the NaijaDeals support team. Include your shipment reference so the team can trace the case.</p>
           <a
-            href={mailtoFor("support", { subject: "NaijaSend shipment dispute" })}
+            href={supportHref("support", { subject: "NaijaSend shipment dispute" })}
             className="mt-2 inline-flex max-w-full rounded-full bg-[#0b5c33] px-4 py-1.5 text-[11.5px] font-extrabold text-white break-words"
           >
             Email {contactAddress("support")}
           </a>
           <a
-            href={mailtoFor("drivers", { subject: "NaijaSend courier enquiry" })}
+            href={supportHref("drivers", { subject: "NaijaSend courier enquiry" })}
             className="mt-2 block text-[11.5px] font-semibold text-[#0b5c33] underline break-words"
           >
             Courier and driver enquiries: {contactAddress("drivers")}

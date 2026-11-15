@@ -1,3 +1,4 @@
+import { supportHref } from "@/lib/support/contact-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -5,7 +6,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { StayBottomNav, StayHeader } from "@/components/stay/stay-shell";
 import { StayFooter } from "@/components/stay/stay-home";
 import { HostApplyForm } from "@/components/stay/host-apply-form";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export default async function HostPage() {
           <p>
             Host and property-partner enquiries:{" "}
             <a
-              href={mailtoFor("partners", { subject: "Hosting on NaijaStay" })}
+              href={supportHref("partners", { subject: "Hosting on NaijaStay" })}
               className="font-semibold text-[#0b5c33] underline underline-offset-2"
             >
               {contactAddress("partners")}
@@ -46,7 +47,7 @@ export default async function HostPage() {
           </p>
           <p className="mt-1">
             Support:{" "}
-            <a href={mailtoFor("support")} className="font-semibold text-[#0b5c33] underline underline-offset-2">
+            <a href={supportHref("support")} className="font-semibold text-[#0b5c33] underline underline-offset-2">
               {contactAddress("support")}
             </a>
           </p>

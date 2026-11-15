@@ -1,8 +1,9 @@
+import { supportHref } from "@/lib/support/contact-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Building2, FileText, ShieldCheck, Users } from "lucide-react";
 import { listGigCategories } from "@/lib/services/gigs/service";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 import { GigsFooter, GigsHeader, GigsPageShell } from "@/components/gigs/gigs-chrome";
 import { getSessionUser, toPublicSessionUser } from "@/lib/auth/session";
 
@@ -43,7 +44,7 @@ export default async function GovernmentPage() {
           <Link href="/naijagigs/post-job" className="rounded-full bg-[#f26b21] px-4 py-1.5 text-[11.5px] font-extrabold text-white">Post a job</Link>
           <Link href="/naijagigs/professionals" className="rounded-full px-4 py-1.5 text-[11.5px] font-extrabold text-[#0b5c33] ring-1 ring-[#cfe3ca]">Browse professionals</Link>
           <a
-            href={mailtoFor("partners", { subject: "Institutional procurement enquiry" })}
+            href={supportHref("partners", { subject: "Institutional procurement enquiry" })}
             className="max-w-full break-words rounded-full px-4 py-1.5 text-[11.5px] font-extrabold text-[#0b5c33] ring-1 ring-[#cfe3ca]"
           >
             {contactAddress("partners")}

@@ -1,10 +1,11 @@
 "use client";
 
+import { supportHref } from "@/lib/support/contact-link";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Circle, ShieldCheck } from "lucide-react";
 import { apiClient, ApiRequestError, koboToNaira } from "@/lib/api-client";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 import { EscrowWorkspace } from "./escrow-workspace";
 
 type EscrowEvent = { id: string; from: string | null; to: string; note: string | null; createdAt: string };
@@ -186,13 +187,13 @@ export function NaijaPayEscrowPage() {
         <p className="space-y-1.5">
           <span className="block">
             Payment or refund issue:{" "}
-            <a href={mailtoFor("payments")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+            <a href={supportHref("payments")} className="font-bold text-pay-green underline-offset-2 hover:underline">
               {contactAddress("payments")}
             </a>
           </span>
           <span className="block">
             Customer support:{" "}
-            <a href={mailtoFor("support")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+            <a href={supportHref("support")} className="font-bold text-pay-green underline-offset-2 hover:underline">
               {contactAddress("support")}
             </a>
           </span>

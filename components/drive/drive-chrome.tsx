@@ -1,10 +1,11 @@
 "use client";
 
+import { supportHref } from "@/lib/support/contact-link";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Car, ChevronDown, MapPin, Menu, UserRound, X } from "lucide-react";
 import { DRIVE_CITY } from "@/lib/config/drive";
-import { contactAddress, mailtoFor, type ContactKey } from "@/lib/data/contact-directory";
+import { contactAddress, type ContactKey } from "@/lib/data/contact-directory";
 
 type PublicContactKey = Exclude<ContactKey, "accounts">;
 
@@ -271,7 +272,7 @@ export function DriveFooter() {
             {FOOTER_CONTACTS.map((entry) => (
               <li key={entry.contact}>
                 {entry.label}:{" "}
-                <a href={mailtoFor(entry.contact)} className="hover:text-white hover:underline">
+                <a href={supportHref(entry.contact)} className="hover:text-white hover:underline">
                   {contactAddress(entry.contact)}
                 </a>
               </li>

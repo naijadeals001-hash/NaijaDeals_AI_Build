@@ -33,6 +33,7 @@ import {
   FolderTree,
   Power,
   Globe2,
+  Headphones,
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { normalizeTab, TAB_LABELS, type AdminTab } from "@/lib/admin/admin-navigation";
@@ -73,6 +74,7 @@ const adminNavItems: NavItem[] = [
       { id: "deliveries", label: "Deliveries", icon: <Truck className="h-4 w-4" />, href: "/admin?tab=deliveries" },
       { id: "rides", label: "Rides", icon: <Car className="h-4 w-4" />, href: "/admin?tab=rides" },
       { id: "payouts", label: "Payouts", icon: <DollarSign className="h-4 w-4" />, href: "/admin?tab=payouts" },
+      { id: "support-inbox", label: "Support", icon: <Headphones className="h-4 w-4" />, href: "/admin/support" },
     ],
   },
   {

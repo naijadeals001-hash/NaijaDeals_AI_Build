@@ -1,8 +1,9 @@
+import { supportHref } from "@/lib/support/contact-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ShieldCheck, Store, Truck } from "lucide-react";
 import { getSessionUser, isVendor } from "@/lib/auth/session";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 export const metadata: Metadata = {
   title: "Sell on NaijaDeals",
@@ -70,7 +71,7 @@ export default async function Page() {
         <p>
           Partner with NaijaDeals:{" "}
           <a
-            href={mailtoFor("partners", { subject: "Selling on NaijaDeals" })}
+            href={supportHref("partners", { subject: "Selling on NaijaDeals" })}
             className="font-bold text-primary underline-offset-2 hover:underline"
           >
             {contactAddress("partners")}
@@ -78,7 +79,7 @@ export default async function Page() {
         </p>
         <p className="mt-1">
           Support:{" "}
-          <a href={mailtoFor("support")} className="font-bold text-primary underline-offset-2 hover:underline">
+          <a href={supportHref("support")} className="font-bold text-primary underline-offset-2 hover:underline">
             {contactAddress("support")}
           </a>
         </p>

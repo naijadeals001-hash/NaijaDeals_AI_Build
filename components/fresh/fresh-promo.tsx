@@ -1,5 +1,6 @@
 "use client";
 
+import { supportHref } from "@/lib/support/contact-link";
 import Link from "next/link";
 import { Apple, BadgeCheck, Bike, CalendarDays, CheckCircle2, ChefHat, Leaf, MapPin, Play, Sprout, Store, Truck, Wallet } from "lucide-react";
 import { mailtoFor, type ContactKey } from "@/lib/data/contact-directory";
@@ -217,7 +218,7 @@ export function FreshFooter() {
           <p>© {new Date().getFullYear()} NaijaDeals. NaijaFresh is a NaijaDeals Company. All rights reserved.</p>
           <div className="flex flex-wrap items-center gap-3">
             {LEGAL_LINKS.map((entry) => (
-              <a key={entry.label} href={mailtoFor(entry.contact, { subject: entry.subject })} className="hover:text-white hover:underline">{entry.label}</a>
+              <a key={entry.label} href={supportHref(entry.contact, { subject: entry.subject })} className="hover:text-white hover:underline">{entry.label}</a>
             ))}
             <span className="flex items-center gap-2 rounded-full bg-white/10 px-2 py-0.5">
               <span className="flex items-center gap-1"><MapPin className="h-3 w-3" aria-hidden /> Pan-African</span>

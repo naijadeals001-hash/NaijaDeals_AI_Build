@@ -37,6 +37,11 @@ export const PERMISSIONS = [
   "countries:editorial:publish",
   "countries:origin:review",
   "disputes:read",
+  /// Customer support inbox. Staff do not gain order, wallet, refund or trip
+  /// permissions through support access; those stay with their own capabilities.
+  "support:read",
+  "support:write",
+  "support:assign",
   "disputes:write",
   "gigs:read",
   "gigs:moderate",
@@ -149,7 +154,10 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "users:read",
     "countries:editorial:read",
     "gigs:read",
-    "stream:read"
+    "stream:read",
+    "support:read",
+    "support:write",
+    "support:assign",
   ],
   finance: [
     "dashboard:read",
@@ -172,7 +180,10 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "disputes:read",
     "countries:editorial:read",
     "gigs:read",
-    "stream:read"
+    "stream:read",
+    "support:read",
+    "support:write",
+    "support:assign",
   ],
   moderator: [
     "dashboard:read",

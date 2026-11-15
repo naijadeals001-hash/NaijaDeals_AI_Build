@@ -1,4 +1,5 @@
-import { contactAddress, mailtoFor, type ContactKey } from "@/lib/data/contact-directory";
+import { supportHref } from "@/lib/support/contact-link";
+import { contactAddress, type ContactKey } from "@/lib/data/contact-directory";
 
 /**
  * One "Label: address" contact line.
@@ -24,7 +25,7 @@ export function ContactLine({
     <p className={className}>
       {label}:{" "}
       <a
-        href={mailtoFor(contact, subject ? { subject } : undefined)}
+        href={supportHref(contact, subject ? { subject } : undefined)}
         className={linkClassName ?? "font-semibold text-[#0b5c33] underline break-words"}
       >
         {contactAddress(contact)}

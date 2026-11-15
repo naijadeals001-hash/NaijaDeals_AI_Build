@@ -138,83 +138,87 @@ enum SellerApplicationStatus {
 }
 
 model User {
-  id                String             @id @default(cuid())
-  email             String             @unique
-  passwordHash      String?
-  name              String
-  phone             String?
-  countryCode       String             @default("NG")
+  id                             String                   @id @default(cuid())
+  email                          String                   @unique
+  passwordHash                   String?
+  name                           String
+  phone                          String?
+  countryCode                    String                   @default("NG")
   /**
    * Administrative region scope. Null means platform-wide (for example a super
    * administrator). A non-null country restricts every scoped read and write to
    * records in that country, and a non-null city narrows it further.
    */
-  scopeCountryCode  String?
-  scopeCityCode     String?
-  actorType         ActorType          @default(CUSTOMER)
-  verifiedAt        DateTime?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  roles             UserRole[]
-  vendors           Vendor[]
-  courier           Courier?
-  carts             Cart[]
-  orders            Order[]            @relation("CustomerOrders")
-  wallets           Wallet[]
-  streamPlaylists   StreamPlaylist[]      @relation("StreamPlaylistOwner")
-  streamPlaylistFollows StreamPlaylistFollow[] @relation("StreamPlaylistFollows")
-  streamFollows     StreamFollow[]        @relation("StreamFollows")
-  streamLikes       StreamLike[]          @relation("StreamLikes")
-  streamMedia       StreamMediaAsset[]     @relation("StreamMediaOwner")
-  streamSubscriptions StreamSubscription[] @relation("StreamSubscriptions")
-  foodCartItems FoodCartItem[]
-  farms Farm[] @relation("FarmOwner")
-  bulkQuotes BulkQuoteRequest[] @relation("BulkQuoteBuyer")
-  logisticsShipments LogisticsShipment[] @relation("LogisticsShipments")
-  stayHost StayHost? @relation("StayHostOwner")
-  devices DeviceRegistration[] @relation("UserDevices")
-  stayReservations StayReservation[] @relation("StayGuest")
-  logisticsProviders LogisticsProvider[] @relation("LogisticsProviderOwner")
-  freshCart FreshCartItem[] @relation("FreshCartOwner")
-  freshOrders FreshOrder[] @relation("FreshOrders")
-  eatsFavourites EatsFavourite[] @relation("EatsFavourites")
-  streamArtist      StreamArtist?
-  disputes          Dispute[]          @relation("CustomerDisputes")
-  adminActions      AdminAction[]
-  auditLogs         AuditLog[]
-  systemEvents      SystemEvent[]      @relation("SystemEventActor")
-  sessions          Session[]
-  addresses         Address[]
-  savedItems        SavedItem[]
-  reviews           Review[]
-  sellerApplication SellerApplication?
-  returnRequests    ReturnRequest[]
-  driverProfile     DriverProfile?
-  rides             Ride[]             @relation("RiderRides")
-  rideRatingsGiven  RideRating[]       @relation("RideRatingRater")
-  rideRatingsReceived RideRating[]     @relation("RideRatingSubject")
-  rideSafetyReports RideSafetyReport[] @relation("RideSafetyReporter")
-  savedPlaces       SavedPlace[]
-  freightRequests  FreightRequest[] @relation("CustomerFreight")
-  partnerNotifications PartnerNotification[] @relation("PartnerNotifications")
-  restaurants Restaurant[] @relation("RestaurantOwner")
-  foodOrders FoodOrder[] @relation("CustomerFoodOrders")
-  restaurantApplications RestaurantApplication[] @relation("RestaurantApplications")
-  gigProfile ProfessionalProfile?
-  gigJobs CustomerJob[] @relation("GigCustomerJobs")
-  gigBookingsAsCustomer ServiceBooking[] @relation("GigCustomerBookings")
-  gigBookingsAsProfessional ServiceBooking[] @relation("GigProfessionalBookings")
-  gigConversationsAsCustomer Conversation[] @relation("GigCustomerConversations")
-  gigConversationsAsProfessional Conversation[] @relation("GigProfessionalConversations")
-  gigMessages Message[] @relation("GigMessageSender")
-  gigReviewsWritten ServiceReview[] @relation("GigReviewAuthor")
-  gigReviewsReceived ServiceReview[] @relation("GigReviewProfessional")
-  gigDisputesOpened ServiceDispute[] @relation("GigDisputeOpener")
-  auraConversations AuraConversation[]
-  auraPreferences   AuraPreference?
-  notifications Notification[] @relation("UserNotifications")
-  affiliateProfile AffiliateProfile?
-  notificationPreferences NotificationPreference[] @relation("UserNotificationPreferences")
+  scopeCountryCode               String?
+  scopeCityCode                  String?
+  actorType                      ActorType                @default(CUSTOMER)
+  verifiedAt                     DateTime?
+  createdAt                      DateTime                 @default(now())
+  updatedAt                      DateTime                 @updatedAt
+  roles                          UserRole[]
+  vendors                        Vendor[]
+  courier                        Courier?
+  carts                          Cart[]
+  orders                         Order[]                  @relation("CustomerOrders")
+  wallets                        Wallet[]
+  streamPlaylists                StreamPlaylist[]         @relation("StreamPlaylistOwner")
+  streamPlaylistFollows          StreamPlaylistFollow[]   @relation("StreamPlaylistFollows")
+  streamFollows                  StreamFollow[]           @relation("StreamFollows")
+  streamLikes                    StreamLike[]             @relation("StreamLikes")
+  streamMedia                    StreamMediaAsset[]       @relation("StreamMediaOwner")
+  streamSubscriptions            StreamSubscription[]     @relation("StreamSubscriptions")
+  foodCartItems                  FoodCartItem[]
+  farms                          Farm[]                   @relation("FarmOwner")
+  bulkQuotes                     BulkQuoteRequest[]       @relation("BulkQuoteBuyer")
+  logisticsShipments             LogisticsShipment[]      @relation("LogisticsShipments")
+  stayHost                       StayHost?                @relation("StayHostOwner")
+  devices                        DeviceRegistration[]     @relation("UserDevices")
+  stayReservations               StayReservation[]        @relation("StayGuest")
+  logisticsProviders             LogisticsProvider[]      @relation("LogisticsProviderOwner")
+  freshCart                      FreshCartItem[]          @relation("FreshCartOwner")
+  freshOrders                    FreshOrder[]             @relation("FreshOrders")
+  eatsFavourites                 EatsFavourite[]          @relation("EatsFavourites")
+  streamArtist                   StreamArtist?
+  disputes                       Dispute[]                @relation("CustomerDisputes")
+  adminActions                   AdminAction[]
+  auditLogs                      AuditLog[]
+  systemEvents                   SystemEvent[]            @relation("SystemEventActor")
+  sessions                       Session[]
+  addresses                      Address[]
+  savedItems                     SavedItem[]
+  reviews                        Review[]
+  sellerApplication              SellerApplication?
+  returnRequests                 ReturnRequest[]
+  driverProfile                  DriverProfile?
+  rides                          Ride[]                   @relation("RiderRides")
+  rideRatingsGiven               RideRating[]             @relation("RideRatingRater")
+  rideRatingsReceived            RideRating[]             @relation("RideRatingSubject")
+  rideSafetyReports              RideSafetyReport[]       @relation("RideSafetyReporter")
+  savedPlaces                    SavedPlace[]
+  freightRequests                FreightRequest[]         @relation("CustomerFreight")
+  partnerNotifications           PartnerNotification[]    @relation("PartnerNotifications")
+  restaurants                    Restaurant[]             @relation("RestaurantOwner")
+  foodOrders                     FoodOrder[]              @relation("CustomerFoodOrders")
+  restaurantApplications         RestaurantApplication[]  @relation("RestaurantApplications")
+  gigProfile                     ProfessionalProfile?
+  gigJobs                        CustomerJob[]            @relation("GigCustomerJobs")
+  gigBookingsAsCustomer          ServiceBooking[]         @relation("GigCustomerBookings")
+  gigBookingsAsProfessional      ServiceBooking[]         @relation("GigProfessionalBookings")
+  gigConversationsAsCustomer     Conversation[]           @relation("GigCustomerConversations")
+  gigConversationsAsProfessional Conversation[]           @relation("GigProfessionalConversations")
+  gigMessages                    Message[]                @relation("GigMessageSender")
+  gigReviewsWritten              ServiceReview[]          @relation("GigReviewAuthor")
+  gigReviewsReceived             ServiceReview[]          @relation("GigReviewProfessional")
+  gigDisputesOpened              ServiceDispute[]         @relation("GigDisputeOpener")
+  auraConversations              AuraConversation[]
+  auraPreferences                AuraPreference?
+  notifications                  Notification[]           @relation("UserNotifications")
+  affiliateProfile               AffiliateProfile?
+  notificationPreferences        NotificationPreference[] @relation("UserNotificationPreferences")
+  supportTickets                 SupportTicket[]          @relation("SupportTicketOwner")
+  supportAssigned                SupportTicket[]          @relation("SupportTicketAssignee")
+  supportMessages                SupportMessage[]         @relation("SupportMessageAuthor")
+  supportEvents                  SupportTicketEvent[]     @relation("SupportEventActor")
 }
 
 model Role {
@@ -265,31 +269,31 @@ model Vendor {
 }
 
 model Category {
-  id              String    @id @default(cuid())
-  key             String?   @unique
-  name            String    @unique
-  slug            String    @unique
+  id              String                @id @default(cuid())
+  key             String?               @unique
+  name            String                @unique
+  slug            String                @unique
   description     String?
   imageUrl        String?
   imageAlt        String?
   parentId        String?
   /// 0 = department, 1 = category, 2 = subcategory.
-  level           Int       @default(0)
+  level           Int                   @default(0)
   /// Sellers may list directly in this node even when it has no products.
-  isSelectable    Boolean   @default(true)
-  showOnHomepage  Boolean   @default(false)
+  isSelectable    Boolean               @default(true)
+  showOnHomepage  Boolean               @default(false)
   /// Browsing rail/directory visibility, separate from taxon publication and homepage merchandising.
-  browsingVisible Boolean   @default(true)
+  browsingVisible Boolean               @default(true)
   /// Regulated goods: publishing needs an explicit country rule, never absence-of-rule.
-  isRegulated     Boolean   @default(false)
+  isRegulated     Boolean               @default(false)
   deprecatedAt    DateTime?
-  sortOrder       Int       @default(0)
-  isActive        Boolean   @default(true)
+  sortOrder       Int                   @default(0)
+  isActive        Boolean               @default(true)
   /// Explicit demonstration classification; never shown as real supply.
-  isDemo          Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  parent          Category? @relation("CategoryTree", fields: [parentId], references: [id])
-  children        Category[] @relation("CategoryTree")
+  isDemo          Boolean               @default(false)
+  createdAt       DateTime              @default(now())
+  parent          Category?             @relation("CategoryTree", fields: [parentId], references: [id])
+  children        Category[]            @relation("CategoryTree")
   products        Product[]
   aliases         CategoryAlias[]
   attributes      CategoryAttribute[]
@@ -303,6 +307,7 @@ model CategoryAlias {
   alias      String
   locale     String   @default("en")
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
   @@unique([alias, locale])
   @@index([categoryId])
 }
@@ -323,15 +328,17 @@ model CategoryAttribute {
   required   Boolean               @default(false)
   options    Json?
   category   Category              @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
   @@unique([categoryId, key])
 }
 
 model CategoryCountryRule {
-  categoryId String
+  categoryId  String
   countryCode String
-  canPublish Boolean @default(true)
-  note       String?
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  canPublish  Boolean  @default(true)
+  note        String?
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
   @@id([categoryId, countryCode])
 }
 
@@ -354,6 +361,7 @@ model CategoryRequest {
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
   parent             Category?             @relation(fields: [parentId], references: [id])
+
   @@index([sellerId, status])
 }
 
@@ -363,47 +371,47 @@ enum SaleMode {
 }
 
 model Product {
-  id             String           @id @default(cuid())
-  vendorId       String
-  categoryId     String
-  name           String
-  slug           String           @unique
-  description    String
-  brand          String?
-  condition      String           @default("NEW")
-  priceKobo      BigInt
-  compareAtKobo  BigInt?
+  id                String           @id @default(cuid())
+  vendorId          String
+  categoryId        String
+  name              String
+  slug              String           @unique
+  description       String
+  brand             String?
+  condition         String           @default("NEW")
+  priceKobo         BigInt
+  compareAtKobo     BigInt?
   /// Marketplace fulfilment country. This is not the product's country of origin.
-  countryCode    String           @default("NG")
+  countryCode       String           @default("NG")
   /// Recorded product country of origin. Never inferred from the seller's
   /// location or from a cultural/style association.
   originCountryCode String?
   /// SELLER_DECLARED or VERIFIED. VERIFIED requires an operator's recorded basis.
-  originBasis    String?
-  originNote     String?
-  originVerifiedAt DateTime?
-  originVerifiedBy String?
-  weightGrams    Int              @default(500)
+  originBasis       String?
+  originNote        String?
+  originVerifiedAt  DateTime?
+  originVerifiedBy  String?
+  weightGrams       Int              @default(500)
   /// escrow = paid through checkout; contact = seller-handled enquiry only.
-  saleMode       SaleMode         @default(escrow)
-  status         ProductStatus    @default(ACTIVE)
+  saleMode          SaleMode         @default(escrow)
+  status            ProductStatus    @default(ACTIVE)
   /// Explicit demonstration classification; never shown as real supply.
-  isDemo         Boolean          @default(false)
-  attributes     Json?
-  moderationNote String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  category       Category         @relation(fields: [categoryId], references: [id])
-  vendor         Vendor           @relation(fields: [vendorId], references: [id])
-  images         ProductImage[]
-  stock          InventoryStock?
-  variants       ProductVariant[]
-  cartItems      CartItem[]
-  orderItems     OrderItem[]
-  reviews        Review[]
-  savedBy        SavedItem[]
+  isDemo            Boolean          @default(false)
+  attributes        Json?
+  moderationNote    String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  category          Category         @relation(fields: [categoryId], references: [id])
+  vendor            Vendor           @relation(fields: [vendorId], references: [id])
+  images            ProductImage[]
+  stock             InventoryStock?
+  variants          ProductVariant[]
+  cartItems         CartItem[]
+  orderItems        OrderItem[]
+  reviews           Review[]
+  savedBy           SavedItem[]
   /// Sample/fixture catalogue rows are excluded from the public storefront by default.
-  isSample          Boolean            @default(false)
+  isSample          Boolean          @default(false)
 
   @@index([originCountryCode, status])
 }
@@ -510,7 +518,7 @@ model Order {
 }
 
 model OrderItem {
-  id          String          @id @default(cuid())
+  id          String            @id @default(cuid())
   orderId     String
   productId   String
   variantId   String?
@@ -520,9 +528,9 @@ model OrderItem {
   productName String
   variantName String?
   imageUrl    String?
-  order       Order           @relation(fields: [orderId], references: [id])
-  product     Product         @relation(fields: [productId], references: [id])
-  variant     ProductVariant? @relation(fields: [variantId], references: [id])
+  order       Order             @relation(fields: [orderId], references: [id])
+  product     Product           @relation(fields: [productId], references: [id])
+  variant     ProductVariant?   @relation(fields: [variantId], references: [id])
   restock     OrderItemRestock?
 }
 
@@ -546,9 +554,9 @@ enum OrderItemRestockStatus {
 }
 
 model OrderItemRestock {
-  id          String                @id @default(cuid())
+  id          String                 @id @default(cuid())
   orderId     String
-  orderItemId String                @unique
+  orderItemId String                 @unique
   productId   String
   /// Historical variant reference, retained even when the variant row is gone.
   variantId   String?
@@ -556,14 +564,14 @@ model OrderItemRestock {
   status      OrderItemRestockStatus
   /// Suppression reason, or the prior reason retained when a retry fails again.
   reason      String?
-  attempts    Int                   @default(1)
+  attempts    Int                    @default(1)
   lastSource  String?
   lastActorId String?
   restoredAt  DateTime?
-  createdAt   DateTime              @default(now())
-  updatedAt   DateTime              @updatedAt
-  order       Order                 @relation(fields: [orderId], references: [id])
-  orderItem   OrderItem             @relation(fields: [orderItemId], references: [id])
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  order       Order                  @relation(fields: [orderId], references: [id])
+  orderItem   OrderItem              @relation(fields: [orderItemId], references: [id])
 
   @@index([orderId, status])
   @@index([status, updatedAt])
@@ -648,24 +656,24 @@ model EscrowEvent {
 }
 
 model Courier {
-  id         String     @id @default(cuid())
-  userId     String     @unique
-  name       String
-  phone      String
-  active     Boolean    @default(true)
-  suspendedReason String?
+  id                  String      @id @default(cuid())
+  userId              String      @unique
+  name                String
+  phone               String
+  active              Boolean     @default(true)
+  suspendedReason     String?
   /// NaijaSend food-delivery eligibility. Riders must opt in AND be equipped.
-  foodDeliveryEnabled Boolean @default(false)
+  foodDeliveryEnabled Boolean     @default(false)
   /// motorcycle | car | van — capacity decides which orders they can carry.
-  vehicleType String    @default("motorcycle")
-  vehiclePlate String?
+  vehicleType         String      @default("motorcycle")
+  vehiclePlate        String?
   /// Operating zone (city name) used for dispatch matching.
-  serviceZone String?
-  online     Boolean    @default(false)
-  createdAt  DateTime   @default(now())
-  user       User       @relation(fields: [userId], references: [id])
-  deliveries Delivery[]
-  foodDeliveries FoodOrder[]
+  serviceZone         String?
+  online              Boolean     @default(false)
+  createdAt           DateTime    @default(now())
+  user                User        @relation(fields: [userId], references: [id])
+  deliveries          Delivery[]
+  foodDeliveries      FoodOrder[]
 }
 
 model Delivery {
@@ -841,9 +849,9 @@ model Payment {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   order             Order         @relation(fields: [orderId], references: [id])
+  refunds           Refund[]
 
   @@index([orderId])
-  refunds Refund[]
 }
 
 model WebhookEvent {
@@ -922,72 +930,73 @@ enum RidePaymentStatus {
 }
 
 model DriverProfile {
-  id            String       @id @default(cuid())
-  userId        String       @unique
-  licenseNumber String
-  status        DriverStatus @default(pending)
-  vehicleClass  String       @default("economy")
-  vehicleMake   String
-  vehicleModel  String
-  vehiclePlate  String
-  active        Boolean      @default(true)
-  suspendedReason String?
+  id                  String       @id @default(cuid())
+  userId              String       @unique
+  licenseNumber       String
+  status              DriverStatus @default(pending)
+  vehicleClass        String       @default("economy")
+  vehicleMake         String
+  vehicleModel        String
+  vehiclePlate        String
+  active              Boolean      @default(true)
+  suspendedReason     String?
   /// NaijaDrive does not enrol every ride driver in food delivery automatically;
   /// they opt in explicitly and carry an insulated bag.
-  foodDeliveryEnabled Boolean @default(false)
+  foodDeliveryEnabled Boolean      @default(false)
   /// motorcycle | car — mapped from vehicleClass for dispatch eligibility.
-  foodVehicleType String    @default("car")
-  serviceZone   String?
-  online        Boolean      @default(false)
-  insulatedBag  Boolean      @default(false)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  user          User         @relation(fields: [userId], references: [id])
-  rides         Ride[]
+  foodVehicleType     String       @default("car")
+  serviceZone         String?
+  online              Boolean      @default(false)
+  insulatedBag        Boolean      @default(false)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  user                User         @relation(fields: [userId], references: [id])
+  rides               Ride[]
 
   @@index([status, active])
 }
 
 model Ride {
-  id                 String            @id @default(cuid())
-  rideNumber         String            @unique
-  riderId            String
-  driverId           String?
-  status             RideStatus        @default(requested)
-  pickupLabel        String
-  pickupAddress      String
-  pickupLat          Float
-  pickupLng          Float
-  dropoffLabel       String
-  dropoffAddress     String
-  dropoffLat         Float
-  dropoffLng         Float
-  vehicleClass       String
-  distanceMeters     Int
-  durationMinutes    Int
-  fareKobo           BigInt
-  currency           String            @default("NGN")
-  paymentMethod      RidePaymentMethod
-  paymentStatus      RidePaymentStatus @default(pending)
-  paymentReference   String?
-  requestedAt        DateTime          @default(now())
-  acceptedAt         DateTime?
-  arrivedAt          DateTime?
-  startedAt          DateTime?
-  completedAt        DateTime?
-  cancelledAt        DateTime?
-  cancellationReason String?
+  id                         String             @id @default(cuid())
+  rideNumber                 String             @unique
+  riderId                    String
+  driverId                   String?
+  status                     RideStatus         @default(requested)
+  pickupLabel                String
+  pickupAddress              String
+  pickupLat                  Float
+  pickupLng                  Float
+  dropoffLabel               String
+  dropoffAddress             String
+  dropoffLat                 Float
+  dropoffLng                 Float
+  vehicleClass               String
+  distanceMeters             Int
+  durationMinutes            Int
+  fareKobo                   BigInt
+  currency                   String             @default("NGN")
+  paymentMethod              RidePaymentMethod
+  paymentStatus              RidePaymentStatus  @default(pending)
+  paymentReference           String?
+  requestedAt                DateTime           @default(now())
+  acceptedAt                 DateTime?
+  arrivedAt                  DateTime?
+  startedAt                  DateTime?
+  completedAt                DateTime?
+  cancelledAt                DateTime?
+  cancellationReason         String?
   /**
    * When the assigned driver must make the next move before the ride returns to the
    * open queue. Set on acceptance, reset on arrival, cleared once the trip starts.
    * Null means no deadline (nothing assigned, or the trip is already moving).
    */
-  assignmentExpiresAt DateTime?
-  /** Retained from the fare hold when the rider cancels after the driver set off. */
-  cancellationFeeKobo BigInt          @default(0)
+  assignmentExpiresAt        DateTime?
+  /**
+   * Retained from the fare hold when the rider cancels after the driver set off.
+   */
+  cancellationFeeKobo        BigInt             @default(0)
   /**
    * Bounded pre-enforcement compatibility marker for protected pickup verification.
-   *
    * Null for every ride assigned after enforcement. The enforcement migration set
    * this exactly once for rides that were already assigned (`driver_assigned` or
    * `driver_arriving`) and had no `RideVerification` record at that moment. It is
@@ -997,14 +1006,14 @@ model Ride {
    * reassignment clear it so it can never authorise a later assignment.
    */
   pickupVerificationLegacyAt DateTime?
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  rider              User              @relation("RiderRides", fields: [riderId], references: [id])
-  driver             DriverProfile?    @relation(fields: [driverId], references: [id])
-  events             RideEvent[]
-  verification       RideVerification?
-  ratings            RideRating[]
-  safetyReports      RideSafetyReport[]
+  createdAt                  DateTime           @default(now())
+  updatedAt                  DateTime           @updatedAt
+  rider                      User               @relation("RiderRides", fields: [riderId], references: [id])
+  driver                     DriverProfile?     @relation(fields: [driverId], references: [id])
+  events                     RideEvent[]
+  verification               RideVerification?
+  ratings                    RideRating[]
+  safetyReports              RideSafetyReport[]
 
   @@index([riderId, status])
   @@index([driverId, status])
@@ -1059,18 +1068,18 @@ model RideVerification {
 /// rows are read only by the two participants (their own rating) and by
 /// aggregate calculation over real rows.
 model RideRating {
-  id            String             @id @default(cuid())
+  id            String              @id @default(cuid())
   rideId        String
   raterUserId   String
   raterRole     RideParticipantRole
   subjectUserId String
   score         Int
   feedback      String?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  ride          Ride               @relation(fields: [rideId], references: [id], onDelete: Cascade)
-  rater         User               @relation("RideRatingRater", fields: [raterUserId], references: [id])
-  subject       User               @relation("RideRatingSubject", fields: [subjectUserId], references: [id])
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  ride          Ride                @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  rater         User                @relation("RideRatingRater", fields: [raterUserId], references: [id])
+  subject       User                @relation("RideRatingSubject", fields: [subjectUserId], references: [id])
 
   @@unique([rideId, raterUserId])
   @@index([subjectUserId, raterRole])
@@ -1086,20 +1095,20 @@ enum RideSafetyReportStatus {
 /// Safety reports are an operational record, deliberately separate from ratings
 /// and reviews. They are never shown as public testimonials.
 model RideSafetyReport {
-  id              String                @id @default(cuid())
-  rideId          String
-  reporterUserId  String
-  reporterRole    RideParticipantRole
-  category        String
-  details         String
-  status          RideSafetyReportStatus @default(submitted)
-  reviewedAt      DateTime?
+  id               String                 @id @default(cuid())
+  rideId           String
+  reporterUserId   String
+  reporterRole     RideParticipantRole
+  category         String
+  details          String
+  status           RideSafetyReportStatus @default(submitted)
+  reviewedAt       DateTime?
   reviewedByUserId String?
-  resolutionNote  String?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  ride            Ride                  @relation(fields: [rideId], references: [id], onDelete: Cascade)
-  reporter        User                  @relation("RideSafetyReporter", fields: [reporterUserId], references: [id])
+  resolutionNote   String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  ride             Ride                   @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  reporter         User                   @relation("RideSafetyReporter", fields: [reporterUserId], references: [id])
 
   @@index([rideId, createdAt])
   @@index([status, createdAt])
@@ -1147,18 +1156,17 @@ model CountrySetting {
 
 /// City-level activation overrides used for onboarding and staff scopes.
 model CitySetting {
-  id              String   @id @default(cuid())
-  countryCode     String
-  code            String
-  name            String
-  enabled         Boolean  @default(false)
-  updatedById     String?
-  updatedAt       DateTime @updatedAt
+  id          String   @id @default(cuid())
+  countryCode String
+  code        String
+  name        String
+  enabled     Boolean  @default(false)
+  updatedById String?
+  updatedAt   DateTime @updatedAt
 
   @@unique([countryCode, code])
   @@index([countryCode])
 }
-
 
 enum FreightServiceType {
   bus
@@ -1201,20 +1209,18 @@ model FreightRequest {
   @@index([status, createdAt])
 }
 
-
 /// Milestones recorded by an operator for one freight request.
 model FreightEvent {
-  id        String        @id @default(cuid())
+  id        String         @id @default(cuid())
   requestId String
   status    FreightStatus
   note      String?
   actorId   String?
-  createdAt DateTime      @default(now())
+  createdAt DateTime       @default(now())
   request   FreightRequest @relation(fields: [requestId], references: [id])
 
   @@index([requestId, createdAt])
 }
-
 
 /// Events a partner should see: application decisions, assignments, suspensions.
 model PartnerNotification {
@@ -1231,7 +1237,6 @@ model PartnerNotification {
   @@index([userId, createdAt])
 }
 
-
 enum RestaurantStatus {
   PENDING
   VERIFIED
@@ -1240,56 +1245,56 @@ enum RestaurantStatus {
 
 /// A kitchen partner listing. Menus are only shown for VERIFIED restaurants.
 model Restaurant {
-  id        String           @id @default(cuid())
-  slug      String           @unique
-  ownerId   String
-  name      String
-  cuisine   String
-  market    String
-  address   String
-  phone     String
-  status    RestaurantStatus @default(PENDING)
-  isSample      Boolean          @default(false)
-  applicationId String?          @unique
+  id              String             @id @default(cuid())
+  slug            String             @unique
+  ownerId         String
+  name            String
+  cuisine         String
+  market          String
+  address         String
+  phone           String
+  status          RestaurantStatus   @default(PENDING)
+  isSample        Boolean            @default(false)
+  applicationId   String?            @unique
   // Editorial fields used by the NaijaEats storefront.
-  coverUrl      String?
-  logoUrl       String?
-  description   String?
-  countryCode   String           @default("NG")
+  coverUrl        String?
+  logoUrl         String?
+  description     String?
+  countryCode     String             @default("NG")
   /// Cuisine family: West | East | Southern | Central | North | Continental.
-  region        String           @default("West")
-  dishes        String[]         @default([])
+  region          String             @default("West")
+  dishes          String[]           @default([])
   /// Minutes, shown only when the restaurant sets its own preparation window.
   prepMinMinutes  Int?
   prepMaxMinutes  Int?
-  deliveryFeeKobo BigInt         @default(0)
-  highlighted   Boolean          @default(false)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  owner         User             @relation("RestaurantOwner", fields: [ownerId], references: [id])
-  menuItems MenuItem[]
-  ratings   RestaurantRating[]
-  cartItems FoodCartItem[] @relation("RestaurantCartItems")
+  deliveryFeeKobo BigInt             @default(0)
+  highlighted     Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  owner           User               @relation("RestaurantOwner", fields: [ownerId], references: [id])
+  menuItems       MenuItem[]
+  ratings         RestaurantRating[]
+  cartItems       FoodCartItem[]     @relation("RestaurantCartItems")
+  foodOrders      FoodOrder[]
 
   @@index([status, market])
   @@index([region, countryCode])
-  foodOrders FoodOrder[]
 }
 
 /// Per-account food basket. One row per restaurant so multi-kitchen orders
 /// stay separate, matching how NaijaEats checkout creates one order per kitchen.
 model FoodCartItem {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   userId       String
   restaurantId String
   menuItemId   String
-  quantity     Int      @default(1)
+  quantity     Int        @default(1)
   notes        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   restaurant   Restaurant @relation("RestaurantCartItems", fields: [restaurantId], references: [id], onDelete: Cascade)
-  menuItem     MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  menuItem     MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 
   @@unique([userId, menuItemId])
   @@index([userId, restaurantId])
@@ -1298,13 +1303,13 @@ model FoodCartItem {
 /// Saved restaurants/dishes for an account. Survives sessions and devices
 /// because it lives in the database rather than local storage.
 model EatsFavourite {
-  id           String   @id @default(cuid())
-  userId       String
+  id        String   @id @default(cuid())
+  userId    String
   /// restaurant | dish
-  kind         String
-  targetId     String
-  createdAt    DateTime @default(now())
-  user         User     @relation("EatsFavourites", fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  targetId  String
+  createdAt DateTime @default(now())
+  user      User     @relation("EatsFavourites", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, kind, targetId])
   @@index([userId, kind])
@@ -1312,32 +1317,32 @@ model EatsFavourite {
 
 /// A farm or cooperative selling produce directly to households and businesses.
 model Farm {
-  id            String   @id @default(cuid())
-  slug          String   @unique
-  ownerId       String
-  name          String
-  farmerName    String
-  description   String?
-  countryCode   String   @default("NG")
+  id              String           @id @default(cuid())
+  slug            String           @unique
+  ownerId         String
+  name            String
+  farmerName      String
+  description     String?
+  countryCode     String           @default("NG")
   /// Country name as the farmer entered it; countryCode stays for filtering.
-  country       String   @default("Nigeria")
-  state         String
-  city          String
-  coverUrl      String?
-  avatarUrl     String?
+  country         String           @default("Nigeria")
+  state           String
+  city            String
+  coverUrl        String?
+  avatarUrl       String?
   /// Produce specialisations shown on the farmer card.
-  specialities  String[] @default([])
-  verified      Boolean  @default(false)
-  verifiedAt    DateTime?
-  isSample      Boolean  @default(false)
-  deliveryFeeKobo BigInt @default(0)
+  specialities    String[]         @default([])
+  verified        Boolean          @default(false)
+  verifiedAt      DateTime?
+  isSample        Boolean          @default(false)
+  deliveryFeeKobo BigInt           @default(0)
   prepMinMinutes  Int?
   prepMaxMinutes  Int?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  owner         User     @relation("FarmOwner", fields: [ownerId], references: [id])
-  listings      ProduceListing[]
-  orders        FreshOrder[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  owner           User             @relation("FarmOwner", fields: [ownerId], references: [id])
+  listings        ProduceListing[]
+  orders          FreshOrder[]
 
   @@index([verified, state])
 }
@@ -1345,23 +1350,23 @@ model Farm {
 /// Produce sold by a farm. `unit` is the agricultural unit of sale, which is
 /// what makes prices comparable (per kg, per tuber, per bunch, per tray…).
 model ProduceListing {
-  id            String   @id @default(cuid())
-  farmId        String
-  slug          String   @unique
-  name          String
-  category      String
-  description   String?
-  unit          String   @default("kg")
-  priceKobo     BigInt
-  available     Boolean  @default(true)
-  quantity      Int      @default(0)
-  minimumOrder  Int      @default(1)
-  imageUrl      String?
-  isSample      Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  farm          Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  cartItems     FreshCartItem[] @relation("ListingCartItems")
-  bulkQuotes    BulkQuoteRequest[]
+  id           String             @id @default(cuid())
+  farmId       String
+  slug         String             @unique
+  name         String
+  category     String
+  description  String?
+  unit         String             @default("kg")
+  priceKobo    BigInt
+  available    Boolean            @default(true)
+  quantity     Int                @default(0)
+  minimumOrder Int                @default(1)
+  imageUrl     String?
+  isSample     Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+  farm         Farm               @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  cartItems    FreshCartItem[]    @relation("ListingCartItems")
+  bulkQuotes   BulkQuoteRequest[]
 
   @@index([farmId, available])
   @@index([category])
@@ -1370,29 +1375,29 @@ model ProduceListing {
 /// Business/wholesale quote request against one listing. Farmers respond with an
 /// offer; nothing here invents a quote on the farmer's behalf.
 model BulkQuoteRequest {
-  id           String   @id @default(cuid())
-  listingId    String
-  buyerId      String
-  quantity     Int
-  note         String?
-  status       String   @default("requested") // requested | quoted | accepted | declined
+  id              String         @id @default(cuid())
+  listingId       String
+  buyerId         String
+  quantity        Int
+  note            String?
+  status          String         @default("requested") // requested | quoted | accepted | declined
   quotedPriceKobo BigInt?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  buyer        User     @relation("BulkQuoteBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
-  listing      ProduceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  buyer           User           @relation("BulkQuoteBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  listing         ProduceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@index([listingId, status])
 }
 
 /// Per-account NaijaFresh basket. Prices are always re-read from the listing.
 model FreshCartItem {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   userId    String
   listingId String
-  quantity  Int      @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  quantity  Int            @default(1)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
   user      User           @relation("FreshCartOwner", fields: [userId], references: [id], onDelete: Cascade)
   listing   ProduceListing @relation("ListingCartItems", fields: [listingId], references: [id], onDelete: Cascade)
 
@@ -1403,26 +1408,26 @@ model FreshCartItem {
 /// One NaijaFresh order per farm: a mixed basket becomes several orders so each
 /// harvest is paid to the farm that grew it.
 model FreshOrder {
-  id              String   @id @default(cuid())
-  orderNumber     String   @unique
+  id              String            @id @default(cuid())
+  orderNumber     String            @unique
   customerId      String
   farmId          String
   /// customer | business
-  orderKind       String   @default("customer")
-  status          String   @default("payment_pending")
-  paymentStatus   String   @default("pending")
+  orderKind       String            @default("customer")
+  status          String            @default("payment_pending")
+  paymentStatus   String            @default("pending")
   subtotalKobo    BigInt
-  deliveryFeeKobo BigInt   @default(0)
+  deliveryFeeKobo BigInt            @default(0)
   totalKobo       BigInt
-  currency        String   @default("NGN")
+  currency        String            @default("NGN")
   deliveryAddress String
   contactName     String
   contactPhone    String
   notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  customer        User            @relation("FreshOrders", fields: [customerId], references: [id])
-  farm            Farm            @relation(fields: [farmId], references: [id])
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  customer        User              @relation("FreshOrders", fields: [customerId], references: [id])
+  farm            Farm              @relation(fields: [farmId], references: [id])
   items           FreshOrderItem[]
   events          FreshOrderEvent[]
   dispatch        FreshDispatch?
@@ -1432,7 +1437,7 @@ model FreshOrder {
 }
 
 model FreshOrderItem {
-  id            String   @id @default(cuid())
+  id            String     @id @default(cuid())
   orderId       String
   listingId     String?
   name          String
@@ -1445,48 +1450,48 @@ model FreshOrderItem {
 }
 
 model FreshOrderEvent {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   orderId   String
   status    String
   note      String?
   actorId   String?
-  createdAt DateTime @default(now())
+  createdAt DateTime   @default(now())
   order     FreshOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId, createdAt])
 }
 
 model FreshDispatch {
-  id           String    @id @default(cuid())
-  orderId      String    @unique
-  status       String    @default("open") // open | assigned | completed | failed
-  vehicleNeed  String    @default("motorcycle")
-  attempts     Int       @default(0)
-  assignedType String?   // courier | driver
-  assignedId   String?
-  pickupPin    String
-  deliveryPin  String
-  pickedUpAt   DateTime?
-  deliveredAt  DateTime?
-  settlementReference String? @unique
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  order        FreshOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  offers       FreshDispatchOffer[]
+  id                  String               @id @default(cuid())
+  orderId             String               @unique
+  status              String               @default("open") // open | assigned | completed | failed
+  vehicleNeed         String               @default("motorcycle")
+  attempts            Int                  @default(0)
+  assignedType        String? // courier | driver
+  assignedId          String?
+  pickupPin           String
+  deliveryPin         String
+  pickedUpAt          DateTime?
+  deliveredAt         DateTime?
+  settlementReference String?              @unique
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  order               FreshOrder           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  offers              FreshDispatchOffer[]
 
   @@index([status])
 }
 
 model FreshDispatchOffer {
-  id           String   @id @default(cuid())
+  id           String        @id @default(cuid())
   dispatchId   String
   /// courier = NaijaSend provider, driver = NaijaDrive provider.
   providerType String
   providerId   String
-  status       String   @default("offered") // offered | accepted | declined | expired
+  status       String        @default("offered") // offered | accepted | declined | expired
   earningsKobo BigInt
   expiresAt    DateTime
-  createdAt    DateTime @default(now())
+  createdAt    DateTime      @default(now())
   dispatch     FreshDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
 
   @@index([dispatchId, status])
@@ -1533,7 +1538,7 @@ model RestaurantRating {
 }
 
 model MenuItem {
-  id           String     @id @default(cuid())
+  id           String         @id @default(cuid())
   restaurantId String
   name         String
   description  String?
@@ -1541,17 +1546,16 @@ model MenuItem {
   imageUrl     String?
   /// Dish taxonomy slug used by the "Popular Food Categories" rail.
   category     String?
-  featured     Boolean    @default(false)
-  published    Boolean    @default(false)
-  available    Boolean    @default(true)
-  isSample     Boolean    @default(false)
-  createdAt    DateTime   @default(now())
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  featured     Boolean        @default(false)
+  published    Boolean        @default(false)
+  available    Boolean        @default(true)
+  isSample     Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id])
   cartItems    FoodCartItem[]
 
   @@index([restaurantId, available])
 }
-
 
 enum FoodOrderStatus {
   placed
@@ -1576,22 +1580,22 @@ enum DispatchOfferStatus {
 /// withdrawn once any provider accepts, so an order can never end up with two
 /// riders or two settlements.
 model FoodDispatch {
-  id           String   @id @default(cuid())
-  orderId      String   @unique
-  status       String   @default("open") // open | assigned | completed | failed
-  vehicleNeed  String   @default("motorcycle")
-  attempts     Int      @default(0)
-  assignedType String?  // courier | driver
-  assignedId   String?
-  pickupPin    String
-  deliveryPin  String
-  pickedUpAt   DateTime?
-  deliveredAt  DateTime?
-  settlementReference String? @unique
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  order        FoodOrder       @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  offers       DispatchOffer[]
+  id                  String          @id @default(cuid())
+  orderId             String          @unique
+  status              String          @default("open") // open | assigned | completed | failed
+  vehicleNeed         String          @default("motorcycle")
+  attempts            Int             @default(0)
+  assignedType        String? // courier | driver
+  assignedId          String?
+  pickupPin           String
+  deliveryPin         String
+  pickedUpAt          DateTime?
+  deliveredAt         DateTime?
+  settlementReference String?         @unique
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  order               FoodOrder       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  offers              DispatchOffer[]
 
   @@index([status])
 }
@@ -1613,42 +1617,42 @@ model DispatchOffer {
 }
 
 model FoodOrder {
-  id             String          @id @default(cuid())
-  orderNumber    String          @unique
-  customerId     String
-  restaurantId   String
-  courierId      String?
-  status         FoodOrderStatus @default(placed)
-  paymentStatus  String          @default("paid")
-  subtotalKobo   BigInt
-  totalKobo      BigInt
-  currency       String          @default("NGN")
+  id              String           @id @default(cuid())
+  orderNumber     String           @unique
+  customerId      String
+  restaurantId    String
+  courierId       String?
+  status          FoodOrderStatus  @default(placed)
+  paymentStatus   String           @default("paid")
+  subtotalKobo    BigInt
+  totalKobo       BigInt
+  currency        String           @default("NGN")
   deliveryAddress String
-  contactName    String
-  contactPhone   String
-  notes          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  customer       User            @relation("CustomerFoodOrders", fields: [customerId], references: [id])
-  restaurant     Restaurant      @relation(fields: [restaurantId], references: [id])
-  courier        Courier?        @relation(fields: [courierId], references: [id])
-  dispatch       FoodDispatch?
-  items          FoodOrderItem[]
-  events         FoodOrderEvent[]
+  contactName     String
+  contactPhone    String
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  customer        User             @relation("CustomerFoodOrders", fields: [customerId], references: [id])
+  restaurant      Restaurant       @relation(fields: [restaurantId], references: [id])
+  courier         Courier?         @relation(fields: [courierId], references: [id])
+  dispatch        FoodDispatch?
+  items           FoodOrderItem[]
+  events          FoodOrderEvent[]
 
   @@index([customerId, createdAt])
   @@index([restaurantId, status])
 }
 
 model FoodOrderItem {
-  id           String   @id @default(cuid())
-  orderId      String
-  menuItemId   String?
-  name         String
+  id            String    @id @default(cuid())
+  orderId       String
+  menuItemId    String?
+  name          String
   unitPriceKobo BigInt
-  quantity     Int
-  notes        String?
-  order        FoodOrder @relation(fields: [orderId], references: [id])
+  quantity      Int
+  notes         String?
+  order         FoodOrder @relation(fields: [orderId], references: [id])
 }
 
 model FoodOrderEvent {
@@ -1662,7 +1666,6 @@ model FoodOrderEvent {
 
   @@index([orderId, createdAt])
 }
-
 
 enum RestaurantApplicationStatus {
   SUBMITTED
@@ -1690,7 +1693,6 @@ model RestaurantApplication {
   @@index([status, createdAt])
 }
 
-
 enum RefundStatus {
   PENDING
   COMPLETED
@@ -1716,7 +1718,6 @@ model Refund {
   @@index([orderId, status])
 }
 
-
 /// Singleton admin-managed storefront configuration.
 model StorefrontConfig {
   id        String   @id @default("default")
@@ -1725,16 +1726,15 @@ model StorefrontConfig {
   updatedAt DateTime @updatedAt
 }
 
-
 /// Append-only, unapplied financial correction prepared for review.
 model LedgerAdjustment {
-  id            String    @id @default(cuid())
-  adjustmentKey String    @unique
-  status        String    @default("PREPARED")
+  id            String           @id @default(cuid())
+  adjustmentKey String           @unique
+  status        String           @default("PREPARED")
   journal       Json
   references    Json
   preparedBy    String
-  preparedAt    DateTime  @default(now())
+  preparedAt    DateTime         @default(now())
   appliedAt     DateTime?
   appliedBy     String?
   postings      AccountPosting[]
@@ -1752,20 +1752,20 @@ model LedgerAccount {
 }
 
 model AccountPosting {
-  id             String          @id @default(cuid())
-  accountId      String
-  adjustmentId   String?
-  transactionId  String
-  direction      LedgerDirection
-  amountKobo     BigInt
-  memo           String
-  createdAt      DateTime        @default(now())
-  account        LedgerAccount   @relation(fields: [accountId], references: [id])
-  adjustment     LedgerAdjustment? @relation(fields: [adjustmentId], references: [id])
-  @@index([accountId])
-  @@unique([adjustmentId, accountId])
-}
+  id            String            @id @default(cuid())
+  accountId     String
+  adjustmentId  String?
+  transactionId String
+  direction     LedgerDirection
+  amountKobo    BigInt
+  memo          String
+  createdAt     DateTime          @default(now())
+  account       LedgerAccount     @relation(fields: [accountId], references: [id])
+  adjustment    LedgerAdjustment? @relation(fields: [adjustmentId], references: [id])
 
+  @@unique([adjustmentId, accountId])
+  @@index([accountId])
+}
 
 /// Durable database identity used to gate live financial operations.
 enum VerticalActivationStatus {
@@ -1777,16 +1777,17 @@ enum VerticalActivationStatus {
 /// Central service activation. GLOBAL overrides COUNTRY/CITY; the effective
 /// state is computed by lib/services/core/vertical-activation.service.ts.
 model VerticalActivation {
-  id           String                   @id @default(cuid())
-  verticalKey  String
-  scopeType    String
-  countryCode  String                   @default("")
-  cityCode     String                   @default("")
-  status       VerticalActivationStatus @default(DISABLED)
-  reason       String?
-  updatedById  String?
-  createdAt    DateTime                 @default(now())
-  updatedAt    DateTime                 @updatedAt
+  id          String                   @id @default(cuid())
+  verticalKey String
+  scopeType   String
+  countryCode String                   @default("")
+  cityCode    String                   @default("")
+  status      VerticalActivationStatus @default(DISABLED)
+  reason      String?
+  updatedById String?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
   @@unique([verticalKey, scopeType, countryCode, cityCode])
   @@index([verticalKey])
 }
@@ -1882,28 +1883,28 @@ enum GigMilestoneStatus {
 
 /// A vetted professional operating in the NaijaDeals services marketplace.
 model ProfessionalProfile {
-  id              String             @id @default(cuid())
-  userId          String             @unique
+  id              String                 @id @default(cuid())
+  userId          String                 @unique
   displayName     String
   headline        String
   bio             String
   avatarUrl       String?
-  countryCode     String             @default("NG")
+  countryCode     String                 @default("NG")
   state           String
   city            String
   serviceModes    ServiceMode[]
-  languages       String[]           @default([])
+  languages       String[]               @default([])
   yearsExperience Int?
-  status          ProfessionalStatus @default(PENDING)
+  status          ProfessionalStatus     @default(PENDING)
   verifiedAt      DateTime?
-  published       Boolean            @default(false)
+  published       Boolean                @default(false)
   responseMinutes Int?
-  commissionBps   Int                @default(1200)
+  commissionBps   Int                    @default(1200)
   suspendedReason String?
-  isSample        Boolean            @default(false)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  user            User               @relation(fields: [userId], references: [id])
+  isSample        Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  user            User                   @relation(fields: [userId], references: [id])
   categories      ProfessionalCategory[]
   listings        ServiceListing[]
   portfolio       PortfolioItem[]
@@ -1927,19 +1928,19 @@ model ProfessionalCategory {
 
 /// Admin-managed service taxonomy shown on the NaijaGigs landing page and filters.
 model ServiceCategory {
-  id          String    @id @default(cuid())
-  slug        String    @unique
-  name        String
-  description String?
-  icon        String    @default("Wrench")
-  accent      String    @default("#0f7a4a")
-  imageUrl    String?
-  sortOrder   Int       @default(0)
-  isActive    Boolean   @default(true)
+  id            String                 @id @default(cuid())
+  slug          String                 @unique
+  name          String
+  description   String?
+  icon          String                 @default("Wrench")
+  accent        String                 @default("#0f7a4a")
+  imageUrl      String?
+  sortOrder     Int                    @default(0)
+  isActive      Boolean                @default(true)
   /// Null means every enabled country; otherwise the category is country-specific.
-  countryCode String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  countryCode   String?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
   professionals ProfessionalCategory[]
   listings      ServiceListing[]
   jobs          CustomerJob[]
@@ -1951,29 +1952,29 @@ model ServiceCategory {
 }
 
 model ServiceListing {
-  id             String               @id @default(cuid())
-  isSample       Boolean              @default(false)
+  id             String                @id @default(cuid())
+  isSample       Boolean               @default(false)
   professionalId String
   categoryId     String
   title          String
-  slug           String               @unique
+  slug           String                @unique
   summary        String
   description    String
   mode           ServiceMode
   pricingType    ServicePricingType
   priceKobo      BigInt?
-  currency       String               @default("NGN")
-  countryCode    String               @default("NG")
+  currency       String                @default("NGN")
+  countryCode    String                @default("NG")
   state          String?
   city           String?
-  isRemote       Boolean              @default(false)
-  status         ServiceListingStatus @default(DRAFT)
-  isFeatured     Boolean              @default(false)
+  isRemote       Boolean               @default(false)
+  status         ServiceListingStatus  @default(DRAFT)
+  isFeatured     Boolean               @default(false)
   moderationNote String?
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  professional   ProfessionalProfile  @relation(fields: [professionalId], references: [id])
-  category       ServiceCategory      @relation(fields: [categoryId], references: [id])
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  professional   ProfessionalProfile   @relation(fields: [professionalId], references: [id])
+  category       ServiceCategory       @relation(fields: [categoryId], references: [id])
   images         ServiceListingImage[]
   packages       ServicePackage[]
   bookings       ServiceBooking[]
@@ -2009,21 +2010,21 @@ model ServicePackage {
 }
 
 model PortfolioItem {
-  id             String           @id @default(cuid())
+  id             String              @id @default(cuid())
   professionalId String
   categoryId     String?
   title          String
   description    String?
   imageUrl       String
-  createdAt      DateTime         @default(now())
+  createdAt      DateTime            @default(now())
   professional   ProfessionalProfile @relation(fields: [professionalId], references: [id])
-  category       ServiceCategory?  @relation(fields: [categoryId], references: [id])
+  category       ServiceCategory?    @relation(fields: [categoryId], references: [id])
 
   @@index([professionalId])
 }
 
 model ServiceArea {
-  id             String             @id @default(cuid())
+  id             String              @id @default(cuid())
   professionalId String
   countryCode    String
   state          String
@@ -2035,13 +2036,13 @@ model ServiceArea {
 }
 
 model AvailabilitySlot {
-  id             String             @id @default(cuid())
+  id             String              @id @default(cuid())
   professionalId String
   /// 0 = Sunday … 6 = Saturday.
   weekday        Int
   startMinute    Int
   endMinute      Int
-  timezone       String             @default("Africa/Lagos")
+  timezone       String              @default("Africa/Lagos")
   professional   ProfessionalProfile @relation(fields: [professionalId], references: [id])
 
   @@index([professionalId, weekday])
@@ -2074,17 +2075,17 @@ model CustomerJob {
 }
 
 model JobProposal {
-  id             String             @id @default(cuid())
+  id             String              @id @default(cuid())
   jobId          String
   professionalId String
   amountKobo     BigInt
-  currency       String             @default("NGN")
+  currency       String              @default("NGN")
   message        String
   deliveryDays   Int
-  status         JobProposalStatus  @default(SUBMITTED)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  job            CustomerJob        @relation(fields: [jobId], references: [id])
+  status         JobProposalStatus   @default(SUBMITTED)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  job            CustomerJob         @relation(fields: [jobId], references: [id])
   professional   ProfessionalProfile @relation(fields: [professionalId], references: [id])
 
   @@unique([jobId, professionalId])
@@ -2092,43 +2093,43 @@ model JobProposal {
 }
 
 model ServiceBooking {
-  id             String               @id @default(cuid())
-  reference      String               @unique
-  customerId     String
-  professionalId String
+  id                    String               @id @default(cuid())
+  reference             String               @unique
+  customerId            String
+  professionalId        String
   professionalProfileId String
-  listingId      String?
-  jobId          String?
-  categoryId     String?
-  mode           ServiceMode
-  title          String
-  description    String?
-  status         ServiceBookingStatus @default(REQUESTED)
-  scheduledAt    DateTime?
-  address        String?
-  countryCode    String               @default("NG")
-  state          String
-  city           String?
-  amountKobo     BigInt
-  currency       String               @default("NGN")
-  commissionBps  Int                  @default(1200)
-  paymentStatus  ServicePaymentStatus @default(UNPAID)
-  acceptedAt     DateTime?
-  submittedAt    DateTime?
-  completedAt    DateTime?
-  cancelledReason String?
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  customer       User                  @relation("GigCustomerBookings", fields: [customerId], references: [id])
-  professional   User                  @relation("GigProfessionalBookings", fields: [professionalId], references: [id])
-  professionalProfile ProfessionalProfile @relation(fields: [professionalProfileId], references: [id])
-  listing        ServiceListing?       @relation(fields: [listingId], references: [id])
-  job            CustomerJob?          @relation(fields: [jobId], references: [id])
-  category       ServiceCategory?      @relation(fields: [categoryId], references: [id])
-  milestones     BookingMilestone[]
-  conversation   Conversation?
-  review         ServiceReview?
-  disputes       ServiceDispute[]
+  listingId             String?
+  jobId                 String?
+  categoryId            String?
+  mode                  ServiceMode
+  title                 String
+  description           String?
+  status                ServiceBookingStatus @default(REQUESTED)
+  scheduledAt           DateTime?
+  address               String?
+  countryCode           String               @default("NG")
+  state                 String
+  city                  String?
+  amountKobo            BigInt
+  currency              String               @default("NGN")
+  commissionBps         Int                  @default(1200)
+  paymentStatus         ServicePaymentStatus @default(UNPAID)
+  acceptedAt            DateTime?
+  submittedAt           DateTime?
+  completedAt           DateTime?
+  cancelledReason       String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  customer              User                 @relation("GigCustomerBookings", fields: [customerId], references: [id])
+  professional          User                 @relation("GigProfessionalBookings", fields: [professionalId], references: [id])
+  professionalProfile   ProfessionalProfile  @relation(fields: [professionalProfileId], references: [id])
+  listing               ServiceListing?      @relation(fields: [listingId], references: [id])
+  job                   CustomerJob?         @relation(fields: [jobId], references: [id])
+  category              ServiceCategory?     @relation(fields: [categoryId], references: [id])
+  milestones            BookingMilestone[]
+  conversation          Conversation?
+  review                ServiceReview?
+  disputes              ServiceDispute[]
 
   @@index([customerId, status])
   @@index([professionalId, status])
@@ -2136,31 +2137,31 @@ model ServiceBooking {
 }
 
 model BookingMilestone {
-  id          String             @id @default(cuid())
-  bookingId   String
-  title       String
-  amountKobo  BigInt
-  dueAt       DateTime?
-  status      GigMilestoneStatus @default(PENDING)
-  note        String?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  booking     ServiceBooking     @relation(fields: [bookingId], references: [id])
+  id         String             @id @default(cuid())
+  bookingId  String
+  title      String
+  amountKobo BigInt
+  dueAt      DateTime?
+  status     GigMilestoneStatus @default(PENDING)
+  note       String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  booking    ServiceBooking     @relation(fields: [bookingId], references: [id])
 
   @@index([bookingId])
 }
 
 model Conversation {
-  id             String            @id @default(cuid())
-  bookingId      String?           @unique
+  id             String          @id @default(cuid())
+  bookingId      String?         @unique
   jobId          String?
   customerId     String
   professionalId String
-  createdAt      DateTime          @default(now())
-  lastMessageAt  DateTime          @default(now())
-  booking        ServiceBooking?   @relation(fields: [bookingId], references: [id])
-  customer       User              @relation("GigCustomerConversations", fields: [customerId], references: [id])
-  professional   User              @relation("GigProfessionalConversations", fields: [professionalId], references: [id])
+  createdAt      DateTime        @default(now())
+  lastMessageAt  DateTime        @default(now())
+  booking        ServiceBooking? @relation(fields: [bookingId], references: [id])
+  customer       User            @relation("GigCustomerConversations", fields: [customerId], references: [id])
+  professional   User            @relation("GigProfessionalConversations", fields: [professionalId], references: [id])
   messages       Message[]
 
   @@index([customerId, lastMessageAt])
@@ -2168,15 +2169,15 @@ model Conversation {
 }
 
 model Message {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   conversationId String
   senderId       String
   body           String
   attachmentUrl  String?
   readAt         DateTime?
-  createdAt      DateTime      @default(now())
-  conversation   Conversation  @relation(fields: [conversationId], references: [id])
-  sender         User          @relation("GigMessageSender", fields: [senderId], references: [id])
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  sender         User         @relation("GigMessageSender", fields: [senderId], references: [id])
 
   @@index([conversationId, createdAt])
 }
@@ -2199,17 +2200,17 @@ model ServiceReview {
 }
 
 model ServiceDispute {
-  id          String                @id @default(cuid())
-  bookingId   String
-  openedById  String
-  reason      String
-  details     String?
-  status      ServiceDisputeStatus  @default(OPEN)
-  resolution  String?
-  createdAt   DateTime              @default(now())
-  updatedAt   DateTime              @updatedAt
-  booking     ServiceBooking        @relation(fields: [bookingId], references: [id])
-  openedBy    User                  @relation("GigDisputeOpener", fields: [openedById], references: [id])
+  id         String               @id @default(cuid())
+  bookingId  String
+  openedById String
+  reason     String
+  details    String?
+  status     ServiceDisputeStatus @default(OPEN)
+  resolution String?
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+  booking    ServiceBooking       @relation(fields: [bookingId], references: [id])
+  openedBy   User                 @relation("GigDisputeOpener", fields: [openedById], references: [id])
 
   @@index([bookingId])
   @@index([status])
@@ -2235,13 +2236,13 @@ model ServiceSpotlight {
 
 /// Singleton admin-managed NaijaGigs landing copy.
 model GigSiteConfig {
-  id            String   @id @default("default")
-  heroTitle     String   @default("Skilled hands. Brilliant minds. One Africa.")
-  heroSubtitle  String   @default("Find trusted professionals for every project — at home, at work, and online.")
-  heroImageUrl  String?
-  announcement  String?
-  updatedBy     String?
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default("default")
+  heroTitle    String   @default("Skilled hands. Brilliant minds. One Africa.")
+  heroSubtitle String   @default("Find trusted professionals for every project — at home, at work, and online.")
+  heroImageUrl String?
+  announcement String?
+  updatedBy    String?
+  updatedAt    DateTime @updatedAt
 }
 
 // ===========================================================================
@@ -2276,23 +2277,23 @@ enum StreamRoyaltyStatus {
 }
 
 model StreamArtist {
-  id            String   @id @default(cuid())
-  userId        String   @unique
+  id            String           @id @default(cuid())
+  userId        String           @unique
   name          String
-  slug          String   @unique
+  slug          String           @unique
   bio           String?
   avatarUrl     String?
   coverUrl      String?
-  verified      Boolean  @default(false)
+  verified      Boolean          @default(false)
   verifiedAt    DateTime?
-  countryCode   String   @default("NG")
+  countryCode   String           @default("NG")
   city          String?
-  genres        String[] @default([])
-  isSample      Boolean  @default(false)
-  commissionBps Int      @default(1200)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  genres        String[]         @default([])
+  isSample      Boolean          @default(false)
+  commissionBps Int              @default(1200)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   releases      StreamRelease[]
   tracks        StreamTrack[]
   playlists     StreamPlaylist[]
@@ -2322,30 +2323,30 @@ model StreamRelease {
 }
 
 model StreamTrack {
-  id           String            @id @default(cuid())
-  artistId     String
-  releaseId    String?
-  title        String
-  slug         String            @unique
-  durationSec  Int
-  audioUrl     String?
-  artworkUrl   String?
-  genre        String?
-  language     String?
-  explicit     Boolean           @default(false)
-  status       StreamTrackStatus @default(DRAFT)
-  rightsDeclared Boolean         @default(false)
-  publishedAt  DateTime?
-  playCount    BigInt            @default(0)
-  isSample     Boolean           @default(false)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  artist       StreamArtist      @relation(fields: [artistId], references: [id], onDelete: Cascade)
-  release      StreamRelease?    @relation(fields: [releaseId], references: [id], onDelete: SetNull)
-  plays        StreamPlay[]
-  playlistItems StreamPlaylistItem[]
-  likes        StreamLike[]
-  royalties    StreamRoyaltyAccrual[]
+  id             String                 @id @default(cuid())
+  artistId       String
+  releaseId      String?
+  title          String
+  slug           String                 @unique
+  durationSec    Int
+  audioUrl       String?
+  artworkUrl     String?
+  genre          String?
+  language       String?
+  explicit       Boolean                @default(false)
+  status         StreamTrackStatus      @default(DRAFT)
+  rightsDeclared Boolean                @default(false)
+  publishedAt    DateTime?
+  playCount      BigInt                 @default(0)
+  isSample       Boolean                @default(false)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  artist         StreamArtist           @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  release        StreamRelease?         @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+  plays          StreamPlay[]
+  playlistItems  StreamPlaylistItem[]
+  likes          StreamLike[]
+  royalties      StreamRoyaltyAccrual[]
 
   @@index([status, publishedAt])
   @@index([artistId, status])
@@ -2353,19 +2354,19 @@ model StreamTrack {
 }
 
 model StreamPlaylist {
-  id          String   @id @default(cuid())
-  ownerId     String?          // null = editorial playlist
-  artistId    String?          // artist-curated playlist
+  id          String                 @id @default(cuid())
+  ownerId     String? // null = editorial playlist
+  artistId    String? // artist-curated playlist
   title       String
-  slug        String   @unique
+  slug        String                 @unique
   description String?
   coverUrl    String?
-  isPublic    Boolean  @default(true)
-  isEditorial Boolean  @default(false)
-  isSample    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  owner       User?          @relation("StreamPlaylistOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  artist      StreamArtist?  @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  isPublic    Boolean                @default(true)
+  isEditorial Boolean                @default(false)
+  isSample    Boolean                @default(false)
+  createdAt   DateTime               @default(now())
+  owner       User?                  @relation("StreamPlaylistOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  artist      StreamArtist?          @relation(fields: [artistId], references: [id], onDelete: SetNull)
   items       StreamPlaylistItem[]
   follows     StreamPlaylistFollow[]
 
@@ -2373,11 +2374,11 @@ model StreamPlaylist {
 }
 
 model StreamPlaylistItem {
-  id         String   @id @default(cuid())
+  id         String         @id @default(cuid())
   playlistId String
   trackId    String
   position   Int
-  addedAt    DateTime @default(now())
+  addedAt    DateTime       @default(now())
   playlist   StreamPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
   track      StreamTrack    @relation(fields: [trackId], references: [id], onDelete: Cascade)
 
@@ -2386,10 +2387,10 @@ model StreamPlaylistItem {
 }
 
 model StreamPlaylistFollow {
-  id         String   @id @default(cuid())
+  id         String         @id @default(cuid())
   playlistId String
   userId     String
-  createdAt  DateTime @default(now())
+  createdAt  DateTime       @default(now())
   playlist   StreamPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
   user       User           @relation("StreamPlaylistFollows", fields: [userId], references: [id], onDelete: Cascade)
 
@@ -2397,10 +2398,10 @@ model StreamPlaylistFollow {
 }
 
 model StreamFollow {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   artistId  String
   userId    String
-  createdAt DateTime @default(now())
+  createdAt DateTime     @default(now())
   artist    StreamArtist @relation(fields: [artistId], references: [id], onDelete: Cascade)
   user      User         @relation("StreamFollows", fields: [userId], references: [id], onDelete: Cascade)
 
@@ -2408,12 +2409,12 @@ model StreamFollow {
 }
 
 model StreamLike {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   trackId   String
   userId    String
-  createdAt DateTime @default(now())
-  user      User         @relation("StreamLikes", fields: [userId], references: [id], onDelete: Cascade)
-  track     StreamTrack  @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  user      User        @relation("StreamLikes", fields: [userId], references: [id], onDelete: Cascade)
+  track     StreamTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
 
   @@unique([trackId, userId])
 }
@@ -2421,14 +2422,14 @@ model StreamLike {
 /// One row per play. Deduplicated per (track, user, 30s bucket) so a client
 /// replay or duplicate report cannot inflate counts or royalties.
 model StreamPlay {
-  id         String   @id @default(cuid())
-  trackId    String
-  userId     String?
-  bucket     String   // e.g. "2026-11-08T10:30" — unique per track/user/bucket
-  secondsPlayed Int   @default(0)
-  eligible   Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  track      StreamTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  id            String      @id @default(cuid())
+  trackId       String
+  userId        String?
+  bucket        String // e.g. "2026-11-08T10:30" — unique per track/user/bucket
+  secondsPlayed Int         @default(0)
+  eligible      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  track         StreamTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
 
   @@unique([trackId, userId, bucket])
   @@index([trackId, createdAt])
@@ -2437,20 +2438,20 @@ model StreamPlay {
 /// Royalty accrual per track per period. Pending accruals are NOT cash; only
 /// settled transfers to the artist wallet move money on the shared ledger.
 model StreamRoyaltyAccrual {
-  id           String              @id @default(cuid())
-  trackId      String
-  artistId     String
-  period       String              // YYYY-MM
-  eligiblePlays BigInt             @default(0)
-  rateKoboPerPlay BigInt           @default(0)
-  grossKobo    BigInt              @default(0)
-  platformKobo BigInt              @default(0)
-  artistKobo   BigInt              @default(0)
-  currency     String              @default("NGN")
-  status       StreamRoyaltyStatus @default(ACCRUED)
-  ledgerReference String?          // WalletTransaction.reference once settled
-  calculatedAt DateTime            @default(now())
-  track        StreamTrack         @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  id              String              @id @default(cuid())
+  trackId         String
+  artistId        String
+  period          String // YYYY-MM
+  eligiblePlays   BigInt              @default(0)
+  rateKoboPerPlay BigInt              @default(0)
+  grossKobo       BigInt              @default(0)
+  platformKobo    BigInt              @default(0)
+  artistKobo      BigInt              @default(0)
+  currency        String              @default("NGN")
+  status          StreamRoyaltyStatus @default(ACCRUED)
+  ledgerReference String? // WalletTransaction.reference once settled
+  calculatedAt    DateTime            @default(now())
+  track           StreamTrack         @relation(fields: [trackId], references: [id], onDelete: Cascade)
 
   @@unique([trackId, period])
   @@index([artistId, period])
@@ -2458,93 +2459,93 @@ model StreamRoyaltyAccrual {
 
 /// Admin-configurable royalty pool rate per period (never hard-coded per play).
 model StreamRevenuePool {
-  id            String   @id @default(cuid())
-  period        String   @unique
-  poolKobo      BigInt
-  eligiblePlays BigInt   @default(0)
-  rateKoboPerPlay BigInt @default(0)
-  currency      String   @default("NGN")
-  notes         String?
-  createdBy     String?
-  createdAt     DateTime @default(now())
+  id              String   @id @default(cuid())
+  period          String   @unique
+  poolKobo        BigInt
+  eligiblePlays   BigInt   @default(0)
+  rateKoboPerPlay BigInt   @default(0)
+  currency        String   @default("NGN")
+  notes           String?
+  createdBy       String?
+  createdAt       DateTime @default(now())
 }
 
 // --- NaijaStream podcasts & video -------------------------------------------
 
 model StreamShow {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   artistId    String
   title       String
-  slug        String   @unique
+  slug        String          @unique
   description String?
   coverUrl    String?
-  category    String   @default("Culture")
-  language    String   @default("English")
-  isSample    Boolean  @default(false)
-  published   Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  artist      StreamArtist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  category    String          @default("Culture")
+  language    String          @default("English")
+  isSample    Boolean         @default(false)
+  published   Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  artist      StreamArtist    @relation(fields: [artistId], references: [id], onDelete: Cascade)
   episodes    StreamEpisode[]
 
   @@index([published, category])
 }
 
 model StreamEpisode {
-  id          String   @id @default(cuid())
+  id          String            @id @default(cuid())
   showId      String
   title       String
-  slug        String   @unique
+  slug        String            @unique
   description String?
   audioUrl    String?
   durationSec Int
-  season      Int      @default(1)
+  season      Int               @default(1)
   episodeNo   Int
   publishedAt DateTime?
   status      StreamTrackStatus @default(DRAFT)
-  isSample    Boolean  @default(false)
-  show        StreamShow @relation(fields: [showId], references: [id], onDelete: Cascade)
+  isSample    Boolean           @default(false)
+  show        StreamShow        @relation(fields: [showId], references: [id], onDelete: Cascade)
 
   @@unique([showId, season, episodeNo])
   @@index([status, publishedAt])
 }
 
 model StreamVideo {
-  id          String   @id @default(cuid())
+  id          String            @id @default(cuid())
   artistId    String?
   title       String
-  slug        String   @unique
+  slug        String            @unique
   description String?
   videoUrl    String
   posterUrl   String?
   durationSec Int
-  kind        String   @default("MUSIC_VIDEO")
+  kind        String            @default("MUSIC_VIDEO")
   status      StreamTrackStatus @default(DRAFT)
-  isSample    Boolean  @default(false)
+  isSample    Boolean           @default(false)
   publishedAt DateTime?
-  views       BigInt   @default(0)
-  createdAt   DateTime @default(now())
-  artist      StreamArtist? @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  views       BigInt            @default(0)
+  createdAt   DateTime          @default(now())
+  artist      StreamArtist?     @relation(fields: [artistId], references: [id], onDelete: SetNull)
 
   @@index([status, publishedAt])
 }
 
 model StreamLiveEvent {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
-  slug        String   @unique
+  slug        String    @unique
   description String?
   artworkUrl  String?
   startsAt    DateTime
   endsAt      DateTime?
-  status      String   @default("UPCOMING") // UPCOMING | LIVE | ENDED | CANCELLED
+  status      String    @default("UPCOMING") // UPCOMING | LIVE | ENDED | CANCELLED
   streamUrl   String?
   startedAt   DateTime?
   endedAt     DateTime?
   organizerId String?
-  isFree      Boolean  @default(true)
+  isFree      Boolean   @default(true)
   priceKobo   BigInt?
-  isSample    Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  isSample    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
 
   @@index([status, startsAt])
 }
@@ -2562,7 +2563,7 @@ enum StreamMediaStatus {
 model StreamMediaAsset {
   id            String            @id @default(cuid())
   ownerId       String
-  kind          String            // AUDIO | VIDEO | IMAGE
+  kind          String // AUDIO | VIDEO | IMAGE
   storageKey    String            @unique
   mimeType      String
   sizeBytes     Int
@@ -2573,7 +2574,7 @@ model StreamMediaAsset {
   bitrate       Int?
   status        StreamMediaStatus @default(PENDING)
   error         String?
-  processedKey  String?           // optional normalised output
+  processedKey  String? // optional normalised output
   attempts      Int               @default(0)
   purpose       String            @default("TRACK") // TRACK | EPISODE | VIDEO | ARTWORK
   publicVisible Boolean           @default(false)
@@ -2595,74 +2596,74 @@ enum StreamSubscriptionStatus {
 }
 
 model StreamPlan {
-  id           String   @id @default(cuid())
-  code         String   @unique          // FREE | BASIC | STANDARD | PREMIUM
-  name         String
-  description  String?
-  priceKobo    BigInt   @default(0)
-  interval     String   @default("MONTH") // MONTH | YEAR
-  currency     String   @default("NGN")
-  features     String[] @default([])
-  isActive     Boolean  @default(true)
-  sortOrder    Int      @default(0)
-  createdAt    DateTime @default(now())
+  id            String               @id @default(cuid())
+  code          String               @unique // FREE | BASIC | STANDARD | PREMIUM
+  name          String
+  description   String?
+  priceKobo     BigInt               @default(0)
+  interval      String               @default("MONTH") // MONTH | YEAR
+  currency      String               @default("NGN")
+  features      String[]             @default([])
+  isActive      Boolean              @default(true)
+  sortOrder     Int                  @default(0)
+  createdAt     DateTime             @default(now())
   subscriptions StreamSubscription[]
 }
 
 model StreamSubscription {
-  id             String                    @id @default(cuid())
-  userId         String
-  planId         String
-  status         StreamSubscriptionStatus @default(ACTIVE)
-  startsAt       DateTime                  @default(now())
-  currentPeriodEnd DateTime
-  cancelAtPeriodEnd Boolean                @default(false)
-  cancelledAt    DateTime?
-  provider       String                    @default("wallet") // wallet | test | paystack | flutterwave
-  ledgerReference String?                  @unique
-  createdAt      DateTime                  @default(now())
-  updatedAt      DateTime                  @updatedAt
-  user           User                      @relation("StreamSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
-  plan           StreamPlan                @relation(fields: [planId], references: [id])
+  id                String                   @id @default(cuid())
+  userId            String
+  planId            String
+  status            StreamSubscriptionStatus @default(ACTIVE)
+  startsAt          DateTime                 @default(now())
+  currentPeriodEnd  DateTime
+  cancelAtPeriodEnd Boolean                  @default(false)
+  cancelledAt       DateTime?
+  provider          String                   @default("wallet") // wallet | test | paystack | flutterwave
+  ledgerReference   String?                  @unique
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  user              User                     @relation("StreamSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  plan              StreamPlan               @relation(fields: [planId], references: [id])
 
   @@index([userId, status])
 }
 
 model StreamBillingRecord {
-  id             String   @id @default(cuid())
-  subscriptionId String
-  userId         String
-  amountKobo     BigInt
-  currency       String   @default("NGN")
+  id              String   @id @default(cuid())
+  subscriptionId  String
+  userId          String
+  amountKobo      BigInt
+  currency        String   @default("NGN")
   ledgerReference String
-  periodStart    DateTime
-  periodEnd      DateTime
-  status         String   @default("PAID")
-  createdAt      DateTime @default(now())
+  periodStart     DateTime
+  periodEnd       DateTime
+  status          String   @default("PAID")
+  createdAt       DateTime @default(now())
 
   @@index([userId, createdAt])
 }
 
 /// Admin-managed homepage carousel slides (Control Center editable).
 model StreamHeroSlide {
-  id           String   @id @default(cuid())
-  eyebrow      String   @default("Featured")
-  headline     String
-  accent       String   @default("")
-  body         String   @default("")
-  imageUrl     String
+  id             String    @id @default(cuid())
+  eyebrow        String    @default("Featured")
+  headline       String
+  accent         String    @default("")
+  body           String    @default("")
+  imageUrl       String
   mobileImageUrl String?
-  primaryLabel String
-  primaryHref  String
+  primaryLabel   String
+  primaryHref    String
   secondaryLabel String
   secondaryHref  String
-  sortOrder    Int      @default(0)
-  isActive     Boolean  @default(true)
-  startsAt     DateTime?
-  endsAt       DateTime?
-  updatedBy    String?
-  updatedAt    DateTime @updatedAt
-  createdAt    DateTime @default(now())
+  sortOrder      Int       @default(0)
+  isActive       Boolean   @default(true)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  updatedBy      String?
+  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime  @default(now())
 
   @@index([isActive, sortOrder])
 }
@@ -2710,80 +2711,80 @@ model StreamPodcastCategory {
 
 /// One shipment request from a customer, business or another NaijaDeals vertical.
 model LogisticsShipment {
-  id              String   @id @default(cuid())
-  reference       String   @unique
-  customerId      String
+  id                    String              @id @default(cuid())
+  reference             String              @unique
+  customerId            String
   /// individual | business | enterprise | farm | institution
-  customerKind    String   @default("individual")
+  customerKind          String              @default("individual")
   /// parcel | goods | freight | bulk
-  cargoClass      String   @default("parcel")
+  cargoClass            String              @default("parcel")
   /// Produce category slug when cargoClass is bulk/farm.
-  cargoCategory   String?
-  description     String
-  weightKg        Int      @default(1)
-  quantity        Int      @default(1)
-  dimensions      String?
-  declaredValueKobo BigInt @default(0)
-  handling        String?
-  originLabel     String
-  originCountry   String   @default("Nigeria")
-  destinationLabel String
-  destinationCountry String @default("Nigeria")
-  senderName      String
-  senderPhone     String
-  recipientName   String
-  recipientPhone  String
-  pickupDate      DateTime?
+  cargoCategory         String?
+  description           String
+  weightKg              Int                 @default(1)
+  quantity              Int                 @default(1)
+  dimensions            String?
+  declaredValueKobo     BigInt              @default(0)
+  handling              String?
+  originLabel           String
+  originCountry         String              @default("Nigeria")
+  destinationLabel      String
+  destinationCountry    String              @default("Nigeria")
+  senderName            String
+  senderPhone           String
+  recipientName         String
+  recipientPhone        String
+  pickupDate            DateTime?
   /// "request_quote" (default) | "instant" (only where a verified rate exists)
-  bookingModel    String   @default("request_quote")
+  bookingModel          String              @default("request_quote")
   /// Preferred first-leg mode: motorcycle | car | van | truck | air | sea | rail | warehouse
-  preferredMode   String?
+  preferredMode         String?
   /// open | quoting | booked | in_transit | delivered | completed | cancelled | expired
-  status          String   @default("open")
+  status                String              @default("open")
   /// Set when this shipment fulfils another vertical (eats | fresh | drive | shop).
-  sourceVertical  String?
-  sourceReference String?
+  sourceVertical        String?
+  sourceReference       String?
   /// Immutable origin of the shipment: naijasend | naijashop | naijafresh | naijaeats.
   /// A shipment created from an order keeps that vertical for life; only an
   /// audited admin correction may change it.
-  originVertical  String   @default("naijasend")
+  originVertical        String              @default("naijasend")
   /// Customer-facing tracking number (distinct from the internal reference).
-  trackingNumber  String?  @unique
+  trackingNumber        String?             @unique
   /// Optimistic concurrency guard: every state transition must match this.
-  version         Int      @default(0)
+  version               Int                 @default(0)
   /// Transport state machine position (see lib/services/send/state-machine.ts).
-  transportState  String   @default("awaiting_quote")
+  transportState        String              @default("awaiting_quote")
   /// Hash of the pickup PIN the sender holds; the plain PIN is never stored here.
   assignedPickupPinHash String?
   /// Set when the current transporter assignment was made.
-  assignedAt      DateTime?
-  pickupVerifiedAt   DateTime?
-  deliveryVerifiedAt DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  customer        User     @relation("LogisticsShipments", fields: [customerId], references: [id])
-  packages        ShipmentPackage[]
-  quotes          ShipmentQuote[]
-  legs            ShipmentLeg[]
-  events          ShipmentEvent[]
-  assignment      ShipmentAssignment?
-  pickups         ShipmentPickup[]
+  assignedAt            DateTime?
+  pickupVerifiedAt      DateTime?
+  deliveryVerifiedAt    DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  customer              User                @relation("LogisticsShipments", fields: [customerId], references: [id])
+  packages              ShipmentPackage[]
+  quotes                ShipmentQuote[]
+  legs                  ShipmentLeg[]
+  events                ShipmentEvent[]
+  assignment            ShipmentAssignment?
+  pickups               ShipmentPickup[]
 
+  /// One logistics shipment per originating order: the database, not the app,
+  /// prevents a second shipment being created for the same order.
+  @@unique([originVertical, sourceReference])
   @@index([customerId, status])
   @@index([status, createdAt])
   @@index([sourceVertical, sourceReference])
   @@index([originVertical])
-  /// One logistics shipment per originating order: the database, not the app,
-  /// prevents a second shipment being created for the same order.
-  @@unique([originVertical, sourceReference])
 }
 
 model ShipmentPackage {
-  id          String   @id @default(cuid())
+  id          String            @id @default(cuid())
   shipmentId  String
   description String
   weightKg    Int
-  quantity    Int      @default(1)
+  quantity    Int               @default(1)
   dimensions  String?
   shipment    LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
@@ -2792,30 +2793,30 @@ model ShipmentPackage {
 
 /// An independent logistics provider organisation or individual.
 model LogisticsProvider {
-  id            String   @id @default(cuid())
-  ownerId       String
-  name          String
+  id              String            @id @default(cuid())
+  ownerId         String
+  name            String
   /// courier | car | van | truck | fleet | air | sea | rail | warehouse | forwarder | logistics
-  providerType  String
+  providerType    String
   /// naijasend (registered here) | naijadrive (enrolled from NaijaDrive)
-  sourcePlatform String  @default("naijasend")
-  country       String   @default("Nigeria")
-  operatingCities String[] @default([])
-  contactPhone  String
+  sourcePlatform  String            @default("naijasend")
+  country         String            @default("Nigeria")
+  operatingCities String[]          @default([])
+  contactPhone    String
   /// Legal registration / licence details supplied by the provider.
-  licenceRef    String?
-  insuranceRef  String?
+  licenceRef      String?
+  insuranceRef    String?
   /// pending | verified | rejected | suspended
-  status        String   @default("pending")
-  verifiedAt    DateTime?
+  status          String            @default("pending")
+  verifiedAt      DateTime?
   /// Capacity envelope advertised by the provider (not a NaijaSend guarantee).
-  capacityKg    Int?
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  owner         User     @relation("LogisticsProviderOwner", fields: [ownerId], references: [id])
-  vehicles      ProviderVehicle[]
-  quotes        ShipmentQuote[]
+  capacityKg      Int?
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  owner           User              @relation("LogisticsProviderOwner", fields: [ownerId], references: [id])
+  vehicles        ProviderVehicle[]
+  quotes          ShipmentQuote[]
 
   @@index([providerType, status])
   @@index([country, status])
@@ -2825,42 +2826,42 @@ model LogisticsProvider {
 /// A vehicle or transport asset the provider operates. NaijaDrive vehicles are
 /// linked here by `driverProfileId` rather than copied.
 model ProviderVehicle {
-  id              String   @id @default(cuid())
+  id              String            @id @default(cuid())
   providerId      String
   /// truck types: box | flatbed | container | refrigerated | tipper | tanker | heavy_haul
   vehicleType     String
   make            String?
   model           String?
   plate           String?
-  capacityKg      Int      @default(0)
+  capacityKg      Int               @default(0)
   /// Enrolled NaijaDrive driver, when the vehicle came from NaijaDrive.
   driverProfileId String?
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
   provider        LogisticsProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
-  @@index([providerId, active])
   @@unique([providerId, plate])
+  @@index([providerId, active])
 }
 
 /// A provider's quotation against a shipment. Only the provider sets the price.
 model ShipmentQuote {
-  id           String   @id @default(cuid())
-  shipmentId   String
-  providerId   String
-  amountKobo   BigInt
-  currency     String   @default("NGN")
-  transitDays  Int      @default(1)
+  id          String            @id @default(cuid())
+  shipmentId  String
+  providerId  String
+  amountKobo  BigInt
+  currency    String            @default("NGN")
+  transitDays Int               @default(1)
   /// Transport modes this quote covers, in order (multimodal when > 1).
-  modes        String[] @default([])
-  message      String?
+  modes       String[]          @default([])
+  message     String?
   /// offered | accepted | declined | expired | withdrawn
-  status       String   @default("offered")
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  shipment     LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
-  provider     LogisticsProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  status      String            @default("offered")
+  expiresAt   DateTime
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  shipment    LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  provider    LogisticsProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   @@unique([shipmentId, providerId])
   @@index([shipmentId, status])
@@ -2869,45 +2870,45 @@ model ShipmentQuote {
 
 /// One leg of a shipment. A shipment is delivered only when every leg is.
 model ShipmentLeg {
-  id            String   @id @default(cuid())
-  shipmentId    String
-  sequence      Int
+  id          String            @id @default(cuid())
+  shipmentId  String
+  sequence    Int
   /// motorcycle | car | van | truck | air | sea | rail | warehouse
-  mode          String
-  providerId    String?
-  fromLabel     String
-  toLabel       String
+  mode        String
+  providerId  String?
+  fromLabel   String
+  toLabel     String
   /// pending | assigned | picked_up | in_transit | arrived | failed
-  status        String   @default("pending")
-  carrierRef    String?
+  status      String            @default("pending")
+  carrierRef  String?
   /// Customer-visible pickup and delivery codes for the first and last leg.
-  pickupPin     String?
-  deliveryPin   String?
-  startedAt     DateTime?
-  completedAt   DateTime?
-  shipment      LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  pickupPin   String?
+  deliveryPin String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  shipment    LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
   @@unique([shipmentId, sequence])
   @@index([shipmentId, status])
 }
 
 model ShipmentEvent {
-  id         String   @id @default(cuid())
-  shipmentId String
-  status     String
+  id             String            @id @default(cuid())
+  shipmentId     String
+  status         String
   /// Timeline label shown to the customer.
-  label      String
-  note       String?
-  actorId    String?
+  label          String
+  note           String?
+  actorId        String?
   /// Simulated external carrier milestone (never presented as live tracking).
-  simulated  Boolean  @default(false)
+  simulated      Boolean           @default(false)
   /// Makes a repeated transition a no-op instead of a duplicate event.
   idempotencyKey String?
-  createdAt  DateTime @default(now())
-  shipment   LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  createdAt      DateTime          @default(now())
+  shipment       LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
-  @@index([shipmentId, createdAt])
   @@unique([shipmentId, idempotencyKey])
+  @@index([shipmentId, createdAt])
 }
 
 /// Proof supplied by the provider at handover.
@@ -2929,19 +2930,19 @@ model ShipmentProof {
 /// verified, and the customer booked that provider's quote. A driver pressing a
 /// button cannot create this row.
 model ShipmentAssignment {
-  id             String   @id @default(cuid())
-  shipmentId     String   @unique
-  providerId     String
-  quoteId        String
+  id              String            @id @default(cuid())
+  shipmentId      String            @unique
+  providerId      String
+  quoteId         String
   /// Vehicle the provider committed for this shipment.
-  vehicleId      String?
+  vehicleId       String?
   /// Hash of the delivery PIN handed to the customer at booking; the plain PIN
   /// is never stored on the assignment.
   deliveryPinHash String
-  assignedAt     DateTime @default(now())
-  revokedAt      DateTime?
-  revokedReason  String?
-  shipment       LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  assignedAt      DateTime          @default(now())
+  revokedAt       DateTime?
+  revokedReason   String?
+  shipment        LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
   @@index([providerId])
 }
@@ -2950,17 +2951,17 @@ model ShipmentAssignment {
 /// confirmation creates one, and the unique shipmentId means a shipment can never
 /// be marked picked up twice.
 model ShipmentPickup {
-  id              String   @id @default(cuid())
-  shipmentId      String   @unique
-  legId           String?
-  actorId         String
+  id            String            @id @default(cuid())
+  shipmentId    String            @unique
+  legId         String?
+  actorId       String
   /// pin | sender | admin
-  method          String
-  pickupPinUsed   Boolean  @default(true)
-  providerId      String
-  verifiedAt      DateTime @default(now())
-  note            String?
-  shipment        LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  method        String
+  pickupPinUsed Boolean           @default(true)
+  providerId    String
+  verifiedAt    DateTime          @default(now())
+  note          String?
+  shipment      LogisticsShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
   @@index([providerId])
 }
@@ -2975,77 +2976,77 @@ model ShipmentPickup {
 // ---------------------------------------------------------------------------
 
 model StayHost {
-  id           String   @id @default(cuid())
-  ownerId      String   @unique
-  displayName  String
-  bio          String?
-  phone        String?
-  country      String   @default("Nigeria")
+  id          String         @id @default(cuid())
+  ownerId     String         @unique
+  displayName String
+  bio         String?
+  phone       String?
+  country     String         @default("Nigeria")
   /// pending | verified | rejected | suspended
-  status       String   @default("pending")
-  verifiedAt   DateTime?
+  status      String         @default("pending")
+  verifiedAt  DateTime?
   /// Identity/document reference the host supplied; never invented by the platform.
-  documentRef  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  owner        User     @relation("StayHostOwner", fields: [ownerId], references: [id])
-  properties   StayProperty[]
+  documentRef String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  owner       User           @relation("StayHostOwner", fields: [ownerId], references: [id])
+  properties  StayProperty[]
 
   @@index([status])
 }
 
 model StayProperty {
-  id            String   @id @default(cuid())
-  hostId        String
-  slug          String   @unique
-  title         String
+  id              String            @id @default(cuid())
+  hostId          String
+  slug            String            @unique
+  title           String
   /// hotels | serviced-apartments | short-term-rentals | long-term-rentals |
   /// houses-for-sale | land-and-plots | student-accommodation | corporate-stays |
   /// vacation-homes | event-conference-spaces
-  category      String
+  category        String
   /// stay | rent | sale | land
-  listingType   String   @default("stay")
-  description   String
-  city          String
-  state         String?
-  country       String   @default("Nigeria")
-  addressLine   String?
-  latitude      Float?
-  longitude     Float?
-  bedrooms      Int      @default(1)
-  beds          Int      @default(1)
-  bathrooms     Int      @default(1)
-  maxGuests     Int      @default(2)
+  listingType     String            @default("stay")
+  description     String
+  city            String
+  state           String?
+  country         String            @default("Nigeria")
+  addressLine     String?
+  latitude        Float?
+  longitude       Float?
+  bedrooms        Int               @default(1)
+  beds            Int               @default(1)
+  bathrooms       Int               @default(1)
+  maxGuests       Int               @default(2)
   /// Amenities the HOST supplied; the platform never adds unverified claims.
-  amenities     String[] @default([])
-  houseRules    String[] @default([])
-  powerBackup   Boolean  @default(false)
-  waterSupply   Boolean  @default(false)
-  internet      Boolean  @default(false)
-  parking       Boolean  @default(false)
-  accessible    Boolean  @default(false)
-  security24h   Boolean  @default(false)
+  amenities       String[]          @default([])
+  houseRules      String[]          @default([])
+  powerBackup     Boolean           @default(false)
+  waterSupply     Boolean           @default(false)
+  internet        Boolean           @default(false)
+  parking         Boolean           @default(false)
+  accessible      Boolean           @default(false)
+  security24h     Boolean           @default(false)
   /// nightly price in kobo for the base unit (stays/rents)
-  nightlyKobo   BigInt   @default(0)
+  nightlyKobo     BigInt            @default(0)
   /// sale price in kobo for sale/land listings
-  salePriceKobo BigInt?
-  cleaningFeeKobo BigInt @default(0)
-  serviceFeeBps Int      @default(500)
-  minimumNights Int      @default(1)
-  currency      String   @default("NGN")
-  timeZone      String   @default("Africa/Lagos")
+  salePriceKobo   BigInt?
+  cleaningFeeKobo BigInt            @default(0)
+  serviceFeeBps   Int               @default(500)
+  minimumNights   Int               @default(1)
+  currency        String            @default("NGN")
+  timeZone        String            @default("Africa/Lagos")
   /// draft | pending | published | rejected | suspended
-  status        String   @default("draft")
+  status          String            @default("draft")
   /// true for clearly-labelled demonstration listings only
-  isDemo        Boolean  @default(false)
-  featured      Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  host          StayHost @relation(fields: [hostId], references: [id])
-  images        StayImage[]
-  units         StayUnit[]
-  reservations  StayReservation[]
-  reviews       StayReview[]
+  isDemo          Boolean           @default(false)
+  featured        Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  host            StayHost          @relation(fields: [hostId], references: [id])
+  images          StayImage[]
+  units           StayUnit[]
+  reservations    StayReservation[]
+  reviews         StayReview[]
 
   @@index([category, status])
   @@index([city, status])
@@ -3055,25 +3056,25 @@ model StayProperty {
 /// Ordered gallery images. Generated demo art is marked so it is never presented
 /// as a photograph of a real bookable property.
 model StayImage {
-  id         String   @id @default(cuid())
+  id         String       @id @default(cuid())
   propertyId String
   url        String
   alt        String
-  sortOrder  Int      @default(0)
-  kind       String   @default("photo") // photo | generated-demo
+  sortOrder  Int          @default(0)
+  kind       String       @default("photo") // photo | generated-demo
   property   StayProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@index([propertyId, sortOrder])
 }
 
 model StayUnit {
-  id           String   @id @default(cuid())
+  id           String            @id @default(cuid())
   propertyId   String
   name         String
-  maxGuests    Int      @default(2)
-  nightlyKobo  BigInt   @default(0)
-  quantity     Int      @default(1)
-  property     StayProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  maxGuests    Int               @default(2)
+  nightlyKobo  BigInt            @default(0)
+  quantity     Int               @default(1)
+  property     StayProperty      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   reservations StayReservation[]
 
   @@index([propertyId])
@@ -3081,49 +3082,49 @@ model StayUnit {
 
 /// A host-blocked date range (maintenance, personal use).
 model StayBlock {
-  id         String   @id @default(cuid())
-  unitId     String
-  startDate  DateTime
-  endDate    DateTime
-  reason     String?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  unitId    String
+  startDate DateTime
+  endDate   DateTime
+  reason    String?
+  createdAt DateTime @default(now())
 
   @@index([unitId, startDate])
 }
 
 model StayReservation {
-  id            String   @id @default(cuid())
-  reference     String   @unique
-  propertyId    String
-  unitId        String
-  guestId       String
+  id             String                 @id @default(cuid())
+  reference      String                 @unique
+  propertyId     String
+  unitId         String
+  guestId        String
   /// hold | awaiting_payment | confirmed | cancelled | completed | no_show | disputed
-  status        String   @default("hold")
-  paymentStatus String   @default("unpaid")
-  checkIn       DateTime
-  checkOut      DateTime
-  nights        Int
-  guests        Int
-  rooms         Int      @default(1)
+  status         String                 @default("hold")
+  paymentStatus  String                 @default("unpaid")
+  checkIn        DateTime
+  checkOut       DateTime
+  nights         Int
+  guests         Int
+  rooms          Int                    @default(1)
   /// Server-computed snapshot of the accepted price and policy.
-  currency      String   @default("NGN")
-  nightlyKobo   BigInt
-  subtotalKobo  BigInt
-  cleaningKobo  BigInt   @default(0)
-  serviceKobo   BigInt   @default(0)
-  totalKobo     BigInt
+  currency       String                 @default("NGN")
+  nightlyKobo    BigInt
+  subtotalKobo   BigInt
+  cleaningKobo   BigInt                 @default(0)
+  serviceKobo    BigInt                 @default(0)
+  totalKobo      BigInt
   policySnapshot String
-  guestName     String
-  guestPhone    String
-  holdExpiresAt DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  guestName      String
+  guestPhone     String
+  holdExpiresAt  DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
   /// Version for optimistic transitions.
-  version       Int      @default(0)
-  property      StayProperty @relation(fields: [propertyId], references: [id])
-  unit          StayUnit     @relation(fields: [unitId], references: [id])
-  guest         User         @relation("StayGuest", fields: [guestId], references: [id])
-  events        StayReservationEvent[]
+  version        Int                    @default(0)
+  property       StayProperty           @relation(fields: [propertyId], references: [id])
+  unit           StayUnit               @relation(fields: [unitId], references: [id])
+  guest          User                   @relation("StayGuest", fields: [guestId], references: [id])
+  events         StayReservationEvent[]
 
   @@index([propertyId, status])
   @@index([guestId, status])
@@ -3131,26 +3132,26 @@ model StayReservation {
 }
 
 model StayReservationEvent {
-  id            String   @id @default(cuid())
+  id            String          @id @default(cuid())
   reservationId String
   status        String
   note          String?
   actorId       String?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime        @default(now())
   reservation   StayReservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 
   @@index([reservationId, createdAt])
 }
 
 model StayReview {
-  id            String   @id @default(cuid())
+  id            String       @id @default(cuid())
   propertyId    String
-  reservationId String   @unique
+  reservationId String       @unique
   guestId       String
   rating        Int
   comment       String?
-  status        String   @default("published")
-  createdAt     DateTime @default(now())
+  status        String       @default("published")
+  createdAt     DateTime     @default(now())
   property      StayProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@index([propertyId, status])
@@ -3179,7 +3180,7 @@ model StayMessage {
 // ---------------------------------------------------------------------------
 
 model DeviceRegistration {
-  id           String   @id @default(cuid())
+  id           String         @id @default(cuid())
   userId       String
   /// web | android | ios
   platform     String
@@ -3188,10 +3189,10 @@ model DeviceRegistration {
   appVersion   String?
   /// JSON capability report captured at registration (location, wakeLock, push…).
   capabilities String?
-  lastSeenAt   DateTime @default(now())
+  lastSeenAt   DateTime       @default(now())
   revokedAt    DateTime?
-  createdAt    DateTime @default(now())
-  user         User     @relation("UserDevices", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime       @default(now())
+  user         User           @relation("UserDevices", fields: [userId], references: [id], onDelete: Cascade)
   pings        LocationPing[]
 
   @@index([userId, platform])
@@ -3200,23 +3201,23 @@ model DeviceRegistration {
 /// One recorded position. `clientId` makes uploads idempotent, so a retried
 /// queue entry can never create a duplicate row.
 model LocationPing {
-  id          String   @id @default(cuid())
-  deviceId    String
-  userId      String
+  id         String             @id @default(cuid())
+  deviceId   String
+  userId     String
   /// Session this fix belongs to: "drive:<rideId>", "send:<shipmentId>".
-  sessionRef  String
-  latitude    Float
-  longitude   Float
-  accuracyM   Float?
-  speedMps    Float?
-  headingDeg  Float?
+  sessionRef String
+  latitude   Float
+  longitude  Float
+  accuracyM  Float?
+  speedMps   Float?
+  headingDeg Float?
   /// Device-side capture time; ordering always uses this, never arrival time.
-  capturedAt  DateTime
+  capturedAt DateTime
   /// Client-generated unique id for idempotent upload.
-  clientId    String
-  source      String   @default("browser") // browser | native
-  createdAt   DateTime @default(now())
-  device      DeviceRegistration @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  clientId   String
+  source     String             @default("browser") // browser | native
+  createdAt  DateTime           @default(now())
+  device     DeviceRegistration @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@unique([deviceId, clientId])
   @@index([sessionRef, capturedAt])
@@ -3232,41 +3233,41 @@ model LocationPing {
 // ---------------------------------------------------------------------------
 
 model HomeVariant {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   /// original | africa-super-app | mobility | commerce
-  key         String   @unique
+  key         String          @unique
   name        String
   description String
-  enabled     Boolean  @default(true)
+  enabled     Boolean         @default(true)
   /// Share of new visitors, in whole percent. Enabled variants must total 100.
-  allocation  Int      @default(25)
-  sortOrder   Int      @default(0)
+  allocation  Int             @default(25)
+  sortOrder   Int             @default(0)
   /// Bumped on every admin save so concurrent edits cannot silently overwrite.
-  revision    Int      @default(1)
+  revision    Int             @default(1)
   slides      HomeHeroSlide[]
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime        @updatedAt
 }
 
 model HomeHeroSlide {
-  id          String   @id @default(cuid())
-  variantKey  String
+  id             String      @id @default(cuid())
+  variantKey     String
   /// Identifies the slide in code so imagery and copy can be edited independently.
-  slug        String
-  headline    String
-  body        String
-  ctaLabel    String
-  ctaHref     String
+  slug           String
+  headline       String
+  body           String
+  ctaLabel       String
+  ctaHref        String
   secondaryLabel String?
   secondaryHref  String?
-  imageId     String?
+  imageId        String?
   /// Alt text is required; a slide without it cannot be published.
-  alt         String
-  sortOrder   Int      @default(0)
-  enabled     Boolean  @default(true)
+  alt            String
+  sortOrder      Int         @default(0)
+  enabled        Boolean     @default(true)
   /// Optional campaign window (ISO dates, inclusive).
-  startsAt    DateTime?
-  endsAt      DateTime?
-  variant     HomeVariant @relation(fields: [variantKey], references: [key], onDelete: Cascade)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  variant        HomeVariant @relation(fields: [variantKey], references: [key], onDelete: Cascade)
 
   @@unique([variantKey, slug])
   @@index([variantKey, enabled, sortOrder])
@@ -3288,15 +3289,15 @@ model HomeAssignment {
 
 /// Aggregate counters only: no personal data, no per-visitor profiles.
 model HomeMetric {
-  id        String   @id @default(cuid())
+  id         String   @id @default(cuid())
   variantKey String
   /// impression | hero_impression | hero_click | card_click | search | cta_click
-  kind      String
+  kind       String
   /// Empty string when the event is not slide-scoped: NULL would defeat the
   /// unique index, since Postgres treats NULLs as distinct.
-  slideSlug String   @default("")
-  day       DateTime @default(now())
-  count     Int      @default(0)
+  slideSlug  String   @default("")
+  day        DateTime @default(now())
+  count      Int      @default(0)
 
   @@unique([variantKey, kind, slideSlug, day])
   @@index([variantKey, day])
@@ -3353,28 +3354,28 @@ enum MilestoneStatus {
 }
 
 model EscrowMilestone {
-  id                String          @id @default(cuid())
+  id                      String          @id @default(cuid())
   /// Human-facing reference shared by both parties and used in receipts.
-  reference         String          @unique
-  payerUserId       String
-  payeeUserId       String
-  title             String
-  description       String?
-  amountKobo        BigInt
-  currency          String          @default("NGN")
-  status            MilestoneStatus @default(draft)
+  reference               String          @unique
+  payerUserId             String
+  payeeUserId             String
+  title                   String
+  description             String?
+  amountKobo              BigInt
+  currency                String          @default("NGN")
+  status                  MilestoneStatus @default(draft)
   /// Monotonic guard so two concurrent transitions cannot both succeed.
-  version           Int             @default(0)
-  fundedAt          DateTime?
-  submittedAt       DateTime?
-  acceptedAt        DateTime?
-  releasedAt        DateTime?
-  refundedAt        DateTime?
+  version                 Int             @default(0)
+  fundedAt                DateTime?
+  submittedAt             DateTime?
+  acceptedAt              DateTime?
+  releasedAt              DateTime?
+  refundedAt              DateTime?
   /// Which transaction moved the money, for receipt and reconciliation.
-  fundingTransactionId String?
+  fundingTransactionId    String?
   settlementTransactionId String?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
 
   @@index([payerUserId, status])
   @@index([payeeUserId, status])
@@ -3406,16 +3407,16 @@ enum AuraActionStatus {
 }
 
 model AuraConversation {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   userId    String
-  title     String   @default("New conversation")
+  title     String        @default("New conversation")
   /// Archived conversations stay readable but leave the active list.
-  archived  Boolean  @default(false)
+  archived  Boolean       @default(false)
   /// A short rolling summary used to bound the context sent to the model.
   summary   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User          @relation(fields: [userId], references: [id])
   messages  AuraMessage[]
   actions   AuraAction[]
 
@@ -3423,22 +3424,22 @@ model AuraConversation {
 }
 
 model AuraMessage {
-  id             String          @id @default(cuid())
-  conversationId String
-  role           AuraRole
-  content        String
+  id               String           @id @default(cuid())
+  conversationId   String
+  role             AuraRole
+  content          String
   /// Tool results, recommendation cards and plan references rendered under the
   /// message. JSON so the UI can restore without re-running anything.
-  attachments    Json?
+  attachments      Json?
   /// Names of tools the model called for this turn, for the status trail.
-  toolNames      String[]        @default([])
+  toolNames        String[]         @default([])
   /// Saved items appear in the user's Saved view.
-  saved          Boolean         @default(false)
+  saved            Boolean          @default(false)
   /// Token usage reported by the provider for this turn, when available.
-  promptTokens   Int?
+  promptTokens     Int?
   completionTokens Int?
-  createdAt      DateTime        @default(now())
-  conversation   AuraConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt        DateTime         @default(now())
+  conversation     AuraConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
   @@index([saved])
@@ -3451,29 +3452,29 @@ model AuraMessage {
 /// changed between proposal and confirmation, execution is refused and a new
 /// proposal is required.
 model AuraAction {
-  id             String           @id @default(cuid())
-  conversationId String
-  userId         String
-  tool           String
-  status         AuraActionStatus @default(proposed)
+  id              String           @id @default(cuid())
+  conversationId  String
+  userId          String
+  tool            String
+  status          AuraActionStatus @default(proposed)
   /// Human-readable summary of exactly what will happen.
-  summary        String
+  summary         String
   /// Frozen tool input, hashed so the confirmed request must match it.
-  input          Json
-  inputHash      String
+  input           Json
+  inputHash       String
   /// Price/recipient snapshot shown on the review card.
-  reviewSnapshot Json
+  reviewSnapshot  Json
   /// Set when executed; the authoritative service's reference.
   resultReference String?
-  resultPayload  Json?
-  failureReason  String?
+  resultPayload   Json?
+  failureReason   String?
   /// Caller-supplied key so a repeated confirm cannot execute twice.
-  idempotencyKey String           @unique
-  expiresAt      DateTime
-  confirmedAt    DateTime?
-  executedAt     DateTime?
-  createdAt      DateTime         @default(now())
-  conversation   AuraConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  idempotencyKey  String           @unique
+  expiresAt       DateTime
+  confirmedAt     DateTime?
+  executedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  conversation    AuraConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
   @@index([conversationId])
@@ -3481,17 +3482,17 @@ model AuraAction {
 
 /// A saved cross-vertical plan (for example a Saturday in Abuja).
 model AuraPlan {
-  id             String      @id @default(cuid())
+  id             String   @id @default(cuid())
   userId         String
   conversationId String?
   title          String
   city           String?
-  status         String      @default("draft")
+  status         String   @default("draft")
   /// Ordered components: stay, meal, ride, with their chosen records and status.
   components     Json
   notes          String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([userId, updatedAt])
 }
@@ -3499,16 +3500,16 @@ model AuraPlan {
 /// Personalisation and privacy choices. Every field defaults to off/empty:
 /// Aura does not remember anything the user did not ask it to remember.
 model AuraPreference {
-  userId              String    @id
-  personalised        Boolean   @default(false)
-  useSavedPreferences Boolean   @default(false)
+  userId              String   @id
+  personalised        Boolean  @default(false)
+  useSavedPreferences Boolean  @default(false)
   /// Free-form preferences the user typed or approved, nothing inferred.
   savedPreferences    Json?
   /// City/area the user selected manually; device location is never stored.
   preferredCity       String?
   preferredArea       String?
-  updatedAt           DateTime  @updatedAt
-  user                User      @relation(fields: [userId], references: [id])
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
@@ -3516,18 +3517,18 @@ model AuraPreference {
 /// Per-turn usage and failure record for the Control Center. Stores counts and
 /// latency only — never message content.
 model AuraUsage {
-  id            String   @id @default(cuid())
-  userId        String?
-  conversationId String?
-  provider      String
-  model         String
-  status        String
-  promptTokens  Int      @default(0)
-  completionTokens Int   @default(0)
-  latencyMs     Int      @default(0)
-  toolCalls     Int      @default(0)
-  errorCode     String?
-  createdAt     DateTime @default(now())
+  id               String   @id @default(cuid())
+  userId           String?
+  conversationId   String?
+  provider         String
+  model            String
+  status           String
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  latencyMs        Int      @default(0)
+  toolCalls        Int      @default(0)
+  errorCode        String?
+  createdAt        DateTime @default(now())
 
   @@index([createdAt])
   @@index([status, createdAt])
@@ -3587,11 +3588,11 @@ model NotificationTemplate {
 /// One row per message, whatever the channel. `dedupeKey` is unique so a
 /// replayed webhook or a retried request cannot produce a second message.
 model Notification {
-  id                String               @id @default(cuid())
+  id                String                @id @default(cuid())
   userId            String?
-  user              User?                @relation("UserNotifications", fields: [userId], references: [id], onDelete: SetNull)
+  user              User?                 @relation("UserNotifications", fields: [userId], references: [id], onDelete: SetNull)
   channel           NotificationChannel
-  category          NotificationCategory @default(SYSTEM)
+  category          NotificationCategory  @default(SYSTEM)
   templateKey       String
   eventType         String
   entityType        String?
@@ -3599,19 +3600,19 @@ model Notification {
   title             String
   body              String
   data              Json?
-  status            NotificationStatus   @default(QUEUED)
-  attempts          Int                  @default(0)
-  maxAttempts       Int                  @default(4)
+  status            NotificationStatus    @default(QUEUED)
+  attempts          Int                   @default(0)
+  maxAttempts       Int                   @default(4)
   lastError         String?
   provider          String?
   providerMessageId String?
-  dedupeKey         String               @unique
-  scheduledFor      DateTime             @default(now())
+  dedupeKey         String                @unique
+  scheduledFor      DateTime              @default(now())
   sentAt            DateTime?
   deliveredAt       DateTime?
   readAt            DateTime?
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
   attemptsLog       NotificationAttempt[]
 
   @@index([userId, status, createdAt])
@@ -3672,16 +3673,16 @@ enum SearchSyncOp {
 /// changes collapse into the same row, and the worker deletes it only after the
 /// index accepted the write. Postgres remains the source of truth.
 model SearchSyncEvent {
-  id          String          @id @default(cuid())
-  dedupeKey   String          @unique
+  id          String           @id @default(cuid())
+  dedupeKey   String           @unique
   entityType  SearchEntityType
   entityId    String
-  op          SearchSyncOp    @default(UPSERT)
-  attempts    Int             @default(0)
+  op          SearchSyncOp     @default(UPSERT)
+  attempts    Int              @default(0)
   lastError   String?
   processedAt DateTime?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@index([processedAt, createdAt])
 }
@@ -3767,71 +3768,71 @@ enum PayoutState {
 }
 
 model AffiliateProfile {
-  id              String            @id @default(cuid())
-  userId          String            @unique
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status          AffiliateStatus   @default(APPLIED)
-  displayName     String?
-  channels        String[]          @default([])
-  audienceCity    String?
-  termsVersion    String
-  termsAcceptedAt DateTime?
-  payoutBank      String?
-  payoutAccountName String?
+  id                  String          @id @default(cuid())
+  userId              String          @unique
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status              AffiliateStatus @default(APPLIED)
+  displayName         String?
+  channels            String[]        @default([])
+  audienceCity        String?
+  termsVersion        String
+  termsAcceptedAt     DateTime?
+  payoutBank          String?
+  payoutAccountName   String?
   payoutAccountNumber String?
-  riskNote        String?
-  approvedAt      DateTime?
-  suspendedReason String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  riskNote            String?
+  approvedAt          DateTime?
+  suspendedReason     String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
-  links           AffiliateLink[]
-  conversions     AffiliateConversion[]
-  payouts         AffiliatePayout[]
+  links       AffiliateLink[]
+  conversions AffiliateConversion[]
+  payouts     AffiliatePayout[]
 
   @@index([status, createdAt])
 }
 
 model AffiliateCampaign {
-  id                String                 @id @default(cuid())
-  slug              String                 @unique
-  name              String
-  vertical          String                 @default("shop")
-  status            AffiliateCampaignStatus @default(DRAFT)
-  funding           CampaignFunding        @default(PLATFORM)
+  id                 String                  @id @default(cuid())
+  slug               String                  @unique
+  name               String
+  vertical           String                  @default("shop")
+  status             AffiliateCampaignStatus @default(DRAFT)
+  funding            CampaignFunding         @default(PLATFORM)
   /// Percentage in basis points, applied to the qualifying basis.
-  commissionBps     Int                    @default(0)
+  commissionBps      Int                     @default(0)
   /// Fixed alternative in kobo; when set, takes precedence over commissionBps.
   commissionFlatKobo BigInt?
-  budgetKobo        BigInt                 @default(0)
-  spentKobo         BigInt                 @default(0)
-  attributionDays   Int                    @default(30)
+  budgetKobo         BigInt                  @default(0)
+  spentKobo          BigInt                  @default(0)
+  attributionDays    Int                     @default(30)
   /// Which amount is commissioned: SUBTOTAL (excludes delivery) or TOTAL.
-  commissionBasis   String                 @default("SUBTOTAL")
-  ruleVersion       Int                    @default(1)
-  effectiveFrom     DateTime               @default(now())
-  effectiveTo       DateTime?
-  termsUrl          String?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
+  commissionBasis    String                  @default("SUBTOTAL")
+  ruleVersion        Int                     @default(1)
+  effectiveFrom      DateTime                @default(now())
+  effectiveTo        DateTime?
+  termsUrl           String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
 
-  links             AffiliateLink[]
-  conversions       AffiliateConversion[]
+  links       AffiliateLink[]
+  conversions AffiliateConversion[]
 
   @@index([status, vertical])
 }
 
 model AffiliateLink {
-  id          String             @id @default(cuid())
+  id          String            @id @default(cuid())
   affiliateId String
   affiliate   AffiliateProfile  @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
   campaignId  String
   campaign    AffiliateCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  code        String             @unique
+  code        String            @unique
   /// Allowlisted destination path on this platform; never an external URL.
   destination String
-  active      Boolean            @default(true)
-  createdAt   DateTime           @default(now())
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now())
 
   touches     AttributionTouch[]
   conversions AffiliateConversion[]
@@ -3854,58 +3855,58 @@ model AttributionTouch {
 }
 
 model AffiliateConversion {
-  id              String          @id @default(cuid())
+  id                   String            @id @default(cuid())
   /// Unique: one qualifying event can never produce two commissions.
-  dedupeKey       String          @unique
-  affiliateId     String
-  affiliate       AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Restrict)
-  campaignId      String
-  campaign        AffiliateCampaign @relation(fields: [campaignId], references: [id], onDelete: Restrict)
-  linkId          String?
-  link            AffiliateLink?   @relation(fields: [linkId], references: [id], onDelete: SetNull)
+  dedupeKey            String            @unique
+  affiliateId          String
+  affiliate            AffiliateProfile  @relation(fields: [affiliateId], references: [id], onDelete: Restrict)
+  campaignId           String
+  campaign             AffiliateCampaign @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  linkId               String?
+  link                 AffiliateLink?    @relation(fields: [linkId], references: [id], onDelete: SetNull)
   /// The order or booking that qualified, by type and id.
-  entityType      String
-  entityId        String
+  entityType           String
+  entityId             String
   /// Frozen at capture so a later rule edit cannot change an earned liability.
-  ruleVersion     Int
+  ruleVersion          Int
   /// SUBTOTAL or TOTAL as it was when the conversion was created. Basis type is
   /// not derivable from basisKobo, and the campaign field is editable, so reading
   /// it later would let an edit rewrite history.
-  basisType       String?
+  basisType            String?
   /// Delivery amount included in basisKobo, when the basis was TOTAL.
   includedDeliveryKobo BigInt?
-  commissionBps   Int
-  basisKobo       BigInt
-  amountKobo      BigInt
-  state           ConversionState @default(TRACKED)
+  commissionBps        Int
+  basisKobo            BigInt
+  amountKobo           BigInt
+  state                ConversionState   @default(TRACKED)
   /// Ledger reference once the liability or settlement is posted.
-  ledgerReference String?
-  reversibleUntil DateTime?
-  reason          String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  ledgerReference      String?
+  reversibleUntil      DateTime?
+  reason               String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
   /// Set when historical reversal evidence is insufficient to reconstruct a
   /// cumulative total. Financial mutation is blocked until reviewed.
-  reconciliationRequired Boolean   @default(false)
+  reconciliationRequired Boolean @default(false)
 
   @@index([affiliateId, state, createdAt])
   @@index([entityType, entityId])
 }
 
 model AffiliatePayout {
-  id            String      @id @default(cuid())
-  affiliateId   String
-  affiliate     AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Restrict)
-  reference     String      @unique
-  amountKobo    BigInt
-  state         PayoutState @default(REQUESTED)
+  id              String           @id @default(cuid())
+  affiliateId     String
+  affiliate       AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Restrict)
+  reference       String           @unique
+  amountKobo      BigInt
+  state           PayoutState      @default(REQUESTED)
   ledgerReference String?
-  requestedAt   DateTime    @default(now())
-  decidedBy     String?
-  decidedAt     DateTime?
-  paidAt        DateTime?
-  failureReason String?
+  requestedAt     DateTime         @default(now())
+  decidedBy       String?
+  decidedAt       DateTime?
+  paidAt          DateTime?
+  failureReason   String?
 
   @@index([affiliateId, state, requestedAt])
 }
@@ -3952,28 +3953,28 @@ enum ReversalIntentState {
 /// cannot lose it and a rollback cannot leave one behind. Processed by the
 /// worker, independently of the customer refund.
 model AffiliateReversalIntent {
-  id             String               @id @default(cuid())
-  dedupeKey      String               @unique
-  refundId       String
-  orderId        String
+  id               String              @id @default(cuid())
+  dedupeKey        String              @unique
+  refundId         String
+  orderId          String
   /// Gross refunded amount as reported by the provider.
-  amountKobo     BigInt
+  amountKobo       BigInt
   /// Portion of the refund that falls inside the conversion's frozen commission
   /// basis. Null on pre-policy intents, which must be reviewed rather than applied
   /// at the gross figure.
-  eligibleKobo   BigInt?
+  eligibleKobo     BigInt?
   /// Identifies how eligibleKobo was derived, so a later change cannot be read as
   /// if it had always applied.
   allocationPolicy String?
-  state          ReversalIntentState  @default(PENDING)
-  attempts       Int                  @default(0)
-  maxAttempts    Int                  @default(6)
-  leaseToken     String?
-  leaseExpiresAt DateTime?
-  lastError      String?
-  processedAt    DateTime?
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  state            ReversalIntentState @default(PENDING)
+  attempts         Int                 @default(0)
+  maxAttempts      Int                 @default(6)
+  leaseToken       String?
+  leaseExpiresAt   DateTime?
+  lastError        String?
+  processedAt      DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 
   @@index([state, createdAt])
   @@index([orderId])
@@ -4108,18 +4109,18 @@ model PlusContentCard {
 /// of `currency`. A positive price cannot be activated without an approved
 /// effective term and `paidActivationApproved`.
 model PlusPlan {
-  id                     String            @id @default(cuid())
-  code                   String            @unique
+  id                     String             @id @default(cuid())
+  code                   String             @unique
   name                   String
   description            String
-  status                 PlusPlanStatus    @default(DRAFT)
+  status                 PlusPlanStatus     @default(DRAFT)
   currency               String
   priceMinor             BigInt?
   billingPeriod          PlusBillingPeriod?
-  paidActivationApproved Boolean           @default(false)
-  sortOrder              Int               @default(0)
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
+  paidActivationApproved Boolean            @default(false)
+  sortOrder              Int                @default(0)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
 
   countries   PlusPlanCountry[]
   terms       PlusPlanTerm[]
@@ -4287,22 +4288,22 @@ enum CountryPublicationStatus {
 }
 
 model CountryProfile {
-  code              String                    @id
-  slug              String                    @unique
+  code              String                   @id
+  slug              String                   @unique
   name              String
   region            String
   localizedNames    Json?
   introduction      String
-  editorialStatus   CountryEditorialStatus    @default(NEEDS_REVIEW)
-  publicationStatus CountryPublicationStatus  @default(DRAFT)
+  editorialStatus   CountryEditorialStatus   @default(NEEDS_REVIEW)
+  publicationStatus CountryPublicationStatus @default(DRAFT)
   /// Featured on the Shop country rail. Featuring changes order, never coverage:
   /// every published country remains reachable from the directory.
-  homeFeatured      Boolean                   @default(false)
-  sortOrder         Int                       @default(0)
+  homeFeatured      Boolean                  @default(false)
+  sortOrder         Int                      @default(0)
   publishedAt       DateTime?
   publishedBy       String?
-  createdAt         DateTime                  @default(now())
-  updatedAt         DateTime                  @updatedAt
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
 
   themes CountryTheme[]
 
@@ -4313,19 +4314,19 @@ model CountryProfile {
 /// One editorial "Known for" association. It is information about the country,
 /// not evidence that NaijaDeals supplies the product.
 model CountryTheme {
-  id                String                  @id @default(cuid())
-  countryCode       String
-  key               String
-  label             String
-  association       String
-  imageUrl          String?
-  imageAlt          String?
-  imageKind         String?
-  imageProvenance   String?
-  sortOrder         Int                     @default(0)
-  editorialStatus   CountryEditorialStatus  @default(NEEDS_REVIEW)
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
+  id              String                 @id @default(cuid())
+  countryCode     String
+  key             String
+  label           String
+  association     String
+  imageUrl        String?
+  imageAlt        String?
+  imageKind       String?
+  imageProvenance String?
+  sortOrder       Int                    @default(0)
+  editorialStatus CountryEditorialStatus @default(NEEDS_REVIEW)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
   country CountryProfile       @relation(fields: [countryCode], references: [code], onDelete: Cascade)
   sources CountryThemeSource[]
@@ -4335,17 +4336,144 @@ model CountryTheme {
 }
 
 model CountryThemeSource {
-  id        String   @id @default(cuid())
-  themeId   String
-  title     String
-  publisher String?
-  url       String
+  id         String   @id @default(cuid())
+  themeId    String
+  title      String
+  publisher  String?
+  url        String
   accessedAt DateTime
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
 
   theme CountryTheme @relation(fields: [themeId], references: [id], onDelete: Cascade)
 
   @@unique([themeId, url])
   @@index([themeId, sortOrder])
+}
+
+// ---------------------------------------------------------------------------
+// Customer support — one shared contact and ticket system for every vertical
+// ---------------------------------------------------------------------------
+
+enum SupportTicketStatus {
+  OPEN
+  PENDING
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum SupportMessageAuthor {
+  CUSTOMER
+  STAFF
+  SYSTEM
+}
+
+enum SupportEventType {
+  CREATED
+  ASSIGNED
+  UNASSIGNED
+  STATUS_CHANGED
+  PRIORITY_CHANGED
+  STAFF_REPLY
+  INTERNAL_NOTE
+  CUSTOMER_REPLY
+  ACCESS_ISSUED
+  ACCESS_REVOKED
+}
+
+/// One customer or guest enquiry. The ticket stores its own vertical and topic,
+/// so a guest ticket never depends on a marketplace account.
+model SupportTicket {
+  id                    String                @id @default(cuid())
+  /// Human reference shown to the customer, e.g. ND-SUP-7K4Q2M.
+  reference             String                @unique
+  /// Canonical vertical key from lib/data/ecosystem, or "general".
+  vertical              String
+  topic                 String
+  subject               String                @db.VarChar(160)
+  status                SupportTicketStatus   @default(OPEN)
+  priority              SupportTicketPriority @default(NORMAL)
+  countryCode           String?
+  userId                String?
+  guestName             String?               @db.VarChar(120)
+  /// Normalised email for reply context only. Never used for authentication and
+  /// never auto-links a guest ticket to an account.
+  guestEmail            String?
+  assignedToId          String?
+  lastActivityAt        DateTime              @default(now())
+  lastCustomerMessageAt DateTime?
+  lastStaffMessageAt    DateTime?
+  closedAt              DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  user         User?                @relation("SupportTicketOwner", fields: [userId], references: [id], onDelete: SetNull)
+  assignedTo   User?                @relation("SupportTicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  messages     SupportMessage[]
+  events       SupportTicketEvent[]
+  accessTokens SupportAccessToken[]
+
+  @@index([status, lastActivityAt])
+  @@index([vertical, status, lastActivityAt])
+  @@index([userId, lastActivityAt])
+  @@index([assignedToId, status])
+  @@index([guestEmail])
+}
+
+/// Customer or staff message. Internal notes share the table but are filtered
+/// out of every customer-facing response and count.
+model SupportMessage {
+  id           String               @id @default(cuid())
+  ticketId     String
+  authorType   SupportMessageAuthor
+  authorUserId String?
+  isInternal   Boolean              @default(false)
+  body         String               @db.VarChar(8000)
+  createdAt    DateTime             @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User?         @relation("SupportMessageAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId, createdAt])
+  @@index([ticketId, isInternal, createdAt])
+}
+
+/// Append-only assignment, status, priority and access history.
+model SupportTicketEvent {
+  id          String           @id @default(cuid())
+  ticketId    String
+  actorUserId String?
+  type        SupportEventType
+  fromValue   String?
+  toValue     String?
+  note        String?          @db.VarChar(240)
+  createdAt   DateTime         @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actor  User?         @relation("SupportEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId, createdAt])
+}
+
+/// Hashed guest access token. The raw token is shown once; only its sha256 hash
+/// is stored. Expired or revoked tokens grant nothing.
+model SupportAccessToken {
+  id         String    @id @default(cuid())
+  ticketId   String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, expiresAt])
 }

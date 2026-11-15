@@ -1,8 +1,9 @@
 "use client";
 
+import { supportHref } from "@/lib/support/contact-link";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 type Profile = {
   id: string;
@@ -76,7 +77,7 @@ function AffiliateContact() {
       <p>
         Programme and partnership enquiries:{" "}
         <a
-          href={mailtoFor("partners", { subject: "Affiliate programme" })}
+          href={supportHref("partners", { subject: "Affiliate programme" })}
           className="font-bold text-primary underline-offset-2 hover:underline"
         >
           {contactAddress("partners")}
@@ -84,7 +85,7 @@ function AffiliateContact() {
       </p>
       <p>
         Account or commission help:{" "}
-        <a href={mailtoFor("support")} className="font-bold text-primary underline-offset-2 hover:underline">
+        <a href={supportHref("support")} className="font-bold text-primary underline-offset-2 hover:underline">
           {contactAddress("support")}
         </a>
       </p>
@@ -316,7 +317,7 @@ export function AffiliateHome() {
                         <>
                           contact{" "}
                           <a
-                            href={mailtoFor("support", { subject: "Affiliate account suspension" })}
+                            href={supportHref("support", { subject: "Affiliate account suspension" })}
                             className="font-bold text-primary underline-offset-2 hover:underline"
                           >
                             {contactAddress("support")}

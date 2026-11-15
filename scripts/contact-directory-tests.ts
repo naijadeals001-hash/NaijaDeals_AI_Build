@@ -285,21 +285,18 @@ async function httpChecks(baseUrl: string) {
       if (!html.includes(contactAddress(key as ContactKey))) missing.push(`${route} -> ${key}`);
     }
 
-    for (const match of html.matchAll(/mailto:([^"'?>\s\\,]+)/g)) {
-      const address = decodeURIComponent(match[1]).replace(/\\+$/, "").toLowerCase();
-      if (!approved.has(address)) stray.push(`${route}: ${address}`);
-    }
+    // Contact actions must open the on-site support experience; a mailto
+    // composer is no longer launched from an application page.
+    const mailtos = [...html.matchAll(/mailto:/g)].length;
+    if (mailtos > 0) stray.push(`${route}: ${mailtos} mailto link(s)`);
+    const supportLinks = html.split('"' + '/contact').length - 1;
+    if (supportLinks === 0) stray.push(`${route}: no on-site /contact link`);
   }
-
-  check(missing.length === 0, "every audited page renders its purpose-matched address", missing.join(", "));
-  check(stray.length === 0, "every mailto target is an approved public address", stray.slice(0, 8).join(", "));
-
   const accountsPages: string[] = [];
   for (const [route] of ROUTE_EXPECTATIONS) {
     const response = await fetch(new URL(route, baseUrl), { redirect: "manual" });
     if (response.status !== 200) continue;
-    const html = await response.text();
-    if (html.includes("mailto:accounts@")) accountsPages.push(route);
+    if ((await response.text()).includes("mailto:accounts@")) accountsPages.push(route);
   }
   check(accountsPages.length === 0, "no audited page links the internal accounts address", accountsPages.join(", "));
 }

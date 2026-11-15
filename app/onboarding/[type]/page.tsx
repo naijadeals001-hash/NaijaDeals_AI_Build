@@ -1,9 +1,10 @@
+import { supportHref } from "@/lib/support/contact-link";
 import type { Metadata } from "next";
 import { CheckCircle2 } from "lucide-react";
 import { onboardingFlows } from "@/lib/data/ecosystem";
 import { TrustBadge } from "@/components/ui/badge";
 import { OnboardingForm } from "@/components/functional/onboarding-form";
-import { contactAddress, mailtoFor, type ContactKey } from "@/lib/data/contact-directory";
+import { contactAddress, type ContactKey } from "@/lib/data/contact-directory";
 
 /**
  * Contact routing per supported onboarding flow. The flows themselves are
@@ -63,7 +64,7 @@ export default function OnboardingPage({ params }: { params: { type: string } })
         <p>
           {partnerContact.label}:{" "}
           <a
-            href={mailtoFor(partnerContact.key, { subject: partnerContact.subject })}
+            href={supportHref(partnerContact.key, { subject: partnerContact.subject })}
             className="font-bold text-primary underline-offset-2 hover:underline"
           >
             {contactAddress(partnerContact.key)}
@@ -71,7 +72,7 @@ export default function OnboardingPage({ params }: { params: { type: string } })
         </p>
         <p className="mt-1">
           Onboarding help:{" "}
-          <a href={mailtoFor("support")} className="font-bold text-primary underline-offset-2 hover:underline">
+          <a href={supportHref("support")} className="font-bold text-primary underline-offset-2 hover:underline">
             {contactAddress("support")}
           </a>
         </p>

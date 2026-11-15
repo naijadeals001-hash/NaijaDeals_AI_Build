@@ -1,5 +1,6 @@
 "use client";
 
+import { supportHref } from "@/lib/support/contact-link";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Bike, Boxes, Building2, Car, Check, Container, Factory, Globe2, Headset, Landmark, Package, Refrigerator, ShieldCheck, Sprout, Store, Truck, Warehouse, Wheat, Plane, TrainFront, User, Clock, CreditCard, Navigation } from "lucide-react";
@@ -395,10 +396,10 @@ export function SendFooter() {
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 px-4 py-3 text-[10px] text-white/70">
           <p>© {new Date().getFullYear()} NaijaDeals. NaijaSend is a NaijaDeals Company. All rights reserved.</p>
           <div className="flex flex-wrap items-center gap-3">
-            <a href={mailtoFor("legal", { subject: "Terms of Service" })} className="hover:text-white hover:underline">Terms of Service</a>
-            <a href={mailtoFor("legal", { subject: "Transporter Policy" })} className="hover:text-white hover:underline">Transporter Policy</a>
-            <a href={mailtoFor("legal", { subject: "Shipping Policy" })} className="hover:text-white hover:underline">Shipping Policy</a>
-            <a href={mailtoFor("partners", { subject: "Partner Terms" })} className="hover:text-white hover:underline">Partner Terms</a>
+            <a href={supportHref("legal", { subject: "Terms of Service" })} className="hover:text-white hover:underline">Terms of Service</a>
+            <a href={supportHref("legal", { subject: "Transporter Policy" })} className="hover:text-white hover:underline">Transporter Policy</a>
+            <a href={supportHref("legal", { subject: "Shipping Policy" })} className="hover:text-white hover:underline">Shipping Policy</a>
+            <a href={supportHref("partners", { subject: "Partner Terms" })} className="hover:text-white hover:underline">Partner Terms</a>
             <span className="rounded-full bg-white/10 px-2 py-0.5">NGN</span>
           </div>
         </div>

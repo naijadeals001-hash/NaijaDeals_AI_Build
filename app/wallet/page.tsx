@@ -1,8 +1,9 @@
+import { supportHref } from "@/lib/support/contact-link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { NaijaPayWalletPage } from "@/components/pay/wallet-page";
 import { getSessionUser } from "@/lib/auth/session";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 export const metadata: Metadata = {
   title: "NaijaPay wallet",
@@ -26,13 +27,13 @@ export default async function Page() {
         <p className="space-y-1.5">
           <span className="block">
             Wallet payment or refund issue:{" "}
-            <a href={mailtoFor("payments")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+            <a href={supportHref("payments")} className="font-bold text-pay-green underline-offset-2 hover:underline">
               {contactAddress("payments")}
             </a>
           </span>
           <span className="block">
             Customer support:{" "}
-            <a href={mailtoFor("support")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+            <a href={supportHref("support")} className="font-bold text-pay-green underline-offset-2 hover:underline">
               {contactAddress("support")}
             </a>
           </span>

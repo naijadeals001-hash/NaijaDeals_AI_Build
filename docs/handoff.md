@@ -6095,3 +6095,66 @@ development checkout (which was not moved, stopped or cleaned).
 - **Blocked:** R2 S3 credentials; n8n installation (25 GB partial install
   removed; needs Node 22/NTFS or Docker). Items 2–5 of the end-to-end list stay
   BLOCKED until the R2 token exists.
+
+## 2026-11-15 — On-site contact and support system
+
+**Routes.** `/contact` (public form, vertical/topic preselect via validated
+query params), `/support/access?token=…` (one-time exchange → httpOnly cookie),
+`/support/ticket/[reference]` (guest or owner conversation), `/account/support`
+(list), `/admin/support` and `/admin/support/[id]` (Control Center inbox).
+
+**Data.** Migration `20261115180000_support_center` adds `SupportTicket`,
+`SupportMessage`, `SupportTicketEvent`, `SupportAccessToken` and the four enums,
+with indexes for status/activity, vertical, owner, assignee and guest email.
+Applied to `naijadeals_review` (REVIEW) and exercised on a disposable
+`nd_support_test_*` database that was dropped afterwards.
+
+**Permissions.** New `support:read`, `support:write`, `support:assign`;
+granted to `admin` (via PERMISSIONS), `ops`, `support` and `moderator`. Support
+access adds no order, wallet, refund, payout or trip permission. Staff reads are
+scoped by `scopeCountryCode`; a scoped agent cannot open another country's
+ticket.
+
+**Guest access.** 32-byte token, only its sha256 stored, 7-day expiry, revocable,
+single-ticket scope. The raw token is shown once after submission, exchanged at
+`/support/access` for an httpOnly cookie, then removed from the URL. A reference
+alone, an expired token, a revoked token and a token for another ticket all
+fail. Guest email is normalised and never used for authentication or automatic
+account linking.
+
+**Notifications.** `support.ticket_created` notifies up to 20 staff in-app;
+`support.reply` notifies the owner on a staff reply and the assignee on a
+customer reply. Delivery uses the existing durable notification pipeline
+(in-app + capture transport). Email delivery is not configured, so the form says
+so explicitly and never claims an email was sent. A Valkey outage observed
+during the acceptance run did not lose any ticket or message.
+
+**Replaced contact links.** 36 files that opened `mailto:` composers now point
+at `/contact?vertical=…&topic=…` (shell/shop/eats/drive/gigs/fresh/stay
+footers, help centres, pay security, returns, affiliate, Plus, onboarding and
+profile pages). Addresses remain visible as text where they already were;
+business emails in documentation are unchanged.
+
+**Verification.**
+- `scripts/support-center-tests.ts` on disposable `nd_support_test_*`: **29/29**
+  (durable creation in one transaction, duplicate suppression, token hashing,
+  scoping, expiry, revocation, owner/other/anonymous access, public reply vs
+  internal note filtering, status/assignment timeline, 4 audit rows, pagination,
+  vertical filter, rate limit, run-owned cleanup).
+- `scripts/contact-directory-tests.ts --base-url=http://localhost:3047`
+  **48/48**: every audited page still shows its addresses and now contains an
+  on-site `/contact` link, with zero mailto actions and no `accounts@`.
+- Live build **`iGAHAGC7uHMdkeaUpgLJ0`** on port 3047: guest submission through
+  the UI returned `ND-SUP-9PRU2F` with a private access link, the exchange
+  redirected to `/support/ticket/…` with no token in the URL, the conversation
+  rendered and a customer reply appeared; anonymous API/page access returned
+  404 and `/api/admin/support/tickets` returned 401. The verification ticket
+  was deleted afterwards (0 remaining).
+- Desktop 1440 and mobile 390 contact screenshots: no horizontal overflow,
+  canonical vertical options, URL preselect working.
+
+**Deferred.** Attachments are deliberately not offered: there is no private
+upload + malware-scan pipeline wired for support, and no upload control is shown
+rather than a working-looking one. n8n escalation and email delivery remain
+future integrations. The staff inbox UI label for the `wallet` vertical is "Pay"
+from the module name; it is cosmetic.

@@ -1,5 +1,6 @@
 "use client";
 
+import { supportHref } from "@/lib/support/contact-link";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -25,7 +26,7 @@ import {
   Zap
 } from "lucide-react";
 import { apiClient, ApiRequestError, koboToNaira } from "@/lib/api-client";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 import { readBalanceVisibility, writeBalanceVisibility } from "@/lib/pay/balance-visibility";
 import { PhoneScreens } from "./pay-phone-screens";
 import { DesktopPanels } from "./pay-desktop-panels";
@@ -610,7 +611,7 @@ export function PayLanding() {
             <li>
               Payment and refund enquiries:{" "}
               <a
-                href={mailtoFor("payments")}
+                href={supportHref("payments")}
                 className="font-semibold text-pay-green underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
               >
                 {contactAddress("payments")}
@@ -619,7 +620,7 @@ export function PayLanding() {
             <li>
               Customer support:{" "}
               <a
-                href={mailtoFor("support")}
+                href={supportHref("support")}
                 className="font-semibold text-pay-green underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pay-green"
               >
                 {contactAddress("support")}

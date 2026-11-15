@@ -1,9 +1,10 @@
+import { supportHref } from "@/lib/support/contact-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { SendEmpty, SendHeading, SendPage } from "@/components/send/send-page";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 export const dynamic = "force-dynamic";
 
@@ -51,13 +52,13 @@ export default async function ProvidersPage() {
       <section aria-label="Provider contacts" className="mt-3 rounded-2xl bg-white p-4 text-[12px] leading-6 text-[#5d6d64] ring-1 ring-[#eef1ef]">
         <p>
           Courier and driver enquiries:{" "}
-          <a href={mailtoFor("drivers")} className="font-semibold text-[#0b5c33] underline underline-offset-2">
+          <a href={supportHref("drivers")} className="font-semibold text-[#0b5c33] underline underline-offset-2">
             {contactAddress("drivers")}
           </a>
         </p>
         <p className="mt-1">
           Business and freight partnerships:{" "}
-          <a href={mailtoFor("partners")} className="font-semibold text-[#0b5c33] underline underline-offset-2">
+          <a href={supportHref("partners")} className="font-semibold text-[#0b5c33] underline underline-offset-2">
             {contactAddress("partners")}
           </a>
         </p>

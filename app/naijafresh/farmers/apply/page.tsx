@@ -1,7 +1,8 @@
+import { supportHref } from "@/lib/support/contact-link";
 import type { Metadata } from "next";
 import { FarmerApplyForm } from "@/components/fresh/farmer-apply-form";
 import { FreshHeading, FreshPage } from "@/components/fresh/fresh-page";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export default function FarmerApplyPage() {
         <p>
           Farmer and producer partnerships:{" "}
           <a
-            href={mailtoFor("partners", { subject: "NaijaFresh farmer onboarding" })}
+            href={supportHref("partners", { subject: "NaijaFresh farmer onboarding" })}
             className="font-semibold text-[#0b5c33] underline underline-offset-2"
           >
             {contactAddress("partners")}
@@ -46,7 +47,7 @@ export default function FarmerApplyPage() {
         </p>
         <p className="mt-1">
           Support:{" "}
-          <a href={mailtoFor("support")} className="font-semibold text-[#0b5c33] underline underline-offset-2">
+          <a href={supportHref("support")} className="font-semibold text-[#0b5c33] underline underline-offset-2">
             {contactAddress("support")}
           </a>
         </p>

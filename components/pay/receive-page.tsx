@@ -1,9 +1,10 @@
 "use client";
 
+import { supportHref } from "@/lib/support/contact-link";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Copy, QrCode, Share2 } from "lucide-react";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 /**
  * Receive money screen. Today it shows the account's real payment identifiers
@@ -142,13 +143,13 @@ export function NaijaPayReceivePage() {
         <p className="space-y-1.5">
           <span className="block">
             Payment or refund issue:{" "}
-            <a href={mailtoFor("payments")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+            <a href={supportHref("payments")} className="font-bold text-pay-green underline-offset-2 hover:underline">
               {contactAddress("payments")}
             </a>
           </span>
           <span className="block">
             Customer support:{" "}
-            <a href={mailtoFor("support")} className="font-bold text-pay-green underline-offset-2 hover:underline">
+            <a href={supportHref("support")} className="font-bold text-pay-green underline-offset-2 hover:underline">
               {contactAddress("support")}
             </a>
           </span>

@@ -1,9 +1,10 @@
 "use client";
 
+import { supportHref } from "@/lib/support/contact-link";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 const serviceModes = ["LOCAL", "REMOTE", "PROJECT"] as const;
 const modeLabels: Record<string, string> = { LOCAL: "Local (in person)", REMOTE: "Remote", PROJECT: "Project based" };
@@ -118,7 +119,7 @@ function ProfessionalApplyPage() {
           <p className="mt-6 text-xs leading-5 text-[#6B7A72]">
             Professional and partner enquiries:{" "}
             <a
-              href={mailtoFor("partners", { subject: "NaijaGigs professional onboarding" })}
+              href={supportHref("partners", { subject: "NaijaGigs professional onboarding" })}
               className="font-semibold text-[#0F7A4A] underline underline-offset-2"
             >
               {contactAddress("partners")}
@@ -126,7 +127,7 @@ function ProfessionalApplyPage() {
           </p>
           <p className="mt-1 text-xs leading-5 text-[#6B7A72]">
             Support:{" "}
-            <a href={mailtoFor("support")} className="font-semibold text-[#0F7A4A] underline underline-offset-2">
+            <a href={supportHref("support")} className="font-semibold text-[#0F7A4A] underline underline-offset-2">
               {contactAddress("support")}
             </a>
           </p>
@@ -376,7 +377,7 @@ function ProfessionalApplyPage() {
             <p>
               Professional and partner enquiries:{" "}
               <a
-                href={mailtoFor("partners", { subject: "NaijaGigs professional onboarding" })}
+                href={supportHref("partners", { subject: "NaijaGigs professional onboarding" })}
                 className="font-semibold text-[#0F7A4A] underline underline-offset-2"
               >
                 {contactAddress("partners")}
@@ -384,7 +385,7 @@ function ProfessionalApplyPage() {
             </p>
             <p className="mt-1">
               Support:{" "}
-              <a href={mailtoFor("support")} className="font-semibold text-[#0F7A4A] underline underline-offset-2">
+              <a href={supportHref("support")} className="font-semibold text-[#0F7A4A] underline underline-offset-2">
                 {contactAddress("support")}
               </a>
             </p>

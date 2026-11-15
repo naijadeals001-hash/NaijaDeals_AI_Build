@@ -1,7 +1,8 @@
+import { supportHref } from "@/lib/support/contact-link";
 import Link from "next/link";
 import { ArrowUpRight, ShieldCheck, ShoppingBag, Truck } from "lucide-react";
 import { NaijaDealsLogo } from "@/components/brand/naijadeals-logo";
-import { contactAddress, mailtoFor, type ContactKey } from "@/lib/data/contact-directory";
+import { contactAddress, type ContactKey } from "@/lib/data/contact-directory";
 
 type PublicContactKey = Exclude<ContactKey, "accounts">;
 
@@ -106,7 +107,7 @@ export function ShopSiteFooter({ shopPaused = false }: { shopPaused?: boolean })
             <p>© 2026 NaijaDeals.com — one ecosystem for Africa.</p>
             <p>
               Corporate correspondence:{" "}
-              <a href={mailtoFor("office")} className="font-bold text-[#d6e7d7] hover:text-white hover:underline">
+              <a href={supportHref("office")} className="font-bold text-[#d6e7d7] hover:text-white hover:underline">
                 {contactAddress("office")}
               </a>
             </p>
@@ -148,7 +149,7 @@ function FooterColumn({
         {contacts.map((entry) => (
           <li key={entry.contact} className="text-[11.5px] text-[#b9d5bd]">
             {entry.label}:{" "}
-            <a href={mailtoFor(entry.contact, { subject: entry.subject })} className="hover:text-white hover:underline">
+            <a href={supportHref(entry.contact, { subject: entry.subject })} className="hover:text-white hover:underline">
               {contactAddress(entry.contact)}
             </a>
           </li>

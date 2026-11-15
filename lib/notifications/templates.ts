@@ -26,6 +26,36 @@ export type TemplateDefinition = {
 const money = (value: string) => `₦${value}`;
 
 export const TEMPLATES: Record<string, TemplateDefinition> = {
+  "support.ticket_created": {
+    key: "support.ticket_created",
+    category: "ACCOUNT",
+    required: ["reference", "vertical", "subject"],
+    inApp: {
+      title: "New support ticket {{reference}}",
+      body: "{{subject}} — {{vertical}}. Open the support inbox to reply."
+    },
+    email: {
+      subject: "New support ticket {{reference}}",
+      body: "A new {{vertical}} support ticket needs attention: {{subject}}. Reply in the Control Center."
+    },
+    sms: { body: "NaijaDeals support: new ticket {{reference}}." },
+    push: { title: "New support ticket", body: "{{reference}} · {{vertical}}" }
+  },
+  "support.reply": {
+    key: "support.reply",
+    category: "ACCOUNT",
+    required: ["reference", "subject"],
+    inApp: {
+      title: "Support replied to {{reference}}",
+      body: "Your ticket {{subject}} has a new reply. Open it in Support."
+    },
+    email: {
+      subject: "New reply on support ticket {{reference}}",
+      body: "There is a new reply on your support ticket {{reference}}. Sign in or use your private access link to read it."
+    },
+    sms: { body: "NaijaDeals support: reply on {{reference}}." },
+    push: { title: "Support reply", body: "{{reference}}" }
+  },
   "order.paid": {
     key: "order.paid",
     category: "ORDERS",

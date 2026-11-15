@@ -1,7 +1,8 @@
+import { supportHref } from "@/lib/support/contact-link";
 import type { Metadata } from "next";
 import { StayBottomNav, StayHeader } from "@/components/stay/stay-shell";
 import { StayFooter } from "@/components/stay/stay-home";
-import { mailtoFor } from "@/lib/data/contact-directory";
+
 
 export const dynamic = "force-static";
 
@@ -29,7 +30,7 @@ export default function SafetyPage() {
             </li>
           ))}
         </ul>
-        <a href={mailtoFor("support", { subject: "NaijaStay safety report" })} className="mt-3 inline-flex max-w-full break-words rounded-full bg-[#0b5c33] px-4 py-1.5 text-[11.5px] font-extrabold text-white">Report an issue</a>
+        <a href={supportHref("support", { subject: "NaijaStay safety report" })} className="mt-3 inline-flex max-w-full break-words rounded-full bg-[#0b5c33] px-4 py-1.5 text-[11.5px] font-extrabold text-white">Report an issue</a>
       </main>
       <StayFooter />
       <StayBottomNav />

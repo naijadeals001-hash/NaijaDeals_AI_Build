@@ -1,3 +1,4 @@
+import { supportHref } from "@/lib/support/contact-link";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -20,7 +21,7 @@ import { PlusCountryGrid } from "@/components/plus/plus-country-grid";
 import { PlusEmptyState } from "@/components/plus/plus-empty-state";
 import { PlusFaq } from "@/components/plus/plus-faq";
 import { PlusPromotionCard } from "@/components/plus/plus-promotion-card";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 import {
   loadPlusPublicData,
   plusFaqs,
@@ -515,7 +516,7 @@ export default async function PlusPage() {
               <li>
                 Subscription and invoice help:{" "}
                 <a
-                  href={mailtoFor("billing", { subject: "Plus membership billing" })}
+                  href={supportHref("billing", { subject: "Plus membership billing" })}
                   className="font-bold text-[#0b5c33] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
                 >
                   {contactAddress("billing")}
@@ -524,7 +525,7 @@ export default async function PlusPage() {
               <li>
                 Payment or refund issue:{" "}
                 <a
-                  href={mailtoFor("payments")}
+                  href={supportHref("payments")}
                   className="font-bold text-[#0b5c33] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
                 >
                   {contactAddress("payments")}
@@ -533,7 +534,7 @@ export default async function PlusPage() {
               <li>
                 General membership help:{" "}
                 <a
-                  href={mailtoFor("support")}
+                  href={supportHref("support")}
                   className="font-bold text-[#0b5c33] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5c33] focus-visible:ring-offset-2"
                 >
                   {contactAddress("support")}

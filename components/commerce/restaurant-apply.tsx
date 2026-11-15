@@ -1,9 +1,10 @@
 "use client";
 
+import { supportHref } from "@/lib/support/contact-link";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { contactAddress, mailtoFor } from "@/lib/data/contact-directory";
+import { contactAddress } from "@/lib/data/contact-directory";
 
 interface Application {
   id: string;
@@ -22,7 +23,7 @@ function OnboardingContacts() {
       <p>
         Restaurant partnerships:{" "}
         <a
-          href={mailtoFor("partners", { subject: "Restaurant onboarding" })}
+          href={supportHref("partners", { subject: "Restaurant onboarding" })}
           className="font-bold text-primary underline-offset-2 hover:underline"
         >
           {contactAddress("partners")}
@@ -30,7 +31,7 @@ function OnboardingContacts() {
       </p>
       <p className="mt-1">
         Onboarding help:{" "}
-        <a href={mailtoFor("support")} className="font-bold text-primary underline-offset-2 hover:underline">
+        <a href={supportHref("support")} className="font-bold text-primary underline-offset-2 hover:underline">
           {contactAddress("support")}
         </a>
       </p>
