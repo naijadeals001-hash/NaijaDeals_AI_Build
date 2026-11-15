@@ -299,7 +299,10 @@ async function main() {
       return "GH reviewer refused 403 for both set and clear; record unchanged";
     });
 
-    await check("in-scope reviewer can clear the origin record", async () => {
+    await check("in-scope reviewer can clear the origin record and the public inventory excludes it", async () => {
+      const { listCountryOriginProducts } = await import("../lib/services/countries/discovery.service");
+      const publishedBefore = await listCountryOriginProducts("GH");
+      assert(publishedBefore.some((product) => product.id === fixture!.productId), "verified fixture was not visible in the public country inventory before clearing");
       const cleared = await updateProductOrigin(ngReviewer, {
         productId: fixture!.productId,
         originCountryCode: null,
@@ -311,7 +314,9 @@ async function main() {
         [fixture!.productId]
       );
       assert(row.rows[0]?.origin === null && row.rows[0]?.verifiedAt === null, "verification residue remains after clearing");
-      return "origin and verification fields cleared";
+      const publishedAfter = await listCountryOriginProducts("GH");
+      assert(!publishedAfter.some((product) => product.id === fixture!.productId), "cleared origin remained in the public country inventory");
+      return "origin and verification fields cleared; public GH inventory excluded the fixture";
     });
   } finally {
     if (fixture) {

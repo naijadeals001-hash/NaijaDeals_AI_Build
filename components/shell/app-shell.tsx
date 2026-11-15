@@ -113,7 +113,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
 
           <ServicesMenu isActive={isActive} />
 
-          <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Company and partner links">
+          <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Primary">
             {HEADER_LINKS.map((link) => (
               <Link
                 key={link.href}

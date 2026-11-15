@@ -13,8 +13,15 @@
 import { PrismaClient } from "@prisma/client";
 
 const BASE = (process.env.TEST_BASE_URL || "http://localhost:3100").replace(/\/$/, "");
+const testDatabaseUrl =
+  process.env.TEST_DATABASE_URL || process.env.NAIJADEALS_TEST_DATABASE_URL || "";
+if (!testDatabaseUrl) {
+  throw new Error(
+    "TEST_DATABASE_URL or NAIJADEALS_TEST_DATABASE_URL must be set explicitly; the marketplace suite never uses ambient DATABASE_URL or .env."
+  );
+}
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl } } });
 
 type Json = Record<string, any>;
 
@@ -191,6 +198,8 @@ async function createPurchasableProduct(seller: Client, unique: string, label: s
 }
 
 async function main() {
+  const { requireTestDatabase } = await import("./lib/test-db-guard");
+  await requireTestDatabase({ denyList: ["naijadeals_review"] });
   const admin = new Client();
   const customer = new Client();
   const seller = new Client();

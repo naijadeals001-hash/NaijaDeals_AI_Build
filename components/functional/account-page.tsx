@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Headphones, Loader2, LogOut, MapPin, PackageCheck, RotateCcw, Store, UserCircle, Wallet } from "lucide-react";
 import { ApiRequestError, apiClient, koboToNaira, type ApiSavedItem } from "@/lib/api-client";
+import { LOCALE_COOKIES } from "@/lib/i18n/config";
 
 type Address = {
   id: string;
@@ -33,6 +34,24 @@ type Account = {
 };
 
 const emptyAddress = { label: "Home", countryCode: "NG", state: "Lagos", city: "Ikeja", line1: "", line2: "", phone: "", postalCode: "" };
+
+/** Read the selected browsing market from the same cookies the Shop shell uses. */
+function selectedMarket(): { country?: string; city?: string } {
+  if (typeof document === "undefined") return {};
+  const values = new Map(
+    document.cookie
+      .split(";")
+      .map((part) => part.trim().split("="))
+      .filter(([key, value]) => key && value !== undefined)
+      .map(([key, value]) => [key, decodeURIComponent(value)])
+  );
+  const country = values.get(LOCALE_COOKIES.country);
+  const city = values.get(LOCALE_COOKIES.city);
+  return {
+    country: country && /^[A-Za-z]{2}$/.test(country) ? country.toUpperCase() : undefined,
+    city: city && /^[a-z0-9-]{1,40}$/i.test(city) ? city.toLowerCase() : undefined
+  };
+}
 
 const SAVED_UNAVAILABLE_COPY: Record<NonNullable<ApiSavedItem["product"]["unavailableReason"]>, string> = {
   shop_not_available: "Shop is not available in this market",
@@ -163,7 +182,7 @@ export function AccountPage() {
       const [summary, addressList, savedList] = await Promise.all([
         apiClient.getAccount() as Promise<Account>,
         apiClient.getAddresses() as Promise<Address[]>,
-        apiClient.getSaved()
+        apiClient.getSaved(selectedMarket())
       ]);
       setAccount(summary);
       setProfileForm({ name: (summary as Account).name, phone: (summary as Account).phone ?? "" });

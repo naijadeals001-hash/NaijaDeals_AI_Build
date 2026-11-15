@@ -433,15 +433,15 @@ async function main() {
       const quantityCountStandard = await page.locator('[data-testid="product-quantity"] option').count();
       check("quantity cap updates with variant stock", quantityCountStandard === 5, `options=${quantityCountStandard}`);
       check(
-        "selected variant switches the gallery image",
+        "selected variant leaves the product-level gallery unchanged",
         (await page.locator('[data-testid="product-main-image"]').getAttribute("src")) === IMAGE_A.url,
         await page.locator('[data-testid="product-main-image"]').getAttribute("src")
       );
       await page.locator('[data-testid="product-variant"]').selectOption(fixture.variantIds.large);
       await page.waitForTimeout(300);
       check(
-        "switching to a variant with its own image updates the main image",
-        (await page.locator('[data-testid="product-main-image"]').getAttribute("src")) === IMAGE_B.url,
+        "switching to a variant does not reintroduce the deferred per-variant image contract",
+        (await page.locator('[data-testid="product-main-image"]').getAttribute("src")) === IMAGE_A.url,
         await page.locator('[data-testid="product-main-image"]').getAttribute("src")
       );
 
