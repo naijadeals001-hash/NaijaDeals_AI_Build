@@ -15,10 +15,10 @@
 | ST/copra-and-palm-kernel-oil | Copra and palm kernel oil | /generated/countries/theme-copra.webp | ACCEPT (neutral subject; country-specific distinction would be artificial) |
 | ST/agroforestry-food-crops | Agroforestry food crops | /generated/fresh/cat-fruits.webp | ACCEPT (neutral subject; country-specific distinction would be artificial) |
 | TD/millet-sorghum-and-berbere | Millet, sorghum and berbere | /generated/countries/theme-sorghum.webp | ACCEPT (neutral subject; country-specific distinction would be artificial) |
-| BI/leather | Hides, skins and leather | /generated/countries/theme-cattle.webp | REVIEW (country-specific expected) |
+| BI/leather | Hides, skins and leather | /generated/countries/theme-cattle.webp | ACCEPT (accurate neutral commodity subject; reviewed) |
 | DJ/date-palm | Date palm | /generated/countries/theme-figs-dates.webp | ACCEPT (neutral subject; country-specific distinction would be artificial) |
 | ET/textiles | Cotton textiles and garments | /generated/countries/et-*-replacement | REPLACED with country-specific generated art (6 credits) |
-| KM/tuna-fisheries | Tuna and artisanal fisheries | /generated/countries/theme-tuna.webp | REVIEW (country-specific expected) |
+| KM/tuna-fisheries | Tuna and artisanal fisheries | /generated/countries/theme-tuna.webp | ACCEPT (accurate neutral commodity subject; reviewed) |
 | SC/reef-fisheries | Reef and coastal fisheries | /generated/fresh/prod-tilapia.webp | ACCEPT (neutral subject; country-specific distinction would be artificial) |
 | SC/breadfruit | Breadfruit and santol | /generated/countries/theme-breadfruit.webp | ACCEPT (neutral subject; country-specific distinction would be artificial) |
 | SC/raffia-bamboo | Raffia and bamboo materials | /generated/taxonomy/raffia-tote.webp | ACCEPT (neutral subject; country-specific distinction would be artificial) |
