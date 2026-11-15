@@ -255,3 +255,37 @@ outstanding; they do not affect the staging/storage gates above.
   leaked password had been rotated before deletion and no longer authenticates.
 - Still blocked: R2 S3 credentials (management token only), so application
   upload/presign/denial and uploaded-file recovery remain untested.
+
+## 2026-11-15 — R2 credentials, file recovery and object backup
+
+The R2 S3 credentials were found in the project `.env` as labelled notes rather
+than `KEY=VALUE` lines; they were parsed locally, never printed, and written to
+`C:\NaijaDeals-Staging\env\staging.env` (`S3_ACCESS_KEY_ID`,
+`S3_SECRET_ACCESS_KEY`, endpoint, `S3_PUBLIC_BASE_URL`). The Cloudflare API
+token in the MCP configuration is a management token and is distinct from these
+S3 keys.
+
+Verified: both staging buckets accept the key (HeadBucket/put/get/delete),
+anonymous `r2.dev` access to the private bucket returns 401, and a presigned
+private read returns 200.
+
+Application-level acceptance (`lib/infra/storage.ts`): **14/14** — public upload
++ anonymous read, private upload not readable through the public base (404),
+presigned read 200, expired presign 403, scoped private read, bucket separation,
+run-owned cleanup.
+
+Object backup (`scripts/backup/run.mjs`) now archives both buckets with per
+object sha256, content type and etag. Verified: backup produced a 696-byte
+encrypted objects archive, uploaded to B2, downloaded and per-object checksums
+matched; a separate restore test re-uploaded the archived objects to a
+run-owned `_restore/<stamp>/` prefix and confirmed public anonymous read,
+private presign-only read and private non-public (404), then removed them
+(**8/8**).
+
+Database recovery remains separate: a 506,450-byte encrypted dump was uploaded
+to B2 and restored into a disposable database with checksum/row equality.
+
+Note: the running staging build (`bs3yYUkUWEgqKRX5tzz0U`, worktree `a4b2a01`)
+predates the `getObjectBytesFrom` helper and the two-bucket object backup; the
+acceptance above ran the current source modules, and a staging rebuild is
+required before runtime upload endpoints use them.
