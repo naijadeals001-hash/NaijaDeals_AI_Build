@@ -92,11 +92,28 @@ export async function listRestockRecovery(input: {
     const orderIds = markers.map((marker) => marker.entityId).filter((id): id is string => Boolean(id));
     const orders = orderIds.length
       ? await prisma.order.findMany({
-          where: { id: { in: orderIds }, itemRestocks: { none: {} } },
-          select: { id: true, orderNumber: true }
+          where: { id: { in: orderIds } },
+          select: {
+            id: true,
+            orderNumber: true,
+            items: { select: { id: true } },
+            itemRestocks: { select: { orderItemId: true } }
+          }
         })
       : [];
-    const numbers = new Map(orders.map((order) => [order.id, order.orderNumber]));
+    // A partial ledger is still a marker-only recovery: one item may have a
+    // RESTORED/SUPPRESSED row while another item named by the legacy marker
+    // has no row at all. Do not hide that outstanding item just because the
+    // order has some ledger rows.
+    const incomplete = new Set(
+      orders
+        .filter((order) => {
+          const recorded = new Set(order.itemRestocks.map((row) => row.orderItemId));
+          return order.items.some((item) => !recorded.has(item.id));
+        })
+        .map((order) => order.id)
+    );
+    const numbers = new Map(orders.filter((order) => incomplete.has(order.id)).map((order) => [order.id, order.orderNumber]));
     legacyMarkerOrders = markers
       .filter((marker) => marker.entityId && numbers.has(marker.entityId))
       .map((marker) => ({

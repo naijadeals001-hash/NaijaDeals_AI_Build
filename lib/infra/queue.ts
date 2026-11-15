@@ -75,7 +75,16 @@ export function getQueue(name: QueueName): Queue | null {
   if (existing) return existing;
 
   const queue = new Queue(name, {
-    connection: { ...connection, maxRetriesPerRequest: null },
+    // Producers must fail fast when the optional Valkey backend is down.
+    // Workers still use maxRetriesPerRequest:null below. A producer with an
+    // unbounded retry loop can keep a financial request open and leak a client.
+    connection: {
+      ...connection,
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
+      connectTimeout: 2_000,
+      retryStrategy: () => null
+    },
     prefix: queuePrefix()
   });
   scope().queues.set(name, queue);
@@ -105,6 +114,7 @@ export async function enqueue(
       removeOnComplete: { age: 60 * 60 * 24 },
       removeOnFail: { age: 60 * 60 * 24 * 7 }
     });
+    void added.catch(() => undefined);
     const job = await Promise.race([
       added,
       new Promise<null>((resolve) => setTimeout(() => resolve(null), ENQUEUE_TIMEOUT_MS))
@@ -113,7 +123,10 @@ export async function enqueue(
       recordOperation("valkey", "enqueue", "error", Date.now() - startedAt);
       infraMetrics().queueJobs.inc({ queue: name, event: "enqueue_timeout" });
       scope().queues.delete(name);
-      void Promise.resolve(queue.disconnect()).catch(() => undefined);
+      // Disconnect the producer and drop the cached reference. With finite
+      // retries and the offline queue disabled, the abandoned add cannot keep
+      // reconnecting after this returns.
+      queue.disconnect();
       return null;
     }
     recordOperation("valkey", "enqueue", "ok", Date.now() - startedAt);

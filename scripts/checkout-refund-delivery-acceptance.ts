@@ -31,7 +31,7 @@ import { requireTestDatabase, type VerifiedTestDatabase } from "./lib/test-db-gu
 import { cleanupCheckoutRefundFixtures } from "./lib/checkout-refund-fixture-cleanup";
 import type { PrismaClient } from "@prisma/client";
 
-const EXPECTED_DATABASE = "naijadeals_checkout_refund_test";
+const EXPECTED_DATABASE = process.env.CHECKOUT_REFUND_EXPECTED_DATABASE?.trim() || "naijadeals_checkout_refund_test";
 const RUN_ID = `${new Date().toISOString().replace(/\D/g, "").slice(0, 14)}-${randomBytes(4).toString("hex")}`;
 const PRICE_KOBO = BigInt(300_000);
 const DELIVERY_FEE_KOBO = BigInt(150_000);
@@ -696,6 +696,10 @@ async function main() {
     });
   } finally {
     const cleanup = await cleanupCheckoutRefundFixtures(prisma, RUN_ID).catch((error) => ({ error: error instanceof Error ? error.message : String(error) }));
+    if ("error" in cleanup) {
+      failures += 1;
+      checks.push({ name: "fixture cleanup", status: "FAIL", detail: String(cleanup.error).slice(0, 700) });
+    }
     console.log(JSON.stringify({ database: EXPECTED_DATABASE, runId: RUN_ID, checks, failures, cleanup }, null, 2));
     clearTimeout(watchdog);
     await prisma.$disconnect();
