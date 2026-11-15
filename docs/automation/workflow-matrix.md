@@ -16,7 +16,30 @@ transitions or driver dispatch; those stay in NaijaDeals services.
 | Shop / Eats / Drive / Send / Gigs / Stay / Fresh / Stream / Pay vertical workflows | Per-vertical follow-up automation; vertical owners | Not defined for this release | No approved authenticated endpoints or event contracts; several verticals are demo/partial | — | — | Explicitly excluded from readiness claims | DEFERRED |
 | n8n outage behavior | Prove core transactions do not depend on n8n | Controlled stop during staging activity | Local process control | Application keeps committing; n8n restarts cleanly | Ticket created while n8n down persisted exactly once (`ND-OUT-MWIDGBGI`, deleted after the test) | PASS |
 
-## Event contracts (not yet implemented)
+## Durable support event slice (implemented)
+
+`SupportTicket` creation now writes `NotificationIntent` rows **inside the same
+transaction** (one per eligible staff member, dedupeKey
+`support.ticket.created:<ticketId>:<userId>`, payload version 1 with reference,
+subject and vertical). Delivery uses the existing outbox processor
+(claim → lease → deliver → complete) behind a new bearer-token API:
+`POST /api/automation/notifications/drain` and
+`GET /api/automation/notifications/status` (dead-letter visibility). The n8n
+consumer never receives a database credential; it holds only
+`AUTOMATION_CONSUMER_TOKEN` through its environment.
+
+Verified on staging build `9Myrkk0S71N84QX7nPCbK` (source includes the slice):
+intent written with the ticket, no notification before the consumer, one
+notification after drain, replay processed 0 and created none, invalid token
+401, two concurrent drains processed each intent once, an expired lease was
+recovered and delivered once, an unsupported event became DEAD after its
+bounded attempt and appeared in the status endpoint — **12/12**. n8n consumer
+workflow `1lU7ERGPS0jAW7V4` was created through the authenticated API, executed
+via the supported CLI, and its executions 3 and 4 are recorded as success; a
+ticket created while n8n was stopped had a pending intent that the consumer
+processed afterwards (one notification per ticket, no duplicates).
+
+## Event contracts (remaining)
 
 No durable automation event/outbox contract was added in this pass. Support, order,
 refund, onboarding and document reminders therefore remain DEFERRED; the

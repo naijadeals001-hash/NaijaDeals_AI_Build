@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/auth/api-error";
 import type { SessionUser } from "@/lib/auth/session";
 import { recordAudit } from "./audit.service";
 import { notify } from "./notification-delivery.service";
+import { enqueueIntent } from "@/lib/notifications/intent.service";
 import { verticals } from "@/lib/data/ecosystem";
 
 /**
@@ -230,11 +231,31 @@ export async function createTicket(input: CreateTicketInput): Promise<CreatedTic
             data: { ticketId: ticket.id, type: "ACCESS_ISSUED", note: "Guest access link issued at submission" }
           });
         }
+        // Durable outbox: staff alerts are written in the same transaction as the
+        // ticket, so a rollback removes both. The worker (or the authenticated
+        // n8n consumer) delivers them later with lease/ack/retry semantics.
+        const staff = await tx.user.findMany({
+          where: {
+            roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support"] } } } },
+            OR: input.countryCode
+              ? [{ scopeCountryCode: null }, { scopeCountryCode: input.countryCode }]
+              : [{ scopeCountryCode: null }]
+          },
+          select: { id: true },
+          take: 20
+        });
+        for (const member of staff) {
+          await enqueueIntent(tx, {
+            dedupeKey: `support.ticket.created:${ticket.id}:${member.id}`,
+            eventType: "support.ticket.created",
+            entityType: "support_ticket",
+            entityId: ticket.id,
+            recipientUserId: member.id,
+            payload: { version: 1, reference, subject, vertical, priority: "NORMAL" }
+          });
+        }
         return ticket;
       });
-
-      // Notifications are best effort and must never roll back the ticket.
-      await notifySupportTeam(created.id, created.reference, vertical, subject, input.countryCode ?? null).catch(() => undefined);
 
       return { ticket: created, accessToken: rawToken, accessExpiresAt: expiresAt?.toISOString() ?? null, duplicate: false };
     } catch (error) {

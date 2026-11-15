@@ -152,6 +152,31 @@ async function deliver(intent: ClaimedIntent): Promise<void> {
         String(intent.payload.label ?? intent.eventType.replace("shipment.", ""))
       );
       return;
+    case "support.ticket.created": {
+      // Staff alert for a new support ticket. Dedupe key derives from the
+      // intent, so a retry after a crash between delivery and completion cannot
+      // create a second notification.
+      const created = await notify({
+        userId: intent.recipientUserId,
+        channel: "IN_APP",
+        templateKey: "support.ticket_created",
+        eventType: "support.ticket.created",
+        entityType: intent.entityType,
+        entityId: intent.entityId,
+        data: {
+          reference: String(intent.payload.reference ?? ""),
+          subject: String(intent.payload.subject ?? ""),
+          vertical: String(intent.payload.vertical ?? "general")
+        },
+        dedupeKey: `notification:${intent.dedupeKey}`
+      });
+      if (created.notification.status === "SUPPRESSED") return;
+      const outcome = await deliverNotification(created.notification.id);
+      if (outcome.status === "FAILED" || outcome.status === "missing") {
+        throw new Error(`notification_delivery_${outcome.status}:${outcome.error ?? "unknown"}`);
+      }
+      return;
+    }
     case "order.paid.vendor": {
       // The vendor notification is recorded in the payment transaction as an
       // intent, not written through a nested Prisma client. Delivery happens

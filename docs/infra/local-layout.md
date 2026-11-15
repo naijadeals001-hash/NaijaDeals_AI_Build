@@ -92,3 +92,21 @@ Owner actions required:
 4. Suggested unused hostname: `staging-remote.naijadeals.com` (must be checked
    against DNS before creation; `staging.naijadeals.com` must not be
    overwritten).
+
+
+## Support automation slice (2026-11-15)
+
+- Event: `support.ticket.created` v1, stored in `NotificationIntent` in the
+  ticket transaction.
+- Consumer API: `POST /api/automation/notifications/drain`,
+  `GET /api/automation/notifications/status` on `http://127.0.0.1:3200`;
+  bearer `AUTOMATION_CONSUMER_TOKEN` (stored only in the staging env and the
+  n8n env, both ACL-protected). The drain route deliberately has no
+  same-origin requirement because it is a bearer-authenticated server-to-server
+  call; the token check is mandatory and fails closed when unset.
+- n8n workflow: `1lU7ERGPS0jAW7V4` (manual trigger → HTTP drain), created via the
+  authenticated API and executed via the supported CLI while the server was
+  stopped; executions 3 and 4 recorded success.
+- Dead letters are visible to the operator status endpoint; retries are bounded
+  by `maxAttempts` with the shared backoff table.
+- Staging build `9Myrkk0S71N84QX7nPCbK` on `127.0.0.1:3200`.
