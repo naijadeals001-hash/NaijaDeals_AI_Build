@@ -1,12 +1,13 @@
 {
   "generatedAt": "2026-11-14",
   "source": "REVIEW database naijadeals_review (CountryTheme rows) plus corrected override mapping",
-  "status": "INTENDED_FINAL_MAPPING_PENDING_SEED",
-  "note": "Verdicts describe the asset each row will use after lib/data/country-theme-image-overrides.ts is wired into the seed. Until the coordinator reseeds and the build is rebuilt, the running preview still serves the pre-correction assets. Re-run scripts/discover-africa-visual-acceptance.cjs --expect-overrides after seeding to verify the rendered result.",
+  "status": "FINAL_APPLIED_AND_INDEPENDENTLY_VERIFIED",
+  "note": "Exact final REVIEW mapping: 54 published profiles, 324 themes, 362 sources, 111 distinct images, 174 GENERATED assignments, 0 null alt/kind/provenance. All 47 override rows are applied with exact URL/alt/kind/provenance; all 324 rows match this audit and the served DOM. The 54 cards (324 theme images) and 54 country pages (324 theme rows) were captured on build H9mMmDLBrIv4jMFc6Co0M. Independent reviewer agent_7f13b059-cfc8-4f54-946a-1a8d4e7c9ab5 verified 0 MATERIAL_FAIL, 0 mismatches, 0 broken images and no accepted-country mutation; acceptance was 67/67 with 0 failed/blocked.",
   "totals": {
     "rows": 324,
     "countries": 54,
-    "changed": 45,
+    "changed": 47,
+    "dbRemapped": 1,
     "materialFail": 0,
     "PASS": 268,
     "BROAD": 56
@@ -867,11 +868,11 @@
       "themeKey": "potato",
       "label": "Potato",
       "finalAsset": "/generated/fresh/prod-irish-potatoes.webp",
-      "finalAlt": "Potatoes. Illustrative image for the Potato theme.",
+      "finalAlt": "Irish potatoes. Illustrative image for the Potato theme.",
       "kind": "APPROVED_EXISTING",
       "verdict": "PASS",
       "note": "Irish potatoes; direct match.",
-      "changed": false
+      "changed": true
     },
     {
       "region": "East Africa",
@@ -1917,11 +1918,11 @@
       "themeKey": "couscous",
       "label": "Couscous",
       "finalAsset": "/generated/countries/theme-couscous.webp",
-      "finalAlt": "Couscous. Illustrative image for the Couscous theme.",
+      "finalAlt": "Steamed couscous. Illustrative image for the Couscous theme.",
       "kind": "GENERATED",
       "verdict": "PASS",
-      "note": "Steamed couscous; direct match.",
-      "changed": false
+      "note": "Generated couscous image; direct match.",
+      "changed": true
     },
     {
       "region": "North Africa",
@@ -3512,12 +3513,13 @@
       "slug": "cabo-verde",
       "themeKey": "horticulture",
       "label": "Horticulture and maize",
-      "finalAsset": "/generated/fresh/prod-maize.webp",
-      "finalAlt": "Maize cobs. Illustrative image for the Horticulture and maize theme.",
-      "kind": "APPROVED_EXISTING",
+      "finalAsset": "/generated/countries/theme-vegetables.webp",
+      "finalAlt": "Fresh vegetables. Illustrative image for the Horticulture and maize theme.",
+      "kind": "GENERATED",
       "verdict": "BROAD",
-      "note": "Maize is shown; the other named crop(s) are absent.",
-      "changed": false
+      "note": "Mixed vegetables show horticulture; maize is absent.",
+      "changed": false,
+      "dbRemapped": true
     },
     {
       "region": "West Africa",
@@ -4555,5 +4557,58 @@
       "note": "Cotton bolls; direct match.",
       "changed": false
     }
-  ]
+  ],
+  "verifiedAt": "2026-11-15T00:36:47.212Z",
+  "buildId": "H9mMmDLBrIv4jMFc6Co0M",
+  "verification": {
+    "dbRows": 324,
+    "publishedProfiles": 54,
+    "themes": 324,
+    "sources": 362,
+    "distinctImages": 111,
+    "generatedAssignments": 174,
+    "changedOverrideRowsApplied": 47,
+    "mismatchedRows": 0,
+    "materialRegressions": 0,
+    "altKindProvenanceComplete": true,
+    "duplicatedLabelSentence": false,
+    "visual": {
+      "buildId": "H9mMmDLBrIv4jMFc6Co0M",
+      "cards": 54,
+      "cardThemeImages": 324,
+      "cardBroken": 0,
+      "cardMismatches": 0,
+      "pages": 54,
+      "pageThemeImages": 324,
+      "pageBroken": 0,
+      "pageMismatches": 0,
+      "duplicateAltLabels": 0
+    }
+  },
+  "visualInspection": {
+    "buildId": "H9mMmDLBrIv4jMFc6Co0M",
+    "cards": 54,
+    "cardThemeImages": 324,
+    "cardBroken": 0,
+    "cardMismatches": 0,
+    "pages": 54,
+    "pageThemeImages": 324,
+    "pageBroken": 0,
+    "pageMismatches": 0,
+    "duplicateAltLabels": 0,
+    "evidence": "qa-artifacts/visual/discover-africa-remediation/final-54/",
+    "cardsSheets": 6,
+    "pagesSheets": 6,
+    "inspectedAt": "2026-11-15T00:36:47.212Z"
+  },
+  "independentReview": {
+    "reviewerAgentId": "agent_7f13b059-cfc8-4f54-946a-1a8d4e7c9ab5",
+    "verdict": "PASS",
+    "buildId": "H9mMmDLBrIv4jMFc6Co0M",
+    "commit": "37172e5",
+    "imagery": "324/324 rows; 0 MATERIAL_FAIL; 0 broken; 0 mismatches; 47 corrected rows",
+    "acceptance": "67/67; 0 failed; 0 blocked; accepted GH content and audit unchanged",
+    "carousel": "390/768/1440; final card fully revealed; no page overflow",
+    "shop": "basket 10/10; variants 32/32; financial 46/46 (0 provider calls); suspend path 7/7"
+  }
 }

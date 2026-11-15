@@ -1,6 +1,6 @@
 # Discover Africa — imagery manifest
 
-Date: 2026-11-14. Model: `gpt-image-2-5-flare-text-to-image` via the connected Kie.ai MCP, `flare`, `1K`, `1:1`. Price recorded by the MCP plan: **6 credits per image** (rate card `2026-10-28`; USD conversion shown by the tool was $0.03 at the tool's published $0.005/credit basis). **No credits were purchased and no top-up was performed.**
+Date: 2026-11-14. Final served build: `H9mMmDLBrIv4jMFc6Co0M`. Model: `gpt-image-2-5-flare-text-to-image` via the connected Kie.ai MCP, `flare`, `1K`, `1:1`. Price recorded by the MCP plan: **6 credits per image** (rate card `2026-10-28`; USD conversion shown by the tool was $0.03 at the tool's published $0.005/credit basis). **No credits were purchased and no top-up was performed.**
 
 ## Original generated photography (29 images, 174 credits)
 
@@ -96,10 +96,16 @@ They are **not** photographs, do not depict a specific country landmark or produ
 
 54 SVG flags were downloaded from `https://flagcdn.com/<code>.svg` on 2026-11-14. Flags are public-domain national symbols. Western Sahara is not included because it is documented separately as a disputed/non-self-governing territory rather than a 55th country page.
 
-## Corrected coverage
+## Final applied coverage
 
-The earlier focused passes (205/117/2, then 234/90/0) are superseded by the full 324-slot remediation audit. `docs/countries/imagery-remediation-audit.json` records every row against the intended final mapping: **268 PASS / 56 BROAD / 0 MATERIAL_FAIL**, with 45 slots changed (44 generated rows across 29 images, plus the approved-existing spice-bowl remap). The 56 remaining BROAD rows are honest partial matches — typically one of several named crops, a generic illustration where no accurate photograph exists, or a concept (tourism, services, blue economy) that a single still cannot cover. Each one is listed with its exact note rather than promoted to PASS.
+Final verification: 2026-11-14, served build `H9mMmDLBrIv4jMFc6Co0M` on `http://localhost:3047`. The REVIEW database was reseeded with `lib/data/country-theme-image-overrides.ts` wired into `scripts/seed-country-discovery.ts`. Verified counts: 54 published profiles, 324 themes, 362 sources, 111 distinct theme images and 174 GENERATED tile assignments. All 324 rows have alt text, kind and provenance; no alt contains a duplicated label sentence.
 
-`lib/data/country-theme-image-overrides.ts` is the hand-off: keyed by `${COUNTRY_CODE}/${themeKey}`, with final public alt text, kind, provenance, task ID, credits and prompt. The running preview still serves the pre-correction assets until the coordinator wires this module into `scripts/seed-country-discovery.ts`, reseeds the REVIEW database and rebuilds. Until then the audit status is `INTENDED_FINAL_MAPPING_PENDING_SEED`; re-run `BASE_URL=<preview> node scripts/discover-africa-visual-acceptance.cjs --expect-overrides` after seeding to verify the rendered assets and alt text.
+All 47 override rows are applied with the exact URL, alt, kind and provenance from the module. All 324 rows match `docs/countries/imagery-remediation-audit.json`. The two prior reseed regressions are corrected:
 
-No stock image was substituted for a required original asset, and no country name, product label or brand is baked into a generated image.
+- `DZ/couscous` uses `public/generated/countries/theme-couscous.webp` (GENERATED), alt "Steamed couscous. Illustrative image for the Couscous theme." — PASS.
+- `ER/potato` uses `public/generated/fresh/prod-irish-potatoes.webp` (APPROVED_EXISTING), alt "Irish potatoes. Illustrative image for the Potato theme." — PASS.
+- `CV/horticulture` keeps the mixed-vegetable image: BROAD — horticulture is shown, maize is absent; acceptable and not promoted.
+
+Final audit: **268 PASS / 56 BROAD / 0 MATERIAL_FAIL**, independently verified on build `H9mMmDLBrIv4jMFc6Co0M` at commit `37172e5`. The independent reviewer checked all 324 rendered rows, 54 cards and 54 pages, found 0 material failures, 0 broken images and 0 URL/alt mismatches, and confirmed the acceptance harness did not mutate accepted Ghana content or audit. The 56 BROAD rows remain honest partial matches — typically one of several named crops, a generic illustration where no accurate photograph exists, or a concept (tourism, services, blue economy) that a single still cannot cover. Each is listed with its exact note rather than promoted to PASS.
+
+Visual evidence captured on build H9: 54 card screenshots (324 theme images) and 54 full-page country screenshots (324 theme images) at `qa-artifacts/visual/discover-africa-remediation/final-54/` (`cards/`, `pages/`, `sections/`, `cards-sheet-1..6.png`, `pages-sheet-1..6.png`, `verification.json`). The run recorded 0 broken images, 0 URL/alt mismatches and 0 duplicated alt labels across both sets; the corrected Algeria Couscous and Eritrea Potato tiles were inspected and show the intended subjects. No stock image was substituted for a required original asset, and no country name, product label or brand is baked into a generated image.

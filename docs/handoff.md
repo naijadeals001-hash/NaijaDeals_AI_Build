@@ -5696,3 +5696,82 @@ availability probes.
 - Open Shop blockers remain the variant concurrency follow-ups (legacy variant image exposure,
   DB CHECK constraints, test-doc env, activation recovery TOCTOU/audit, saved-item status,
   refund/restock suppression, paused homepage RSC recheck).
+
+## 2026-11-14 — Discover Africa bounded remediation
+
+**Served artifact:** canonical `http://localhost:3047`, build **`H9mMmDLBrIv4jMFc6Co0M`**, PID 32472,
+launched through `scripts/start-review-preview.cmd` with `REVIEW_DATABASE_URL` and
+`REVIEW_EXPECTED_DATABASE=naijadeals_review`. Application/build source commit **`37172e5`**
+(`d021408` is the main remediation commit; `9c5fe8f` and `37172e5` close review findings).
+Branch `naijashop-marketplace`. No migration was required. No production deployment,
+provider charge, purchase, top-up or live financial action occurred.
+
+### Delivered
+
+- **Imagery:** audited all 324 theme slots. 47 explicit overrides now carry exact URL, alt,
+  kind and provenance (45 first-batch corrections plus DZ/couscous and ER/potato). 29 new
+  Kie.ai images were generated at 6 credits each = **174 credits**, balance 10,884.8 → 10,710.8;
+  no purchase or top-up. The seed also removes the potato/couscous fallback ordering defect,
+  seeds each country transactionally, and prefers the override module.
+- **Carousel:** arrow-only steps are clamped to the exact maximum; the final country is fully
+  revealed without overshoot. Prev/next remain visible, 40×40, hit-testable and keyboard
+  focusable at 390; Home/End/Arrow keys, swipe, snap and reduced motion retained.
+- **Permissions:** explicit `country_editor` (read/write only); `country_publisher`
+  (read/publish only); `country_origin_reviewer` (read/origin only); ordinary `admin` keeps
+  drafting but is refused publication and origin review. Scoped editors, publishers and origin
+  reviewers are tested with run-owned accounts, including a QT-scoped fixture editor. Accepted
+  Ghana was not mutated and its audit was unchanged in the final harness.
+- **Publication integrity:** profile row locks serialize publication, theme edits and seed
+  replacement. Published themes require image, alt, kind, provenance and a source; image changes
+  require alt+kind+provenance in the same update. Source replacement and per-country seed writes
+  are transactional. Both suspected races were reproduced before the fix; source replacement now
+  leaves one complete set and publish/edit preserves the invariant. Audit records before/after
+  content, including unpublished drafts.
+- **Origin review:** server pagination (default 25, max 100), total/totalPages, summary counts,
+  search/origin/basis/market filters; all eligible products are reachable. Authorisation uses the
+  product's market scope and `countries:origin:review`, not origin/market equality. A scoped
+  reviewer can record a legitimate foreign origin; cross-market changes are refused. Origin must be
+  a published discovery country. Public labels distinguish seller-declared and verified origin.
+- **Database guards:** every mutating country script requires explicit `REVIEW_DATABASE_URL`,
+  verifies live `current_database()`, schema and a REVIEW `DatabaseClassification` row before
+  writes. `DATABASE_URL` is never a fallback; errors redact the URL. Acceptance uses a run-owned
+  DRAFT fixture and never unpublishes an accepted country.
+- **Visual quality:** measured source “Accessed” contrast improved to at least 7.95:1, public
+  captions are ≥10px/11px, and the duplicate admin “Country discovery” shell heading is now
+  “Discover Africa”. Delivery/address/currency are unchanged by country browsing.
+
+### Verification (frozen H9)
+
+- Country acceptance **67/67**, 0 failed, 0 blocked; accepted 54/54/324/362 restored, 9 run-owned
+  role accounts removed.
+- Discover visual/carousel **151/151**; 54 cards and 54 pages, 324 card + 324 page images, no
+  broken, missing-alt or URL mismatches; final card fully revealed at 390/768/1440.
+- Country access 9/9, publication integrity 18/18, origin 10/10, seed replacement 3/3, guard 8/8,
+  source race 12/12 serialized, publish/edit race invariant preserved.
+- Shop preservation: basket 10/10, variants 32/32 (restored 259/63/0), financial refusal 46/46 with
+  0 provider calls; independent run-owned suspend/activate path 7/7.
+- Independent reviewer `agent_7f13b059-cfc8-4f54-946a-1a8d4e7c9ab5`: **PASS** on H9 (324/324
+  imagery, 67/67 acceptance, accepted GH untouched, carousel/race/Shop scopes).
+- Evidence: `qa-artifacts/visual/discover-africa-remediation/final-54/` (54 cards/pages, 324+324),
+  `qa-artifacts/visual/discover-africa-independent/recheck-h9/`, and focused logs under
+  `qa-artifacts/country-discovery-permissions/`.
+
+### Agents
+
+- Imagery/visual: `agent_065cf829-f919-47fb-97be-2241764b8267`.
+- Permissions/publication/data: `agent_8b5270af-bbe9-4a82-9d6d-79bd2a4c5b96`.
+- Coordinator/integration: main session.
+- Independent reviewer: `agent_7f13b059-cfc8-4f54-946a-1a8d4e7c9ab5`.
+
+### Remaining findings
+
+- **56 BROAD** partial theme matches remain (honest notes in the audit); several are generic
+  category/hero/illustration assets (tourism, services, flowers, loom/boat). None is a corrected
+  material failure and none uses a generic basket/groundnut for a corrected row.
+- The pre-existing admin catalogue journey still cannot reach the oldest demo product because
+  `/api/admin/products` returns only the newest 200 of 259; the suspend/activate path itself was
+  reproduced 7/7 on a run-owned newer product. Not introduced by this slice.
+- The variant suite leaves 8 audit rows for deleted run-owned products (`auditTotal` 3211 → 3219);
+  accepted catalogue rows and content are unchanged.
+- No push or deployment. Local commits remain the preservation path because the known GitHub
+  credential remains rejected; it was not retried.
