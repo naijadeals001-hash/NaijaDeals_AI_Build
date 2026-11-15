@@ -6158,3 +6158,55 @@ upload + malware-scan pipeline wired for support, and no upload control is shown
 rather than a working-looking one. n8n escalation and email delivery remain
 future integrations. The staff inbox UI label for the `wallet` vertical is "Pay"
 from the module name; it is cosmetic.
+
+## 2026-11-15 — Independent acceptance of the support system (hardening)
+
+**Candidate.** `db3de96` reviewed by an independent `code-security-reviewer`
+against build `iGAHAGC7uHMdkeaUpgLJ0`; verdict **CHANGES-REQUIRED** with one
+HIGH, six MEDIUM and several LOW findings.
+
+**Fixes (commit `4b51b5e`, migration `20261115193000_support_guest_hardening`,
+applied to REVIEW).**
+- H1: the guest link is now genuinely single-use. Exchange consumes the LINK
+  row with a conditional update inside one transaction and issues a separate
+  SESSION token (8 h cap); replay returns 401, the consumed link can never be
+  presented as a cookie, and cookies are per ticket (`nd_support_<reference>`).
+- M2/M3: guests never select a country; only the signed-in account country
+  routes a ticket. Unknown-country tickets are visible to and notified to
+  unscoped triage staff, never to every country-scoped agent.
+- M4: forwarded headers are trusted only with `SUPPORT_TRUST_PROXY=1`; bucket
+  pressure no longer clears all counters; a database cap allows five guest
+  tickets per address per ten minutes across workers.
+- M5: support list/detail JSON is `no-store, private` with `Vary: Cookie`.
+- M6: the idempotency key is stored and honoured only within the same owner
+  (guest email + key), so identical text from a third party creates their own
+  ticket and never reveals another reference.
+- M7/L9/L12/L14: conversations return the latest messages chronologically,
+  PENDING reopens on a customer reply, closed tickets reject staff replies,
+  status changes notify the owning customer in-app, and the "verified address"
+  copy is corrected.
+
+**Second defect found by runtime acceptance (commit `de8595d`).** After the
+per-ticket cookie change the ticket *page* still read only the legacy global
+cookie and rendered 404 while the API worked; the page now reads
+`guestCookieName(reference)` first. Rebuilt as `TeIdZhuU-g_uqTZHvEnKS`.
+
+**Verification on the final build `TeIdZhuU-g_uqTZHvEnKS` (REVIEW, port 3047).**
+- `scripts/support-center-tests.ts` **29/29** and new
+  `scripts/support-hardening-tests.ts` **22/22** on a disposable
+  `nd_support_test_*` database (dropped afterwards).
+- `scripts/contact-directory-tests.ts --base-url=…` **48/48**.
+- Live HTTP probe **15/15**: per-ticket httpOnly SameSite=Lax cookie, exchange
+  replay 401, consumed link as cookie 404, session scoped to one ticket,
+  no-store + Vary: Cookie on ticket JSON, rotated `X-Forwarded-For` still 429.
+- Browser at 390 and 1440: `/support/access` exchanged the link, redirected to
+  the ticket with no token in the URL, rendered the conversation and accepted a
+  reply; zero horizontal overflow.
+- All `@example.test` verification tickets were deleted from REVIEW
+  (0 remaining). The disposable database was dropped.
+
+**Push.** Local commits `db3de96`, `4b51b5e`, `de8595d`; GitHub still refuses
+the configured identity (403), so the remote branch remains at `e80a0f9`.
+
+**Deferred.** Attachments, email delivery and n8n escalation remain out of
+scope; the UI states that no email is sent.
