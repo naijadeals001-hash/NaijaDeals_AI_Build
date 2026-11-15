@@ -145,6 +145,22 @@ const REUSE = [
 
 const TILES = [
   {
+    id: "category-medicines-treatments",
+    categoryKey: "medicines-treatments",
+    categorySlug: "medicines-treatments",
+    alt: "Neutral unbranded medicine cartons, blister packs and first-aid supplies",
+    prompt:
+      "a neat arrangement of plain unbranded medicine cartons and blister packs with a simple first-aid kit, rolled bandage, gauze pads and a plain white bottle, all labels blank, no readable text, no medical claims"
+  },
+  {
+    id: "category-vitamins-supplements",
+    categoryKey: "vitamins-supplements",
+    categorySlug: "vitamins-supplements",
+    alt: "Neutral unbranded supplement bottles, capsules and softgel vitamins",
+    prompt:
+      "plain amber and white supplement bottles with unmarked labels beside a small pile of simple capsules and softgel vitamins, no readable text, no health claims or brand imitation"
+  },
+  {
     id: "category-baby-gear-nursery",
     categoryKey: "baby-gear-nursery",
     categorySlug: "baby-gear-nursery",

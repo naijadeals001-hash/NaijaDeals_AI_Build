@@ -2,9 +2,9 @@
 /**
  * Guarded application of the approved level-1 CATEGORY tile images.
  *
- * Sets Category.imageUrl and Category.imageAlt for exactly the 26 active
+ * Sets Category.imageUrl and Category.imageAlt for exactly the 28 active
  * level-1 categories that have no approved image and a suitable visual:
- *   - 19 newly generated Kie category tiles (batch `taxonomy-categories`);
+ *   - 21 newly generated Kie category tiles (batch `taxonomy-categories`);
  *   - 7 reused approved product photographs whose subject represents the
  *     category (recorded with zero credits in the same ledger batch).
  * It also adds the missing imageAlt to six of the nine level-1 categories that
@@ -15,9 +15,11 @@
  * (gaming, power-solar, groceries-household) already had alt text and are not
  * targets.
  *
- * The two level-1 categories whose entire subtree is NG-restricted
- * (medicines-treatments, vitamins-supplements) are deliberately skipped and
- * documented in docs/taxonomy/coverage.md.
+ * The two level-1 categories whose subtree is NG-restricted
+ * (medicines-treatments, vitamins-supplements) joined the target list in the
+ * 2026-11-15 batch (2 generated tiles, 12 credits). Their art is neutral and
+ * claim-free; publication eligibility is unchanged because it is decided by
+ * the regulated leaf rules in lib/taxonomy/regulated.ts, not by the tile.
  *
  * Default is a dry run: it validates the generated assets, the ledger review
  * state and the live REVIEW rows, then prints the before -> after report.
@@ -82,6 +84,8 @@ type Target = {
 
 /** 19 generated tiles. Their image URL and alt come from the ledger. */
 const GENERATED_TARGETS: Target[] = [
+  "medicines-treatments",
+  "vitamins-supplements",
   "baby-gear-nursery",
   "books",
   "car-parts",

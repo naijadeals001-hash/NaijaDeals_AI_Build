@@ -1305,7 +1305,7 @@
         "/generated/shop/product-led-monitor.webp",
         "/generated/shop/product-coffee-maker.webp"
       ],
-      "compositor": "sharp 1024x1024 + 1024x576 \u2192 1600x900 WebP quality 88",
+      "compositor": "sharp 1024x1024 + 1024x576 → 1600x900 WebP quality 88",
       "pngPath": null,
       "webpPath": "/generated/taxonomy/category-electronics-appliances.webp",
       "alt": "Slim LED monitor on a stand beside a black drip coffee maker with a glass carafe",
@@ -1492,9 +1492,87 @@
       "review": "visually inspected 2026-11-14T20:36:16.461Z: Full-resolution 1254x1254 and contact-sheet-all.png: rolled sage mat with cream carry strap, cork block and coiled grey fabric band; contextual plant only; no text, logo or branding; no people or hands; fully inside square crop.",
       "lastError": null,
       "reviewedAt": "2026-11-14T20:36:16.461Z"
+    },
+    {
+      "id": "category-medicines-treatments",
+      "batch": "taxonomy-categories",
+      "categoryKey": "medicines-treatments",
+      "categorySlug": "medicines-treatments",
+      "kind": "category-tile",
+      "prompt": "a neat arrangement of plain unbranded medicine cartons and blister packs with a simple first-aid kit, rolled bandage, gauze pads and a plain white bottle, all labels blank, no readable text, no medical claims",
+      "model": "gpt-image-2-5-flare-text-to-image",
+      "size": "1K",
+      "aspectRatio": "1:1",
+      "price": {
+        "creditsPerImage": 6,
+        "usdPerImage": 0.03,
+        "usdPerCredit": 0.005,
+        "sourceUrl": "https://kie.ai/pricing",
+        "rateCardVerifiedAt": "2026-10-27",
+        "rateCardVersion": "2026-10-28",
+        "quotedVia": "Kie.ai MCP prepare_media_generation (exact quote, 2026-11-13)"
+      },
+      "status": "generated",
+      "taskId": "244b9917e3f510c89bb8873b89a5ab62",
+      "credits": 6,
+      "attempts": [],
+      "submitIntentAt": "2026-11-15T13:40:18.405Z",
+      "submittedAt": "2026-11-15T13:40:18.560Z",
+      "pngOriginalPath": "qa-artifacts/category-tiles/originals/category-medicines-treatments-244b9917e3f510c89bb8873b89a5ab62.png",
+      "webpPath": "/generated/taxonomy/category-medicines-treatments.webp",
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "width": 1024,
+      "height": 1024,
+      "webpBytes": 119548,
+      "cropped": true,
+      "alt": "Neutral unbranded medicine cartons, blister packs and first-aid supplies",
+      "generatedAt": "2026-11-15T13:41:19.677Z",
+      "review": "visually inspected 2026-11-15T14:04:19.890Z: qa-artifacts/visual/country-image-repair/category-health-sheet.png: neutral unbranded medicine cartons/blister packs/first-aid and unbranded amber+white supplement bottles with capsules; no readable text, no brands, no medical or health claims; both square 1024x1024, subjects centred and recognisable at card size",
+      "lastError": null,
+      "reviewedAt": "2026-11-15T14:04:19.890Z"
+    },
+    {
+      "id": "category-vitamins-supplements",
+      "batch": "taxonomy-categories",
+      "categoryKey": "vitamins-supplements",
+      "categorySlug": "vitamins-supplements",
+      "kind": "category-tile",
+      "prompt": "plain amber and white supplement bottles with unmarked labels beside a small pile of simple capsules and softgel vitamins, no readable text, no health claims or brand imitation",
+      "model": "gpt-image-2-5-flare-text-to-image",
+      "size": "1K",
+      "aspectRatio": "1:1",
+      "price": {
+        "creditsPerImage": 6,
+        "usdPerImage": 0.03,
+        "usdPerCredit": 0.005,
+        "sourceUrl": "https://kie.ai/pricing",
+        "rateCardVerifiedAt": "2026-10-27",
+        "rateCardVersion": "2026-10-28",
+        "quotedVia": "Kie.ai MCP prepare_media_generation (exact quote, 2026-11-13)"
+      },
+      "status": "generated",
+      "taskId": "a6bd33561a5799031698163ad91aefd5",
+      "credits": 6,
+      "attempts": [],
+      "submitIntentAt": "2026-11-15T13:41:19.763Z",
+      "submittedAt": "2026-11-15T13:41:19.900Z",
+      "pngOriginalPath": "qa-artifacts/category-tiles/originals/category-vitamins-supplements-a6bd33561a5799031698163ad91aefd5.png",
+      "webpPath": "/generated/taxonomy/category-vitamins-supplements.webp",
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "width": 1024,
+      "height": 1024,
+      "webpBytes": 68006,
+      "cropped": true,
+      "alt": "Neutral unbranded supplement bottles, capsules and softgel vitamins",
+      "generatedAt": "2026-11-15T13:42:20.904Z",
+      "review": "visually inspected 2026-11-15T14:04:19.890Z: qa-artifacts/visual/country-image-repair/category-health-sheet.png: neutral unbranded medicine cartons/blister packs/first-aid and unbranded amber+white supplement bottles with capsules; no readable text, no brands, no medical or health claims; both square 1024x1024, subjects centred and recognisable at card size",
+      "lastError": null,
+      "reviewedAt": "2026-11-15T14:04:19.890Z"
     }
   ],
-  "cumulativeCredits": 282,
+  "cumulativeCredits": 258,
   "creditBatches": {
     "taxonomy-batch2": {
       "images": 8,
@@ -1615,10 +1693,10 @@
         }
       ],
       "balanceBefore": 11208.8,
-      "balanceAfter": 11094.8,
-      "images": 19,
+      "balanceAfter": 10698.8,
+      "images": 21,
       "reused": 7,
-      "credits": 114,
+      "credits": 126,
       "model": "gpt-image-2-5-flare-text-to-image",
       "size": "1K",
       "aspectRatio": "1:1",
@@ -1633,7 +1711,7 @@
       },
       "status": "complete",
       "firstSubmittedAt": "2026-11-13T20:59:55.695Z",
-      "completedAt": "2026-11-13T21:23:16.214Z"
+      "completedAt": "2026-11-15T13:42:21.093Z"
     },
     "taxonomy-batch3": {
       "balanceBefore": 10920.8,
@@ -1664,8 +1742,8 @@
       }
     }
   },
-  "priorCredits": 246,
-  "newCredits": 36,
+  "priorCredits": 132,
+  "newCredits": 126,
   "publication": {
     "batch": "taxonomy-batch2",
     "date": "2026-11-13",
@@ -1675,7 +1753,7 @@
       {
         "id": "cmwf6y0u000cnv4gobf9kpr3e",
         "slug": "demo-compact-first-aid-kit-42-pieces-5x8ln",
-        "name": "DEMO \u2014 Compact first-aid kit, 42 pieces",
+        "name": "DEMO — Compact first-aid kit, 42 pieces",
         "leafKey": "first-aid-supplies",
         "priceKobo": "850000",
         "stock": 12,
@@ -1685,7 +1763,7 @@
       {
         "id": "cmwf6y0ya00ddv4goh2u87vra",
         "slug": "demo-glass-baby-bottles-2-240ml-vz8lq",
-        "name": "DEMO \u2014 Glass baby bottles, 2 \u00d7 240ml",
+        "name": "DEMO — Glass baby bottles, 2 × 240ml",
         "leafKey": "bottles-teats-sterilisers",
         "priceKobo": "780000",
         "stock": 15,
@@ -1695,7 +1773,7 @@
       {
         "id": "cmwf6y11o00e3v4gomp4cvpln",
         "slug": "demo-size-5-match-football-2tldo",
-        "name": "DEMO \u2014 Size 5 match football",
+        "name": "DEMO — Size 5 match football",
         "leafKey": "football-basketball-equipment",
         "priceKobo": "950000",
         "stock": 20,
@@ -1705,7 +1783,7 @@
       {
         "id": "cmwf6y16500etv4go2cri35gl",
         "slug": "demo-car-wash-and-microfibre-care-kit-nfey8",
-        "name": "DEMO \u2014 Car wash and microfibre care kit",
+        "name": "DEMO — Car wash and microfibre care kit",
         "leafKey": "car-care-cleaning",
         "priceKobo": "1200000",
         "stock": 14,
@@ -1715,7 +1793,7 @@
       {
         "id": "cmwf6y19400fjv4goi5q39a9g",
         "slug": "demo-cordless-drill-and-bit-set-18v-dlbqn",
-        "name": "DEMO \u2014 Cordless drill and bit set, 18V",
+        "name": "DEMO — Cordless drill and bit set, 18V",
         "leafKey": "drills-drivers",
         "priceKobo": "4800000",
         "stock": 8,
@@ -1725,7 +1803,7 @@
       {
         "id": "cmwf6y1c800g9v4go8uicfz2s",
         "slug": "demo-a5-exercise-books-pack-of-10-m3ss1",
-        "name": "DEMO \u2014 A5 exercise books, pack of 10",
+        "name": "DEMO — A5 exercise books, pack of 10",
         "leafKey": "notebooks-paper",
         "priceKobo": "480000",
         "stock": 30,
@@ -1735,7 +1813,7 @@
       {
         "id": "cmwf6y1g400gzv4gooqflw9t1",
         "slug": "demo-garri-cassava-flakes-1kg-3cwop",
-        "name": "DEMO \u2014 Garri (cassava flakes), 1kg",
+        "name": "DEMO — Garri (cassava flakes), 1kg",
         "leafKey": "cassava-products",
         "priceKobo": "220000",
         "stock": 25,
@@ -1745,7 +1823,7 @@
       {
         "id": "cmwf6y1kh00hpv4go6mkc8305",
         "slug": "demo-handwoven-raffia-tote-bag-y57pg",
-        "name": "DEMO \u2014 Handwoven raffia tote bag",
+        "name": "DEMO — Handwoven raffia tote bag",
         "leafKey": "bags-accessories",
         "priceKobo": "1500000",
         "stock": 10,
@@ -1781,7 +1859,7 @@
       {
         "id": "cmwgvdgdk000av4a04s42azpi",
         "slug": "demo-long-grain-white-rice-5kg-hd49g",
-        "name": "DEMO \u2014 Long-grain white rice, 5kg",
+        "name": "DEMO — Long-grain white rice, 5kg",
         "leafKey": "rice-grains",
         "priceKobo": "950000",
         "stock": 24,
@@ -1791,7 +1869,7 @@
       {
         "id": "cmwgvdgh1000zv4a0t81d2xiy",
         "slug": "demo-red-palm-oil-1-litre-rn11s",
-        "name": "DEMO \u2014 Red palm oil, 1 litre",
+        "name": "DEMO — Red palm oil, 1 litre",
         "leafKey": "palm-cooking-oils",
         "priceKobo": "480000",
         "stock": 18,
@@ -1801,7 +1879,7 @@
       {
         "id": "cmwgvdgjz001ov4a0mscnxcro",
         "slug": "demo-household-cleaning-set-leqbm",
-        "name": "DEMO \u2014 Household cleaning set",
+        "name": "DEMO — Household cleaning set",
         "leafKey": "cleaning-supplies",
         "priceKobo": "850000",
         "stock": 16,
@@ -1811,7 +1889,7 @@
       {
         "id": "cmwgvdgmo002dv4a0gjm10k4l",
         "slug": "demo-pen-pencil-and-ruler-set-q4g44",
-        "name": "DEMO \u2014 Pen, pencil and ruler set",
+        "name": "DEMO — Pen, pencil and ruler set",
         "leafKey": "writing-drawing-instruments",
         "priceKobo": "320000",
         "stock": 40,
@@ -1821,7 +1899,7 @@
       {
         "id": "cmwgvdgpi0032v4a0f9ebosxv",
         "slug": "demo-wooden-stacking-toy-with-soft-ball-uz6wu",
-        "name": "DEMO \u2014 Wooden stacking toy with soft ball",
+        "name": "DEMO — Wooden stacking toy with soft ball",
         "leafKey": "baby-toddler-toys",
         "priceKobo": "750000",
         "stock": 14,
@@ -1831,7 +1909,7 @@
       {
         "id": "cmwgvdgsa003rv4a0756m8lif",
         "slug": "demo-yoga-mat-cork-block-and-resistance-band-set-x55et",
-        "name": "DEMO \u2014 Yoga mat, cork block and resistance band set",
+        "name": "DEMO — Yoga mat, cork block and resistance band set",
         "leafKey": "yoga-fitness-accessories",
         "priceKobo": "1450000",
         "stock": 12,

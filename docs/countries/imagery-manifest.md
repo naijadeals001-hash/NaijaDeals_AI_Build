@@ -186,3 +186,65 @@ The executed test verified the four required contracts:
 - Unauthorized/scoped rejection: `updateProductOrigin` locks the product and calls `assertProductMarketScope(actor, product.countryCode)`; a reviewer outside the product's marketplace receives 403 `region_forbidden`. The existing run-owned test also covers a scoped reviewer recording a foreign origin for an in-scope product, plus cross-market refusal and clear.
 
 The origin workflow is now executed on isolated fixtures; the accepted origin inventory remains 0.
+
+## 2026-11-15 repair batch — executed
+
+Authorised Kie.ai generation replaced every image that the audit marked non-photographic or mismatched, plus five broad combination rows. Model `gpt-image-2-5-flare-text-to-image`, resolution 1K, aspect 1:1, **6 credits per image**. 44 images x 6 = **264 credits**, balance 10,698.8 -> 10,434.8 (no top-up, no retry, 0 failures). Two Shop category tiles (Medicines & Treatments, Vitamins & Supplements) were generated in the same session: 12 credits, balance 10,710.8 -> 10,698.8. Ledger: `docs/countries/image-repair-ledger-2026-11-15.json`; target manifest: `docs/countries/image-repair-manifest-2026-11-15.json`; contact sheet: `qa-artifacts/visual/country-image-repair/contact-sheet.png`.
+
+| Country | Theme key | Asset | Task |
+| --- | --- | --- | --- |
+| GA | rubber | /generated/countries/theme-ga-rubber.webp | bef2e6c16407aaaeaf9c51363c99e052 |
+| BI | wild-mushrooms | /generated/countries/theme-bi-wild-mushrooms.webp | a615df81feda4c5e6ea8a91b6ccd55fc |
+| KE | cut-flowers | /generated/countries/theme-ke-cut-flowers.webp | 7d56c08c670b9662f2f0ca36811df74b |
+| KE | export-manufacturing | /generated/countries/theme-ke-export-manufacturing.webp | c7895283f197701d863bfada2cabac3b |
+| KM | ylang-ylang | /generated/countries/theme-km-ylang-ylang.webp | bb2dd0374c28eff44b0fcca16bc501ea |
+| MU | rum | /generated/countries/theme-mu-rum.webp | 512e7e3c73d876424bc583f69bd74590 |
+| RW | imigongo | /generated/countries/theme-rw-imigongo.webp | e2000d5fb05fc1cbf5397115c4294696 |
+| UG | barkcloth | /generated/countries/theme-ug-barkcloth.webp | 04e393944368770b83a7438cd105ecbf |
+| DZ | carpets | /generated/countries/theme-dz-carpets.webp | befea878f9b7ab9c6caaec9c30897128 |
+| DZ | pottery | /generated/countries/theme-dz-pottery.webp | 00f6b806ce133c4e9f3efb78040ffbf7 |
+| EG | furniture | /generated/countries/theme-eg-furniture.webp | 46aa7e22b024dbe77f8fed5520ce6757 |
+| LY | gharyan-pottery | /generated/countries/theme-ly-gharyan-pottery.webp | b847831b759e061c7ad3353a74d78796 |
+| MA | argan | /generated/countries/theme-ma-argan.webp | b2da69e8783df5e18f0118be0c8dc23d |
+| MA | woven-textiles | /generated/countries/theme-ma-woven-textiles.webp | 9c67bcbebefb4016560abb868278eb8b |
+| SD | henna | /generated/countries/theme-sd-henna.webp | 775be080a3f18fd8b72a93b193aa782d |
+| TN | carpets | /generated/countries/theme-tn-carpets.webp | b061e57a3b6764f5331cf9a00879139e |
+| TN | ceramics | /generated/countries/theme-tn-ceramics.webp | a1092c9ca8166c62f5350924ce8de77f |
+| BW | wiring-harnesses | /generated/countries/theme-bw-wiring-harnesses.webp | 8244a62f701605406596ca46998f0e53 |
+| LS | wool | /generated/countries/theme-ls-wool.webp | 2452d8be3834552b47c8d57c020a7792 |
+| LS | mohair | /generated/countries/theme-ls-mohair.webp | 4b464bf51ab025dffffb35f50d077425 |
+| LS | bottled-water | /generated/countries/theme-ls-bottled-water.webp | 9bb38b3b1a1fc721be6d3e86578ac7c8 |
+| LS | automotive-components | /generated/countries/theme-ls-automotive-components.webp | 3f03871da3c35594e50641ba3c2948b8 |
+| MW | tobacco | /generated/countries/theme-mw-tobacco.webp | 8f9d46e001c282e4a3a4040964451f79 |
+| SZ | candles | /generated/countries/theme-sz-candles.webp | 130a5a2c8e4f08e338dacbaf5d8db2c7 |
+| ZA | wine | /generated/countries/theme-za-wine.webp | c2c60dfa3e5c53298b496dcce99088b1 |
+| ZA | mohair | /generated/countries/theme-za-mohair.webp | 93aad7bd97bf8f38c847553cbc8ec834 |
+| ZW | tobacco | /generated/countries/theme-zw-tobacco.webp | 18bd2750e2f04465ec5c8d2b113a89f2 |
+| ZW | crafts | /generated/countries/theme-zw-crafts.webp | 9c46d81481a18c8d711b4c679b6c1c15 |
+| CI | hydrocarbons | /generated/countries/theme-ci-hydrocarbons.webp | 8a284a9f185a315f82f25ff52696decd |
+| GM | tourism | /generated/countries/theme-gm-tourism.webp | 7a5c31ec1c33d4327d959938105ca1bf |
+| GN | hydropower | /generated/countries/theme-gn-hydropower.webp | 0d93dca3568a1e638738f82b48ec810e |
+| LR | rubber | /generated/countries/theme-lr-rubber.webp | d2f26065af1003c338da9d95b818ef5d |
+| ML | bogolan | /generated/countries/theme-ml-bogolan.webp | 510648163970398e2854361109c6929c |
+| MR | natural-gas | /generated/countries/theme-mr-natural-gas.webp | 545296a389a41f5e60d9a220076dc793 |
+| MR | tourism | /generated/countries/theme-mr-tourism.webp | 688af2f59b8f288d2bb38c755f67b734 |
+| NE | oil | /generated/countries/theme-ne-oil.webp | c368144121f0cd61a301099df73a8376 |
+| SL | marine-fisheries | /generated/countries/theme-sl-marine-fisheries.webp | 09afadf28b10cfe0481f5b446015e7af |
+| SL | tourism | /generated/countries/theme-sl-tourism.webp | a723d7ca540f743289564fb47a2951d7 |
+| TG | manufacturing | /generated/countries/theme-tg-manufacturing.webp | f663c06631b5869b2165eb5f6b8f5bf1 |
+| CV | tourism | /generated/countries/theme-cv-tourism.webp | 6f61354f191b043c2c6abd57ebcd7756 |
+| GW | ecotourism | /generated/countries/theme-gw-ecotourism.webp | 5e68fd652a87104668d6a8d621c12e78 |
+| GH | handwoven-textiles | /generated/countries/theme-gh-handwoven-textiles.webp | a884f9f5a0fbc22b1946a6c3b76115d7 |
+| NG | textiles-and-crafts | /generated/countries/theme-ng-textiles-and-crafts.webp | 1ba27f1b583bf20b0d0a63749f99732c |
+| CM | rubber-palm-oil-and-bananas | /generated/countries/theme-cm-rubber-palm-oil-and-bananas.webp | 8cf3fa065bffe44a3d8df6440db21788 |
+
+All 44 assets are 900x900 WebP (source 1254x1254, centre-cropped, no upscaling). Each is referenced once — no repair image is shared between countries. Overrides live in `lib/data/country-theme-image-overrides.ts` keyed `${COUNTRY_CODE}/${themeKey}` with alt, kind GENERATED, task id, credits and prompt; `scripts/seed-country-discovery.ts` reseeded REVIEW to 54 countries / 324 themes / 362 sources.
+
+### Post-repair verification
+
+- REVIEW (naijadeals_review) now reports 216 GENERATED and 108 APPROVED_EXISTING theme images; 0 rows without a recognised kind.
+- 44/44 theme rows read back the repaired URL, alt and provenance from the database.
+- 33 affected country pages were fetched from the running preview: every target theme renders the repaired `<img src>` and the stored alt; 0 stale or missing.
+- All 44 assets decoded in-browser at exactly 900x900; 0 broken images on the pages; document width equalled viewport width at 390, 768 and 1440.
+- Theme cards keep `loading="lazy"`; lead-theme images stay eager. Algeria 390/768/1440 screenshots: `qa-artifacts/visual/image-repair-2026-11-15/`.
+- Audit state after the batch: 285 PASS / 39 BROAD / **0 NON_PHOTOGRAPHIC**, 134 distinct images. The remaining 39 BROAD rows are subject-appropriate but not country-specific and are documented as such.

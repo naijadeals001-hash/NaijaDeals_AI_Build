@@ -2199,6 +2199,8 @@ export const TAXONOMY_NODES: TaxonomyNode[] = [
     slug: "medicines-treatments",
     description:
       "Over-the-counter medicines and topical treatments. Excludes prescription-only medicines, unregistered products and veterinary medicines.",
+    imageUrl: "/generated/taxonomy/category-medicines-treatments.webp",
+    imageAlt: "Neutral unbranded medicine cartons, blister packs and first-aid supplies",
     level: 1,
     isSelectable: false,
     showOnHomepage: false,
@@ -2258,6 +2260,8 @@ export const TAXONOMY_NODES: TaxonomyNode[] = [
     slug: "vitamins-supplements",
     description:
       "Dietary supplements, vitamins, minerals and herbal products. Excludes medicines, prescription nutrition and products making unverified therapeutic claims.",
+    imageUrl: "/generated/taxonomy/category-vitamins-supplements.webp",
+    imageAlt: "Neutral unbranded supplement bottles, capsules and softgel vitamins",
     level: 1,
     isSelectable: false,
     showOnHomepage: false,

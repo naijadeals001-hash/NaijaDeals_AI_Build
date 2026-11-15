@@ -1,0 +1,315 @@
+{
+  "model": "gpt-image-2-5-flare-text-to-image",
+  "size": "1K",
+  "aspectRatio": "1:1",
+  "targets": [
+    {
+      "countryCode": "GA",
+      "key": "rubber",
+      "label": "Rubber",
+      "file": "theme-ga-rubber.webp",
+      "alt": "rubber latex being tapped into a cup on a rubber tree and folded natural rubber sheets in a Gabonese forest. Illustrative editorial image for the Rubber theme."
+    },
+    {
+      "countryCode": "BI",
+      "key": "wild-mushrooms",
+      "label": "Wild mushrooms",
+      "file": "theme-bi-wild-mushrooms.webp",
+      "alt": "a woven basket of mixed wild forest mushrooms with moss and fallen leaves in a Burundi highland forest. Illustrative editorial image for the Wild mushrooms theme."
+    },
+    {
+      "countryCode": "KE",
+      "key": "cut-flowers",
+      "label": "Cut flowers",
+      "file": "theme-ke-cut-flowers.webp",
+      "alt": "bunches of fresh roses and seasonal cut flowers being packed in a Kenyan flower-farm workroom with plain unmarked sleeves. Illustrative editorial image for the Cut flowers theme."
+    },
+    {
+      "countryCode": "KE",
+      "key": "export-manufacturing",
+      "label": "Export manufacturing",
+      "file": "theme-ke-export-manufacturing.webp",
+      "alt": "a clean garment manufacturing floor with sewing machines, folded cotton fabric and thread spools in Kenya, no people. Illustrative editorial image for the Export manufacturing theme."
+    },
+    {
+      "countryCode": "KM",
+      "key": "ylang-ylang",
+      "label": "Ylang-ylang",
+      "file": "theme-km-ylang-ylang.webp",
+      "alt": "fresh yellow ylang-ylang flowers beside a copper distillation vessel and a small plain bottle of essential oil in the Comoros. Illustrative editorial image for the Ylang-ylang theme."
+    },
+    {
+      "countryCode": "MU",
+      "key": "rum",
+      "label": "Rum and spirits",
+      "file": "theme-mu-rum.webp",
+      "alt": "an unlabelled amber rum bottle and glass beside cut sugarcane and a small barrel in Mauritius, neutral editorial still life. Illustrative editorial image for the Rum and spirits theme."
+    },
+    {
+      "countryCode": "RW",
+      "key": "imigongo",
+      "label": "Imigongo art",
+      "file": "theme-rw-imigongo.webp",
+      "alt": "a group of geometric black, white and ochre earth-painted Imigongo panels from Rwanda with raised angular patterns. Illustrative editorial image for the Imigongo art theme."
+    },
+    {
+      "countryCode": "UG",
+      "key": "barkcloth",
+      "label": "Barkcloth",
+      "file": "theme-ug-barkcloth.webp",
+      "alt": "folded textured barkcloth made from beaten fig-tree bark in Uganda, showing its natural grain and warm earth tone. Illustrative editorial image for the Barkcloth theme."
+    },
+    {
+      "countryCode": "DZ",
+      "key": "carpets",
+      "label": "Woven carpets",
+      "file": "theme-dz-carpets.webp",
+      "alt": "a hand-knotted wool Berber carpet from Algeria with geometric diamond motifs, folded to show pile and fringe. Illustrative editorial image for the Woven carpets theme."
+    },
+    {
+      "countryCode": "DZ",
+      "key": "pottery",
+      "label": "Pottery and ceramics",
+      "file": "theme-dz-pottery.webp",
+      "alt": "handmade Algerian Berber pottery with painted geometric bands, bowls and a tall vessel on a neutral surface. Illustrative editorial image for the Pottery and ceramics theme."
+    },
+    {
+      "countryCode": "EG",
+      "key": "furniture",
+      "label": "Furniture",
+      "file": "theme-eg-furniture.webp",
+      "alt": "a handcrafted wooden Egyptian chair and side table with mashrabiya latticework and carved details in a neutral workshop. Illustrative editorial image for the Furniture theme."
+    },
+    {
+      "countryCode": "LY",
+      "key": "gharyan-pottery",
+      "label": "Gharyan pottery",
+      "file": "theme-ly-gharyan-pottery.webp",
+      "alt": "traditional Gharyan Libyan glazed pottery in deep blue, green and cream, plates and a jug on a pale surface. Illustrative editorial image for the Gharyan pottery theme."
+    },
+    {
+      "countryCode": "MA",
+      "key": "argan",
+      "label": "Argan",
+      "file": "theme-ma-argan.webp",
+      "alt": "argan nuts and kernels beside a small unlabelled bottle of golden argan oil and argan tree branches in Morocco. Illustrative editorial image for the Argan theme."
+    },
+    {
+      "countryCode": "MA",
+      "key": "woven-textiles",
+      "label": "Woven textiles",
+      "file": "theme-ma-woven-textiles.webp",
+      "alt": "a folded Moroccan handwoven wool textile with geometric bands and fringe, showing warp and weft texture. Illustrative editorial image for the Woven textiles theme."
+    },
+    {
+      "countryCode": "SD",
+      "key": "henna",
+      "label": "Henna",
+      "file": "theme-sd-henna.webp",
+      "alt": "fresh henna leaves, a bowl of green henna powder and a small dish of prepared henna paste in Sudan. Illustrative editorial image for the Henna theme."
+    },
+    {
+      "countryCode": "TN",
+      "key": "carpets",
+      "label": "Carpets and flat-weave textiles",
+      "file": "theme-tn-carpets.webp",
+      "alt": "a Tunisian flat-weave kilim with geometric bands and fringe, folded to show the weave and earthy colours. Illustrative editorial image for the Carpets and flat-weave textiles theme."
+    },
+    {
+      "countryCode": "TN",
+      "key": "ceramics",
+      "label": "Ceramics",
+      "file": "theme-tn-ceramics.webp",
+      "alt": "painted Nabeul Tunisian ceramic plates and bowls with blue, yellow and green floral motifs on a pale surface. Illustrative editorial image for the Ceramics theme."
+    },
+    {
+      "countryCode": "BW",
+      "key": "wiring-harnesses",
+      "label": "Vehicle wiring sets",
+      "file": "theme-bw-wiring-harnesses.webp",
+      "alt": "coiled automotive wiring harnesses with multi-pin connectors, insulated wires and a fuse block in Botswana, no vehicle branding. Illustrative editorial image for the Vehicle wiring sets theme."
+    },
+    {
+      "countryCode": "LS",
+      "key": "wool",
+      "label": "Wool",
+      "file": "theme-ls-wool.webp",
+      "alt": "raw Lesotho wool fleece, carded wool and a skein of undyed yarn arranged on a neutral work surface. Illustrative editorial image for the Wool theme."
+    },
+    {
+      "countryCode": "LS",
+      "key": "mohair",
+      "label": "Mohair",
+      "file": "theme-ls-mohair.webp",
+      "alt": "curly lustrous mohair locks and spun mohair yarn from Lesotho, showing the characteristic long fibre. Illustrative editorial image for the Mohair theme."
+    },
+    {
+      "countryCode": "LS",
+      "key": "bottled-water",
+      "label": "Highland water",
+      "file": "theme-ls-bottled-water.webp",
+      "alt": "clear highland spring water in a plain glass beside a rocky Lesotho mountain stream, no bottle branding. Illustrative editorial image for the Highland water theme."
+    },
+    {
+      "countryCode": "LS",
+      "key": "automotive-components",
+      "label": "Automotive components",
+      "file": "theme-ls-automotive-components.webp",
+      "alt": "machined gears, bearings and engine components arranged on a workshop bench in Lesotho, no vehicle branding. Illustrative editorial image for the Automotive components theme."
+    },
+    {
+      "countryCode": "MW",
+      "key": "tobacco",
+      "label": "Tobacco",
+      "file": "theme-mw-tobacco.webp",
+      "alt": "cured tobacco leaves hanging in neat rows in a Malawi drying barn, neutral editorial documentation. Illustrative editorial image for the Tobacco theme."
+    },
+    {
+      "countryCode": "SZ",
+      "key": "candles",
+      "label": "Handcrafted candles",
+      "file": "theme-sz-candles.webp",
+      "alt": "handmade plain candles in cream, ochre and green beside a wooden mould and cotton wicks in Eswatini. Illustrative editorial image for the Handcrafted candles theme."
+    },
+    {
+      "countryCode": "ZA",
+      "key": "wine",
+      "label": "Wine",
+      "file": "theme-za-wine.webp",
+      "alt": "a South African vineyard row beside an unlabelled dark wine bottle and a glass of red wine on a wooden table. Illustrative editorial image for the Wine theme."
+    },
+    {
+      "countryCode": "ZA",
+      "key": "mohair",
+      "label": "Mohair",
+      "file": "theme-za-mohair.webp",
+      "alt": "curly white mohair fleece and fine spun mohair yarn from South Africa on a neutral surface. Illustrative editorial image for the Mohair theme."
+    },
+    {
+      "countryCode": "ZW",
+      "key": "tobacco",
+      "label": "Tobacco",
+      "file": "theme-zw-tobacco.webp",
+      "alt": "cured tobacco leaves in a Zimbabwean drying barn, stacked in neat bundles with natural leaf texture. Illustrative editorial image for the Tobacco theme."
+    },
+    {
+      "countryCode": "ZW",
+      "key": "crafts",
+      "label": "Stone sculpture and crafts",
+      "file": "theme-zw-crafts.webp",
+      "alt": "carved Shona stone sculptures from Zimbabwe in dark serpentine and pale soapstone, with simple chisels. Illustrative editorial image for the Stone sculpture and crafts theme."
+    },
+    {
+      "countryCode": "CI",
+      "key": "hydrocarbons",
+      "label": "Oil and gas",
+      "file": "theme-ci-hydrocarbons.webp",
+      "alt": "an offshore oil and gas platform with a flare stack on the horizon off Côte d'Ivoire, clear daylight, no branding. Illustrative editorial image for the Oil and gas theme."
+    },
+    {
+      "countryCode": "GM",
+      "key": "tourism",
+      "label": "Tourism",
+      "file": "theme-gm-tourism.webp",
+      "alt": "Kunta Kinteh Island and the River Gambia with mangroves and historic stone ruins, a verified Gambian heritage landscape. Illustrative editorial image for the Tourism theme."
+    },
+    {
+      "countryCode": "GN",
+      "key": "hydropower",
+      "label": "Hydropower",
+      "file": "theme-gn-hydropower.webp",
+      "alt": "a concrete hydropower dam and spillway on a forested Guinean river with mist and falling water. Illustrative editorial image for the Hydropower theme."
+    },
+    {
+      "countryCode": "LR",
+      "key": "rubber",
+      "label": "Rubber",
+      "file": "theme-lr-rubber.webp",
+      "alt": "rubber latex collection cups and scored rubber trees with folded natural rubber sheets in Liberia. Illustrative editorial image for the Rubber theme."
+    },
+    {
+      "countryCode": "ML",
+      "key": "bogolan",
+      "label": "Bogolan",
+      "file": "theme-ml-bogolan.webp",
+      "alt": "folded Malian bogolan mud cloth with bold geometric symbols in black, white and ochre, showing hand-painted texture. Illustrative editorial image for the Bogolan theme."
+    },
+    {
+      "countryCode": "MR",
+      "key": "natural-gas",
+      "label": "Natural gas",
+      "file": "theme-mr-natural-gas.webp",
+      "alt": "a natural-gas processing pipeline and compressor station in the Mauritanian desert, industrial editorial image, no branding. Illustrative editorial image for the Natural gas theme."
+    },
+    {
+      "countryCode": "MR",
+      "key": "tourism",
+      "label": "Tourism",
+      "file": "theme-mr-tourism.webp",
+      "alt": "the stone library and narrow historic streets of Chinguetti, Mauritania, a verified Saharan heritage location. Illustrative editorial image for the Tourism theme."
+    },
+    {
+      "countryCode": "NE",
+      "key": "oil",
+      "label": "Oil",
+      "file": "theme-ne-oil.webp",
+      "alt": "an oil drilling pumpjack and desert wellhead in Niger's Sahel landscape, neutral industrial documentation. Illustrative editorial image for the Oil theme."
+    },
+    {
+      "countryCode": "SL",
+      "key": "marine-fisheries",
+      "label": "Marine fisheries",
+      "file": "theme-sl-marine-fisheries.webp",
+      "alt": "colourful fishing boats and drying nets on the Sierra Leone coast with local wooden pirogues. Illustrative editorial image for the Marine fisheries theme."
+    },
+    {
+      "countryCode": "SL",
+      "key": "tourism",
+      "label": "Tourism and heritage",
+      "file": "theme-sl-tourism.webp",
+      "alt": "the stone ruins of Bunce Island on the Sierra Leone River surrounded by water and tropical vegetation, heritage editorial. Illustrative editorial image for the Tourism and heritage theme."
+    },
+    {
+      "countryCode": "TG",
+      "key": "manufacturing",
+      "label": "Manufacturing",
+      "file": "theme-tg-manufacturing.webp",
+      "alt": "a clean agro-processing workshop with stainless-steel machinery, sacks and plain containers in Togo, no people or branding. Illustrative editorial image for the Manufacturing theme."
+    },
+    {
+      "countryCode": "CV",
+      "key": "tourism",
+      "label": "Island tourism",
+      "file": "theme-cv-tourism.webp",
+      "alt": "the volcanic ridges and terraced valley of Santo Antão, Cabo Verde, with a winding mountain path, not a generic beach. Illustrative editorial image for the Island tourism theme."
+    },
+    {
+      "countryCode": "GW",
+      "key": "ecotourism",
+      "label": "Bijagós ecotourism",
+      "file": "theme-gw-ecotourism.webp",
+      "alt": "a narrow mangrove channel in the Bijagós archipelago of Guinea-Bissau with a small traditional wooden boat. Illustrative editorial image for the Bijagós ecotourism theme."
+    },
+    {
+      "countryCode": "GH",
+      "key": "handwoven-textiles",
+      "label": "Fugu and handwoven cloth",
+      "file": "theme-gh-handwoven-textiles.webp",
+      "alt": "folded Ghanaian kente and fugu handwoven strips with geometric patterns and visible handloom texture. Illustrative editorial image for the Fugu and handwoven cloth theme."
+    },
+    {
+      "countryCode": "NG",
+      "key": "textiles-and-crafts",
+      "label": "Textiles and crafts",
+      "file": "theme-ng-textiles-and-crafts.webp",
+      "alt": "Nigerian indigo adire cloth with resist-dyed patterns beside carved wooden craft objects and a woven basket. Illustrative editorial image for the Textiles and crafts theme."
+    },
+    {
+      "countryCode": "CM",
+      "key": "rubber-palm-oil-and-bananas",
+      "label": "Rubber, palm oil and bananas",
+      "file": "theme-cm-rubber-palm-oil-and-bananas.webp",
+      "alt": "rubber latex tapping, a bunch of red palm fruit and green bananas from Cameroon arranged as an agricultural still life. Illustrative editorial image for the Rubber, palm oil and bananas theme."
+    }
+  ]
+}

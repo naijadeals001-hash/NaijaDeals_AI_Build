@@ -500,3 +500,30 @@ inside the target subtree, first image, exact URL) and every alt-only source
 - Only WebP derivatives are committed. No app code, taxonomy seed, API,
   admin UI, schema, product, inventory or payment data was changed.
 
+
+### 2026-11-15 update — medicines and vitamins tiles
+
+The two level-1 categories whose subtrees are NG-restricted now carry approved
+tiles. Both were generated with the authorized Kie.ai workflow
+(`gpt-image-2-5-flare-text-to-image`, 1K, 1:1, 6 credits each = 12 credits;
+balance 10,710.8 -> 10,698.8, no top-up) and applied with
+`scripts/apply-category-images.ts --apply --expect-db=naijadeals_review`.
+
+| Category | Asset | Task | Alt |
+| --- | --- | --- | --- |
+| Medicines & Treatments | `/generated/taxonomy/category-medicines-treatments.webp` | `244b9917e3f510c89bb8873b89a5ab62` | Neutral unbranded medicine cartons, blister packs and first-aid supplies |
+| Vitamins & Supplements | `/generated/taxonomy/category-vitamins-supplements.webp` | `a6bd33561a5799031698163ad91aefd5` | Neutral unbranded supplement bottles, capsules and softgel vitamins |
+
+The contact sheet (`qa-artifacts/visual/country-image-repair/category-health-sheet.png`)
+was inspected before the ledger was marked reviewed; no readable text, brand or
+health claim appears in either image.
+
+Post-apply state: **37/37 active level-1 categories have `imageUrl` and
+`imageAlt`** (`activeLevelOne = 37`, 0 NULL). The apply wrote exactly 2 rows in
+one transaction (`rows written: 2; other rows unchanged: true`), audit plus
+system-event rows included.
+
+Eligibility is unchanged. `lib/taxonomy/regulated.ts` is untouched; the OTC leaf
+still answers "not open for listings in NG yet" with the NAFDAC reviewer note,
+and both restricted leaves stay active with **0 products** anywhere in either
+subtree. The tiles therefore add only presentation, not publishability.

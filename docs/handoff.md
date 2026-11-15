@@ -5907,3 +5907,72 @@ not a full Shop completion, production-readiness or security certification.
   older reconciliation state; it is not a clean financial baseline.
 - The full Shop marketplace suite, country imagery completion, provider
   settlement and business launch gates remain outside this accepted scope.
+
+## 2026-11-15 — Authorised Kie.ai image repair (Shop categories + Discover Africa)
+
+**Scope:** the owner explicitly authorised the project's existing Kie.ai
+integration and available credits for (a) the Medicines & Treatments and
+Vitamins & Supplements "Shop by category" tiles and (b) every missing, broken or
+mismatched country/theme image in Discover Africa. No top-up, subscription,
+unrelated purchase or production deployment was authorised or performed.
+
+**Generation (executed):** model `gpt-image-2-5-flare-text-to-image`, 1K, 1:1,
+6 credits per image. 46 images total = **276 credits**; balance 10,710.8 ->
+10,434.8. Zero retries and zero failures, so no duplicate charges. The Kie MCP
+`prepare_media_generation` call timed out at 30 s again; the documented fallback
+was the project's existing authorised REST generator (not a bypass of any
+rejection — no rejection occurred).
+
+| Batch | Images | Credits | Ledger |
+| --- | --- | --- | --- |
+| Shop category tiles | 2 | 12 | `docs/taxonomy/generation-ledger.json` |
+| Discover Africa themes | 44 | 264 | `docs/countries/image-repair-ledger-2026-11-15.json` |
+
+**Country repair coverage:** all 39 rows the audit marked NON_PHOTOGRAPHIC plus 5
+BROAD rows whose subject did not match (`CM/rubber-palm-oil-and-bananas`,
+`CV/tourism`, `GH/handwoven-textiles`, `GW/ecotourism`,
+`NG/textiles-and-crafts`). Assets are `/generated/countries/theme-<cc>-<key>.webp`
+(900x900 WebP, centre-cropped from 1254x1254, no upscaling). Overrides with alt,
+kind GENERATED, task id, credits and prompt live in
+`lib/data/country-theme-image-overrides.ts`; REVIEW was reseeded to
+54 countries / 324 themes / 362 sources. The `eramics` spelling in the request
+does not exist in source — the theme is `Ceramics` (TN) and was regenerated.
+
+**Application:** `scripts/apply-category-images.ts --apply --expect-db=naijadeals_review`
+wrote exactly 2 category rows in one transaction (`other rows unchanged: true`);
+37/37 active level-1 categories now carry `imageUrl` + `imageAlt`.
+
+**Verification (build `RsT43GlLBsdJsCT8Li0HN`, port 3047, `naijadeals_review`):**
+- 44/44 theme rows read back repaired URL, alt, GENERATED kind and provenance.
+- 33 affected country pages fetched: every target theme renders the repaired
+  image and stored alt; 0 stale, 0 duplicate repair assets.
+- All 44 assets decoded at exactly 900x900; 0 broken images anywhere checked.
+- 390/768/1440: document width equalled viewport width on `/naijashop`,
+  `/naijashop/countries` and `/naijashop/countries/algeria`; theme cards keep
+  `loading="lazy"`, lead images stay eager.
+- `scripts/taxonomy-market-browsing-tests.ts` **18/18 PASS** on the live preview,
+  including regulated-eligibility allow/deny and the browser rail/directory.
+- `scripts/taxonomy-browsing-visibility-tests.ts` **did not complete**: its
+  precondition asserts 57 public REVIEW products and the current accepted
+  catalogue has 63. The baseline was set in `470c616` (2026-11-13) before the
+  catalogue expansion; this task added no products. The constant was not
+  weakened. The regulated/browsing contracts it covers independently pass in the
+  market suite above.
+- Eligibility unchanged: `lib/taxonomy/regulated.ts` untouched, the OTC leaf
+  still answers "not open for listings in NG yet" with the NAFDAC note, both
+  restricted leaves are active, and **0 products** exist anywhere in either
+  subtree. REVIEW after all runs: 277 categories, 37 active level-1, 259
+  products, 54 published countries, 324 themes, 0 active level-1 without an image.
+
+**Evidence:** `qa-artifacts/category-health-generation.log`,
+`qa-artifacts/country-image-repair-generation.log`,
+`qa-artifacts/category-image-apply.log`, `qa-artifacts/country-image-reseed.log`,
+`qa-artifacts/final-review-build-2026-11-15.log`,
+`qa-artifacts/taxonomy-market-browsing-2026-11-15.log`,
+`qa-artifacts/taxonomy-browsing-visibility-2026-11-15.log`, screenshots and
+contact sheets under `qa-artifacts/visual/` (ignored by Git, present on disk).
+
+**Residual:** 39 BROAD rows remain subject-appropriate but not country-specific
+(unchanged, documented in the audit). The preview process was restarted for this
+rebuild after confirming no acceptance run was active; the previous build
+`8CTjw5MV-9MCKuV66hkoY` was replaced by `RsT43GlLBsdJsCT8Li0HN`.
