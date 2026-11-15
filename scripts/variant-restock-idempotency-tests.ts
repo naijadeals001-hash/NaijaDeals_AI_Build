@@ -154,10 +154,10 @@ async function main() {
     const productIds = created.productIds;
     try {
       if (process.env.DISPOSABLE_TEST_DATABASE !== "1") {
-        // Preserve the balanced funding and its wallet projections on a shared
-        // TEST database. Deleting the journal without a compensating entry
-        // corrupts reconciliation. A disposable database is dropped instead.
-        return;
+        // Deleting the journal without a compensating entry corrupts
+        // reconciliation on a shared database. Fail closed instead of leaving
+        // a silent no-op or deleting financial history.
+        throw new Error("DISPOSABLE_TEST_DATABASE=1 is required for financial fixture cleanup");
       }
       await prisma.affiliateReversalIntent.deleteMany({ where: { orderId: { in: orderIds } } }).catch(() => undefined);
       const transactions = await prisma.walletTransaction

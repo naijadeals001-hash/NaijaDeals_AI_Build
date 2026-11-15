@@ -690,6 +690,10 @@ async function main() {
 
       const report = await reconcile();
       assert(report.totals.differenceKobo === "0", `whole-book journal difference ${report.totals.differenceKobo}`);
+      assert(
+        report.status === "CLEAN" && report.issues.length === 0,
+        `reconcile status=${report.status}; expected CLEAN with zero issues`
+      );
       const orderCount = await prisma.order.count();
       assert(orderCount > 0, "no orders found while collecting reconciliation evidence");
       return `reservations=0; journal difference=${report.totals.differenceKobo}; reconcile status=${report.status}; issues=${report.issues.length}`;

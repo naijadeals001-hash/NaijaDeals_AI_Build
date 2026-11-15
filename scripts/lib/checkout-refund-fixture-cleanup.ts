@@ -15,9 +15,11 @@ export async function cleanupCheckoutRefundFixtures(
 ) {
   if (!options.disposeFinancial) {
     // Deleting journal rows while leaving the SYSTEM projection changed makes
-    // later reconciliation fail. Retain the balanced test funding unless the
-    // caller is an explicitly disposable database that will be dropped.
-    return { retained: true, reason: "financial fixture history retained; use a disposable TEST database" };
+    // later reconciliation fail. Never silently leave fixtures behind: require
+    // an explicitly disposable database that the operator will drop.
+    throw new Error(
+      "financial fixture cleanup requires DISPOSABLE_TEST_DATABASE=1; use a disposable TEST database and drop it after the run"
+    );
   }
   const emailPrefix = `crf-${runId}`.toLowerCase();
   const vendorPrefix = `crf-vendor-${runId}`.toLowerCase();
