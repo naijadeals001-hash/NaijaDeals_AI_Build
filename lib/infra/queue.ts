@@ -23,6 +23,8 @@ export function queuePrefix(): string {
   return value ? value : "nd";
 }
 
+export const ENQUEUE_TIMEOUT_MS = 2_500;
+
 export const QUEUE_NAMES = {
   driveExpiry: "drive-expiry",
   checkoutExpiry: "checkout-expiry",
@@ -91,7 +93,11 @@ export async function enqueue(
 
   const startedAt = Date.now();
   try {
-    const job = await queue.add(jobName, payload, {
+    // A producer must never hold a financial response open while an optional
+    // Valkey is unavailable. BullMQ's required null retry setting can keep a
+    // queue.add() pending indefinitely, so bound only the producer's wait and
+    // disconnect the unusable queue; the durable Notification row remains.
+    const added = queue.add(jobName, payload, {
       jobId: options.jobId,
       delay: options.delayMs,
       attempts: options.attempts ?? 3,
@@ -99,6 +105,17 @@ export async function enqueue(
       removeOnComplete: { age: 60 * 60 * 24 },
       removeOnFail: { age: 60 * 60 * 24 * 7 }
     });
+    const job = await Promise.race([
+      added,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), ENQUEUE_TIMEOUT_MS))
+    ]);
+    if (!job) {
+      recordOperation("valkey", "enqueue", "error", Date.now() - startedAt);
+      infraMetrics().queueJobs.inc({ queue: name, event: "enqueue_timeout" });
+      scope().queues.delete(name);
+      void Promise.resolve(queue.disconnect()).catch(() => undefined);
+      return null;
+    }
     recordOperation("valkey", "enqueue", "ok", Date.now() - startedAt);
     infraMetrics().queueJobs.inc({ queue: name, event: "enqueued" });
     return job.id ?? null;

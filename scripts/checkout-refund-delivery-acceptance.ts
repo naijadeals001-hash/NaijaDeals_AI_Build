@@ -28,6 +28,7 @@
 import "dotenv/config";
 import { randomBytes } from "node:crypto";
 import { requireTestDatabase, type VerifiedTestDatabase } from "./lib/test-db-guard";
+import { cleanupCheckoutRefundFixtures } from "./lib/checkout-refund-fixture-cleanup";
 import type { PrismaClient } from "@prisma/client";
 
 const EXPECTED_DATABASE = "naijadeals_checkout_refund_test";
@@ -46,16 +47,43 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+// This suite exercises financial services directly, not the optional queue
+// worker. An unreachable local Valkey must not hang refunds; the durable
+// notification row remains the source of truth.
+process.env.VALKEY_URL = "";
+delete process.env.REDIS_URL;
+
+const CHECK_TIMEOUT_MS = Number(process.env.CHECKOUT_ACCEPTANCE_CHECK_TIMEOUT_MS ?? 120_000);
+const OVERALL_TIMEOUT_MS = Number(process.env.CHECKOUT_ACCEPTANCE_TIMEOUT_MS ?? 15 * 60_000);
+
+function bounded<T>(promise: Promise<T>, label: string, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} exceeded ${ms}ms`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
 async function check(name: string, fn: () => Promise<string>) {
+  const started = Date.now();
+  console.log(`START ${name}`);
   try {
-    checks.push({ name, status: "PASS", detail: await fn() });
+    const detail = await bounded(fn(), name, CHECK_TIMEOUT_MS);
+    checks.push({ name, status: "PASS", detail });
+    console.log(`PASS ${name} (${Date.now() - started}ms) — ${detail}`);
   } catch (error) {
     failures += 1;
-    checks.push({
-      name,
-      status: "FAIL",
-      detail: (error instanceof Error ? error.message : String(error)).slice(0, 700)
-    });
+    const detail = (error instanceof Error ? error.message : String(error)).slice(0, 700);
+    checks.push({ name, status: "FAIL", detail });
+    console.error(`FAIL ${name} (${Date.now() - started}ms) — ${detail}`);
   }
 }
 
@@ -271,6 +299,11 @@ async function main() {
     `Refusing to run on ${target.databaseName}; expected the dedicated ${EXPECTED_DATABASE}`
   );
   assert(process.env.ENABLE_TEST_PAYMENTS === "true", "ENABLE_TEST_PAYMENTS is required for local test-provider fixtures.");
+  const watchdog = setTimeout(() => {
+    console.error(`FATAL checkout acceptance exceeded ${OVERALL_TIMEOUT_MS}ms; last started stage is in the log.`);
+    process.exit(124);
+  }, OVERALL_TIMEOUT_MS);
+  watchdog.unref();
 
   // Keep the acceptance pool small so concurrent checkouts exercise the
   // application's conflict mapping instead of exhausting PostgreSQL's
@@ -662,7 +695,9 @@ async function main() {
       return `reservations=0; journal difference=${report.totals.differenceKobo}; reconcile status=${report.status}; issues=${report.issues.length}`;
     });
   } finally {
-    console.log(JSON.stringify({ database: EXPECTED_DATABASE, runId: RUN_ID, checks, failures }, null, 2));
+    const cleanup = await cleanupCheckoutRefundFixtures(prisma, RUN_ID).catch((error) => ({ error: error instanceof Error ? error.message : String(error) }));
+    console.log(JSON.stringify({ database: EXPECTED_DATABASE, runId: RUN_ID, checks, failures, cleanup }, null, 2));
+    clearTimeout(watchdog);
     await prisma.$disconnect();
   }
 

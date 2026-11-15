@@ -1144,6 +1144,7 @@ async function main() {
             }
           }
           await prisma.orderStatusEvent.deleteMany({ where: { orderId: fixtureOrderId } }).catch(() => undefined);
+          await prisma.orderItemRestock.deleteMany({ where: { orderId: fixtureOrderId } }).catch(() => undefined);
           await prisma.orderItem.deleteMany({ where: { orderId: fixtureOrderId } }).catch(() => undefined);
           await prisma.orderAttribution.deleteMany({ where: { orderId: fixtureOrderId } }).catch(() => undefined);
           await prisma.auditLog.deleteMany({ where: { entity: "Order", entityId: fixtureOrderId } }).catch(() => undefined);

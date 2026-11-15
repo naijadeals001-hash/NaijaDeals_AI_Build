@@ -255,6 +255,9 @@ async function cleanupFixtures() {
     fixture.sellerProductId
   ].filter(Boolean);
   const cleanup = { products: 0, images: 0, stock: 0, variants: 0, cartItems: 0, reviews: 0, orders: 0, orderItems: 0, users: 0 };
+  if (fixture.reviewerId) {
+    await prisma.orderItemRestock.deleteMany({ where: { order: { customerId: fixture.reviewerId } } });
+  }
   if (productIds.length) {
     cleanup.cartItems = (await prisma.cartItem.deleteMany({ where: { productId: { in: productIds } } })).count;
     cleanup.orderItems = (await prisma.orderItem.deleteMany({ where: { productId: { in: productIds } } })).count;

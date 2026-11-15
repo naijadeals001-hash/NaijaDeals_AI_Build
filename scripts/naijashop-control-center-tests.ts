@@ -574,6 +574,7 @@ async function main() {
     await prisma.trackingEvent.deleteMany({ where: { deliveryId: { in: created.deliveryIds } } }).catch(() => undefined);
     await prisma.delivery.deleteMany({ where: { id: { in: created.deliveryIds } } }).catch(() => undefined);
     await prisma.orderStatusEvent.deleteMany({ where: { orderId: { in: created.orderIds } } }).catch(() => undefined);
+    await prisma.orderItemRestock.deleteMany({ where: { orderId: { in: created.orderIds } } }).catch(() => undefined);
     await prisma.orderItem.deleteMany({ where: { orderId: { in: created.orderIds } } }).catch(() => undefined);
     await prisma.order.deleteMany({ where: { id: { in: created.orderIds } } }).catch(() => undefined);
     await prisma.productImage.deleteMany({ where: { productId: { in: created.productIds } } }).catch(() => undefined);

@@ -815,6 +815,7 @@ async function main(): Promise<void> {
       if (orders.length > 0) {
         const orderIds = orders.map((order) => order.id);
         await prisma.orderStatusEvent.deleteMany({ where: { orderId: { in: orderIds } } });
+        await prisma.orderItemRestock.deleteMany({ where: { orderId: { in: orderIds } } });
         await prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } });
         await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
       }

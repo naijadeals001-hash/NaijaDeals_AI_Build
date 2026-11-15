@@ -87,6 +87,7 @@ function credentials(path) {
 
     await browser.close();
   } finally {
+    await prisma.orderItemRestock.deleteMany({ where: { orderId: order.id } });
     await prisma.orderItem.deleteMany({ where: { orderId: order.id } });
     await prisma.order.delete({ where: { id: order.id } });
     const remaining = await prisma.order.count({ where: { orderNumber: `REVIEW-SNAP-${runId}` } });

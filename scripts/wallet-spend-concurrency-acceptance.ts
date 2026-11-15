@@ -910,6 +910,7 @@ async function cleanupRun(prisma: PrismaClient, runId: string = RUN_ID) {
     await tx.escrowHold.deleteMany({ where: { id: { in: escrowIds } } });
     await tx.payment.deleteMany({ where: { orderId: { in: orderIds } } });
     await tx.orderStatusEvent.deleteMany({ where: { orderId: { in: orderIds } } });
+    await tx.orderItemRestock.deleteMany({ where: { orderId: { in: orderIds } } });
     await tx.orderItem.deleteMany({ where: { orderId: { in: orderIds } } });
     await tx.orderAttribution.deleteMany({ where: { orderId: { in: orderIds } } });
     await tx.ledgerEntry.deleteMany({

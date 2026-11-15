@@ -449,6 +449,7 @@ async function main() {
 
     exitCode = results.some((result) => result.status === "FAIL") ? 1 : 0;
   } finally {
+    await prisma.orderItemRestock.deleteMany({ where: { order: { customerId } } }).catch(() => undefined);
     await prisma.orderItem.deleteMany({ where: { order: { customerId } } }).catch(() => undefined);
     await prisma.order.deleteMany({ where: { customerId } }).catch(() => undefined);
     await prisma.cartItem.deleteMany({ where: { id: { in: created.cartItemIds } } }).catch(() => undefined);
