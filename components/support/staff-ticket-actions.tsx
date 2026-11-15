@@ -92,7 +92,7 @@ export function StaffTicketActions({
           {accessLink ? (
             <p className="mt-1 break-all rounded bg-white px-2 py-1 font-mono text-[10.5px] text-[#14241b] ring-1 ring-[#dbe7d7]">{accessLink}</p>
           ) : (
-            <p className="mt-0.5 text-[10.5px] leading-4 text-[#4b5b51]">A new single-use link expires in 7 days. Only share it with the guest&apos;s verified address.</p>
+            <p className="mt-0.5 text-[10.5px] leading-4 text-[#4b5b51]">A new single-use link expires in 7 days. Only share it with the address the guest used. Email delivery is not configured, so nothing is sent automatically.</p>
           )}
           <div className="mt-1.5 flex flex-wrap gap-2">
             <button

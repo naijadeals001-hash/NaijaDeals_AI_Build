@@ -49,8 +49,19 @@ export const SUPPORT_LIMITS = {
   maxPageSize: 50
 } as const;
 
-const GUEST_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const GUEST_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** An exchanged guest session is deliberately shorter than the link. */
+const GUEST_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+/** Legacy cookie name, still accepted for tickets opened before hardening. */
 export const GUEST_ACCESS_COOKIE = "nd_support_access";
+
+/**
+ * Per-ticket cookie name. One global cookie would mean a guest with two
+ * enquiries lost the first whenever they opened the second.
+ */
+export function guestCookieName(reference: string): string {
+  return `nd_support_${reference.replace(/[^A-Za-z0-9]/g, "")}`;
+}
 
 export function supportVerticalOptions(): Array<{ key: string; label: string }> {
   const list = verticals.map((vertical) => ({ key: vertical.key, label: vertical.name.replace(/^Naija/, "") }));
@@ -143,17 +154,36 @@ export async function createTicket(input: CreateTicketInput): Promise<CreatedTic
   const guestName = guest ? cleanText(input.guestName, "name", SUPPORT_LIMITS.name, 2) : null;
   const guestEmail = guest ? normaliseEmail(input.email) : null;
 
-  // Duplicate suppression: identical enquiry from the same identity inside two
-  // minutes returns the existing ticket instead of creating a second one. A
-  // client-supplied idempotency key wins when present.
-  const since = new Date(Date.now() - 2 * 60 * 1000);
+  // Cross-worker abuse cap: a single guest address may open at most five
+  // tickets per ten minutes. This is enforced from the database so it holds
+  // even when more than one application instance is running.
+  if (guest && guestEmail) {
+    const recent = await prisma.supportTicket.count({
+      where: { guestEmail, createdAt: { gte: new Date(Date.now() - 10 * 60 * 1000) } }
+    });
+    if (recent >= 5) {
+      throw new ApiError(429, "rate_limited", "Too many enquiries from this address. Please wait before submitting again.");
+    }
+  }
+
+  // Duplicate suppression is scoped to the requester:
+  //  - a signed-in customer is deduped by their user id;
+  //  - a guest is deduped only when the same normalised email *and* the same
+  //    client idempotency key match, so one visitor can never be handed another
+  //    visitor's reference just by guessing subject and message text.
+  const key = typeof input.idempotencyKey === "string" ? input.idempotencyKey.slice(0, 80) : null;
   const duplicate = await prisma.supportTicket.findFirst({
-    where: {
-      ...(input.actor ? { userId: input.actor.userId } : { guestEmail }),
-      subject,
-      createdAt: { gte: since },
-      messages: { some: { body: message, isInternal: false } }
-    },
+    where: input.actor
+      ? {
+          userId: input.actor.userId,
+          OR: [
+            ...(key ? [{ idempotencyKey: key }] : []),
+            { subject, createdAt: { gte: new Date(Date.now() - 2 * 60 * 1000) }, messages: { some: { body: message, isInternal: false } } }
+          ]
+        }
+      : key && guestEmail
+        ? { guestEmail, idempotencyKey: key }
+        : { id: "__never__" },
     select: { id: true, reference: true }
   });
   if (duplicate) {
@@ -161,7 +191,7 @@ export async function createTicket(input: CreateTicketInput): Promise<CreatedTic
   }
 
   const rawToken = guest ? randomBytes(32).toString("base64url") : null;
-  const expiresAt = rawToken ? new Date(Date.now() + GUEST_TOKEN_TTL_MS) : null;
+  const expiresAt = rawToken ? new Date(Date.now() + GUEST_LINK_TTL_MS) : null;
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
@@ -173,10 +203,13 @@ export async function createTicket(input: CreateTicketInput): Promise<CreatedTic
             vertical,
             topic,
             subject,
-            countryCode: input.countryCode?.slice(0, 2) || null,
+            // Only a signed-in customer can carry a country, and the route
+            // derives it from the account. A guest never selects a queue.
+            countryCode: input.actor && input.countryCode ? input.countryCode.trim().toUpperCase().slice(0, 2) || null : null,
             userId: input.actor?.userId ?? null,
             guestName,
             guestEmail,
+            idempotencyKey: key,
             lastCustomerMessageAt: new Date(),
             messages: {
               create: {
@@ -201,7 +234,7 @@ export async function createTicket(input: CreateTicketInput): Promise<CreatedTic
       });
 
       // Notifications are best effort and must never roll back the ticket.
-      await notifySupportTeam(created.id, created.reference, vertical, subject).catch(() => undefined);
+      await notifySupportTeam(created.id, created.reference, vertical, subject, input.countryCode ?? null).catch(() => undefined);
 
       return { ticket: created, accessToken: rawToken, accessExpiresAt: expiresAt?.toISOString() ?? null, duplicate: false };
     } catch (error) {
@@ -212,10 +245,17 @@ export async function createTicket(input: CreateTicketInput): Promise<CreatedTic
   throw new ApiError(500, "ticket_creation_failed", "The ticket could not be created. Try again.");
 }
 
-async function notifySupportTeam(ticketId: string, reference: string, vertical: string, subject: string) {
+async function notifySupportTeam(ticketId: string, reference: string, vertical: string, subject: string, countryCode: string | null) {
+  // Unscoped staff triage tickets with no known country. A country-scoped agent
+  // is notified only for their own country, so a guest enquiry never vanishes
+  // from every authorised queue while also never being broadcast to every
+  // regional agent.
   const staff = await prisma.user.findMany({
     where: {
-      roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support"] } } } }
+      roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support"] } } } },
+      OR: countryCode
+        ? [{ scopeCountryCode: null }, { scopeCountryCode: countryCode }]
+        : [{ scopeCountryCode: null }]
     },
     select: { id: true },
     take: 20
@@ -245,12 +285,14 @@ export async function resolveGuestTicket(reference: string, rawToken: string | n
     where: { tokenHash: hashToken(rawToken) },
     select: {
       id: true,
+      purpose: true,
+      consumedAt: true,
       expiresAt: true,
       revokedAt: true,
       ticket: { select: { id: true, reference: true } }
     }
   });
-  if (!token || token.revokedAt || token.expiresAt.getTime() <= Date.now()) return null;
+  if (!token || token.purpose !== "SESSION" || token.revokedAt || token.expiresAt.getTime() <= Date.now()) return null;
   if (token.ticket.reference !== reference) return null;
   await prisma.supportAccessToken.update({ where: { id: token.id }, data: { lastUsedAt: new Date() } }).catch(() => undefined);
   return token.ticket;
@@ -260,20 +302,43 @@ export async function exchangeGuestToken(rawToken: string) {
   if (!rawToken || rawToken.length < 20) throw new ApiError(422, "invalid_token", "This access link is not valid.");
   const token = await prisma.supportAccessToken.findUnique({
     where: { tokenHash: hashToken(rawToken) },
-    select: { id: true, expiresAt: true, revokedAt: true, ticket: { select: { reference: true } } }
+    select: { id: true, purpose: true, consumedAt: true, expiresAt: true, revokedAt: true, ticketId: true, ticket: { select: { reference: true } } }
   });
-  if (!token || token.revokedAt || token.expiresAt.getTime() <= Date.now()) {
-    throw new ApiError(401, "invalid_token", "This access link is invalid or has expired.");
+  if (
+    !token ||
+    token.purpose !== "LINK" ||
+    token.consumedAt ||
+    token.revokedAt ||
+    token.expiresAt.getTime() <= Date.now()
+  ) {
+    throw new ApiError(401, "invalid_token", "This access link is invalid, already used or has expired.");
   }
-  await prisma.supportAccessToken.update({ where: { id: token.id }, data: { lastUsedAt: new Date() } });
-  return { reference: token.ticket.reference, expiresAt: token.expiresAt.toISOString() };
+
+  const sessionRaw = randomBytes(32).toString("base64url");
+  const sessionExpires = new Date(Math.min(token.expiresAt.getTime(), Date.now() + GUEST_SESSION_TTL_MS));
+
+  // Single use: the conditional update is the replay guard. If another request
+  // consumed the link first, exactly one transaction wins.
+  const consumed = await prisma.$transaction(async (tx) => {
+    const result = await tx.supportAccessToken.updateMany({
+      where: { id: token.id, purpose: "LINK", consumedAt: null, revokedAt: null },
+      data: { consumedAt: new Date(), lastUsedAt: new Date() }
+    });
+    if (result.count !== 1) return null;
+    await tx.supportAccessToken.create({
+      data: { ticketId: token.ticketId, tokenHash: hashToken(sessionRaw), purpose: "SESSION", expiresAt: sessionExpires }
+    });
+    return { reference: token.ticket.reference, expiresAt: sessionExpires.toISOString() };
+  });
+  if (!consumed) throw new ApiError(401, "invalid_token", "This access link was already used. Ask support for a new one.");
+  return { ...consumed, sessionToken: sessionRaw };
 }
 
 export async function issueGuestAccess(ticketId: string, actorId: string) {
   const rawToken = randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + GUEST_TOKEN_TTL_MS);
+  const expiresAt = new Date(Date.now() + GUEST_LINK_TTL_MS);
   await prisma.$transaction([
-    prisma.supportAccessToken.create({ data: { ticketId, tokenHash: hashToken(rawToken), expiresAt } }),
+    prisma.supportAccessToken.create({ data: { ticketId, tokenHash: hashToken(rawToken), purpose: "LINK", expiresAt } }),
     prisma.supportTicketEvent.create({
       data: { ticketId, type: "ACCESS_ISSUED", actorUserId: actorId, note: "Staff issued a guest access link" }
     })
@@ -376,7 +441,7 @@ export async function getCustomerTicket(reference: string, viewer: { userId?: st
       createdAt: true,
       lastActivityAt: true,
       closedAt: true,
-      messages: { select: customerMessageSelect, orderBy: { createdAt: "asc" }, take: 200 }
+      messages: { select: customerMessageSelect, orderBy: { createdAt: "desc" }, take: 200 }
     }
   });
   if (!ticket) throw new ApiError(404, "ticket_not_found", "That support ticket was not found.");
@@ -396,7 +461,7 @@ export async function getCustomerTicket(reference: string, viewer: { userId?: st
     createdAt: ticket.createdAt.toISOString(),
     lastActivityAt: ticket.lastActivityAt.toISOString(),
     closedAt: ticket.closedAt?.toISOString() ?? null,
-    messages: toCustomerMessages(ticket.messages)
+    messages: toCustomerMessages(ticket.messages).reverse()
   };
 }
 
@@ -417,7 +482,7 @@ export async function postCustomerReply(reference: string, viewer: { userId?: st
     prisma.supportTicket.update({
       where: { id: ticket.id },
       data: {
-        status: ticket.status === "RESOLVED" ? "OPEN" : ticket.status,
+        status: ticket.status === "RESOLVED" || ticket.status === "PENDING" ? "OPEN" : ticket.status,
         lastActivityAt: now,
         lastCustomerMessageAt: now
       }
@@ -436,11 +501,15 @@ export async function postCustomerReply(reference: string, viewer: { userId?: st
       templateKey: "support.reply",
       eventType: "support.reply",
       entityType: "support_ticket",
+      entityId: ticket.id,
       channel: "IN_APP",
       category: "ACCOUNT",
       data: { reference: ticket.reference, subject: ticket.subject },
       dedupeKey: `support:reply:${message.id}`
     }).catch(() => undefined);
+  } else {
+    // Unassigned: a customer reply must still reach the queue.
+    await notifySupportTeam(ticket.id, ticket.reference, "support", ticket.subject, null).catch(() => undefined);
   }
   return { id: message.id, createdAt: message.createdAt.toISOString() };
 }
@@ -575,7 +644,7 @@ export async function getStaffTicket(scope: StaffScope, id: string) {
           createdAt: true,
           author: { select: { id: true, name: true } }
         },
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" },
         take: 300
       },
       events: {
@@ -594,7 +663,10 @@ export async function getStaffTicket(scope: StaffScope, id: string) {
     lastCustomerMessageAt: ticket.lastCustomerMessageAt?.toISOString() ?? null,
     lastStaffMessageAt: ticket.lastStaffMessageAt?.toISOString() ?? null,
     closedAt: ticket.closedAt?.toISOString() ?? null,
-    messages: ticket.messages.map((message) => ({ ...message, createdAt: message.createdAt.toISOString() })),
+    messages: ticket.messages
+      .slice()
+      .reverse()
+      .map((message) => ({ ...message, createdAt: message.createdAt.toISOString() })),
     events: ticket.events.map((event) => ({ ...event, createdAt: event.createdAt.toISOString() })),
     accessTokens: ticket.accessTokens.map((token) => ({
       ...token,
@@ -623,6 +695,7 @@ export async function staffReply(
   internal: boolean
 ) {
   const ticket = await requireScopedTicket(scope, id);
+  if (ticket.status === "CLOSED") throw new ApiError(409, "ticket_closed", "Reopen the ticket before replying.");
   const body = cleanText(bodyInput, "message", SUPPORT_LIMITS.message, 1);
   const now = new Date();
   const message = await prisma.$transaction(async (tx) => {
@@ -735,6 +808,21 @@ export async function setTicketStatus(actor: SessionUser, scope: StaffScope, id:
     entityId: ticket.id,
     metadata: { from: ticket.status, to: status }
   }).catch(() => undefined);
+
+  const owner = await prisma.supportTicket.findUnique({ where: { id: ticket.id }, select: { userId: true, reference: true, subject: true } });
+  if (owner?.userId) {
+    await notify({
+      userId: owner.userId,
+      templateKey: "support.reply",
+      eventType: "support.status",
+      entityType: "support_ticket",
+      entityId: ticket.id,
+      channel: "IN_APP",
+      category: "ACCOUNT",
+      data: { reference: owner.reference, subject: owner.subject },
+      dedupeKey: `support:status:${ticket.id}:${status}:${Date.now()}`
+    }).catch(() => undefined);
+  }
   return { status };
 }
 

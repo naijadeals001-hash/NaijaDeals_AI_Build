@@ -6,6 +6,10 @@ import { listCustomerTickets } from "@/lib/services/core/support.service";
 
 export const dynamic = "force-dynamic";
 
+const NO_STORE = { "Cache-Control": "no-store, private", Vary: "Cookie" };
+
+
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getSessionUser();
@@ -13,7 +17,7 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const page = Math.max(Number(url.searchParams.get("page") ?? 1) || 1, 1);
     const pageSize = Math.max(Number(url.searchParams.get("pageSize") ?? 20) || 20, 1);
-    return NextResponse.json(await listCustomerTickets(user.id, page, pageSize));
+    return NextResponse.json(await listCustomerTickets(user.id, page, pageSize), { headers: NO_STORE });
   } catch (error) {
     return jsonError(error);
   }

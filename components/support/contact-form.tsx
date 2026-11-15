@@ -117,7 +117,7 @@ export function ContactForm({ initialVertical, verticals, signedIn, signedInEmai
         </p>
         {accessPath ? (
           <div className="mt-3 rounded-xl bg-[#eef5ea] p-3">
-            <p className="text-[11.5px] font-bold">Private access link (shown once)</p>
+            <p className="text-[11.5px] font-bold">Private access link (shown once, single use)</p>
             <p className="mt-1 break-all rounded-lg bg-white px-2 py-1.5 font-mono text-[11px] text-[#14241b] ring-1 ring-[#dbe7d7]">
               {typeof window !== "undefined" ? `${window.location.origin}${accessPath}` : accessPath}
             </p>

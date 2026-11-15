@@ -4406,6 +4406,9 @@ model SupportTicket {
   /// Normalised email for reply context only. Never used for authentication and
   /// never auto-links a guest ticket to an account.
   guestEmail            String?
+  /// Client-supplied idempotency key, honoured only inside the same owner or
+  /// guest email. Never used to locate another requester's ticket.
+  idempotencyKey        String?
   assignedToId          String?
   lastActivityAt        DateTime              @default(now())
   lastCustomerMessageAt DateTime?
@@ -4425,6 +4428,7 @@ model SupportTicket {
   @@index([userId, lastActivityAt])
   @@index([assignedToId, status])
   @@index([guestEmail])
+  @@index([guestEmail, idempotencyKey])
 }
 
 /// Customer or staff message. Internal notes share the table but are filtered
@@ -4468,6 +4472,10 @@ model SupportAccessToken {
   id         String    @id @default(cuid())
   ticketId   String
   tokenHash  String    @unique
+  /// LINK is the one-time URL token; SESSION is the cookie credential.
+  purpose    String    @default("LINK")
+  /// Set when a LINK token is exchanged. A consumed link can never be reused.
+  consumedAt DateTime?
   expiresAt  DateTime
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime?
@@ -4476,4 +4484,5 @@ model SupportAccessToken {
   ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId, expiresAt])
+  @@index([ticketId, purpose])
 }

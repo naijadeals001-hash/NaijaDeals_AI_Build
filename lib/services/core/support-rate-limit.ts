@@ -40,10 +40,18 @@ export function supportRateLimit(
   const now = Date.now();
 
   if (buckets.size > MAX_BUCKETS) {
+    // Evict expired entries, then a few of the oldest. Clearing the whole map
+    // would reset every counter and hand a flood attacker fresh allowances.
     for (const [candidate, bucket] of buckets) {
       if (bucket.resetAt <= now) buckets.delete(candidate);
     }
-    if (buckets.size > MAX_BUCKETS) buckets.clear();
+    let evictions = 0;
+    for (const candidate of buckets.keys()) {
+      if (buckets.size <= MAX_BUCKETS) break;
+      buckets.delete(candidate);
+      evictions += 1;
+      if (evictions > 512) break;
+    }
   }
 
   const current = buckets.get(key);
@@ -58,9 +66,20 @@ export function supportRateLimit(
   return { allowed: true, retryAfterSeconds: 0, limit: config.limit };
 }
 
-/** Best-effort client identity for unauthenticated endpoints. */
+/**
+ * Client identity for unauthenticated endpoints.
+ *
+ * Forwarded headers are only believed when the deployment explicitly declares
+ * a trusted proxy (SUPPORT_TRUST_PROXY=1). Otherwise every anonymous caller
+ * shares the "unknown" bucket, so rotating a forged header cannot mint fresh
+ * allowances. When a proxy *is* trusted, the left-most address is the client.
+ */
 export function requestIdentity(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
-  return request.headers.get("x-real-ip") ?? "unknown";
+  if (process.env.SUPPORT_TRUST_PROXY === "1") {
+    const forwarded = request.headers.get("x-forwarded-for");
+    if (forwarded) return forwarded.split(",")[0]!.trim();
+    const real = request.headers.get("x-real-ip");
+    if (real) return real.trim();
+  }
+  return "unknown";
 }

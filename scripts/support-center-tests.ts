@@ -74,10 +74,11 @@ async function main() {
     vertical: "shop",
     topic: "order",
     subject: "Where is my order?",
-    message: "My order has not arrived yet. Reference written in the message only: ORD-123."
+    message: "My order has not arrived yet. Reference written in the message only: ORD-123.",
+    idempotencyKey: `dup-${stamp}`,
   });
   check("guest ticket is created durably", Boolean(guest.ticket.reference) && !guest.duplicate);
-  check("guest response contains a one-time access token", Boolean(guest.accessToken));
+  check("guest response contains an access token", Boolean(guest.accessToken));
   const stored = await prisma.supportTicket.findUnique({ where: { reference: guest.ticket.reference }, include: { messages: true, accessTokens: true } });
   check("ticket and first message commit together", stored?.messages.length === 1 && stored.messages[0].body.includes("ORD-123"));
   check("email is normalised, never used as identity", stored?.guestEmail === `guest-${stamp}@example.test`);
@@ -90,7 +91,8 @@ async function main() {
     vertical: "shop",
     topic: "order",
     subject: "Where is my order?",
-    message: "My order has not arrived yet. Reference written in the message only: ORD-123."
+    message: "My order has not arrived yet. Reference written in the message only: ORD-123.",
+    idempotencyKey: `dup-${stamp}`,
   });
   check("duplicate submission returns the existing ticket", duplicate.duplicate && duplicate.ticket.reference === guest.ticket.reference);
 
@@ -172,7 +174,7 @@ async function main() {
   const reply = await postCustomerReply(customerTicket.ticket.reference, { userId: customer.id }, "Still failing, here is a screenshot description.");
   check("customer reply is stored", Boolean(reply.id));
   const afterReply = await prisma.supportTicket.findUnique({ where: { id: customerTicket.ticket.id }, select: { status: true, lastCustomerMessageAt: true } });
-  check("a customer reply updates activity and reopens a pending ticket", Boolean(afterReply?.lastCustomerMessageAt));
+  check("a customer reply reopens a PENDING ticket", afterReply?.status === "OPEN", String(afterReply?.status));
 
   // --- status, priority, assignment, audit -------------------------------
   await setTicketStatus(staff as never, scope, customerTicket.ticket.id, "RESOLVED");
@@ -182,7 +184,11 @@ async function main() {
   check("assignment is recorded", finalView.events.some((event) => event.type === "ASSIGNED"));
   const audit = await prisma.auditLog.count({ where: { entity: "support_ticket", entityId: customerTicket.ticket.id } });
   check("staff actions are audited", audit >= 3, `audit rows: ${audit}`);
-  check("audit rows exclude message bodies", true);
+  const auditRows = await prisma.auditLog.findMany({ where: { entity: "support_ticket", entityId: customerTicket.ticket.id }, select: { metadata: true } });
+  check(
+    "audit rows exclude message bodies",
+    auditRows.every((row) => !JSON.stringify(row.metadata ?? {}).includes("Still failing") && !JSON.stringify(row.metadata ?? {}).includes("please try again"))
+  );
 
   // --- list projections and pagination -----------------------------------
   const mine = await listCustomerTickets(customer.id, 1, 1);
@@ -201,7 +207,7 @@ async function main() {
   check("guest submission rate limit rejects the sixth attempt", limited);
 
   // --- cleanup (run-owned rows only) -------------------------------------
-  await prisma.supportTicket.deleteMany({ where: { id: { in: [stored!.id, customerTicket.ticket.id] } } });
+  await prisma.supportTicket.deleteMany({ where: { OR: [{ id: { in: [stored!.id, customerTicket.ticket.id] } }, { guestEmail: { contains: `-${stamp}@` } }] } });
   await prisma.auditLog.deleteMany({ where: { entity: "support_ticket" } });
   await prisma.notification.deleteMany({ where: { dedupeKey: { startsWith: "support:" } } });
   await prisma.userRole.deleteMany({ where: { userId: { in: [customer.id, other.id, staff.id] } } });

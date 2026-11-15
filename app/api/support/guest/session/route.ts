@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { assertSameOrigin, jsonError, readJson } from "@/lib/auth/guard";
 import { sessionCookieOptions } from "@/lib/auth/session";
-import { GUEST_ACCESS_COOKIE, exchangeGuestToken } from "@/lib/services/core/support.service";
+import { exchangeGuestToken, guestCookieName } from "@/lib/services/core/support.service";
 import { requestIdentity, supportRateLimit } from "@/lib/services/core/support-rate-limit";
 
 export const dynamic = "force-dynamic";
+
+const NO_STORE = { "Cache-Control": "no-store, private", Vary: "Cookie" };
+
+
 
 /**
  * Exchange a one-time guest access token for an httpOnly cookie.
@@ -27,9 +31,12 @@ export async function POST(request: NextRequest) {
     const body = await readJson<{ token?: unknown }>(request);
     const token = typeof body.token === "string" ? body.token : "";
     const result = await exchangeGuestToken(token);
-    const response = NextResponse.json(result);
+    const { sessionToken, ...publicResult } = result;
+    const response = NextResponse.json(publicResult, { headers: NO_STORE });
     const maxAge = Math.max(60, Math.floor((new Date(result.expiresAt).getTime() - Date.now()) / 1000));
-    response.cookies.set(GUEST_ACCESS_COOKIE, token, sessionCookieOptions(maxAge));
+    // The cookie holds the freshly issued SESSION token, never the one-time
+    // link token from the URL, so a replayed link cannot become a session.
+    response.cookies.set(guestCookieName(result.reference), sessionToken, sessionCookieOptions(maxAge));
     return response;
   } catch (error) {
     return jsonError(error);

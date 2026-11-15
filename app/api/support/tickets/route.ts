@@ -7,6 +7,10 @@ import { requestIdentity, supportRateLimit } from "@/lib/services/core/support-r
 
 export const dynamic = "force-dynamic";
 
+const NO_STORE = { "Cache-Control": "no-store, private", Vary: "Cookie" };
+
+
+
 /** Public vertical options so the form and the server share one registry. */
 export async function GET() {
   return NextResponse.json({ verticals: supportVerticalOptions() });
@@ -40,7 +44,9 @@ export async function POST(request: NextRequest) {
       topic: body.topic,
       subject: body.subject,
       message: body.message,
-      countryCode: user?.countryCode ?? (typeof body.countryCode === "string" ? body.countryCode : null),
+      // Country is derived from the signed-in customer record only. A guest
+      // request cannot choose which regional queue sees the ticket.
+      countryCode: user?.countryCode ?? null,
       idempotencyKey: typeof body.idempotencyKey === "string" ? body.idempotencyKey : null
     });
 
@@ -54,7 +60,7 @@ export async function POST(request: NextRequest) {
         // provider, so nothing is claimed to have been emailed.
         emailDelivery: "unavailable"
       },
-      { status: result.duplicate ? 200 : 201 }
+      { status: result.duplicate ? 200 : 201, headers: NO_STORE }
     );
   } catch (error) {
     return jsonError(error);
@@ -75,7 +81,7 @@ export async function PATCH(request: NextRequest) {
     const page = Number(body.page ?? 1);
     const pageSize = Number(body.pageSize ?? 20);
     const list = await listCustomerTickets(user.id, Number.isFinite(page) ? page : 1, Number.isFinite(pageSize) ? pageSize : 20);
-    return NextResponse.json(list);
+    return NextResponse.json(list, { headers: NO_STORE });
   } catch (error) {
     return jsonError(error);
   }

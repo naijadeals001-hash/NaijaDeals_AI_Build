@@ -5,6 +5,10 @@ import { listStaffAssignees, listStaffTickets, staffScope } from "@/lib/services
 
 export const dynamic = "force-dynamic";
 
+const NO_STORE = { "Cache-Control": "no-store, private", Vary: "Cookie" };
+
+
+
 export async function GET(request: NextRequest) {
   try {
     const admin = await requireAdminPermission("support:read");
@@ -20,7 +24,7 @@ export async function GET(request: NextRequest) {
       pageSize: Number(url.searchParams.get("pageSize") ?? 20) || 20
     });
     const assignees = await listStaffAssignees(staffScope(admin));
-    return NextResponse.json({ ...list, assignees });
+    return NextResponse.json({ ...list, assignees }, { headers: NO_STORE });
   } catch (error) {
     return jsonError(error);
   }
