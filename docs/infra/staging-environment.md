@@ -186,3 +186,54 @@ are on D:; only the compile ran on NTFS. `next.config.mjs` gained the
    Docker engine is stopped and was left untouched.
 3. Proposed retention (not enabled): 14 daily + 8 weekly encrypted sets, then
    manual review.
+
+## 2026-11-15 (later) — Active staging moved to NTFS on C:
+
+**Paths now.** `C:\NaijaDeals-Staging` holds the running stack:
+`app\` (worktree at `a4b2a01`, build `bs3yYUkUWEgqKRX5tzz0U`, `node_modules`
+installed with `npm ci`), `pgdata\` (PostgreSQL 18 Windows cluster, port
+55432, database `naijadeals_staging`, roles `nd_staging` and
+`nd_staging_restore`), `env\staging.env`, `secrets\staging-secrets.json`
+(ACL-restricted on NTFS), `logs\` and `migration\`.
+
+`D:\NaijaDeals-Staging` is retained unchanged as the **rollback source**
+(old exFAT cluster, stopped) and keeps the encrypted backup preparation
+directory `D:\NaijaDeals-Staging\backups\prep` and restore-verify space.
+
+**Migration performed.** Staging app and the old cluster were stopped cleanly;
+the database was dumped with `pg_dump --format=custom` (490,530 bytes), a new
+cluster was initialised on NTFS, roles recreated from the protected secrets
+file, the dump restored (84 migrations, 183 tables), ownership/grants fixed,
+and `prisma migrate deploy` rehearsed to the current head (**86 migrations,
+187 tables**, including the two support migrations). No running data directory
+was copied.
+
+**Verification.** App on http://localhost:3200 serves 200; `pg_stat_activity`
+shows its connections as `nd_staging` on `naijadeals_staging`; Prisma client
+generation and `next build` ran normally on NTFS (no exFAT readlink workaround).
+The scheduled tasks were re-registered against the C: launcher and are Ready.
+Before moving, a fresh encrypted backup was uploaded to B2 and restored into a
+disposable database with checksum and row-count equality.
+
+**R2.** Buckets and CORS remain as before, but `S3_ACCESS_KEY_ID` and
+`S3_SECRET_ACCESS_KEY` are still empty in the staging env; no R2 S3 API token
+exists and Cloudflare does not expose token creation through the management
+token in use. Application-side R2 upload/presign/denial tests remain **BLOCKED**
+(owner action below).
+
+**n8n.** Deferred. The partial D: install was removed; installation requires a
+supported Node runtime and an NTFS path (or containers), and is not required for
+staging or backups.
+
+**Credential incident.** The restore-role password was rotated on 2026-11-15 and
+the affected PostgreSQL log deleted after a clean stop; current secrets are
+absent from logs, the browser bundle and Git. The old value was overwritten
+rather than archived, so it cannot be re-verified directly; the current role
+password authenticates and the prior log no longer exists.
+
+**Support-system re-review (separate candidate).** The independent reviewer's
+re-verification of `a4b2a01`/build `TeIdZhuU-g_uqTZHvEnKS` returned
+CHANGES-REQUIRED for the support feature: global anonymous rate-limit bucket
+(H2), 8-hour guest session vs the advertised 7-day link (M8), and a no-op
+unassigned-reply notification dedupe key (M9), plus LOW items. These are
+outstanding; they do not affect the staging/storage gates above.

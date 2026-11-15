@@ -1,7 +1,7 @@
 # NaijaDeals staging — shared helpers. Dot-source from the other scripts.
 $ErrorActionPreference = "Stop"
 
-$script:StagingRoot = "D:\NaijaDeals-Staging"
+$script:StagingRoot = "C:\NaijaDeals-Staging"
 $script:AppDir = Join-Path $StagingRoot "app"
 $script:EnvFile = Join-Path $StagingRoot "env\staging.env"
 $script:PgData = Join-Path $StagingRoot "pgdata"

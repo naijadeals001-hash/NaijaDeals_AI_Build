@@ -3,7 +3,7 @@
 # - MultipleInstances IgnoreNew: no overlapping runs.
 # - The script itself also holds a named mutex and retries up to 3 times.
 $ErrorActionPreference = "Stop"
-$root = "D:\NaijaDeals-Staging"
+$root = "C:\NaijaDeals-Staging"
 $backupScript = Join-Path $root "app\scripts\staging\backup-staging.ps1"
 if (-not (Test-Path $backupScript)) { throw "Missing $backupScript" }
 
