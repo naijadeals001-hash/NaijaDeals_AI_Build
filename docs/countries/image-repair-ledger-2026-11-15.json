@@ -198,16 +198,16 @@
       "key": "gharyan-pottery",
       "label": "Gharyan pottery",
       "file": "theme-ly-gharyan-pottery.webp",
-      "alt": "traditional Gharyan Libyan glazed pottery in deep blue, green and cream, plates and a jug on a pale surface. Illustrative editorial image for the Gharyan pottery theme.",
-      "prompt": "traditional Gharyan Libyan glazed pottery in deep blue, green and cream, plates and a jug on a pale surface. Photorealistic editorial photograph for a premium African country guide, accurate materials, colours and textures, warm natural light, centred composition, generous edge margin, no people, no hands, no text, no letters, no numbers, no logos, no brands, no watermark, no flag, no landmark labels, accurate and recognisable at small card size, not a stock collage, no invented health or safety claims.",
+      "alt": "Hand-built unglazed red-clay water jars, an amphora, a bowl and a plate from Gharyan, Libya, with burnished bands. Illustrative editorial image for the Gharyan pottery theme.",
+      "prompt": "hand-built unglazed red-clay pottery from Gharyan, Libya: water jars, an oil amphora and simple tableware in terracotta and reddish-brown clay with subtle burnished bands, matte earthenware surface, no glaze, no blue or green decoration, arranged on a neutral surface. Photorealistic editorial photograph for a premium African country guide, accurate materials and textures, warm natural light, centred composition, generous edge margin, no people, no hands, no text, no letters, no numbers, no logos, no brands, no watermark, no flag, no landmark labels, accurate and recognisable at small card size, not a stock collage.",
       "status": "generated",
-      "taskId": "b847831b759e061c7ad3353a74d78796",
+      "taskId": "bc14290775cffa3ec5c8753d1e30f048",
       "credits": 6,
       "sourceWidth": 1254,
       "sourceHeight": 1254,
       "webpPath": "/generated/countries/theme-ly-gharyan-pottery.webp",
-      "bytes": 177610,
-      "generatedAt": "2026-11-15T13:47:44.354Z",
+      "bytes": 91938,
+      "generatedAt": "2026-11-15T19:50:11.005Z",
       "lastError": null
     },
     {
@@ -756,5 +756,57 @@
     }
   ],
   "balanceBefore": 10698.8,
-  "balanceAfter": 10434.8
+  "balanceAfter": 10404.8,
+  "corrections": [
+    {
+      "at": "2026-11-15T19:50:11.006Z",
+      "countryCode": "LY",
+      "key": "gharyan-pottery",
+      "reason": "Independent visual review: first image depicted blue-green glazed majolica, contradicting the sourced Gharyan red-clay description.",
+      "taskId": "bc14290775cffa3ec5c8753d1e30f048",
+      "credits": 6,
+      "balanceBefore": 10434.8,
+      "balanceAfter": 10428.8
+    },
+    {
+      "at": "2026-11-15T19:57:09.774Z",
+      "countryCode": "MA",
+      "key": "leatherwork",
+      "reason": "BROAD-row review: shared generic asset replaced with country-specific imagery.",
+      "taskId": "2a145022fa2b08d5c2a02e195ac7c8b6",
+      "credits": 6,
+      "balanceBefore": 10428.8,
+      "balanceAfter": 10404.8
+    },
+    {
+      "at": "2026-11-15T19:57:09.774Z",
+      "countryCode": "BW",
+      "key": "crafts",
+      "reason": "BROAD-row review: shared generic asset replaced with country-specific imagery.",
+      "taskId": "0502ae5925a5fd7565bd056d88c82cda",
+      "credits": 6,
+      "balanceBefore": 10428.8,
+      "balanceAfter": 10404.8
+    },
+    {
+      "at": "2026-11-15T19:57:09.774Z",
+      "countryCode": "BF",
+      "key": "crafts",
+      "reason": "BROAD-row review: shared generic asset replaced with country-specific imagery.",
+      "taskId": "053dfb261e80b55c0cc3bd45f5cee4f3",
+      "credits": 6,
+      "balanceBefore": 10428.8,
+      "balanceAfter": 10404.8
+    },
+    {
+      "at": "2026-11-15T19:57:09.774Z",
+      "countryCode": "ET",
+      "key": "textiles",
+      "reason": "BROAD-row review: shared generic asset replaced with country-specific imagery.",
+      "taskId": "df6592c1d4093ed65ebde8418146ea15",
+      "credits": 6,
+      "balanceBefore": 10428.8,
+      "balanceAfter": 10404.8
+    }
+  ]
 }

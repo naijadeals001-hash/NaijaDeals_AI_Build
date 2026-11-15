@@ -26,6 +26,24 @@ export type CountryThemeImageOverride = {
 };
 
 export const COUNTRY_THEME_IMAGE_OVERRIDES: Record<string, CountryThemeImageOverride> = {
+  "BW/crafts": {
+    url: "/generated/countries/theme-bw-crafts.webp",
+    alt: "Coiled palm-fibre baskets hand-woven in Botswana Etsha and Ghanzi style with diamond and zigzag geometric patterns. Illustrative editorial image for the Indigenous crafts theme.",
+    kind: "GENERATED",
+    provenance: "GENERATED: Kie.ai gpt-image-2-5-flare-text-to-image, 1K, 1:1, task 0502ae5925a5fd7565bd056d88c82cda, 6 credits, generated 2026-11-15 (country-specific replacement for a broad shared asset). Editorial illustration only; not documentary proof of origin, quality or quantity.",
+    taskId: "0502ae5925a5fd7565bd056d88c82cda",
+    credits: 6,
+    prompt: "traditional coiled baskets hand-woven from Botswana palm fibre in the Etsha and Ghanzi style, with diamond and zigzag geometric patterns in natural straw, dark brown and pale dye, stacked and open on a neutral surface showing coil texture.",
+  },
+  "BF/crafts": {
+    url: "/generated/countries/theme-bf-crafts.webp",
+    alt: "A lost-wax cast bronze figure, a patterned woven basket and a small tooled leather pouch from Burkina Faso. Illustrative editorial image for the Craft industries theme.",
+    kind: "GENERATED",
+    provenance: "GENERATED: Kie.ai gpt-image-2-5-flare-text-to-image, 1K, 1:1, task 053dfb261e80b55c0cc3bd45f5cee4f3, 6 credits, generated 2026-11-15 (country-specific replacement for a broad shared asset). Editorial illustration only; not documentary proof of origin, quality or quantity.",
+    taskId: "053dfb261e80b55c0cc3bd45f5cee4f3",
+    credits: 6,
+    prompt: "handcrafted objects from Burkina Faso arranged as a still life: a lost-wax cast bronze figure, a woven fibre basket with earth-tone bands and a small tooled leather pouch, showing authentic patina and hand-made texture on a neutral surface.",
+  },
   // 2026-11-15 repair batch: 44 non-photographic / mismatched country themes.
   // Kie.ai gpt-image-2-5-flare-text-to-image, 1K, 1:1, 6 credits each = 264 credits
   // (no top-up). Ledger: docs/countries/image-repair-ledger-2026-11-15.json.
@@ -130,13 +148,14 @@ export const COUNTRY_THEME_IMAGE_OVERRIDES: Record<string, CountryThemeImageOver
   },
   "LY/gharyan-pottery": {
     url: "/generated/countries/theme-ly-gharyan-pottery.webp",
-    alt: "traditional Gharyan Libyan glazed pottery in deep blue, green and cream, plates and a jug on a pale surface. Illustrative editorial image for the Gharyan pottery theme.",
+    alt: "Hand-built unglazed red-clay water jars, an amphora, a bowl and a plate from Gharyan, Libya, with burnished bands. Illustrative editorial image for the Gharyan pottery theme.",
     kind: "GENERATED",
-    provenance: "GENERATED: Kie.ai gpt-image-2-5-flare-text-to-image, 1K, 1:1, task b847831b759e061c7ad3353a74d78796, 6 credits, generated 2026-11-15. Editorial illustration only; not documentary proof of origin, quality, quantity or safety. Prompt recorded below.",
-    taskId: "b847831b759e061c7ad3353a74d78796",
+    provenance: "GENERATED: Kie.ai gpt-image-2-5-flare-text-to-image, 1K, 1:1, task bc14290775cffa3ec5c8753d1e30f048, 6 credits, generated 2026-11-15 (replacement after independent review found the first image was glazed majolica rather than Gharyan red-clay). Editorial illustration only; not documentary proof of origin, quality, quantity or safety.",
+    taskId: "bc14290775cffa3ec5c8753d1e30f048",
     credits: 6,
-    prompt: "traditional Gharyan Libyan glazed pottery in deep blue, green and cream, plates and a jug on a pale surface. Photorealistic editorial photograph for a premium African country guide, accurate materials, colours and textures, warm natural light, centred composition, generous edge margin, no people, no hands, no text, no letters, no numbers, no logos, no brands, no watermark, no flag, no landmark labels, accurate and recognisable at small card size, not a stock collage, no invented health or safety claims.",
+    prompt: "hand-built unglazed red-clay pottery from Gharyan, Libya: water jars, an oil amphora and simple tableware in terracotta and reddish-brown clay with subtle burnished bands, matte earthenware surface, no glaze, no blue or green decoration, arranged on a neutral surface. Photorealistic editorial photograph for a premium African country guide, accurate materials and textures, warm natural light, centred composition, generous edge margin, no people, no hands, no text, no letters, no numbers, no logos, no brands, no watermark, no flag, no landmark labels, accurate and recognisable at small card size, not a stock collage.",
   },
+
   "MA/argan": {
     url: "/generated/countries/theme-ma-argan.webp",
     alt: "argan nuts and kernels beside a small unlabelled bottle of golden argan oil and argan tree branches in Morocco. Illustrative editorial image for the Argan theme.",
@@ -616,14 +635,15 @@ export const COUNTRY_THEME_IMAGE_OVERRIDES: Record<string, CountryThemeImageOver
     prompt: "Folded woven cotton fabric in natural cream and indigo stripes stacked on a wooden table.",
   },
   "ET/textiles": {
-    url: "/generated/countries/theme-cotton-textile.webp",
-    alt: "Folded woven cotton fabric in cream and indigo stripes. Illustrative image for the Cotton textiles and garments theme.",
+    url: "/generated/countries/theme-et-textiles.webp",
+    alt: "Folded Ethiopian handwoven cotton netela and shawl cloth with narrow woven borders and fringed ends. Illustrative editorial image for the Cotton textiles and garments theme.",
     kind: "GENERATED",
-    provenance: "GENERATED: Kie.ai gpt-image-2-5-flare-text-to-image, 1K, 1:1, task de887b529dda961539ce3220853b6ca4, 6 credits, generated 2026-11-14. Editorial illustration only; not a country-specific product, stock or origin claim. Prompt recorded in docs/countries/imagery-manifest.md.",
-    taskId: "de887b529dda961539ce3220853b6ca4",
+    provenance: "GENERATED: Kie.ai gpt-image-2-5-flare-text-to-image, 1K, 1:1, task df6592c1d4093ed65ebde8418146ea15, 6 credits, generated 2026-11-15 (country-specific replacement for a broad shared asset). Editorial illustration only; not documentary proof of origin, quality or quantity.",
+    taskId: "df6592c1d4093ed65ebde8418146ea15",
     credits: 6,
-    prompt: "Folded woven cotton fabric in natural cream and indigo stripes stacked on a wooden table.",
+    prompt: "folded Ethiopian handwoven cotton netela and shawl cloth with narrow woven borders and fine handloom texture in ivory, soft ochre and deep red, arranged on a neutral surface with visible selvedge.",
   },
+
   "TN/harissa": {
     url: "/generated/countries/theme-harissa.webp",
     alt: "A bowl of bright red harissa chilli paste with whole red chillies. Illustrative image for the Harissa theme.",
@@ -860,11 +880,15 @@ export const COUNTRY_THEME_IMAGE_OVERRIDES: Record<string, CountryThemeImageOver
     provenance: "APPROVED_EXISTING: project asset taxonomy/raffia-tote.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim."
   },
   "MA/leatherwork": {
-    url: "/generated/shop/product-red-patent-leather-baby-shoes.webp",
-    alt: "Red patent leather baby shoes on a neutral background. Illustrative image for the Leatherwork theme.",
-    kind: "APPROVED_EXISTING",
-    provenance: "APPROVED_EXISTING: project asset shop/product-red-patent-leather-baby-shoes.webp reused; provenance in docs/countries/imagery-manifest.md. Not a country-specific product claim."
+    url: "/generated/countries/theme-ma-leatherwork.webp",
+    alt: "Hand-tooled Moroccan leather babouche slippers, an embossed satchel and a belt in vegetable-tanned brown leather. Illustrative editorial image for the Leatherwork theme.",
+    kind: "GENERATED",
+    provenance: "GENERATED: Kie.ai gpt-image-2-5-flare-text-to-image, 1K, 1:1, task 2a145022fa2b08d5c2a02e195ac7c8b6, 6 credits, generated 2026-11-15 (country-specific replacement for a broad shared asset). Editorial illustration only; not documentary proof of origin, quality or quantity.",
+    taskId: "2a145022fa2b08d5c2a02e195ac7c8b6",
+    credits: 6,
+    prompt: "hand-tooled Moroccan leatherwork from Marrakech: a pair of soft leather babouche slippers, an embossed satchel and a rolled belt in natural vegetable-tanned brown and tan leather with stitched seams and subtle geometric tooling, on a neutral surface.",
   },
+
   "ZW/leather": {
     url: "/generated/shop/product-red-patent-leather-baby-shoes.webp",
     alt: "Red patent leather baby shoes on a neutral background. Illustrative image for the Leather goods theme.",

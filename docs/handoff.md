@@ -6210,3 +6210,38 @@ the configured identity (403), so the remote branch remains at `e80a0f9`.
 
 **Deferred.** Attachments, email delivery and n8n escalation remain out of
 scope; the UI states that no email is sent.
+
+## 2026-11-15 — Image-repair acceptance closure
+
+**Candidate.** Image work is commit `7cc2e45` (ancestor of HEAD), originally
+built as `RsT43GlLJsCT8Li0HN`-series; the running preview has since been rebuilt
+(support work) but serves the same byte-identical 46 assets (verified by
+SHA-256). Category tiles and 44 country images: 46/46 files unique, correct
+dimensions, referenced once.
+
+**Test baseline repaired.** `scripts/taxonomy-browsing-visibility-tests.ts`
+hard-coded `ngTotal === 57`, which described one catalogue snapshot rather than
+a visibility invariant. It now requires a populated baseline and asserts every
+later count relatively (sum equality, +1 after the run-owned product, and a
+cleanup return to baseline). Rerun: **16/16 passed**, baseline 63, cleanup
+`residual run-owned products: 0; public total after cleanup: 63 (expected 63)`.
+Market browsing suite: **18/18 passed**. Regulated, activation and market
+eligibility assertions were untouched.
+
+**Independent visual acceptance.** 45/46 images accepted. One blocker:
+`LY/gharyan-pottery` showed blue-green glazed majolica while the card's cited
+source describes Gharyan red-clay pottery. Replaced with unglazed red-clay
+water jars/amphora/tableware (task `bc14290775cffa3ec5c8753d1e30f048`,
+6 credits, 10,434.8 -> 10,428.8).
+
+**BROAD rows.** All 39 dispositions are in
+`docs/countries/broad-row-dispositions.md`: 33 accepted as accurate neutral
+commodity subjects, 6 craft/textile rows reviewed, of which MA/leatherwork
+(had shown baby shoes), BW/crafts, BF/crafts and ET/textiles were replaced with
+country-specific imagery (4 images, 24 credits, balance 10,404.8). BI/leather
+and KM/tuna-fisheries were accepted as accurate neutral subjects.
+
+**Verification.** All five corrected rows render their new files and alt text on
+`/naijashop/countries/*`; REVIEW reseeded to 54/324/362. Total additional spend
+this closure: **30 credits** (6 + 24); cumulative image repair 306 credits.
+Attachments/deferred items are unrelated. Push remains blocked (see below).

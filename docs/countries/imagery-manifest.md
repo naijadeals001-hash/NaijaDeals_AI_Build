@@ -248,3 +248,12 @@ All 44 assets are 900x900 WebP (source 1254x1254, centre-cropped, no upscaling).
 - All 44 assets decoded in-browser at exactly 900x900; 0 broken images on the pages; document width equalled viewport width at 390, 768 and 1440.
 - Theme cards keep `loading="lazy"`; lead-theme images stay eager. Algeria 390/768/1440 screenshots: `qa-artifacts/visual/image-repair-2026-11-15/`.
 - Audit state after the batch: 285 PASS / 39 BROAD / **0 NON_PHOTOGRAPHIC**, 134 distinct images. The remaining 39 BROAD rows are subject-appropriate but not country-specific and are documented as such.
+
+
+### 2026-11-15 correction — LY/gharyan-pottery
+
+Independent visual review found the first Gharyan image used blue-green glazed majolica, contradicting the card's own sourced description of unglazed red-clay water jars, amphorae and tableware. A replacement was generated with the authorized Kie workflow: task `bc14290775cffa3ec5c8753d1e30f048`, 1K, 1:1, 6 credits (balance 10,434.8 -> 10,428.8), 1254x1254 source downscaled to 900x900 WebP (no upscaling). Alt and override were updated to describe the unglazed red-clay subject. The previous file is kept for audit at `qa-artifacts/visual/country-image-repair/ly-gharyan-pottery.previous.webp` (gitignored).
+
+### 2026-11-15 BROAD-row replacements
+
+Four shared-commodity assets used for craft/textile themes were replaced with country-specific images after review: MA/leatherwork (`2a145022fa2b08d5c2a02e195ac7c8b6`), BW/crafts (`0502ae5925a5fd7565bd056d88c82cda`), BF/crafts (`053dfb261e80b55c0cc3bd45f5cee4f3`), ET/textiles (`df6592c1d4093ed65ebde8418146ea15`). 4 images x 6 = 24 credits (balance 10,428.8 -> 10,404.8). The previous reused assets remain untouched for other themes.
