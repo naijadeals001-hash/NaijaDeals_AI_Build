@@ -5820,3 +5820,90 @@ provider charge, purchase, top-up or live financial action occurred.
 - Admin/cart TEST: `admin-products-tests.log` 12/12, `cart-availability-tests.log` 3/3.
 - Country: `country-acceptance.log` 67/67, `country-visual.log` 175/175, `country-54-final.log` 54 cards/324 and 54 pages/324, `country-origin-final.log` 10/10.
 - Independent review: `qa-artifacts/review-acceptance/` (F1 route probe 16/16; F2 cookie bridge; baselines; screenshots); prior full review `qa-artifacts/` evidence as cited by `agent_1e12d6bc-8c7e-4cb1-ae42-3f5c721f4328`.
+
+## 2026-11-15 — Shop inventory/refund/recovery integration accepted
+
+**Result: ACCEPTED for the bounded inventory/refund/recovery scope.** This is
+not a full Shop completion, production-readiness or security certification.
+
+### Artifact
+
+- Repository: `C:\Users\User\Documents\naijadeals.com`; branch
+  `naijashop-marketplace`; source HEAD **`7fbbfc3`**.
+- Isolated candidate: build **`9HmJaFLYfFI0w4_nSwfX7`**, `.next-inventory-candidate`,
+  port **3109**, PID 42564, database **`naijadeals_test`** (TEST). Provider keys
+  absent; `ENABLE_TEST_PAYMENTS=false` at launch; no provider traffic observed.
+- Canonical 3047 remains **`8CTjw5MV-9MCKuV66hkoY`** on `naijadeals_review`
+  (REVIEW), PID 32716. It was not restarted or migrated during this task.
+- Migrations **`20261114120000_order_item_restock`** and
+  **`20261114121000_inventory_nonnegative_constraints`** are applied to REVIEW,
+  `naijadeals_test` and the checkout TEST database. Candidate TEST has 84
+  migrations and six inventory CHECK constraints.
+
+### Migration-path evidence
+
+- Fresh pre-change schema: **82** applied migrations, no `OrderItemRestock`,
+  **0** inventory CHECK constraints.
+- Invalid-data preflight: normal runner exited **1** with **P3018/P0001**
+  (`Inventory integrity preflight failed`); it applied no constraints and left
+  the run-owned invalid row unchanged. No silent repair.
+- After correcting the run-owned fixture and using the normal runner: **84**
+  applied migrations, `OrderItemRestock` table with RESTRICT FKs, **6/6**
+  CHECK constraints validated.
+- Six independent invalid writes rejected with SQLSTATE **23514**; valid writes
+  succeeded.
+- Evidence: `qa-artifacts/migration-path-*.log`,
+  `qa-artifacts/migration-path-prechange-summary.txt`,
+  `qa-artifacts/migration-path-constraints.log`, `clean-db-migrate.log`.
+
+### Restock/recovery and cleanup
+
+- `OrderItemRestock` per-item ledger: RESTORED terminal, SUPPRESSED durable and
+  retryable, LEGACY_RECORDED terminal; recovery listing now surfaces partial
+  legacy ledgers where an item has no row. Ambiguous markers remain visible and
+  never increment stock.
+- Recovery retry is ownership/permission/region guarded; invalid/duplicate
+  requests have explicit responses; financial refund completion is separate
+  from physical-stock recovery.
+- Cleanup paths for OrderItem/Order now delete child `OrderItemRestock` first.
+  Financial cleanup **fails closed** unless `DISPOSABLE_TEST_DATABASE=1`; it is
+  never silently skipped on shared TEST. Disposable databases must be dropped
+  after the run.
+- Queue producer is bounded: finite producer retries, offline queue disabled,
+  connect timeout, no reconnect strategy, disconnect/drop cache on timeout.
+  Probe with unreachable Valkey returned `result:null` at ~77 ms, exit 0, no
+  active handles.
+
+### Verification
+
+- Checkout/refund/delivery: **10/10**, check 10
+  `reconcile status=CLEAN; issues=0`, cleanup success on a schema-only
+  disposable TEST database. The suite has START/PASS diagnostics, per-check
+  bounds, an overall watchdog and cleanup-failure exit semantics.
+- Restock idempotency: **35/35** on disposable TEST.
+- Partial/ambiguous legacy recovery: **2/2**, zero leftovers.
+- Activation snapshot/recovery: **8/8**; activation against candidate 3109:
+  **30/30**.
+- Saved-items projection **11/11**; availability view **14/14**.
+- No paid provider call. Paystack/Flutterwave/live refund settlement remains
+  **UNVERIFIED**; the local test simulator is not external settlement evidence.
+- Run-owned disposable databases were dropped. Shared REVIEW and shared TEST
+  financial history were not mutated by the final acceptance runs.
+
+### Agents
+
+- Independent final reviewer: `agent_624583b5-0ea5-4b2d-a24a-3829e543e962`.
+- Earlier independent reviewers used during this task:
+  `agent_f4c3fdf8-ccca-47a0-89ea-e07ab6bd88cd` and
+  `agent_d044ecef-b083-4b33-984a-189db1bfbb31`.
+
+### Residual limitations
+
+- Restock/checkout cleanup flags are checked at cleanup time, so these suites
+  must only be run on an isolated disposable database and it must be dropped
+  afterwards.
+- Restock requires an existing SYSTEM wallet on a schema-only database.
+- Shared TEST retains pre-existing non-financial QA fixture residue and an
+  older reconciliation state; it is not a clean financial baseline.
+- The full Shop marketplace suite, country imagery completion, provider
+  settlement and business launch gates remain outside this accepted scope.
