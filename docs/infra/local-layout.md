@@ -67,3 +67,28 @@ Reviewer follow-ups recorded:
 - The staging database holds no business rows, so the database restore proves
   schema and migration recovery, not business-data recovery.
 - A parked session from the earlier migration was terminated during this pass.
+
+## Protected remote access (Cloudflare) — BLOCKED pending owner action
+
+Requested setup: Cloudflare Tunnel with Cloudflare Access in front of the
+staging site, origin kept at 127.0.0.1:3200, no other local service exposed.
+
+Current verified state:
+- The Cloudflare API token in the MCP configuration can read tunnels
+  (`GET /accounts/{id}/cfd_tunnel` → 200, 0 tunnels) but cannot list zones
+  (`GET /zones` → 200 with an empty result), so it cannot create the DNS record.
+- Access is not enabled on the account:
+  `GET /accounts/{id}/access/apps` → 403 `9999 access.api.error.not_enabled`.
+- No tunnel or DNS record was created. Publishing the hostname before Access
+  is enabled would expose staging, so nothing was published.
+
+Owner actions required:
+1. Cloudflare dashboard → Zero Trust → enable Access for the account.
+2. Grant the API token (or the person completing the setup) `Zone:Read`,
+   `DNS:Edit`, `Access:Edit` and `Tunnel:Edit` for `naijadeals.com`, or perform
+   the DNS/Access steps in the dashboard.
+3. Provide the approved tester email addresses; no allow-rule has been added,
+   so the default-deny posture remains.
+4. Suggested unused hostname: `staging-remote.naijadeals.com` (must be checked
+   against DNS before creation; `staging.naijadeals.com` must not be
+   overwritten).
