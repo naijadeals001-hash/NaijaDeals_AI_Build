@@ -101,7 +101,9 @@ TEST_DATABASE_URL='<TEST URL>' AUTOMATION_CONSUMER_TOKEN='<token>' npx tsx scrip
 
 The in-process suites (retry, operations, support reply) run against the
 disposable database built by `scripts/tests/prepare-automation-test-db.mjs`,
-so a real backup event or the running n8n consumer cannot make them flaky. The
+which clones the schema and the 86-row `_prisma_migrations` history and seeds
+the TEST marker and canonical roles, so a real backup event or the running n8n
+consumer cannot make them flaky. The
 HTTP suites (routes, support automation, support HTTP) must target the staging
 database because they exercise the served build on `127.0.0.1:3200`.
 
@@ -116,8 +118,17 @@ clean up run-owned rows.
   `naijadeals.com` uses Hostinger nameservers, so it is not an active Cloudflare
   zone; the Access API reports `not_enabled`. Prepared, unactivated files are in
   `scripts/cloudflare/`. No tunnel, DNS record or Access application was created.
-- Document-expiry alerts need a partner-document model and a retention policy;
-  no such model exists, so this is a product/schema decision rather than an
-  event-contract gap.
+- **Document-expiry alerts are blocked by missing data, not by a missing
+  event contract.** The schema has no partner-document entity: `DriverProfile`
+  stores only `licenseNumber`; transport providers store `licenceRef`; Stay
+  listings store `documentRef`. None has an expiry date, document type, owner
+  verification state or retention policy. A reminder built on those fields
+  would have to invent an expiry, which is not safe. Required owner decision:
+  approve a `PartnerDocument` model (owner, vertical, kind, reference,
+  issuedAt, expiresAt, verification state, retention) and the reminder windows
+  (for example 30/7/1 days) plus recipients (document owner and unscoped ops).
+  Once that exists the verified pattern applies directly:
+  `document.expiry_reminder` with dedupe
+  `document.expiry:<documentId>:<expiresAt>:<windowDays>:<userId>`.
 - Per-vertical workflows remain deferred until those verticals have real,
   non-demo business transitions.

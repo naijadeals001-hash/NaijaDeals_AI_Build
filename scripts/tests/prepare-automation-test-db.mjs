@@ -4,8 +4,9 @@
  *
  * The staging database receives real scheduled backup events and is also read
  * by the n8n consumer, so some suites cannot be repeated against it once a
- * legitimate event exists. This script clones the staging schema (no rows) into
- * `naijadeals_automation_test`, marks it TEST and seeds the canonical roles.
+ * legitimate event exists. This script clones the staging schema and applied
+ * migration history (no business rows) into `naijadeals_automation_test`, marks
+ * it TEST and seeds the canonical roles.
  *
  * Requirements:
  *   AUTOMATION_TEST_SOURCE_URL  connection string for the schema source
@@ -69,9 +70,14 @@ run(pgBin("psql"), [adminUrl.toString(), "-v", "ON_ERROR_STOP=1", "-c", `CREATE 
 
 const dir = mkdtempSync(join(tmpdir(), "nd-testdb-"));
 const dump = join(dir, "schema.sql");
+const history = join(dir, "migration-history.sql");
 try {
   run(pgBin("pg_dump"), [sourceUrl.toString(), "--schema-only", "--no-owner", "--no-privileges", `--file=${dump}`], "pg_dump");
   run(pgBin("psql"), [targetUrl.toString(), "-v", "ON_ERROR_STOP=1", `--file=${dump}`], "restore");
+  // Copy the applied-migration history, not just the resulting schema. A future
+  // suite that checks `_prisma_migrations` must see the same 86 rows as staging.
+  run(pgBin("pg_dump"), [sourceUrl.toString(), "--data-only", "--table=_prisma_migrations", `--file=${history}`], "pg_dump history");
+  run(pgBin("psql"), [targetUrl.toString(), "-v", "ON_ERROR_STOP=1", `--file=${history}`], "restore history");
 
   const setup = `
     insert into "DatabaseClassification" (id, classification, "updatedAt")
