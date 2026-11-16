@@ -1,14 +1,28 @@
 # Start the protected staging tunnel. Refuses unless the live zone, Access
-# application, exact tester policy, OTP binding and tunnel ingress all match.
-# The API token and tunnel token stay in the protected config or child
-# environment; neither is written to the command line or this repository.
+# application, exact tester policy, OTP binding and tunnel ingress all match,
+# and refuses while the watchdog security hold is present. The API token and
+# tunnel token stay in the protected config or child environment; neither is
+# written to the command line or this repository.
 param([switch]$CheckOnly)
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "security-state.ps1")
 $cfgPath = "C:\NaijaDeals-Automation\config\cloudflare.env"
 $allowlistPath = "C:\NaijaDeals-Staging\secrets\cloudflare-access-allowlist.json"
 $hashPath = Join-Path $PSScriptRoot "approved-testers.sha256"
 $runDir = "C:\NaijaDeals-Staging\run"
 $pidPath = Join-Path $runDir "cloudflared.pid"
+
+# Security hold interlock. The watchdog writes this file when protection drifts
+# or cannot be verified; it is cleared only by a passing `watchdog.ps1 -ClearHold`.
+$hold = Get-SecurityHold -HoldPath (Join-Path $runDir "security-hold.json")
+if ($hold) {
+  $holdCodes = @($hold.reasonCodes) -join ","
+  if ($CheckOnly) {
+    Write-Output "startup checks: BLOCKED by security hold ($holdCodes); a normal start would be refused"
+    exit 2
+  }
+  throw "Protected startup refused: security hold present ($holdCodes); review the watchdog alert, fix the drift, then run watchdog.ps1 -ClearHold"
+}
 
 $cfg = @{}
 Get-Content $cfgPath | ForEach-Object {

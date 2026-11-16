@@ -2,6 +2,7 @@
 # It asserts the live policy, OTP binding and ingress; it does not print secrets
 # or tester email addresses.
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "security-state.ps1")
 $cfgPath = "C:\NaijaDeals-Automation\config\cloudflare.env"
 $allowlistPath = "C:\NaijaDeals-Staging\secrets\cloudflare-access-allowlist.json"
 $hashPath = Join-Path $PSScriptRoot "approved-testers.sha256"
@@ -39,6 +40,24 @@ if (Test-Path $pidPath) {
 }
 $untracked = @(Get-CimInstance Win32_Process -Filter "Name='cloudflared.exe'" | Where-Object { $_.CommandLine -match 'tunnel run' }).Count
 Write-Output "origin: $origin; tracked tunnel: $tracked; cloudflared tunnel processes: $untracked"
+
+$hold = Get-SecurityHold -HoldPath "C:\NaijaDeals-Staging\run\security-hold.json"
+if ($hold) {
+  Write-Output ("security hold: PRESENT reason=" + (@($hold.reasonCodes) -join ",") + " action=" + $hold.action)
+} else {
+  Write-Output "security hold: absent"
+}
+$watchdogState = "C:\NaijaDeals-Staging\run\watchdog-state.json"
+if (Test-Path -LiteralPath $watchdogState) {
+  try {
+    $ws = Get-Content -LiteralPath $watchdogState -Raw | ConvertFrom-Json
+    Write-Output "watchdog: status=$($ws.status) last=$($ws.lastCycleAt) action=$($ws.action)"
+  } catch {
+    Write-Output "watchdog: state file unreadable"
+  }
+} else {
+  Write-Output "watchdog: no cycle state recorded"
+}
 
 $headers = @{ Authorization = "Bearer $($cfg['CLOUDFLARE_STAGING_API_TOKEN'])" }
 function Invoke-Cf {

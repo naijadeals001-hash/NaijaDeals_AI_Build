@@ -21,6 +21,8 @@ documents before you start.
 | Source | `naijashop-marketplace`, tester-role commit |
 | Database | `naijadeals_staging` (TEST classification) |
 | Testers | 3 primary accounts plus 2 persona accounts |
+| Shop fixtures | 3 `STAGING DEMO` departments and 3 `STAGING DEMO` products |
+| Test funds | Tester02: ₦100,000 staging test credit; tester03: unfunded by design |
 | Environment | Local Windows staging stack; not production |
 
 Quote the build ID `ygTpeinzqY0L2X5fgwNUL` in every finding. The served build ID
@@ -51,8 +53,11 @@ tester addresses are allowed; there is no domain-wide rule and no bypass.
 
 The three aliases currently deliver to the coordinator's shared office mailbox.
 Possession of that mailbox satisfies the Access email step for any alias; the
-NaijaDeals app login remains per-account. Never share the mailbox credentials,
-an Access code or a sign-in link.
+NaijaDeals app login remains per-account. Individual mailbox provisioning is
+still an owner action; the exact handoff is in
+[`docs/staging/mailbox-isolation.md`](./mailbox-isolation.md). Never share the
+mailbox credentials, an Access code or a sign-in link, and never use another
+tester's address.
 
 If your address is not accepted, stop and contact the coordinator; do not try
 another identity or a domain-wide address. The local URL remains available for
@@ -110,6 +115,12 @@ Notes:
 
 ## 5. Before you start
 
+- The staging PC must remain powered on and awake for the external URL to work.
+  The app, n8n, PostgreSQL and the Cloudflare connector are local processes; a
+  sleep, sign-out, reboot or stopped service interrupts external testing. Do not
+  stop or restart them yourself. A local watchdog runs every minute and may
+  deliberately stop the connector if the Access/tunnel contract cannot be
+  verified; report the observed outage rather than trying to bypass it.
 - Use a current Chromium-based browser (Chrome or Edge). For the external URL,
   complete the Cloudflare Access sign-in first; for the local URL, no Access
   gate is involved. If sign-in appears to succeed but the next page redirects
@@ -147,9 +158,14 @@ preconditions, steps, expected result and evidence for every row.
 | Sign out | Header account menu | Session ends; `/account` redirects to `/login` |
 | Account profile | `/account` | Name/phone save with "Profile saved."; email and roles read-only |
 | Account addresses | `/account` | Add/edit/set default; list updates; invalid fields rejected |
-| Shop shell | `/naijashop` | Marketplace header, location, search and cart render; catalogue is honestly empty |
-| Shop search | `/naijashop/search?q=phone` | Honest no-results state; no invented products |
-| Empty cart | `/cart` | "Your cart is empty" |
+| Shop shell and DEMO catalogue | `/naijashop` | Marketplace header, location, search and cart render; 3 departments and 3 `STAGING DEMO` products are visible and labelled as demonstration data |
+| Shop search and product detail | `/naijashop/search?q=STAGING%20DEMO`, `/product/[slug]` | Three demo products found; detail shows price, DEMO badge and demonstration notice |
+| Variants and availability | `/product/staging-demo-variant-sneakers`, `/product/staging-demo-out-of-stock-blender` | One in-stock and one disabled out-of-stock variant; the simple out-of-stock item cannot be added |
+| Saved items and cart | `/product/...`, `/account#saved`, `/cart` | Save/list/remove works; cart add, quantity change, save for later, move back and remove work |
+| Checkout and wallet payment | `/checkout` | Tester02: valid address, wallet offered, wallet payment completes, order appears as paid with delivery and escrow. Tester03: insufficient-balance refusal; no false success |
+| Order history, cancellation and refund | `/orders`, `/orders/[id]` | Owner sees the order and payment state; paid cancellation refunds the wallet/escrow; duplicate confirmation/cancellation cannot double-pay |
+| Returns | `/returns` | Honest empty eligibility state; opening a return case is deferred until a legitimately delivered order exists |
+| Empty cart | `/cart` | "Your cart is empty" after your own cleanup |
 | Country directory | `/naijashop/countries` | Search/region controls render and return the honest empty state; "0 published country guides" is the real state |
 | Desktop navigation | `/`, `/naijashop`, `/account` at desktop width | One header, working links, visible keyboard focus, no dead primary controls |
 | Mobile navigation | Same pages at mobile width | Bottom navigation Home/Activity/Wallet/Account; menu works; no horizontal overflow |
@@ -171,15 +187,17 @@ preconditions, steps, expected result and evidence for every row.
 | Journey | Route | Expected result |
 | --- | --- | --- |
 | Customer journeys | As "All testers" above | Same expected results |
-| Seller overview | `/seller` | Vendor name/status, zero-valued stats, wallet values; no Control Center access |
-| Seller orders list | `/seller` Orders | "No orders yet."; no order actions |
-| Seller products list | `/seller` Products | Empty list; "Add product" control visible but **do not submit** (see section 9) |
+| Successful Shop checkout | `/checkout` | Pay for a `STAGING DEMO` item from the pre-funded wallet; order becomes paid; then use the journey's cancellation/refund check |
+| Seller overview | `/seller` | Vendor name/status and zero-valued stats; the `STAGING DEMO` catalogue seller is a different vendor and is not in this projection |
+| Seller orders list | `/seller` Orders | "No orders yet."; no demo-vendor order is readable |
+| Seller products list | `/seller` Products | Empty list; the demo products are not owned by this seller and updates are denied. Do not create a listing (see section 9) |
 
 ### `tester03` — customer and driver persona
 
 | Journey | Route | Expected result |
 | --- | --- | --- |
 | Customer journeys | As "All testers" above | Same expected results |
+| Insufficient-balance payment | `/checkout` | Wallet has no test credit; payment is refused with `insufficient_wallet`; cancel the unpaid order so its reservation is released |
 | Driver workspace | `/driver` | Workspace loads; service zone is Abuja; presence controls visible |
 | Driver presence | `/driver` | Allow location → Go online → Online, heartbeat starts; stop → Offline; deny location → clear error and no online state |
 
@@ -187,8 +205,9 @@ preconditions, steps, expected result and evidence for every row.
 
 Do not attempt to work around these:
 
-- Shop product detail, variants, saved-item actions, cart add/update/remove,
-  checkout, orders and returns.
+- Return-case creation after delivery (no legitimately delivered order exists
+  in the customer-only demo catalogue; the honest empty `/returns` state is the
+  expected result).
 - Seller order actions and seller product creation/publication.
 - Driver ride acceptance, navigation, completion, cash/release, receipt and
   earnings.
@@ -297,12 +316,16 @@ behaviour changes or blocks a journey in a new way.
    <https://staging-remote.naijadeals.com> only with your own approved address
    through the Cloudflare Access gate in §2. There is no domain-wide rule and
    no bypass; do not ask for one.
-2. **The Shop catalogue is empty.** 0 products, 0 published public categories,
-   0 orders. Product detail, variants, saved actions, cart mutation, checkout,
-   orders and returns are blocked. Do not seed products, categories or orders.
-3. **No test payment method.** The running build offers only `wallet`. The local
-   `test` adapter is not offered. There is no test card, no fake confirmation
-   and no top-up procedure. Do not attempt any payment.
+2. **The Shop catalogue is demonstration data only.** There are 3 `STAGING DEMO`
+   departments and 3 `STAGING DEMO` products. They are not real supply, real
+   prices or real sellers. Do not create products, categories or orders outside
+   the documented demo journey.
+3. **Only wallet checkout is offered.** The running production-mode build offers
+   the NaijaPay `wallet` method. The local `test` payment adapter is deliberately
+   not offered. Tester02 has a staging test balance created through the local
+   test top-up service; tester03 is intentionally unfunded for the
+   insufficient-balance case. Do not top up, use a card/bank provider, or claim
+   a provider sandbox result.
 4. **No published country guides.** The Discover Africa directory reports 0
    published countries. That is the real state; country guide detail is blocked.
 5. **Seller publication is closed.** New seller listings can only be drafts, and
@@ -332,37 +355,75 @@ behaviour changes or blocks a journey in a new way.
     exists, but it is not a current run against this staging build.
 12. **This is a web/PWA staging build.** Do not expect a native app store
     listing, push notifications, or closed-app tracking.
+13. **Mailbox identity is not yet individual.** The three approved aliases
+    currently deliver to the coordinator's shared office mailbox. Cloudflare
+    Access therefore proves shared-mailbox access, not a separate tester
+    identity. Individual mailbox provisioning is an owner action recorded in
+    `docs/staging/mailbox-isolation.md`; do not use another tester's address.
+14. **The direct "order paid" in-app notice may remain queued.** The transactional
+    outbox intents used for vendor/status/refund follow-ups are drained by n8n
+    and were processed in the acceptance run. The optional Valkey notification
+    worker is not configured in this staging process, so a direct customer
+    "order paid" notification row can remain `QUEUED`; order history still shows
+    the paid state. Do not treat this as a missing order or payment.
 
-## 10. Test payments
+## 10. Safe test payments
 
-**There is no test-payment procedure on this build.**
+**Payment verification level: local test top-up → wallet checkout. No live
+provider is used.**
 
-Observed facts:
+What is set up:
 
-- `GET /api/payments/methods?country=NG` on the running staging app returns only
-  the `wallet` method.
-- The `test` adapter in `lib/payments/adapters.ts` is gated behind
-  `ENABLE_TEST_PAYMENTS=true` outside a production runtime, and it is not offered
-  by this staging process.
-- There are no purchasable products, so checkout cannot be reached.
+- The app offers the NaijaPay `wallet` method only.
+- Tester02's staging wallet is pre-funded with **₦100,000 of test credit**
+  through the existing local test top-up service. That top-up posted a balanced
+  ledger journal; the app's production-mode environment was not changed and the
+  `test` payment adapter remains unavailable.
+- Tester03's wallet is intentionally unfunded so the insufficient-balance
+  refusal is a real case.
+- The three products are labelled `STAGING DEMO`; the prices are illustrative.
+
+Approved steps for tester02:
+
+1. Open a `STAGING DEMO` in-stock product and choose an available variant.
+2. Add it to the cart and open `/checkout`.
+3. Enter clearly synthetic delivery details.
+4. Choose **NaijaPay wallet** and confirm the payment.
+5. Expect a paid order, one delivery and one escrow hold. The order must appear
+   in `/orders` with `Payment: Paid`.
+6. Use the order's **Cancel order** action to verify the supported
+   cancellation/refund path; the wallet and escrow must return to their prior
+   state. A second cancellation must be refused.
+
+Approved steps for tester03:
+
+1. Follow the same basket/checkout steps.
+2. Choose the wallet and confirm.
+3. Expect an insufficient-balance refusal (`insufficient_wallet`), no paid
+   order and no false success.
+4. Cancel the unpaid order through the UI so its stock reservation is released.
 
 Do not:
 
 - enter card, bank, USSD or mobile-money details;
-- top up a wallet;
+- top up a wallet yourself;
 - call a payment provider;
-- try to enable the test adapter;
-- use a real payment to "see what happens".
+- enable or request the `test` adapter;
+- use a real payment to "see what happens";
+- delete or edit an order, payment, refund or ledger row.
 
-If a payment screen becomes reachable unexpectedly, stop and report it. Do not
-submit a payment.
+`GET /api/payments/methods?country=NG` is expected to return only `wallet`. If a
+provider redirect or card form appears unexpectedly, stop and report it; do not
+submit payment data.
 
 ## 11. Prohibited actions
 
 These are out of scope and may invalidate the test round:
 
-- **No real money.** No payments, refunds, payouts, transfers, top-ups, card
-  details or provider calls.
+- **No real money.** The only permitted money movement is tester02's pre-funded
+  staging wallet on a `STAGING DEMO` order, including the supported cancellation
+  refund. No card/bank/provider charge, payout, transfer, self-service top-up,
+  or use of another account's wallet.
 - **No production.** Do not use `naijadeals.com` or any production service.
   `staging-remote.naijadeals.com` is the approved staging URL and may be used
   only through your own approved Access identity.

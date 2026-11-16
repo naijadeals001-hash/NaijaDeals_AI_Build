@@ -18,13 +18,13 @@ cites local automation or recorded evidence, that evidence is named.
 | Build provenance caveat | The served build ID is authoritative for acceptance. The reviewer confirmed the staging source matches the repository auth/support files except for line endings. |
 | Application URL | <http://localhost:3200> (bound to `127.0.0.1`) |
 | Database | `naijadeals_staging`, TEST classification |
-| Accounts | 5 (3 primary testers, 2 persona accounts) |
-| Vendors | 1 (staging-only seller persona) |
-| Products | 0 (`GET /api/products` returned `[]`) |
-| Published public categories | 0 (`GET /api/categories` returned `[]`) |
-| Orders | 0 |
+| Accounts | 5 tester/persona accounts plus 1 passwordless staging fixture actor (not a login account) |
+| Vendors | 2 (staging-only seller persona plus separate non-login demo catalogue seller) |
+| Products | 3 active `STAGING DEMO` products (`GET /api/products`) |
+| Published public categories | 3 `STAGING DEMO` departments (`GET /api/categories`) |
+| Orders | Created by the demo journeys; financial records retained |
 | Published country guides | 0 (`/naijashop/countries` reported "0 published country guides") |
-| Payment methods offered | `wallet` only (`GET /api/payments/methods?country=NG`) |
+| Payment methods offered | `wallet` only (`GET /api/payments/methods?country=NG`); tester02 pre-funded with local test top-up |
 | n8n | `http://127.0.0.1:5680`, health endpoint HTTP 200 |
 | External access | **PASS** — Cloudflare Access + tunnel; see below |
 
@@ -46,9 +46,22 @@ URL remains <http://localhost:3200>.
   `/api/admin/payouts` (403).
 - Website A, MX, SPF, DKIM and DMARC records resolve correctly after the
   nameserver change. n8n 5680 and PostgreSQL 55432 remain loopback-only.
+- Order/refund/status `NotificationIntent` rows from the Shop journey were
+  processed by n8n; vendor, refund and status notifications are `SENT`.
 
 The code-entry path was not separately exercised; the email's one-time sign-in
 link was used. Do not claim a different tester identity or an unapproved address.
+
+### Individual mailbox identity — **BLOCKED**
+
+The three approved aliases currently deliver to the coordinator's shared office
+mailbox. Cloudflare Access therefore proves access to that shared mailbox, not
+three separate people. Only the `tester01` external sign-in described above was
+observed. External `tester02` and `tester03` sign-ins remain **BLOCKED** until
+the owner provisions individual mailboxes/forwarders; see
+`docs/staging/mailbox-isolation.md`. Local app login and role boundaries for all
+five accounts pass 36/36, but that is not a substitute for external identity
+evidence.
 
 ## Status legend
 
@@ -75,16 +88,21 @@ link was used. Do not claim a different tester identity or an unapproved address
 
 | ID | Journey | Route(s) | Implementation | Status | Persona | Preconditions / data | Steps to expected result | Automation / evidence | Limitations |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| P1 | Browse Shop shell | `/naijashop` | Implemented | **PASS** | Any | App running; 0 published products | Load the marketplace → header, delivery-location control, search, cart and department area render; the catalogue is honestly empty and no fake product cards appear | `GET /naijashop` 200; `GET /api/products` `[]`; `GET /api/categories` `[]` | The shell is testable, but there is no catalogue. Any loading indicator must resolve to an empty state. |
-| P2 | Browse by category | `/naijashop/categories`, `/naijashop/c/[slug]` | Implemented | **BLOCKED** | Any | At least one published category | A department tree and category listing cannot be exercised: 0 public categories and no category links were returned | `GET /api/categories` returned `[]` | Missing category fixture, not a route crash. Do not create categories or products. |
-| P3 | Shop search | `/naijashop/search?q=...` | Implemented | **PASS** | Any | A query, e.g. `phone` or `jollof` | Submit a query → an honest no-results state ("No products match …"); no invented results or prices | Manual; `components/shop/category-browse.tsx` | Relevance, ranking and filters cannot be judged with 0 products. |
-| P4 | Product detail and variants | `/product/[id]` | Implemented | **BLOCKED** | Any | One published product | Price, stock, gallery, attribute labels, variant selector and add-to-cart cannot be exercised; an unknown id correctly returns 404 | Historical `npm run test:marketplace` 13/13 on a seeded development database (2026-10-28), **not** current staging | No product fixture. Do not treat the 404 for an unknown id as a defect. |
-| P5 | Saved items | `/account` saved items; product save action | Implemented | **BLOCKED** | Testers | A published product | Save/unsave and "add saved item to cart" cannot be exercised; only the empty saved list is available | Historical marketplace suite | 0 products. The empty saved list is not a failure. |
-| P6 | Cart empty state | `/cart` | Implemented | **PASS** | Testers | Signed in; empty cart | Open `/cart` → "Your cart is empty"; no checkout action is offered | Manual; `components/commerce/naijashop.tsx` | Add/update/remove is blocked by the empty catalogue. |
-| P7 | Cart add/update/remove | `/cart`, `/api/cart` | Implemented | **BLOCKED** | Testers | A product and variant | Add to cart, change quantity, remove, verify totals and stock reservation | Historical marketplace suite | 0 products; no cart mutation fixture. |
-| P8 | Checkout | `/checkout`, `/api/checkout` | Implemented | **BLOCKED** | Testers | Non-empty cart, delivery configuration, a demonstrated test payment method | Address, delivery, fees and payment selection cannot be completed. Current staging offers only `wallet` as a payment method; the `test` adapter is not offered | `GET /api/payments/methods?country=NG` returned only `wallet`; `lib/payments/adapters.ts` gates the test adapter behind `ENABLE_TEST_PAYMENTS=true` outside production | **No test-payment procedure exists on this build.** Do not attempt a wallet payment, card payment, transfer or top-up. |
-| P9 | Orders | `/orders`, `/orders/[id]` | Implemented | **BLOCKED** | Testers | At least one created order | Order list, detail, cancel/confirm and status history cannot be exercised. The empty state is the honest current result | Historical marketplace suite; staging has 0 orders | An order can only be created through the blocked checkout path. |
-| P10 | Returns and refunds | `/returns` | Implemented | **BLOCKED** | Testers | A delivered/completed order inside the return window | The eligibility screen renders "No orders are ready to return"; opening a case, seller decision and refund status cannot be exercised | Historical marketplace suite | 0 eligible orders. Do not fabricate returns or refunds. |
+| P1 | Browse Shop shell | `/naijashop` | Implemented | **PASS** | Any | App running; 3 demo departments/products | Marketplace header, location, search, cart and three `STAGING DEMO` product cards render with demonstration labelling | `scripts/staging/shop-tester-journey.cjs` A2; screenshot `qa-artifacts/staging-shop/...-01-search-demo-results.png` | Demo catalogue only; do not treat the synthetic listings as real supply. |
+| P2 | Browse by category | `/naijashop/categories`, `/naijashop/c/[slug]` | Implemented | **PASS** | Any | One of the three demo departments | Department browsing shows the demo department and its products; no unrelated real catalogue is present | `GET /api/categories`; journey A2/A3 | Demo departments are intentionally named `STAGING DEMO`. |
+| P3 | Shop search | `/naijashop/search?q=STAGING%20DEMO` | Implemented | **PASS** | Any | The demo catalogue | Three demo results appear; an ordinary query may honestly return no results | Journey A3 (3 demo listings) | Search index is not required for fixture discovery; the journey reads category browse too. |
+| P4 | Product detail, variants and availability | `/product/[slug]` | Implemented | **PASS** | Any | A demo product with stock/variants | Detail shows price, DEMO badge/notice and availability; the variant selector has one in-stock and one disabled out-of-stock option; the simple out-of-stock item cannot be added | Journey A4-A6; screenshots | Only demo products exist. Inventory is illustrative. |
+| P5 | Saved items | `/account#saved`; product save action | Implemented | **PASS** | Testers | A demo product | Save, list under Account and remove all succeed | Journey A7 | Do not save real or unrelated products. |
+| P6 | Cart empty state | `/cart` | Implemented | **PASS** | Testers | Signed in; empty cart | "Your cart is empty" is shown and no order is submitted | Journey A8 | Run-owned demo lines are cleaned up; the empty state is the expected result. |
+| P7 | Cart add/update/remove | `/cart`, `/api/cart` | Implemented | **PASS** | Testers | A demo product/variant | Add, increase/decrease quantity, save for later, move back and remove; the empty state returns | Journey A8 | Foreign non-demo active lines cause the journey to report BLOCKED rather than deleting them. |
+| P8 | Checkout validation | `/checkout`, `/api/checkout` | Implemented | **PASS** | Testers | Non-empty demo cart | Browser blocks empty required fields; the server returns `400 validation_error`; no order is created | Journey A9 | Do not bypass the form with real personal data. |
+| P9 | Successful wallet checkout | `/checkout`, `/api/payments/initialize`, `/api/payments/confirm` | Implemented | **PASS** | `tester02` | Pre-funded test wallet; demo item | One order is created; wallet payment completes; order is paid, one delivery and one escrow hold are created; wallet moves by the total | Journey A10-A12; `fund-shop-testers.ts` balanced top-up | Local test top-up → wallet only; no live provider. Tester03 is the failure case. |
+| P10 | Duplicate checkout/payment | `/api/checkout`, `/api/payments/confirm` | Implemented | **PASS** | `tester02` | A created/paid order | Duplicate checkout returns `409` without a second order; duplicate confirmation returns `duplicate: true` without a second delivery/escrow/balance movement | Journey A11, A13 | Do not retry a payment with a new reference to "see what happens". |
+| P11 | Order history and ownership | `/orders`, `/orders/[id]` | Implemented | **PASS** | `tester02`, `tester03` | Created orders | Owner sees the order and `Payment: Paid`; tester03 gets `403` and no order number | Journey A14, B4 | Cross-account probing beyond this check is prohibited. |
+| P12 | Cancellation and refund | `/orders` cancel action | Implemented | **PASS** | `tester02` | Paid order | Cancellation returns refunded, wallet/escrow restored; duplicate cancellation is `409` and moves no funds | Journey A15-A16 | This is a staging test refund, not a real payment. |
+| P13 | Insufficient-balance refusal | `/checkout` wallet | Implemented | **PASS** | `tester03` | Zero-balance wallet | Payment returns `402 insufficient_wallet`; unpaid order cancellation releases the reservation; no paid state | Journey B2-B3 | Tester03 is intentionally unfunded. Do not top up. |
+| P14 | Returns | `/returns` | Implemented | **DEFERRED** | Testers | Delivered/completed order | The honest empty state is shown; opening a return case is deferred until a legitimate delivered order exists | Journey A17 | Do not fabricate a delivered order or return. |
+| P15 | Seller ownership boundary | `/seller`, `/api/seller/*`, `/api/orders/[id]` | Implemented | **PASS** | seller persona | Demo vendor is not owned by the persona | Demo products absent from seller overview; demo product update and demo-vendor order read return `403` | Journey C1-C3 | Demo seller is a non-login fixture; never blur ownership. |
 
 ## Support and notification journeys
 
@@ -96,6 +114,17 @@ link was used. Do not claim a different tester identity or an unapproved address
 | C4 | Manager assign / reply / internal note | `/admin/support/[id]` | Implemented | **PASS** | `tester01` only | A ticket id | Assign to yourself, set status/priority, send a customer-visible reply, add an internal note; the customer must not see the internal note | `scripts/staging/verify-tester-access.mjs` (36/36: assign, internal/public reply, cross-tester denial, expired session) | No attachments. Do not change a ticket to CLOSED unless it is genuinely resolved. |
 | C5 | n8n follow-up delivery | `NotificationIntent` → n8n workflow `1lU7ERGPS0jAW7V4` → `POST /api/automation/notifications/drain` | Implemented | **PASS (operator-verified)** | `tester01` observer; testers create the event | A committed ticket/reply; n8n running on `127.0.0.1:5680` | The transactional outbox is drained on the two-minute schedule; one in-app staff notification per ticket/recipient; dedupe, lease and retry prevent duplicates | `docs/automation/workflow-matrix.md`: 12/12 creation, 20/20 reply, 23/23 HTTP; n8n health 200 | Testers must not access n8n. Delivery can take up to about two minutes. In-app records only; no live email/SMS. |
 | C6 | Staff-visible follow-up alert | Shared in-app feed `/naijagigs/notifications`; Control Center bell `/admin` | Implemented, but no dedicated staff notification surface | **DEFERRED** | `tester01` observer | Create a ticket, wait for the drain | The shared in-app feed can show "New support ticket <reference>". The Control Center bell currently opens static text: "No notification service is connected." | `lib/notifications/templates.ts`; `components/functional/admin-shell.tsx` | Cross-vertical diagnostic page, not a support workflow. The bell is a known gap: do not report it as a new defect unless its behaviour changes. |
+| C7 | Shop order/refund n8n outbox | `NotificationIntent` → n8n workflow `1lU7ERGPS0jAW7V4` | Implemented | **PASS** | `tester02` | Demo order, refund and status changes | The transactional outbox rows are claimed and delivered by the scheduled n8n drain; order/refund/status intents are `PROCESSED` and vendor/refund/status notifications are `SENT` | `check-shop-followups.ts`; processedAt evidence | Direct customer `order.paid` rows can remain `QUEUED` without the optional Valkey worker; that is disclosed separately and is not an order/payment failure. |
+
+## Shop payment and fixture evidence
+
+| ID | Check | Status | Evidence |
+| --- | --- | --- | --- |
+| E1 | Staging-only demo catalogue | **PASS** | 3 DEMO departments/products via `prepare-shop-fixtures.ts`; `isDemo=true`; existing images only; no paid generation |
+| E2 | Safe funding | **PASS** | tester02 +10,000,000 kobo through local test top-up; balanced ledger; tester03 unfunded |
+| E3 | Wallet checkout, refund and duplicate handling | **PASS** | `shop-tester-journey.cjs` 28 PASS / 0 FAIL / 0 BLOCKED / 1 DEFERRED; screenshots/report under `qa-artifacts/staging-shop/` |
+| E4 | n8n follow-ups | **PASS (outbox)** | Order/refund/status intents were `PROCESSED` by n8n; vendor/refund/status notifications `SENT`. Direct customer `order.paid` notification remains `QUEUED` because the optional Valkey notification worker is not configured; order history still shows paid |
+| E5 | Return case after delivery | **DEFERRED** | No legitimate delivered/completed order exists in the customer-only demo journey; no return was fabricated |
 
 ## Seller persona (NaijaShop)
 
@@ -130,22 +159,24 @@ link was used. Do not claim a different tester identity or an unapproved address
 | G2 | Country guide detail | `/naijashop/countries/[slug]` | Implemented | **BLOCKED** | Any | A published `CountryProfile` | Editorial intro, sourced themes, associated categories/sellers/origin products cannot be exercised | None current | 0 published country guides. Do not create editorial records. |
 | G3 | Desktop navigation (shared shell) | `/`, `/account`, `/orders` | Implemented | **PASS** | Any | 1440×900 viewport (also spot-check 1280×800) | Header exposes Services, location, search (where relevant), Earn, Business, Help, Activity and Account; exactly one header; keyboard Tab reaches links with visible focus; no dead primary controls | Manual; historical `npm run qa:visual` 99 checks | No current automated visual run on this staging build. `/naijashop` intentionally uses its own `ShopShell` header; see G5. |
 | G4 | Mobile navigation (shared shell) | `/`, `/account`, `/orders` | Implemented | **PASS** | Any | 390×844 viewport (also spot-check 360×800) | Shared bottom navigation exposes Home, Activity, Wallet and Account; the menu opens/closes; no horizontal overflow; touch targets are usable; keyboard focus remains visible | Manual; historical `qa:visual` | No current automated visual run. `/naijashop` intentionally uses its own header and navigation; see G5. |
-| G5 | Shop responsive header | `/naijashop/*` | Implemented | **PASS** | Any | 390×844 and 1440×900 | Marketplace header, search, delivery location, Orders/Returns and Cart remain usable at both sizes; one mobile menu; no overlapping cart/actions | Manual; `components/shop/shop-header.tsx` | No catalogue, so only the shell and empty states are observed. |
+| G5 | Shop responsive header | `/naijashop/*` | Implemented | **PASS** | Any | 390×844 and 1440×900 | Marketplace header, search, delivery location, Orders/Returns and Cart remain usable at both sizes; one mobile menu; no overlapping cart/actions | Manual; `components/shop/shop-header.tsx`; journey M1 | The catalogue is DEMO only; do not infer real supply from the rendered cards. |
 | V1 | Form validation and error states | `/login`, `/contact`, `/account`, `/naijastay/host` | Implemented | **PASS** | Testers | Invalid inputs | Invalid login shows the auth alert; a too-short ticket subject/message shows inline field errors; missing address fields are rejected; no false "success" message | Manual; `app/api/auth/*`, `lib/services/core/support.service.ts`, account service | Use synthetic test input only. Do not paste real personal data. |
 | V2 | Authorization and role boundaries | `/admin`, `/seller`, `/driver`, related APIs | Implemented | **PASS** | All | Signed in under each persona | Each role reaches only its surface; the support manager is denied payouts and super-admin; personas are denied seller/support consoles | `scripts/staging/verify-tester-access.mjs` 36/36 | Do not perform broad IDOR or permission probing. Report an unexpected grant immediately. |
 | V3 | Driver geolocation denial | `/driver` | Implemented | **PASS** | Driver persona | Location permission denied or unavailable | Attempting to go online shows "A usable browser location is required before you can go online." and does not set online presence | Manual; `components/drive/driver-workspace.tsx` | Reset the browser permission to retest the allowed path. |
 
 ## Blocking gaps (must be resolved before the affected journey can pass)
 
-1. **No Shop catalogue data.** 0 products and 0 published public categories
-   block product detail, variants, saved-item actions, cart mutation, checkout,
-   orders and returns. A route returning 200 is not evidence that these
-   journeys work.
-2. **No demonstrated test payment.** The running staging build offers only the
-   `wallet` payment method. The local `test` adapter is gated and not offered.
-   Checkout and payment cannot be accepted on this build.
-3. **No orders.** Customer order tracking, returns/refunds, seller order
-   actions and driver ride lifecycles have no fixture.
+1. **Only demonstration Shop data.** Three `STAGING DEMO` departments/products
+   exist; they are not real supply, prices or sellers. Do not call this a real
+   commerce acceptance or seed additional listings.
+2. **Wallet is the only offered payment method.** Tester02's wallet is funded
+   with a balanced local test top-up; tester03 is intentionally unfunded. The
+   local `test` payment adapter is still gated off in the production-mode app.
+   Card/bank/transfer sandboxes are not configured.
+3. **No delivered/completed order.** Customer cancellation/refund and
+   insufficient-balance refusal are verified, but return-case creation, seller
+   fulfilment and driver ride lifecycles still lack a legitimate end-to-end
+   fixture.
 4. **No published country guides.** The Discover Africa directory is empty, so
    country guide detail is blocked.
 5. **No dedicated staff notification surface.** Support follow-up notifications

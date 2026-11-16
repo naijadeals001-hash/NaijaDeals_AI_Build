@@ -29,10 +29,39 @@ Never add to ingress: n8n `5680`, PostgreSQL `55432`, or development previews
 `3047` / `3107` / `3109`. The staging app, n8n and PostgreSQL listeners were
 verified on `127.0.0.1`. The previews are **not** loopback-only: on 2026-11-16,
 `3047` and `3107` listened on `::` (all IPv6 interfaces), and `3109` was not
-listening. They are not internet-reachable through this tunnel, but other
-devices on the local network may reach them. This is a pre-existing preview
-binding; do not add it to ingress and do not change it without the preview
-owner's decision.
+listening. Both preview listeners used `C:\Program Files\nodejs\node.exe`; the
+active Ethernet network category was **Public**, and enabled inbound **Allow**
+rules exist for that executable on TCP/UDP any port for the Public profile. The
+host firewall therefore permits local-network inbound connections to those
+ports; reachability from another device also depends on the access point/client
+isolation and was **not** tested from a second device. They are not
+internet-reachable through this tunnel, are not in its ingress, and are not part
+of the protected staging contract.
+
+Exact rebind commands, to be run only by the owning workstream after
+coordinating the restart (a restart does not modify the preview database or
+source inputs; it does interrupt active sessions):
+
+```powershell
+# 3047: verify and coordinate with the current owner, then stop that tree and
+# re-run the launcher; its committed last line now uses -H 127.0.0.1.
+Get-NetTCPConnection -State Listen -LocalPort 3047 | Select-Object LocalAddress,OwningProcess
+cmd /c "scripts\start-review-preview.cmd"
+Get-NetTCPConnection -State Listen -LocalPort 3047
+
+# 3107: no committed launcher was found; it is an ad hoc next dev session.
+# Stop the current tree after coordinating with its owner, then:
+npx next dev -H 127.0.0.1 -p 3107
+Get-NetTCPConnection -State Listen -LocalPort 3107
+```
+
+The current listeners are PID 53864 (3047) and PID 23476 (3107); verify them
+again before stopping anything. The 3047 launcher was updated to bind loopback
+for future starts, but the running process predates that change. Both previews
+remain LAN-reachable on `::` until the preview owners perform the coordinated
+restart. A restart interrupts active preview sessions; an owner-approved
+inbound firewall restriction is the alternative that avoids a restart, but it
+was not changed here.
 
 ## Current verified state
 
@@ -59,6 +88,13 @@ owner's decision.
 - Approved tester observed: Access email sign-in, NaijaDeals app login,
   `/admin/support` HTTP 200, and `/api/admin/payouts` HTTP 403.
 - n8n `5680` and PostgreSQL `55432`: loopback-only; not in tunnel ingress.
+- Watchdog: `watchdog.ps1 -CheckOnly` returned `0` on 2026-11-16 against the
+  live configuration. It decoded the tunnel token locally without printing it
+  and confirmed the token's account tag and tunnel ID match the protected
+  configuration (64-byte secret). The full contract is listed in
+  `docs/automation/security-watchdog.md`. The isolated failure-path suite
+  passed **127/127**; the live connector PID and start time were unchanged
+  before and after the suite.
 
 Rollback is to restore the Hostinger nameservers
 `athena.dns-parking.com` / `apollo.dns-parking.com` at the registrar and stop
@@ -78,6 +114,9 @@ inventory and full rollback procedure.
 | `stop-tunnel.ps1` / `status-tunnel.ps1` | PID-scoped stop and read-only status; status asserts the same live contract | yes |
 | `preflight.ps1` | Read-only checks: binary, config shape, ingress surface, origin and private ports | yes |
 | `audit-local-runtime.py` | Read-only n8n binding and secret-leak audit (counts only) | yes |
+| `watchdog.ps1` | Periodic Access/tunnel/ingress/token verification; stop-on-drift, hold and local alert; `-CheckOnly`, `-Loop`, `-ClearHold`, isolated `-Fixture` mode | yes |
+| `security-state.ps1` | Shared hold/PID/state/alert helpers and the revalidating stop primitive | yes |
+| `watchdog-tests.ps1` | Isolated failure-path suite with a mock connector and synthetic fixtures | yes |
 | `.gitignore` | Blocks `*.json`, `*.pem`, `*.key`, `config.local.yml`, logs | yes |
 | `config.local.yml` | Optional local override (real UUID) | **never** |
 | `C:\Users\User\.cloudflared\<UUID>.json` | Tunnel credential material | **never**, outside the repo by design |
@@ -114,24 +153,87 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\cloudflare\stop-tu
 ```
 
 `-CheckOnly` runs the same zone/Access/policy/ingress/origin gate without
-starting a process.
+starting a process, and reports a watchdog security hold as a blocked start.
 
 `start-tunnel.ps1` refuses to run unless the zone is active, the Access app is
 present and bound to One-time PIN, the policy is exactly the pinned allowlist,
 and the live ingress is exactly the staging hostname plus the 404 catch-all. It
-starts `cloudflared` with `--no-autoupdate` and records the child PID in
+also refuses while `watchdog.ps1` has written the security hold. It starts
+`cloudflared` with `--no-autoupdate` and records the child PID in
 `C:\NaijaDeals-Staging\run\cloudflared.pid`. `stop-tunnel.ps1` stops only that
 PID; if the PID file is absent it stops nothing rather than killing another
 tunnel. The tunnel token is passed through the child environment and is never
 written to the repository.
 
+## Security watchdog
+
+`watchdog.ps1` re-verifies the protection contract while the tunnel is running
+and stops only the PID-file connector on drift. It never creates or edits an
+Access application, policy, DNS record or ingress rule; every Cloudflare call
+is a GET.
+
+- Checks: zone active; exactly one Access application covers the hostname and
+  is the configured application; exact domain(s), `8h` session, HttpOnly and
+  Lax cookies, preflight bypass off, enabled; exactly one One-time PIN provider
+  and OTP-only binding; exactly one Allow policy with three email-only rules
+  whose canonical SHA-256 matches `approved-testers.sha256`; configured tunnel
+  ID, remote config source; exact ingress
+  (`staging-remote.naijadeals.com -> http://127.0.0.1:3200` plus
+  `http_status:404`); no preview, n8n or PostgreSQL port anywhere in ingress;
+  WARP routing off; tunnel-token account/ID association; a trusted tracked
+  cloudflared PID whenever the tunnel has live connections.
+- Interval and retry: 60 s default loop interval (minimum 15 s), 3 API attempts
+  per cycle with 5 s between attempts and a 10 s per-request timeout. The
+  worst-case verification budget is 40 s; the stop wait plus residual check is
+  up to 13 s. Worst-case detection-to-containment is about two minutes; it is
+  not instantaneous.
+- Fail closed: on confirmed drift or exhausted retries it writes
+  `C:\NaijaDeals-Staging\run\security-hold.json`, stops only the validated
+  tracked PID, removes the PID file only after confirmed exit, checks for
+  residual connections and writes a local alert.
+  `C:\NaijaDeals-Staging\logs\security\watchdog-alert.json` is the latest alert,
+  `watchdog-log.jsonl` records transitions and
+  `C:\NaijaDeals-Staging\run\watchdog-state.json` records the last cycle. No
+  email, SMS or pager is sent.
+- Restart interlock: `start-tunnel.ps1` refuses while the hold exists, and its
+  `-CheckOnly` reports the block. `watchdog.ps1 -ClearHold` runs a fresh live
+  verification and removes the hold only on a full pass; it does not start the
+  tunnel. The watchdog does not clear a hold automatically.
+- `-CheckOnly` is read-only, takes no lock and writes no state. `-Fixture` is an
+  isolated test mode; it requires state and log roots outside
+  `C:\NaijaDeals-Staging` and cannot target the live PID file.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\cloudflare\watchdog.ps1 -CheckOnly
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\cloudflare\watchdog.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\cloudflare\watchdog.ps1 -Loop -IntervalSeconds 60
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\cloudflare\watchdog.ps1 -ClearHold
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\cloudflare\watchdog-tests.ps1
+```
+
+Exit codes: `0` PASS, `1` DRIFT (fail-closed action ran), `2` UNVERIFIABLE
+(bounded retries exhausted, fail-closed action ran), `3` refused/busy/invalid
+invocation. The full contract, detection window, limitations and test evidence
+are in `docs/automation/security-watchdog.md`.
+
 ## Safety rules
 
-- If the Access application or its policy is deleted while the tunnel is
-  running, the hostname can reach the origin without Access. This is not
-  monitored continuously: stop the tunnel first, run `status-tunnel.ps1` to
-  detect the mismatch, restore the app/policy, and only then restart. The
+- If the Access application or its policy is deleted or weakened while the
+  tunnel is running, Cloudflare can pass traffic to the origin. `watchdog.ps1`
+  detects this on its next cycle and stops the tracked connector, but the
+  window is bounded, not instantaneous: 60 s default interval, 40 s retry
+  budget and up to 13 s of stop/residual checks (about two minutes worst case).
+  If the watchdog is not running or scheduled, there is no monitoring. Restore
+  the app/policy, run `watchdog.ps1 -ClearHold` and only then restart. The
   rollback procedure stops the tunnel before deleting Access.
+- Do not kill an untracked or invalid cloudflared process by hand without
+  identifying it. The watchdog never does; it reports `untracked_connector` or
+  `residual_connections` and leaves the investigation to an operator.
+- The coordinator registered the per-minute Windows Scheduled Task
+  `NaijaDeals-Staging-Access-Watchdog` on 2026-11-16 and exercised it once
+  (`LastTaskResult=0`, state `PASS`, hold absent). Inspect it with
+  `Get-ScheduledTask` and `Get-ScheduledTaskInfo`; do not also run a
+  long-running `-Loop` process.
 - Do not create an `Allow Everyone`, domain-wide, bypass or service-token rule.
 - Do not add `staging.naijadeals.com`, n8n, PostgreSQL or preview ports to this
   tunnel.

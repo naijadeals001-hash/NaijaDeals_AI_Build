@@ -19,4 +19,4 @@ if errorlevel 1 (
   echo REFUSED: REVIEW guard failed; preview not started. 1>&2
   exit /b 2
 )
-call npx next start -p 3047
+call npx next start -H 127.0.0.1 -p 3047
