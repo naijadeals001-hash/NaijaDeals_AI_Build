@@ -161,6 +161,7 @@ const db = new Client({ connectionString: env.DATABASE_URL });
 await db.connect();
 try {
   const ticket = (await db.query('select id from "SupportTicket" where reference=$1', [created.body.reference])).rows[0];
+  const ticketId = ticket?.id ?? null;
   if (ticket) {
     const intents = await db.query('select "dedupeKey" from "NotificationIntent" where "entityId"=$1', [ticket.id]);
     const keys = intents.rows.map((row) => `notification:${row.dedupeKey}`);
@@ -177,8 +178,10 @@ try {
   } else {
     check("Verification ticket found for cleanup", false);
   }
-  const leftovers = await db.query(`select (select count(*) from "SupportTicket") tickets, (select count(*) from "NotificationIntent") intents, (select count(*) from "Notification") notifications`);
-  check("No verification fixtures remain", Object.values(leftovers.rows[0]).every((value) => Number(value) === 0), JSON.stringify(leftovers.rows[0]));
+  const leftovers = ticketId
+    ? await db.query('select (select count(*) from "SupportTicket" where id=$1) tickets, (select count(*) from "NotificationIntent" where "entityId"=$1) intents, (select count(*) from "Notification" where "entityId"=$1) notifications', [ticketId])
+    : { rows: [{ tickets: "1", intents: "1", notifications: "1" }] };
+  check("No run-owned verification fixtures remain", Object.values(leftovers.rows[0]).every((value) => Number(value) === 0), JSON.stringify(leftovers.rows[0]));
 } finally {
   await db.end();
 }

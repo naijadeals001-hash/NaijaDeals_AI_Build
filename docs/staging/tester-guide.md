@@ -89,9 +89,9 @@ extend them.
 
 | Account | Roles | Account holder | Use it for | Landing after sign-in |
 | --- | --- | --- | --- | --- |
-| `tester01@naijadeals.com` | customer + staging_test_manager (Testing Manager) | Testing Manager | Support inbox triage, assignment, replies, internal notes, customer-side checks | `/admin` — go directly to `/admin/support` |
-| `tester02@naijadeals.com` | customer | tester02 | Customer journeys: account, Shop shell/search, support tickets, country directory, navigation | `/account` |
-| `tester03@naijadeals.com` | customer | tester03 | Customer journeys; owner of the driver persona | `/account` |
+| `tester01` | customer + staging_test_manager (Testing Manager) | Testing Manager | Support inbox triage, assignment, replies, internal notes, customer-side checks | `/admin` — go directly to `/admin/support` |
+| `tester02` | customer | tester02 | Customer journeys: account, Shop shell/search, support tickets, country directory, navigation | `/account` |
+| `tester03` | customer | tester03 | Customer journeys; owner of the driver persona | `/account` |
 | `tester02.seller@staging.naijadeals.test` | customer + vendor (seller persona) | tester02 only | `/seller` overview and read-only empty lists | `/seller` |
 | `tester03.driver@staging.naijadeals.test` | customer + driver (driver persona) | tester03 only | `/driver` presence and workspace | `/account` — then open `/driver` manually |
 
@@ -261,7 +261,7 @@ Copy this into the ticket body and fill every line:
 ```text
 Build: ygTpeinzqY0L2X5fgwNUL
 Date/time:
-Account: tester02@naijadeals.com (customer)
+Account: tester02 (customer)
 Page/URL: http://localhost:3200/...
 Device/browser/viewport: Windows 11 / Chrome <version> / 1440x900
 Steps:

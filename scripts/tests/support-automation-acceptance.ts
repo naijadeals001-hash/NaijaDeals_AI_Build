@@ -73,6 +73,7 @@ async function main(): Promise<void> {
     await prisma.userRole.deleteMany({ where: { userId: { in: staleStaff.map((u) => u.id) } } });
     await prisma.user.deleteMany({ where: { id: { in: staleStaff.map((u) => u.id) } } });
   }
+  const startedAt = new Date();
   const stamp = Date.now();
   const marker = `automation slice ${stamp}`;
   const staff = await prisma.user.create({
@@ -232,6 +233,25 @@ async function main(): Promise<void> {
       select: { id: true }
     });
     const ownedTicketIds = [...new Set([...ownedTickets.map((row) => row.id), ticket.ticket.id])];
+    const ownedIntents = await prisma.notificationIntent.findMany({
+      where: {
+        OR: [
+          { entityId: { in: ownedTicketIds } },
+          { entityId: { startsWith: "poison-" } },
+          { dedupeKey: { contains: String(stamp) } }
+        ]
+      },
+      select: { dedupeKey: true, recipientUserId: true }
+    });
+    const notificationKeys = ownedIntents.map((row) => `notification:${row.dedupeKey}`);
+    const feedRecipients = [...new Set(ownedIntents.map((row) => row.recipientUserId))];
+    const notifications = await prisma.notification.findMany({
+      where: { OR: [{ dedupeKey: { in: notificationKeys } }, { userId: staff.id }] },
+      select: { id: true }
+    });
+    const notificationIds = notifications.map((row) => row.id);
+    await prisma.notificationAttempt.deleteMany({ where: { notificationId: { in: notificationIds } } });
+    await prisma.notification.deleteMany({ where: { id: { in: notificationIds } } });
     await prisma.notificationIntent.deleteMany({
       where: {
         OR: [
@@ -242,8 +262,7 @@ async function main(): Promise<void> {
       }
     });
     await prisma.supportTicket.deleteMany({ where: { subject: { contains: marker } } });
-    await prisma.partnerNotification.deleteMany({ where: { userId: staff.id } });
-    await prisma.notification.deleteMany({ where: { userId: staff.id } });
+    await prisma.partnerNotification.deleteMany({ where: { OR: [ { userId: staff.id }, { userId: { in: feedRecipients }, createdAt: { gte: startedAt } } ] } });
     await prisma.userRole.deleteMany({ where: { userId: staff.id } });
     await prisma.user.delete({ where: { id: staff.id } });
     if (roleCreated) {
