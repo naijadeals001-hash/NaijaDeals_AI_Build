@@ -24,7 +24,7 @@ staging build `83_q2cG-YEW1IrYOHq0Qz` on `127.0.0.1:3200`, database
 | Document expiry alerts | Compliance | Not scheduled | No partner-document model with an expiry field exists | — | — | Blocked by missing feature, not by a missing contract: implementing it requires a document store and retention policy decision | DEFERRED |
 | Per-vertical workflows (Eats, Drive, Stay, Gigs, Fresh, Stream) | Vertical owners | Only where implemented | Their business transitions are incomplete or demo-only | — | — | Not claimed; shipments already use durable intents | DEFERRED |
 | n8n outage/recovery | Prove core operations are independent | Stop n8n during staging activity | Local process control | Application commits; pending intents drain on restart | Durable rows + dedupe keys | Ticket committed PENDING with 0 notifications while n8n stopped; scheduled drain after restart produced exactly one | PASS (local) |
-| Protected external tester access | Remote protected staging | Cloudflare Tunnel + Access | Account-level DNS/Access | Not published | — | `naijadeals.com` is not delegated to Cloudflare (Hostinger nameservers); Access API returns `not_enabled`; no DNS/tunnel created | BLOCKED (owner account) |
+| Protected external tester access | Remote protected staging | Cloudflare Tunnel + Access | Account-level DNS/Access | Not published | — | `staging-remote` is an A record to `187.127.252.23` on Hostinger nameservers; Access returns `not_enabled`; account has 0 zones; no tester emails in approved config; no tunnel/DNS change created | BLOCKED (owner account/DNS) |
 
 ## Delivery retry contract (fixed)
 
@@ -114,10 +114,14 @@ clean up run-owned rows.
 
 ## Remaining work
 
-- External tester access is blocked by account state, not implementation:
-  `naijadeals.com` uses Hostinger nameservers, so it is not an active Cloudflare
-  zone; the Access API reports `not_enabled`. Prepared, unactivated files are in
-  `scripts/cloudflare/`. No tunnel, DNS record or Access application was created.
+- External tester access is blocked by account and DNS state, not
+  implementation: `staging-remote.naijadeals.com` already exists as an A record
+  to the VPS, `naijadeals.com` uses Hostinger nameservers so it is not an active
+  Cloudflare zone, Access reports `not_enabled`, and no tester email list is
+  present locally. Preserving the existing A record and using a tunnel/Access
+  route are mutually exclusive until the owner chooses a hostname strategy.
+  Prepared, unactivated files are in `scripts/cloudflare/`. No tunnel, DNS
+  change or Access application was created.
 - **Document-expiry alerts are blocked by missing data, not by a missing
   event contract.** The schema has no partner-document entity: `DriverProfile`
   stores only `licenseNumber`; transport providers store `licenceRef`; Stay

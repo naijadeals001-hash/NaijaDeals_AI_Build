@@ -2,7 +2,7 @@
 
 ## Current local automation handoff (2026-11-16)
 
-**Source:** branch `naijashop-marketplace`, commit `661cfd7`. **Staging:** build `83_q2cG-YEW1IrYOHq0Qz` on
+**Source:** branch `naijashop-marketplace`, HEAD `e55d45f` (pushed; remote matches). **Staging:** build `83_q2cG-YEW1IrYOHq0Qz` on
 `http://127.0.0.1:3200`, database `naijadeals_staging` (TEST classification,
 `127.0.0.1:55432`). **n8n:** `http://127.0.0.1:5680`, workflows
 `1lU7ERGPS0jAW7V4` (drain) and `Hcf6yI7AWn2ihNAy` (operations scan), both
@@ -18,16 +18,25 @@ restore, remote B2 fetch/checksum, representative R2 public/private object
 reads (private object returns 404 on the public base) and n8n archive restore
 pass. Scheduled tasks are Ready with last result 0.
 
-**Blocked by account state, not code:** protected external tester access
-(`naijadeals.com` is delegated to Hostinger nameservers, so it is not an active
-Cloudflare zone; Access returns `not_enabled`), and GitHub preservation
-(`git push` 403 for `BetFuz`; remote remains `e80a0f9`). No tunnel, DNS record,
-Access app, production deployment or live message was created.
+**Credential rotation (2026-11-16):** the staging database password and the
+automation consumer token were rotated; the n8n credential was updated and both
+schedules recovered (one transient error during the switch, then success). The
+owner rotated the n8n public-API key and it was propagated to the automation
+config. R2/S3 keys were exposed in a local tool transcript and still require
+rotation in the Cloudflare dashboard; no API route exists for that.
 
-**Next executable step:** owner enables Cloudflare Access and decides DNS
-delegation for a dedicated staging hostname, supplies tester emails, and grants
-repository write access or an authorized credential. Then publish the prepared
-tunnel/Access configuration and push the local commits.
+**Blocked by account state, not code:** protected external tester access.
+`staging-remote.naijadeals.com` exists as an **A record to `187.127.252.23`**
+on Hostinger nameservers; it does not point at a Cloudflare tunnel. Cloudflare
+Access is not enabled, the account has zero zones, and the approved config
+contains no tester email list. GitHub preservation is now **PASS**
+(`e55d45f` on both sides). No tunnel, DNS record, Access app, production
+deployment or live message was created.
+
+**Next executable step:** owner must either move the zone to Cloudflare or
+authorize replacing/delegating the existing A-record name; enable Zero Trust
+Access; supply the exact tester email list. Then create the Access allowlist
+before DNS, create/run the named tunnel, and verify denial plus tester login.
 
 ## Verification Baseline Summary (Phase 00)
 

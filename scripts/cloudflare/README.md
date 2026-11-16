@@ -1,18 +1,31 @@
 # Protected external tester access — prepared, NOT active
 
 Status: **BLOCKED**. Nothing in this directory has been run. No tunnel was
-created, no DNS record was published and no Access application exists. The
-staging origin stays private on `127.0.0.1:3200`.
+created, no DNS route or Access application exists. The staging origin stays
+private on `127.0.0.1:3200`.
 
-Two independent blockers were re-verified on 2026-11-15 (local time, UTC-05:00):
+Current state re-verified on 2026-11-16:
+
+- `staging-remote.naijadeals.com` now exists as an **A record to
+  `187.127.252.23`** on Hostinger nameservers. It does **not** point at a
+  Cloudflare tunnel. Replacing it would change the existing name and conflict
+  with the owner instruction to preserve it.
+- The Cloudflare token is account-scoped (`/zones` returns 0) and lives in the
+  project `.env`; it can read tunnels but cannot create a DNS route or an
+  Access application.
+- The approved local configuration contains **no tester email addresses**, so no
+  allow policy or staging account can be created without guessing.
+- No tunnel process, tunnel credential or Access application exists.
+
+Two independent blockers remain:
 
 | # | Blocker | Exact sanitized evidence |
 | --- | --- | --- |
 | B1 | Cloudflare Zero Trust Access is not enabled on the account | `GET /accounts/<id>/access/apps` → HTTP 403, `9999 access.api.error.not_enabled: Access is not enabled. Visit the Access dashboard at https://dash.cloudflare.com/ and click the 'Enable Access' button.` (same for `/access/policies`, `/access/identity_providers`, `/access/organizations`) |
-| B2 | `naijadeals.com` is **not** delegated to Cloudflare, so no Cloudflare-proxied hostname (and therefore no Access-protected hostname) can exist yet | Public DNS: `NS naijadeals.com` → `athena.dns-parking.com`, `apollo.dns-parking.com`; `SOA` responsible mail `dns.hostinger.com`. Cloudflare Access/self-hosted apps require the domain to be an **active zone in the account** |
+| B2 | `naijadeals.com` is **not** delegated to Cloudflare, and the requested hostname is an A record to the existing VPS | Public DNS: `NS naijadeals.com` → `athena.dns-parking.com`, `apollo.dns-parking.com`; `staging-remote` → `A 187.127.252.23`. Cloudflare Access/self-hosted apps and tunnel DNS routes require an **active zone in the account**. Replacing the A record needs an explicit owner decision because it is an existing name |
 
-Additional capability limits of the token in the ZCode MCP configuration
-(`mcp.cloudflare.com`, bearer, account `6c92d6684237e9c82f3531f9599f3d7e`):
+Additional capability limits of the account-scoped bearer token in the project
+`.env` (account `6c92d6684237e9c82f3531f9599f3d7e`; value never printed):
 
 | Call | Result |
 | --- | --- |
@@ -21,10 +34,9 @@ Additional capability limits of the token in the ZCode MCP configuration
 | `GET /accounts/<id>/access/*` | HTTP 403 `9999 access.api.error.not_enabled` |
 | `GET /user/tokens/verify` | HTTP 401 `1000 Invalid API Token` — expected: this is an OAuth bearer token, not a user API token |
 
-`staging-remote.naijadeals.com` is unused: public DNS returns NXDOMAIN for
-`A`, `AAAA` and `CNAME` (checked against 8.8.8.8).
-`staging.naijadeals.com` already resolves to `187.127.252.23`; it was only
-observed, never touched.
+`staging-remote.naijadeals.com` and `staging.naijadeals.com` both resolve to
+`187.127.252.23`; they were only observed, never touched. No DNS record was
+created, changed or deleted.
 
 ## Hostname and port contract
 
