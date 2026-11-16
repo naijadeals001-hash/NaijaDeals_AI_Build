@@ -122,18 +122,29 @@ try {
 if (-not $proc) { throw "cloudflared did not return a process handle" }
 Set-Content -Path $pidPath -Value $proc.Id
 $healthy = $false
+$healthError = $null
 for ($attempt = 0; $attempt -lt 3; $attempt++) {
   Start-Sleep -Seconds 3
   $proc.Refresh()
   if ($proc.HasExited) { break }
-  $state = Invoke-Cf "https://api.cloudflare.com/client/v4/accounts/$($cfg['CLOUDFLARE_ACCOUNT_ID'])/cfd_tunnel/$($cfg['CLOUDFLARE_TUNNEL_ID'])"
-  if ($state.result.status -eq "healthy" -and @($state.result.connections).Count -gt 0) {
-    $healthy = $true
+  try {
+    $state = Invoke-Cf "https://api.cloudflare.com/client/v4/accounts/$($cfg['CLOUDFLARE_ACCOUNT_ID'])/cfd_tunnel/$($cfg['CLOUDFLARE_TUNNEL_ID'])"
+    if ($state.result.status -eq "healthy" -and @($state.result.connections).Count -gt 0) {
+      $healthy = $true
+      break
+    }
+  } catch {
+    $healthError = $_.Exception.Message
     break
   }
 }
 if (-not $healthy) {
-  Remove-Item $pidPath -Force -ErrorAction SilentlyContinue
-  throw "tunnel did not become healthy; inspect $logDir"
+  $proc.Refresh()
+  if ($proc.HasExited) {
+    Remove-Item $pidPath -Force -ErrorAction SilentlyContinue
+    throw "cloudflared exited during startup; inspect $logDir"
+  }
+  $reason = if ($healthError) { $healthError } else { "no healthy connection within 9 seconds" }
+  throw "cloudflared PID $($proc.Id) is still running but not healthy ($reason); run stop-tunnel.ps1 before retrying; inspect $logDir"
 }
 Write-Output "tunnel started PID $($proc.Id); status is healthy; verify with status-tunnel.ps1"
