@@ -2,7 +2,7 @@
 
 ## Current local automation handoff (2026-11-16)
 
-**Source:** branch `naijashop-marketplace`, HEAD `e55d45f` (pushed; remote matches). **Staging:** build `ygTpeinzqY0L2X5fgwNUL` on
+**Source:** branch `naijashop-marketplace`, HEAD `4a767e6` (pushed; remote matches). **Staging:** build `ygTpeinzqY0L2X5fgwNUL` on
 `http://127.0.0.1:3200`, database `naijadeals_staging` (TEST classification,
 `127.0.0.1:55432`). **n8n:** `http://127.0.0.1:5680`, workflows
 `1lU7ERGPS0jAW7V4` (drain) and `Hcf6yI7AWn2ihNAy` (operations scan), both
