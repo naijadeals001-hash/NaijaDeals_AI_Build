@@ -119,7 +119,7 @@ Owner actions required:
 - Dead letters are visible to the operator status endpoint. Delivery now
   distinguishes delivered, suppressed, not-due, in-flight, terminal and missing,
   so an intent cannot complete while its notification is still unsent.
-- Staging build `83_q2cG-YEW1IrYOHq0Qz` on `127.0.0.1:3200`. Evidence:
+- Staging build `ygTpeinzqY0L2X5fgwNUL` on `127.0.0.1:3200`. Evidence:
   type-check 0 errors; retry 23/23; operations 22/22; served-build routes 22/22;
   support 12/12 + 20/20 + 23/23. Encrypted DB backup restored into a throwaway
   database, remote B2 copy fetched and checksum-verified, and the n8n archive

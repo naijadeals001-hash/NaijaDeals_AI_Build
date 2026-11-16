@@ -170,6 +170,9 @@ const ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
     "gigs:read",
     "stream:read"
   ],
+  // Staging-only testing manager: the support inbox only. Deliberately excludes
+  // dashboard:read, order/user reads and all financial aggregates.
+  staging_test_manager: ["support:read", "support:write", "support:assign"],
   support: [
     "dashboard:read",
     "orders:read",
@@ -207,6 +210,7 @@ export const STAFF_ROLES = [
   "ops",
   "finance",
   "support",
+  "staging_test_manager",
   "moderator",
   "affiliate_reviewer",
   "plus_editor",

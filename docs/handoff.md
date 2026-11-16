@@ -2,7 +2,7 @@
 
 ## Current local automation handoff (2026-11-16)
 
-**Source:** branch `naijashop-marketplace`, HEAD `e55d45f` (pushed; remote matches). **Staging:** build `83_q2cG-YEW1IrYOHq0Qz` on
+**Source:** branch `naijashop-marketplace`, HEAD `e55d45f` (pushed; remote matches). **Staging:** build `ygTpeinzqY0L2X5fgwNUL` on
 `http://127.0.0.1:3200`, database `naijadeals_staging` (TEST classification,
 `127.0.0.1:55432`). **n8n:** `http://127.0.0.1:5680`, workflows
 `1lU7ERGPS0jAW7V4` (drain) and `Hcf6yI7AWn2ihNAy` (operations scan), both
@@ -30,7 +30,7 @@ created through the registration endpoint. The Testing Manager has the existing
 `support` role (support/test-report inbox, reply and assignment only); the two
 testers have the `customer` role. Separate seller and driver personas were
 created for the two testers who need those journeys. Local allowed/denied
-checks pass 23/23: no payout, super-admin, support-console or cross-persona
+checks pass 36/36: no payout, order/user administration, financial overview, super-admin, support-console or cross-persona
 access where it should be denied. Passwords are not in Git or chat; they are in
 the ACL-protected `C:/NaijaDeals-Staging/secrets/tester-activation.json` file for
 out-of-band owner handoff. The Cloudflare allowlist with exactly the three

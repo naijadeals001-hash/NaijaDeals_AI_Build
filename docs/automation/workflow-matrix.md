@@ -6,8 +6,8 @@ transitions or driver dispatch; those stay in NaijaDeals services. Every
 notification below is an in-app record; no live email/SMS/customer message is
 sent in this environment.
 
-Current identity: source `661cfd7`,
-staging build `83_q2cG-YEW1IrYOHq0Qz` on `127.0.0.1:3200`, database
+Current identity: source `naijashop-marketplace` automation commit,
+staging build `ygTpeinzqY0L2X5fgwNUL` on `127.0.0.1:3200`, database
 `naijadeals_staging` (TEST classification, 86 migrations), n8n 2.47.7 on
 `127.0.0.1:5680`.
 

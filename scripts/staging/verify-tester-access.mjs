@@ -21,11 +21,12 @@ const ACTIVATION = "C:/NaijaDeals-Staging/secrets/tester-activation.json";
 const ENV_FILE = "C:/NaijaDeals-Staging/env/staging.env";
 const accounts = JSON.parse(fs.readFileSync(ACTIVATION, "utf8")).accounts;
 const primary = accounts.filter((row) => !row.ownerTester);
-const managerAccount = primary.find((row) => row.roles.includes("support"));
-const testerAccount = primary.find((row) => row.roles.includes("customer") && !row.roles.includes("support"));
+const managerAccount = primary.find((row) => row.roles.includes("staging_test_manager"));
+const testerAccount = primary.find((row) => row.roles.includes("customer") && !row.roles.includes("staging_test_manager"));
+const otherTesterAccount = primary.find((row) => row !== managerAccount && row !== testerAccount && row.roles.includes("customer"));
 const sellerAccount = accounts.find((row) => row.roles.includes("vendor"));
 const driverAccount = accounts.find((row) => row.roles.includes("driver"));
-for (const [label, account] of [["manager", managerAccount], ["tester", testerAccount], ["seller persona", sellerAccount], ["driver persona", driverAccount]]) {
+for (const [label, account] of [["manager", managerAccount], ["tester", testerAccount], ["other tester", otherTesterAccount], ["seller persona", sellerAccount], ["driver persona", driverAccount]]) {
   if (!account) throw new Error(`activation file is missing the ${label} account`);
 }
 
@@ -62,10 +63,15 @@ async function login(account) {
 const manager = await login(managerAccount);
 check("Testing Manager can sign in", manager.status === 200 && Boolean(manager.cookie), `status=${manager.status}`);
 const managerMe = await request("/api/auth/me", { cookie: manager.cookie });
-check("Testing Manager session has support role", managerMe.status === 200 && (managerMe.body.user?.roles ?? []).includes("support"), `roles=${(managerMe.body.user?.roles ?? []).join(",")}`);
+check("Testing Manager session has staging_test_manager role", managerMe.status === 200 && (managerMe.body.user?.roles ?? []).includes("staging_test_manager"), `roles=${(managerMe.body.user?.roles ?? []).join(",")}`);
 const managerList = await request("/api/admin/support/tickets?pageSize=50", { cookie: manager.cookie });
 check("Testing Manager can read the support/test report inbox", managerList.status === 200, `status=${managerList.status}`);
 check("Testing Manager is denied payout access", (await request("/api/admin/payouts", { cookie: manager.cookie })).status === 403);
+check("Testing Manager is denied order administration", (await request("/api/admin/orders", { cookie: manager.cookie })).status === 403);
+check("Testing Manager is denied user administration", (await request("/api/admin/users", { cookie: manager.cookie })).status === 403);
+check("Testing Manager is denied financial overview", (await request("/api/admin/overview", { cookie: manager.cookie })).status === 403);
+check("Testing Manager can open the support screen", (await request("/admin/support", { cookie: manager.cookie })).status === 200);
+check("Testing Manager cannot escalate their own role", (await request(`/api/super-admin/users/${managerMe.body.user.id}/roles`, { cookie: manager.cookie, method: "PUT", body: { roles: ["super_admin"] } })).status === 403);
 check("Testing Manager is denied super-admin platform settings", (await request("/api/super-admin/system", { cookie: manager.cookie })).status === 403);
 
 const tester = await login(testerAccount);
@@ -95,28 +101,54 @@ if (ticketId) {
     body: { assigneeId: managerMe.body.user.id }
   });
   check("Testing Manager can assign the report to themself", assign.status === 200, `status=${assign.status}`);
+  const internalText = `INTERNAL ONLY ${Date.now()}`;
+  const publicText = `PUBLIC REPLY ${Date.now()}`;
   const reply = await request(`/api/admin/support/tickets/${ticketId}/messages`, {
     cookie: manager.cookie,
-    body: { message: "Staging verification reply. This ticket is removed automatically.", internal: true }
+    body: { message: internalText, internal: true }
   });
   check("Testing Manager can add an internal note", reply.status === 201, `status=${reply.status}`);
   const publicReply = await request(`/api/admin/support/tickets/${ticketId}/messages`, {
     cookie: manager.cookie,
-    body: { message: "Staging verification public reply. This ticket is removed automatically.", internal: false }
+    body: { message: publicText, internal: false }
   });
   check("Testing Manager can send a customer-visible reply", publicReply.status === 201, `status=${publicReply.status}`);
+  const customerView = await request(`/api/support/tickets/${created.body.reference}`, { cookie: tester.cookie });
+  const customerText = JSON.stringify(customerView.body);
+  check("Internal note is absent from the customer ticket view", customerView.status === 200 && !customerText.includes(internalText), `status=${customerView.status}`);
+  check("Public reply is visible in the customer ticket view", customerText.includes(publicText), `status=${customerView.status}`);
 }
+
+const otherTester = await login(otherTesterAccount);
+check("Tester03 can sign in", otherTester.status === 200 && Boolean(otherTester.cookie), `status=${otherTester.status}`);
+check("Tester03 cannot read Tester02's ticket", (await request(`/api/support/tickets/${created.body.reference}`, { cookie: otherTester.cookie })).status === 404);
+check("Tester03 cannot reply to Tester02's ticket", (await request(`/api/support/tickets/${created.body.reference}/messages`, { cookie: otherTester.cookie, body: { message: "cross-account attempt" } })).status === 404);
+const otherMe = await request("/api/auth/me", { cookie: otherTester.cookie });
+const expireEnv = {};
+for (const rawLine of fs.readFileSync(ENV_FILE, "utf8").split(String.fromCharCode(10))) {
+  const line = rawLine.trim();
+  if (!line || line.startsWith("#")) continue;
+  const i = line.indexOf("=");
+  if (i > 0) expireEnv[line.slice(0, i)] = line.slice(i + 1);
+}
+const expireDb = new Client({ connectionString: expireEnv.DATABASE_URL });
+await expireDb.connect();
+await expireDb.query('update "Session" set "expiresAt"=$1 where "userId"=$2', [new Date(Date.now() - 1000), otherMe.body.user.id]);
+await expireDb.end();
+check("Expired session is rejected", (await request("/api/support/tickets/mine", { cookie: otherTester.cookie })).status === 401);
 
 const seller = await login(sellerAccount);
 check("Seller persona can sign in", seller.status === 200 && Boolean(seller.cookie), `status=${seller.status}`);
 check("Seller persona can read the seller overview", (await request("/api/seller/overview", { cookie: seller.cookie })).status === 200);
 check("Seller persona is denied the support console", (await request("/api/admin/support/tickets", { cookie: seller.cookie })).status === 403);
+check("Seller persona is denied driver access", (await request("/api/drive/driver/presence", { cookie: seller.cookie })).status === 403);
 
 const driver = await login(driverAccount);
 check("Driver persona can sign in", driver.status === 200 && Boolean(driver.cookie), `status=${driver.status}`);
 check("Driver persona can read driver presence", (await request("/api/drive/driver/presence", { cookie: driver.cookie })).status === 200);
 check("Driver persona is denied seller access", (await request("/api/seller/overview", { cookie: driver.cookie })).status === 403);
 check("Driver persona is denied the support console", (await request("/api/admin/support/tickets", { cookie: driver.cookie })).status === 403);
+check("Invalid session is rejected", (await request("/api/support/tickets/mine", { cookie: "nd_session=invalid-session-token" })).status === 401);
 
 // Remove the verification ticket and any notifications/intents it produced.
 const env = {};

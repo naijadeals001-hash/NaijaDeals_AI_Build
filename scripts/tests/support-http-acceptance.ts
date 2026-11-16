@@ -75,15 +75,16 @@ async function main(): Promise<void> {
   async function removeOwned(ownedUserIds: string[], ownedTicketIds: string[]) {
     const intents = await prisma.notificationIntent.findMany({
       where: { OR: [{ entityId: { in: ownedTicketIds } }, { recipientUserId: { in: ownedUserIds } }] },
-      select: { dedupeKey: true }
+      select: { dedupeKey: true, recipientUserId: true }
     });
+    const feedRecipients = [...new Set(intents.map((row) => row.recipientUserId))];
     const notificationKeys = intents.map((row) => `notification:${row.dedupeKey}`);
     const notifications = await prisma.notification.findMany({
       where: { OR: [{ dedupeKey: { in: notificationKeys } }, { userId: { in: ownedUserIds } }] },
       select: { id: true }
     });
     const notificationIds = notifications.map((row) => row.id);
-    await prisma.partnerNotification.deleteMany({ where: { userId: { in: ownedUserIds } } });
+    await prisma.partnerNotification.deleteMany({ where: { OR: [ { userId: { in: ownedUserIds } }, { userId: { in: feedRecipients }, createdAt: { gte: feedStartedAt } } ] } });
     await prisma.notificationAttempt.deleteMany({ where: { notificationId: { in: notificationIds } } });
     await prisma.notification.deleteMany({ where: { id: { in: notificationIds } } });
     await prisma.notificationIntent.deleteMany({
@@ -126,6 +127,7 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
+  const feedStartedAt = new Date();
   const baseline = await counts();
   let finalCounts: Awaited<ReturnType<typeof counts>> | null = null;
   let exitCode = 0;
@@ -158,7 +160,7 @@ async function main(): Promise<void> {
     const first = await drain();
     check(
       "served build drains ticket-created intent",
-      first.status === 200 && first.body.processed === 1,
+      first.status === 200 && Number(first.body.processed) >= 1,
       `status=${first.status} processed=${first.body.processed}`
     );
 

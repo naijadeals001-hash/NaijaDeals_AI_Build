@@ -239,7 +239,7 @@ export async function createTicket(input: CreateTicketInput): Promise<CreatedTic
         // n8n consumer) delivers them later with lease/ack/retry semantics.
         const staff = await tx.user.findMany({
           where: {
-            roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support"] } } } },
+            roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support", "staging_test_manager"] } } } },
             OR: ticketCountry
               ? [{ scopeCountryCode: null }, { scopeCountryCode: ticketCountry }]
               : [{ scopeCountryCode: null }]
@@ -503,7 +503,7 @@ export async function postCustomerReply(reference: string, viewer: { userId?: st
       // country the ticket actually stored.
       const staff = await tx.user.findMany({
         where: {
-          roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support"] } } } },
+          roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support", "staging_test_manager"] } } } },
           OR: ticket.countryCode
             ? [{ scopeCountryCode: null }, { scopeCountryCode: ticket.countryCode }]
             : [{ scopeCountryCode: null }]
@@ -766,7 +766,7 @@ export async function assignTicket(actor: SessionUser, scope: StaffScope, id: st
   let assigneeName: string | null = null;
   if (assigneeId) {
     const assignee = await prisma.user.findFirst({
-      where: { id: assigneeId, roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support"] } } } } },
+      where: { id: assigneeId, roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support", "staging_test_manager"] } } } } },
       select: { id: true, name: true }
     });
     if (!assignee) throw new ApiError(422, "invalid_assignee", "That person cannot be assigned support tickets.");
@@ -864,7 +864,7 @@ export async function setTicketPriority(actor: SessionUser, scope: StaffScope, i
 export async function listStaffAssignees(scope: StaffScope) {
   const users = await prisma.user.findMany({
     where: {
-      roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support"] } } } },
+      roles: { some: { role: { name: { in: ["super_admin", "admin", "ops", "support", "staging_test_manager"] } } } },
       ...(scope.countryCode
         ? { OR: [{ scopeCountryCode: null }, { scopeCountryCode: scope.countryCode }] }
         : {})
