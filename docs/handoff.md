@@ -37,6 +37,17 @@ out-of-band owner handoff. The Cloudflare allowlist with exactly the three
 approved emails is saved in the protected local staging configuration but is
 not applied, because Access and the hostname route are still blocked.
 
+**External staging preparation (2026-11-16):** the Cloudflare zone
+`naijadeals.com` is created and pending; the complete Hostinger zone export is
+mirrored with 17 DNS-only records, including the previously missed `seller`
+record and all email/DKIM records. A named tunnel is created but inactive, with
+ingress only to `127.0.0.1:3200`; the Access organization is enabled. Cloudflare
+refuses the Access application until the zone is active. Hostinger remains
+authoritative and `staging-remote` still resolves to the existing VPS. The
+migration/rollback plan is `docs/automation/dns-migration-plan.md`; the only
+remaining gate is owner approval to change the registrar nameservers to
+`armando.ns.cloudflare.com` and `nucum.ns.cloudflare.com`.
+
 **Blocked by account state, not code:** protected external tester access.
 `staging-remote.naijadeals.com` exists as an **A record to `187.127.252.23`**
 on Hostinger nameservers; it does not point at a Cloudflare tunnel. Cloudflare

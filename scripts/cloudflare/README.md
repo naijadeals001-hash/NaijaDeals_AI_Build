@@ -1,8 +1,16 @@
 # Protected external tester access — prepared, NOT active
 
-Status: **BLOCKED**. Nothing in this directory has been run. No tunnel was
-created, no DNS route or Access application exists. The staging origin stays
-private on `127.0.0.1:3200`.
+Status: **PREPARED; NAMESERVER MIGRATION APPROVAL REQUIRED.** Hostinger remains
+authoritative. The Cloudflare zone `naijadeals.com` is created and **pending**;
+a named tunnel is created **inactive** with ingress only to
+`127.0.0.1:3200`; the Access organization is enabled. Cloudflare refuses the
+Access application while the zone is pending (`domain does not belong to zone`),
+so no hostname is exposed. The staging origin stays private on
+`127.0.0.1:3200`.
+
+The complete record inventory, migration steps and rollback are in
+`docs/automation/dns-migration-plan.md`. Do not change registrar nameservers
+without owner approval.
 
 Current state re-verified on 2026-11-16:
 
@@ -67,6 +75,9 @@ reachable by other devices on the local network until someone rebinds them.
 | File | Purpose | Committed? |
 | --- | --- | --- |
 | `config.yml` | Named-tunnel ingress, placeholders for tunnel UUID and credentials path | yes (placeholders only) |
+| `configure-staging-access.mjs` | Applies the exact tester allowlist once the zone is active | yes |
+| `start-tunnel.ps1` | Refuses unless the zone is active and the Access app exists; starts cloudflared with the token in the child environment | yes |
+| `stop-tunnel.ps1` / `status-tunnel.ps1` | Stop and read-only status | yes |
 | `preflight.ps1` | Read-only checks: binary, config shape, ingress surface, hostname unused, origin 200, private ports loopback | yes |
 | `audit-local-runtime.py` | Read-only n8n binding and secret-leak audit (counts only) | yes |
 | `.gitignore` | Blocks `*.json`, `*.pem`, `*.key`, `config.local.yml`, logs | yes |

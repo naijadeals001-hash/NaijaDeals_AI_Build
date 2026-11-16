@@ -24,7 +24,7 @@ staging build `83_q2cG-YEW1IrYOHq0Qz` on `127.0.0.1:3200`, database
 | Document expiry alerts | Compliance | Not scheduled | No partner-document model with an expiry field exists | — | — | Blocked by missing feature, not by a missing contract: implementing it requires a document store and retention policy decision | DEFERRED |
 | Per-vertical workflows (Eats, Drive, Stay, Gigs, Fresh, Stream) | Vertical owners | Only where implemented | Their business transitions are incomplete or demo-only | — | — | Not claimed; shipments already use durable intents | DEFERRED |
 | n8n outage/recovery | Prove core operations are independent | Stop n8n during staging activity | Local process control | Application commits; pending intents drain on restart | Durable rows + dedupe keys | Ticket committed PENDING with 0 notifications while n8n stopped; scheduled drain after restart produced exactly one | PASS (local) |
-| Protected external tester access | Remote protected staging | Cloudflare Tunnel + Access | Account-level DNS/Access | Not published | — | `staging-remote` is an A record to `187.127.252.23` on Hostinger nameservers; Access returns `not_enabled`; account has 0 zones; no tester emails in approved config; no tunnel/DNS change created | BLOCKED (owner account/DNS) |
+| Protected external tester access | Remote protected staging | Cloudflare Tunnel + Access | Account-level DNS/Access | Prepared, not published | — | Cloudflare zone `naijadeals.com` pending; all 17 Hostinger records mirrored DNS-only; tunnel inactive with 3200-only ingress; Access org enabled but app refused while pending; Hostinger NS unchanged | BLOCKED (nameserver migration approval) |
 
 ## Delivery retry contract (fixed)
 
