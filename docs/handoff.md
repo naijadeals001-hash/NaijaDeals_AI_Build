@@ -2,9 +2,10 @@
 
 ## Current local automation handoff (2026-11-16)
 
-**Verified source:** branch `naijashop-marketplace`, commit `7def3b2`
-(hardening commit; app code unchanged since `57132e0`; remote matched at
-verification time). The handoff metadata update is a separate docs-only commit.
+**Verified source:** branch `naijashop-marketplace`, commit `c465e2d`
+(staging Shop + watchdog hardening; app code unchanged since `57132e0`; remote
+matched at verification time). The handoff metadata update is a separate
+docs-only commit.
 **Staging:** build `ygTpeinzqY0L2X5fgwNUL` on
 `http://127.0.0.1:3200`, database `naijadeals_staging` (TEST classification,
 `127.0.0.1:55432`). **n8n:** `http://127.0.0.1:5680`, workflows
@@ -27,6 +28,50 @@ schedules recovered (one transient error during the switch, then success). The
 owner rotated the n8n public-API key and it was propagated to the automation
 config. R2/S3 keys were exposed in a local tool transcript and still require
 rotation in the Cloudflare dashboard; no API route exists for that.
+
+**R2 rotation status (2026-11-16): BLOCKED on an owner-only dashboard action.**
+The exposed key is the staging R2 key for `naijadeals-staging-public` and
+`naijadeals-staging-private`; it still lists both buckets and the safe probe
+`scripts/staging/verify-r2-credentials.mjs` returned 8/8 (public/private
+write/read, public URL, private public-URL denial, cleanup). The configured
+Cloudflare API token returns HTTP 403 for `/r2/api_tokens` and `/r2/buckets`, so
+it cannot create or revoke R2 credentials. Exact owner cutover, verification
+and revocation steps are in `docs/staging/r2-credential-rotation.md`. No
+replacement was fabricated and no production R2 credential was touched.
+
+**Staging Shop acceptance (2026-11-16):** three clearly labelled `STAGING DEMO`
+departments and three `STAGING DEMO` products were created through the existing
+catalogue-admin services with approved project images. Tester02's wallet was
+funded with 10,000,000 kobo of test money through the existing local test
+top-up service (balanced ledger; no live provider, no app environment change);
+tester03 remains unfunded for the genuine insufficient-balance case. The real
+Playwright journey passed **28 PASS / 0 FAIL / 0 BLOCKED / 1 DEFERRED**: browse,
+search, DEMO detail, variants and out-of-stock, saved items, cart mutations,
+checkout validation, successful wallet payment, duplicate checkout/payment,
+order ownership, cancellation/refund, seller-ownership denial and mobile
+overflow. The only deferred row is return-case creation after a legitimate
+delivery. Evidence is in `qa-artifacts/staging-shop/` (Git-ignored) and
+`docs/staging/shop-fixtures.md`.
+
+n8n processed the Shop order/refund/status outbox intents (order paid vendor,
+refund completed, order status changed) and their notifications are `SENT`.
+The direct customer `order.paid` notification can remain `QUEUED` because the
+optional Valkey notification worker is not configured; order history still
+shows `Payment: Paid`. The `test` payment adapter remains intentionally
+unavailable in the production-mode staging build; the only checkout provider
+offered is `wallet`. No live payment, payout or provider call occurred.
+
+**Watchdog (2026-11-16):** `scripts/cloudflare/watchdog.ps1` verifies the exact
+Access app/hostname/policy/three-email hash/OTP binding, tunnel ID/config/
+`config_src=cloudflare`, exact 3200+404 ingress, token account/tunnel
+association, WARP off and tracked PID. On drift or unverifiable API state it
+stops only the tracked connector, writes a security hold and local alert, and
+blocks `start-tunnel.ps1` until `-ClearHold` passes a fresh live check.
+`watchdog-tests.ps1` passed **127/127**. The per-minute Scheduled Task
+`NaijaDeals-Staging-Access-Watchdog` is registered and was exercised once with
+`LastTaskResult=0`, `status=PASS`, hold absent. Detection is bounded, not
+instantaneous: 60 s interval, 40 s retry budget and up to 13 s stop checks
+(about 113 s worst case). See `docs/automation/security-watchdog.md`.
 
 **Independent review (2026-11-16):** a code-security reviewer found four
 Medium and six Low gaps in the first staging-access implementation (exact
@@ -60,14 +105,21 @@ is active; public A, MX, SPF, DKIM and DMARC records verify. The Access
 application for `https://staging-remote.naijadeals.com` has a single Allow policy
 with exactly the three approved tester emails and One-time PIN; the named tunnel
 is healthy with four connections. Unauthenticated requests are redirected to
-Access; an approved tester completed the email sign-in, signed into NaijaDeals,
-opened the support inbox and was denied payouts (403). The startup and status
+Access; only `tester01` completed the observed external email sign-in, signed
+into NaijaDeals, opened the support inbox and was denied payouts (403). The
+other two external logins are **BLOCKED** pending individual mailboxes: all
+three aliases currently deliver to the coordinator's shared office mailbox, so
+Access does not prove three separate identities. Local login/role checks for
+all five accounts pass 36/36, but that is not external identity evidence;
+`docs/staging/mailbox-isolation.md` records the provider-side unknown state and
+the exact owner handoff. The startup and status
 scripts assert the live Access policy, OTP binding and live tunnel ingress, and
 pin the allowlist hash; the reviewed fixes are recorded in
 `scripts/cloudflare/README.md`. n8n 5680 and
-PostgreSQL 55432 remain loopback-only. Development previews 3047 and 3107
-listen on `::` and are not loopback-only (pre-existing; not in tunnel ingress);
-3109 was not listening. Rollback is restoring `athena/apollo.dns-parking.com`
+PostgreSQL 55432 remain loopback-only. The 3047 launcher now includes
+`-H 127.0.0.1`, but the running 3047 and 3107 processes still listen on `::`
+(dual-stack) until their owners perform a coordinated restart; they are not in
+tunnel ingress. 3109 was not listening. Rollback is restoring `athena/apollo.dns-parking.com`
 at the registrar; the Hostinger zone export is retained. Post-cutover HTTP
 check: apex returned `200` over plain HTTP, but HTTPS failed TLS principal
 validation because the pre-existing VPS certificate does not match
@@ -76,9 +128,21 @@ returned `200`. This is a pre-existing production origin/certificate issue, not
 a DNS destination change, and was not fixed here. No production application
 deployment or live message was performed.
 
-**Next executable step:** owner/tester acceptance of the journeys in
-`docs/staging/tester-guide.md`; Shop/checkout/order journeys remain blocked by
-the empty staging catalogue and absent test-payment adapter.
+**Next executable step:** owner action on the two blocked identity/credential
+gates, then tester acceptance:
+1. Provision individual `tester01@`, `tester02@` and `tester03@` mailboxes or
+   forwarders using `docs/staging/mailbox-isolation.md`; keep the three exact
+   Cloudflare email rules unchanged. Do not use the shared office mailbox as
+   proof of individual identity.
+2. Create the scoped R2 replacement, update the protected staging environment,
+   run the two verification commands, revoke the old key and record the result
+   using `docs/staging/r2-credential-rotation.md`.
+3. Have the preview owners coordinate a loopback rebind of running 3047/3107
+   (the committed 3047 launcher is already fixed).
+4. Then execute the tester journeys in `docs/staging/tester-guide.md`; the Shop
+   slice is ready, including tester02 wallet success and tester03 insufficient
+   balance. Return-case creation remains deferred until a legitimate delivered
+   order exists.
 
 ## Verification Baseline Summary (Phase 00)
 
