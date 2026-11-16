@@ -5,6 +5,8 @@ import { log } from "@/lib/infra/logger";
 import { infraMetrics } from "@/lib/infra/metrics";
 import { notifyShipmentStatus } from "./domain-events";
 import { deliverNotification, notify } from "@/lib/services/core/notification-delivery.service";
+import { deliverCommerceEvent } from "./commerce-deliveries";
+import { deliverOperationsEvent } from "./operations-deliveries";
 
 /**
  * Transactional notification outbox.
@@ -24,6 +26,35 @@ const BACKOFF_MS = [15_000, 60_000, 300_000, 900_000, 3_600_000];
 export type IntentPayload = Record<string, unknown>;
 
 type Tx = PrismaClient | Prisma.TransactionClient;
+
+/**
+ * A delivery that can succeed later: the notification is waiting for its own
+ * backoff, another worker holds the send, or the provider call failed
+ * retryably. The intent processor re-queues the intent instead of marking it
+ * processed. `retryAt` carries the notification's existing schedule so the two
+ * retry loops do not drift apart.
+ */
+export class RetryableIntentError extends Error {
+  readonly retryAt?: Date;
+
+  constructor(message: string, retryAt?: Date) {
+    super(message);
+    this.name = "RetryableIntentError";
+    this.retryAt = retryAt;
+  }
+}
+
+/**
+ * A delivery that cannot succeed by retrying: the provider rejected the message
+ * terminally or the notification row no longer exists. The intent is
+ * dead-lettered so an operator sees it.
+ */
+export class PermanentIntentError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PermanentIntentError";
+  }
+}
 
 export type IntentInput = {
   dedupeKey: string;
@@ -136,31 +167,73 @@ async function finish(id: string, token: string, data: Prisma.NotificationIntent
   return result.count === 1;
 }
 
+export type IntentNotificationInput = {
+  templateKey: string;
+  /** Defaults to the intent's event type. */
+  eventType?: string;
+  data?: Record<string, unknown>;
+};
+
+/**
+ * Creates (or finds) the notification for an intent, delivers it once and
+ * asserts what actually happened.
+ *
+ * `skipped` is deliberately ignored: it is true for a message waiting for its
+ * backoff, a message another worker is sending and a terminally failed message
+ * alike. Only the classified outcome decides whether the intent may be marked
+ * PROCESSED.
+ */
+export async function deliverIntentNotification(
+  intent: ClaimedIntent,
+  input: IntentNotificationInput
+): Promise<void> {
+  const { notification } = await notify({
+    userId: intent.recipientUserId,
+    channel: "IN_APP",
+    templateKey: input.templateKey,
+    eventType: input.eventType ?? intent.eventType,
+    entityType: intent.entityType,
+    entityId: intent.entityId,
+    data: input.data ?? {},
+    dedupeKey: `notification:${intent.dedupeKey}`
+  });
+
+  const outcome = await deliverNotification(notification.id);
+
+  switch (outcome.reason) {
+    case "delivered":
+    case "suppressed":
+      // A suppressed notification is an intentional, audited outcome: the
+      // channel is disabled for this user or there is no recipient address.
+      return;
+    case "not_due":
+      throw new RetryableIntentError(
+        `notification_delivery_not_due:${outcome.error ?? "scheduled"}`,
+        outcome.scheduledFor
+      );
+    case "in_flight":
+      throw new RetryableIntentError("notification_delivery_in_flight", new Date(Date.now() + 30_000));
+    case "terminal":
+      throw new PermanentIntentError(`notification_delivery_terminal:${outcome.error ?? "unknown"}`);
+    case "missing":
+      throw new PermanentIntentError("notification_delivery_missing");
+  }
+}
+
 /**
  * Shared delivery for the support reply intents. The notification dedupe key
  * derives from the intent, so a retry after a crash between delivery and
  * completion cannot create a second notification.
  */
 async function deliverSupportReply(intent: ClaimedIntent, extra: Record<string, unknown> = {}): Promise<void> {
-  const created = await notify({
-    userId: intent.recipientUserId,
-    channel: "IN_APP",
+  await deliverIntentNotification(intent, {
     templateKey: "support.reply",
-    eventType: intent.eventType,
-    entityType: intent.entityType,
-    entityId: intent.entityId,
     data: {
       reference: String(intent.payload.reference ?? ""),
       subject: String(intent.payload.subject ?? ""),
       ...extra
-    },
-    dedupeKey: `notification:${intent.dedupeKey}`
+    }
   });
-  if (created.notification.status === "SUPPRESSED") return;
-  const outcome = await deliverNotification(created.notification.id);
-  if (outcome.status === "FAILED" || outcome.status === "missing") {
-    throw new Error(`notification_delivery_${outcome.status}:${outcome.error ?? "unknown"}`);
-  }
 }
 
 async function deliver(intent: ClaimedIntent): Promise<void> {
@@ -183,25 +256,15 @@ async function deliver(intent: ClaimedIntent): Promise<void> {
       // Staff alert for a new support ticket. Dedupe key derives from the
       // intent, so a retry after a crash between delivery and completion cannot
       // create a second notification.
-      const created = await notify({
-        userId: intent.recipientUserId,
-        channel: "IN_APP",
+      await deliverIntentNotification(intent, {
         templateKey: "support.ticket_created",
         eventType: "support.ticket.created",
-        entityType: intent.entityType,
-        entityId: intent.entityId,
         data: {
           reference: String(intent.payload.reference ?? ""),
           subject: String(intent.payload.subject ?? ""),
           vertical: String(intent.payload.vertical ?? "general")
-        },
-        dedupeKey: `notification:${intent.dedupeKey}`
+        }
       });
-      if (created.notification.status === "SUPPRESSED") return;
-      const outcome = await deliverNotification(created.notification.id);
-      if (outcome.status === "FAILED" || outcome.status === "missing") {
-        throw new Error(`notification_delivery_${outcome.status}:${outcome.error ?? "unknown"}`);
-      }
       return;
     }
     case "support.ticket.customer_reply":
@@ -224,31 +287,23 @@ async function deliver(intent: ClaimedIntent): Promise<void> {
       // The vendor notification is recorded in the payment transaction as an
       // intent, not written through a nested Prisma client. Delivery happens
       // here, after the financial transaction has committed.
-      const created = await notify({
-        userId: intent.recipientUserId,
-        channel: "IN_APP",
+      await deliverIntentNotification(intent, {
         templateKey: "order.paid.vendor",
-        eventType: "order.paid.vendor",
-        entityType: intent.entityType,
-        entityId: intent.entityId,
         data: {
           orderNumber: String(intent.payload.orderNumber ?? ""),
           href: String(intent.payload.href ?? "/seller")
-        },
-        dedupeKey: `notification:${intent.dedupeKey}`
+        }
       });
-      if (created.notification.status === "SUPPRESSED") return;
-      const outcome = await deliverNotification(created.notification.id);
-      // A skipped delivery is already SENT (a retry replayed the same intent) or
-      // not due yet. A FAILED delivery is surfaced so the intent is retried and
-      // eventually reported DEAD instead of being marked processed silently.
-      if (outcome.status === "FAILED" || outcome.status === "missing") {
-        throw new Error(`notification_delivery_${outcome.status}:${outcome.error ?? "unknown"}`);
-      }
       return;
     }
-    default:
+    default: {
+      // Vertical-specific handlers own their own templates and recipient
+      // rules. Returning false means "not mine", and only then is the event
+      // genuinely unsupported.
+      if (await deliverCommerceEvent(intent)) return;
+      if (await deliverOperationsEvent(intent)) return;
       throw new Error(`unsupported_intent_event:${intent.eventType}`);
+    }
   }
 }
 
@@ -290,17 +345,22 @@ export async function processIntents(owner: string, limit = 25): Promise<IntentR
       if (done) processed += 1;
     } catch (error) {
       const message = error instanceof Error ? error.message.slice(0, 300) : "unknown";
-      const permanent = message.startsWith("unsupported_intent_event");
+      const permanent = error instanceof PermanentIntentError || message.startsWith("unsupported_intent_event");
       const exhausted = intent.attempts >= intent.maxAttempts;
       const backoff = BACKOFF_MS[Math.min(Math.max(intent.attempts - 1, 0), BACKOFF_MS.length - 1)];
+      // A classified retryable delivery owns its schedule (it mirrors the
+      // notification's own backoff); every other error uses the intent backoff.
+      const retryAt = error instanceof RetryableIntentError ? error.retryAt : undefined;
+      const nextAttemptAt = retryAt ?? new Date(Date.now() + backoff);
+      const deadLettered = permanent || exhausted;
 
       await finish(intent.id, token, {
-        status: permanent || exhausted ? "DEAD" : "PENDING",
+        status: deadLettered ? "DEAD" : "PENDING",
         lastError: message,
-        nextAttemptAt: new Date(Date.now() + backoff)
+        nextAttemptAt: deadLettered ? undefined : nextAttemptAt
       });
 
-      if (permanent || exhausted) dead += 1;
+      if (deadLettered) dead += 1;
       else retried += 1;
 
       log.warn("intent.failed", {
@@ -308,6 +368,7 @@ export async function processIntents(owner: string, limit = 25): Promise<IntentR
         eventType: intent.eventType,
         attempts: intent.attempts,
         permanent,
+        retryable: retryAt !== undefined || !permanent,
         error: message
       });
     }

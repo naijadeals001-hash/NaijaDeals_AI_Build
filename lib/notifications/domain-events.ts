@@ -45,29 +45,6 @@ export async function notifyOrderPaid(order: OrderFacts): Promise<void> {
   );
 }
 
-export async function notifyOrderStatus(
-  order: OrderFacts,
-  status: string,
-  options: { templateKey?: string } = {}
-): Promise<void> {
-  const delivered = status.toLowerCase() === "completed";
-  await fanOut(
-    {
-      userId: order.customerId,
-      templateKey: options.templateKey ?? (delivered ? "order.delivered" : "order.status_changed"),
-      eventType: delivered ? "order.delivered" : "order.status_changed",
-      entityType: "Order",
-      entityId: order.id,
-      data: {
-        orderNumber: order.orderNumber,
-        status: status.replace(/_/g, " "),
-        href: `/orders/${order.id}`
-      }
-    },
-    channels(delivered)
-  );
-}
-
 export async function notifyEscrowReleased(order: OrderFacts, amountKobo: bigint): Promise<void> {
   await fanOut(
     {

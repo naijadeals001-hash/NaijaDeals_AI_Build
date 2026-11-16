@@ -96,27 +96,31 @@ Owner actions required:
 
 ## Support automation slice (2026-11-15)
 
-- Events: `support.ticket.created`, `support.ticket.customer_reply`,
-  `support.ticket.queued_reply`, `support.ticket.staff_reply` and
-  `support.ticket.status_changed`, all payload version 1 and stored in
-  `NotificationIntent` inside the same transaction as the support write.
+- Events: the five support events, `order.status_changed`, `order.delivered`,
+  `refund.completed`, `payout.completed`, `onboarding.reminder`,
+  `ops.daily_report`, `ops.backup_succeeded`/`ops.backup_failed` and
+  `ops.backup_stale`, all payload version 1 and delivered through the single
+  `NotificationIntent` outbox.
 - Consumer API: `POST /api/automation/notifications/drain`,
-  `GET /api/automation/notifications/status` on `http://127.0.0.1:3200`;
+  `GET /api/automation/notifications/status`, `POST /api/automation/reminders/scan`
+  and `POST /api/automation/backup-status` on `http://127.0.0.1:3200`;
   bearer `AUTOMATION_CONSUMER_TOKEN` (stored only in the staging env and the
-  n8n env, both ACL-protected). The drain route deliberately has no
-  same-origin requirement because it is a bearer-authenticated server-to-server
-  call; the token check is mandatory and fails closed when unset.
-- n8n workflow: `1lU7ERGPS0jAW7V4` (HTTP drain), created via the authenticated
-  API, executed via the supported CLI and then published with a two-minute
-  schedule trigger so pending events drain without a manual run. With n8n
-  stopped, ticket `ND-SUP-QJ4B5Z` committed with a PENDING intent and zero
-  notifications; after restart, scheduled executions 5 and 6 drained it to
-  exactly one notification. The staging starter loads
-  `C:\NaijaDeals-Automation\config\n8n.env` (SQLite path and token) and binds
-  n8n to `127.0.0.1` with `N8N_LISTEN_ADDRESS`.
-- Dead letters are visible to the operator status endpoint; retries are bounded
-  by `maxAttempts` with the shared backoff table.
-- Staging build `TnD-FlYMrpjyjWZlsOOh0` on `127.0.0.1:3200`. Delivery evidence:
-  20/20 service-level checks, 23/23 HTTP-consumer checks across all five event
-  types, replay no-op, concurrent drains once-only, expired-lease recovery and
-  an operator-visible DEAD letter.
+  n8n config, both ACL-protected). The routes deliberately have no same-origin
+  requirement because they are bearer-authenticated server-to-server calls;
+  the token check is mandatory and fails closed when unset.
+- n8n workflows: `1lU7ERGPS0jAW7V4` (notification drain) and
+  `Hcf6yI7AWn2ihNAy` (operations scan), published with two-minute schedules.
+  Both use an encrypted n8n `httpHeaderAuth` credential rather than `$env`, and
+  `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` is set and verified by successful
+  scheduled executions after restart.
+- The staging starter loads `C:\NaijaDeals-Automation\config\n8n.env` (SQLite
+  path and token) and binds n8n to `127.0.0.1` with `N8N_LISTEN_ADDRESS`, so a
+  restart keeps the same workflows and does not create an empty default DB.
+- Dead letters are visible to the operator status endpoint. Delivery now
+  distinguishes delivered, suppressed, not-due, in-flight, terminal and missing,
+  so an intent cannot complete while its notification is still unsent.
+- Staging build `83_q2cG-YEW1IrYOHq0Qz` on `127.0.0.1:3200`. Evidence:
+  type-check 0 errors; retry 23/23; operations 22/22; served-build routes 22/22;
+  support 12/12 + 20/20 + 23/23. Encrypted DB backup restored into a throwaway
+  database, remote B2 copy fetched and checksum-verified, and the n8n archive
+  restored with 4 workflows / 2 active.

@@ -16,6 +16,7 @@ import { recordAudit } from "@/lib/services/core/audit.service";
 import { recordSystemEvent } from "@/lib/services/core/event.service";
 import { createDelivery, settleRefundDeliveryCustody } from "@/lib/services/core/delivery.service";
 import { notifyOrderPaid } from "@/lib/notifications/domain-events";
+import { enqueueIntent } from "@/lib/notifications/intent.service";
 import { recordConversion } from "@/lib/services/affiliate/service";
 import { log } from "@/lib/infra/logger";
 
@@ -1471,6 +1472,26 @@ async function settleRefund(
       note: isFullRefund ? "Refund settled in full." : "Partial refund settled."
     }
   });
+
+  // Durable customer receipt for this exact refund row. The refund id is the
+  // dedupe key, so a crash between this commit and delivery cannot produce a
+  // second message, and a rollback removes the intent with the settlement.
+  // Notification only: every money movement above already committed here.
+  if (order.customerId) {
+    await enqueueIntent(tx, {
+      dedupeKey: `refund.completed:${refund.id}`,
+      eventType: "refund.completed",
+      entityType: "Order",
+      entityId: order.id,
+      recipientUserId: order.customerId,
+      payload: {
+        version: 1,
+        orderNumber: order.orderNumber,
+        amountKobo: refund.amountKobo.toString(),
+        href: `/orders/${order.id}`
+      }
+    });
+  }
 
   // Durable affiliate reversal intent, written in the same transaction as the
   // confirmed refund. A crash cannot lose it and a rollback cannot leave one.

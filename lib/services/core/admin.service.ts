@@ -24,6 +24,7 @@ import {
 import { refundPayment } from "@/lib/payments/service";
 import { ensureWallet, listPaymentMethods } from "@/lib/payments/service";
 import { assertLiveFinancialOperations } from "@/lib/payments/boundary";
+import { enqueueIntent } from "@/lib/notifications/intent.service";
 
 const deliverySequence: DeliveryStatus[] = ["assigned", "pickup_started", "picked_up", "in_transit", "delivered"];
 
@@ -964,6 +965,29 @@ export async function markPayoutPaid(input: { adminId: string; payoutId: string 
         after: { status: "PAID", paidAt: paid.paidAt?.toISOString() ?? null }
       }
     });
+
+    // Durable partner receipt for the payout that just settled. The payout id is
+    // the dedupe key and the vendor owner is read from the Vendor row in this
+    // transaction. The row claim above already makes settlement exactly-once, so
+    // a replay returns early instead of enqueuing another message.
+    const vendor = await tx.vendor.findUniqueOrThrow({
+      where: { id: payout.vendorId },
+      select: { ownerId: true }
+    });
+    await enqueueIntent(tx, {
+      dedupeKey: `payout.paid:${payout.id}`,
+      eventType: "payout.completed",
+      entityType: "Payout",
+      entityId: payout.id,
+      recipientUserId: vendor.ownerId,
+      payload: {
+        version: 1,
+        amountKobo: payout.amountKobo.toString(),
+        reference: payout.reference,
+        href: "/seller"
+      }
+    });
+
     return paid;
   });
 }

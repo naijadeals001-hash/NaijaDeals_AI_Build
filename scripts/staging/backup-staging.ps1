@@ -40,6 +40,30 @@ try {
   $mutex.Dispose()
 }
 
+# Report the real outcome to the operations scan. This is an alerting side
+# channel: a failed POST is logged and never changes the backup's own result.
+$runId = "staging-backup-" + $started.ToUniversalTime().ToString("yyyyMMddTHHmmssfff") + "Z-attempt$attempt"
+$statusText = if ($ok) { "success" } else { "failure" }
+$statusMessage = if ($ok) {
+  "Staging backup completed successfully."
+} else {
+  "Staging backup failed after $attempt attempt(s)."
+}
+$reporter = Join-Path $PSScriptRoot "..\automation\report-backup-status.mjs"
+if (Test-Path $reporter) {
+  try {
+    $alertOutput = & $node $reporter --run-id $runId --status $statusText --target staging-db --message $statusMessage 2>&1
+    $alertExit = $LASTEXITCODE
+    if ($alertExit -ne 0) {
+      Write-StagingEvent "backup_status_alert_failed" @{ runId = $runId; exitCode = $alertExit; output = (($alertOutput -join " ").Trim()) }
+    }
+  } catch {
+    Write-StagingEvent "backup_status_alert_failed" @{ runId = $runId; error = $_.Exception.Message }
+  }
+} else {
+  Write-StagingEvent "backup_status_reporter_missing" @{ path = $reporter }
+}
+
 if ($ok) {
   Write-StagingEvent "backup_ok" @{ durationSeconds = [math]::Round(((Get-Date) - $started).TotalSeconds, 1) }
   exit 0

@@ -332,7 +332,7 @@ export async function bookShipment(input: { customerId: string; shipmentId: stri
       entityType: "LogisticsShipment",
       entityId: shipment.id,
       recipientUserId: shipment.customerId,
-      payload: { reference: shipment.reference, label: "booked" }
+      payload: { version: 1, reference: shipment.reference, label: "booked" }
     });
     return { shipmentId: shipment.id, reference: shipment.reference, trackingNumber, amountKobo: quote.amountKobo.toString(), providerName: quote.provider.name, modes: quote.modes, pickupPin: firstPin.pickupPin, deliveryPin: firstPin.deliveryPin };
   });
@@ -380,7 +380,7 @@ export async function advanceLeg(input: { actorId: string; shipmentId: string; l
         entityType: "LogisticsShipment",
         entityId: leg.shipmentId,
         recipientUserId: leg.shipment.customerId,
-        payload: { reference: leg.shipment.reference, label: `in transit (leg ${leg.sequence})` }
+        payload: { version: 1, reference: leg.shipment.reference, label: `in transit (leg ${leg.sequence})` }
       });
     }
     if (allArrived && legs.length > 0) {
@@ -390,7 +390,7 @@ export async function advanceLeg(input: { actorId: string; shipmentId: string; l
         entityType: "LogisticsShipment",
         entityId: leg.shipmentId,
         recipientUserId: leg.shipment.customerId,
-        payload: { reference: leg.shipment.reference, label: "delivered" }
+        payload: { version: 1, reference: leg.shipment.reference, label: "delivered" }
       });
     }
     return { legId: leg.id, status: input.status, shipmentDelivered: allArrived };
@@ -421,7 +421,7 @@ export async function confirmShipmentDelivery(input: { customerId: string; shipm
       entityType: "LogisticsShipment",
       entityId: shipment.id,
       recipientUserId: shipment.customerId,
-      payload: { reference: shipment.reference, label: "completed" }
+      payload: { version: 1, reference: shipment.reference, label: "completed" }
     });
     return { completed: true, settlementReference: settled.reference };
   });
@@ -479,7 +479,7 @@ export async function cancelShipment(input: { customerId: string; shipmentId: st
       entityType: "LogisticsShipment",
       entityId: shipment.id,
       recipientUserId: shipment.customerId,
-      payload: { reference: shipment.reference, label: "cancelled" }
+      payload: { version: 1, reference: shipment.reference, label: "cancelled" }
     });
     return { cancelled: true };
   });

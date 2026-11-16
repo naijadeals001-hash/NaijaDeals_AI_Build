@@ -13,12 +13,31 @@ import { assertFinancialOperationsAllowed } from "@/lib/payments/review-financia
 import { loadRefundLifecycles } from "@/lib/payments/refund-lifecycle";
 import { recordAudit } from "./audit.service";
 import { enqueueVendorNotification } from "./notification.service";
-import { notifyEscrowReleased, notifyOrderStatus } from "@/lib/notifications/domain-events";
+import { enqueueIntent } from "@/lib/notifications/intent.service";
+import { notifyEscrowReleased } from "@/lib/notifications/domain-events";
 import { recordSystemEvent } from "./event.service";
 import { assertOrderTransition } from "./state-machines";
 import { ensureWallet } from "@/lib/payments/service";
 
 type Db = PrismaClient | Prisma.TransactionClient;
+
+/**
+ * Statuses a customer should hear about. Internal bookkeeping transitions are
+ * deliberately excluded so a payment/escrow step cannot produce a second,
+ * confusing status message; `refunded` is covered by the refund receipt.
+ */
+const CUSTOMER_VISIBLE_ORDER_STATUSES = new Set<OrderStatus>([
+  "accepted",
+  "preparing",
+  "ready_for_pickup",
+  "courier_assigned",
+  "picked_up",
+  "in_transit",
+  "delivered",
+  "completed",
+  "cancelled",
+  "disputed"
+]);
 
 /**
  * Canonical row-lock order for an order and everything attached to it.
@@ -388,7 +407,7 @@ export async function updateOrderStatus(input: {
   if (claimed.count !== 1) {
     throw new ApiError(409, "order_conflict", "This order changed while its status was being updated. Reload it before retrying.");
   }
-  await db.orderStatusEvent.create({
+  const statusEvent = await db.orderStatusEvent.create({
     data: { orderId: input.orderId, from: current.status, to: input.status, note: input.note }
   });
   const order = await db.order.findUniqueOrThrow({
@@ -412,6 +431,28 @@ export async function updateOrderStatus(input: {
     entityId: order.id,
     metadata: { from: current.status, to: input.status }
   });
+
+  // Durable customer notification for this exact transition. The dedupe key is
+  // the OrderStatusEvent row id, not a timestamp, so replaying the same event
+  // cannot enqueue a second message, and the intent commits or rolls back with
+  // the status change. Internal bookkeeping states are not customer messages;
+  // `refunded` is covered by the refund.completed receipt instead.
+  if (order.customerId && CUSTOMER_VISIBLE_ORDER_STATUSES.has(input.status)) {
+    const delivered = input.status === "completed";
+    await enqueueIntent(db, {
+      dedupeKey: `order.status:${statusEvent.id}`,
+      eventType: delivered ? "order.delivered" : "order.status_changed",
+      entityType: "Order",
+      entityId: order.id,
+      recipientUserId: order.customerId,
+      payload: {
+        version: 1,
+        orderNumber: order.orderNumber,
+        status: input.status,
+        href: `/orders/${order.id}`
+      }
+    });
+  }
 
   if (input.status === "vendor_notified") {
     // Durable outbox: the intent is written in this transaction, so a rollback
@@ -920,8 +961,10 @@ export async function completeOrder(userId: string, orderId: string) {
     };
   });
 
-  // Post-commit: the customer is told the escrow moved and the order closed. An
-  // idempotent replay must not send a second notification for the same release.
+  // Post-commit: the customer is told the escrow moved. The order's delivered
+  // notification is enqueued by updateOrderStatus in the transaction above, so
+  // there is one notification path per transition. An idempotent replay must not
+  // send a second notification for the same release.
   if (!result.duplicate) {
     const facts = {
       id: result.orderId,
@@ -930,7 +973,6 @@ export async function completeOrder(userId: string, orderId: string) {
       customerId: userId
     };
     await notifyEscrowReleased(facts, BigInt(result.payableKobo));
-    await notifyOrderStatus(facts, "completed");
   }
 
   return result;

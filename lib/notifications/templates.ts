@@ -116,6 +116,36 @@ export const TEMPLATES: Record<string, TemplateDefinition> = {
     sms: { body: "NaijaDeals: order {{orderNumber}} delivered." },
     push: { title: "Delivered", body: "{{orderNumber}} — confirm or dispute" }
   },
+  "refund.completed": {
+    key: "refund.completed",
+    category: "PAYMENTS",
+    required: ["orderNumber", "amount"],
+    inApp: {
+      title: "Refund completed for {{orderNumber}}",
+      body: "{{amount}} was refunded for order {{orderNumber}}."
+    },
+    email: {
+      subject: "Refund completed for {{orderNumber}}",
+      body: "Hello,\n\n{{amount}} has been refunded for order {{orderNumber}}. Depending on your payment method, it may take a little time to appear on your statement.\n\nNaijaDeals"
+    },
+    sms: { body: "NaijaDeals: {{amount}} refunded for order {{orderNumber}}." },
+    push: { title: "Refund completed", body: "{{orderNumber}} · {{amount}}" }
+  },
+  "payout.completed": {
+    key: "payout.completed",
+    category: "PAYMENTS",
+    required: ["amount", "reference"],
+    inApp: {
+      title: "Payout {{reference}} completed",
+      body: "{{amount}} was paid out from your NaijaDeals seller balance. Reference: {{reference}}."
+    },
+    email: {
+      subject: "Payout {{reference}} completed",
+      body: "Hello,\n\n{{amount}} was paid out from your NaijaDeals seller balance. Reference: {{reference}}.\n\nNaijaDeals"
+    },
+    sms: { body: "NaijaDeals: payout {{reference}} of {{amount}} completed." },
+    push: { title: "Payout completed", body: "{{reference}} · {{amount}}" }
+  },
   "payment.topup_credited": {
     key: "payment.topup_credited",
     category: "PAYMENTS",
@@ -250,6 +280,81 @@ export const TEMPLATES: Record<string, TemplateDefinition> = {
     },
     sms: { body: "NaijaDeals: your account is verified." },
     push: { title: "Account verified", body: "You can now receive payouts" }
+  },
+  "onboarding.reminder": {
+    key: "onboarding.reminder",
+    category: "ACCOUNT",
+    required: ["kind", "status", "href"],
+    inApp: {
+      title: "Your {{kind}} application needs attention",
+      body: "Your {{kind}} application is still {{status}}. Open your dashboard to check the next step."
+    },
+    email: {
+      subject: "Your {{kind}} application is still {{status}}",
+      body: "Hello,\n\nYour {{kind}} application is still {{status}}. Sign in to NaijaDeals to check the next step.\n\nNaijaDeals"
+    },
+    sms: { body: "NaijaDeals: your {{kind}} application is still {{status}}." },
+    push: { title: "{{kind}} application update", body: "{{status}}" }
+  },
+  "ops.daily_report": {
+    key: "ops.daily_report",
+    category: "SYSTEM",
+    required: ["date", "summary"],
+    inApp: {
+      title: "Daily operations report for {{date}}",
+      body: "{{summary}}"
+    },
+    email: {
+      subject: "NaijaDeals daily operations report for {{date}}",
+      body: "Daily operations report for {{date}}.\n\n{{summary}}\n\nNaijaDeals"
+    },
+    sms: { body: "NaijaDeals ops report {{date}}: {{summary}}" },
+    push: { title: "Daily operations report", body: "{{date}}" }
+  },
+  "ops.backup_succeeded": {
+    key: "ops.backup_succeeded",
+    category: "SYSTEM",
+    required: ["target", "runId", "finishedAt", "message"],
+    inApp: {
+      title: "Backup succeeded: {{target}}",
+      body: "Backup run {{runId}} reported success for {{target}} at {{finishedAt}}. {{message}}"
+    },
+    email: {
+      subject: "Backup succeeded: {{target}}",
+      body: "Backup run {{runId}} reported success for {{target}} at {{finishedAt}}.\n\n{{message}}\n\nNaijaDeals"
+    },
+    sms: { body: "NaijaDeals: backup {{runId}} for {{target}} succeeded." },
+    push: { title: "Backup succeeded", body: "{{target}} · {{runId}}" }
+  },
+  "ops.backup_failed": {
+    key: "ops.backup_failed",
+    category: "SYSTEM",
+    required: ["target", "runId", "finishedAt", "message"],
+    inApp: {
+      title: "Backup failed: {{target}}",
+      body: "Backup run {{runId}} reported failure for {{target}} at {{finishedAt}}. {{message}} Check the backup job before the next scheduled run."
+    },
+    email: {
+      subject: "Backup failed: {{target}}",
+      body: "Backup run {{runId}} reported failure for {{target}} at {{finishedAt}}.\n\n{{message}}\n\nCheck the backup job before the next scheduled run.\n\nNaijaDeals"
+    },
+    sms: { body: "NaijaDeals: backup {{runId}} for {{target}} failed." },
+    push: { title: "Backup failed", body: "{{target}} · {{runId}}" }
+  },
+  "ops.backup_stale": {
+    key: "ops.backup_stale",
+    category: "SYSTEM",
+    required: ["date", "lastSuccessAt"],
+    inApp: {
+      title: "Backup status is stale",
+      body: "Last successful backup: {{lastSuccessAt}}. The scan on {{date}} found no success within 26 hours. Check the backup job."
+    },
+    email: {
+      subject: "NaijaDeals backup status is stale",
+      body: "Last successful backup: {{lastSuccessAt}}.\n\nThe scan on {{date}} found no successful backup within 26 hours. Check the backup job.\n\nNaijaDeals"
+    },
+    sms: { body: "NaijaDeals: backup status stale as of {{date}}." },
+    push: { title: "Backup status stale", body: "{{date}}" }
   }
 };
 

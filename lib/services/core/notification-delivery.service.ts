@@ -12,6 +12,7 @@ import {
   type NotificationMessage,
   type NotificationTransport
 } from "@/lib/notifications/transports";
+import { flakyInAppTestTransport, flakyTestMode } from "@/lib/notifications/test-transport";
 
 /**
  * Multi-channel delivery for the notifications NaijaDeals already shows in-app.
@@ -141,7 +142,16 @@ async function writeFeed(message: NotificationMessage): Promise<string> {
 }
 
 function transportChain(channel: NotificationChannel): NotificationTransport[] {
-  return transportsFor(channel, { captureDirectory: CAPTURE_DIR, feed: writeFeed });
+  const chain = transportsFor(channel, { captureDirectory: CAPTURE_DIR, feed: writeFeed });
+  if (channel !== "IN_APP") return chain;
+  // Test-only seam: replaces the chain (not extends it) so a deterministic
+  // failure cannot fall through to the real transport in the same call. The
+  // guard keeps unset variables and production builds on the normal path.
+  const mode = flakyTestMode();
+  if (!mode) return chain;
+  const real = chain.find((transport) => transport.name === "in-app");
+  if (!real) return chain;
+  return [flakyInAppTestTransport(real, mode)];
 }
 
 /**
@@ -235,27 +245,89 @@ async function scheduleDelivery(notificationId: string, scheduledFor?: Date): Pr
   return Boolean(jobId);
 }
 
+/**
+ * Why a delivery call did or did not send anything.
+ *
+ * `skipped` alone is ambiguous: a message that is waiting for its backoff, one
+ * another worker is sending right now, a terminal failure and a missing row all
+ * failed to claim. Callers that must not lose a message (the intent processor)
+ * branch on `reason`, never on `skipped`.
+ */
+export type DeliveryReason = "delivered" | "suppressed" | "not_due" | "in_flight" | "terminal" | "missing";
+
 export type DeliveryOutcome = {
   id: string;
   status: string;
   provider?: string;
   error?: string;
+  /** Retained for backwards compatibility. Never infer success from it alone. */
   skipped?: boolean;
+  reason: DeliveryReason;
+  /** When `reason` is "not_due": the earliest moment a claim can succeed. */
+  scheduledFor?: Date;
 };
+
+/** Classifies a row that could not be claimed without sending anything. */
+function unclaimedOutcome(row: {
+  id: string;
+  status: string;
+  scheduledFor: Date;
+  lastError: string | null;
+  provider: string | null;
+}): DeliveryOutcome {
+  switch (row.status) {
+    case "SENT":
+    case "DELIVERED":
+    case "READ":
+      return { id: row.id, status: row.status, provider: row.provider ?? undefined, reason: "delivered" };
+    case "SUPPRESSED":
+      return { id: row.id, status: row.status, error: row.lastError ?? undefined, reason: "suppressed" };
+    case "QUEUED":
+      return {
+        id: row.id,
+        status: row.status,
+        error: row.lastError ?? undefined,
+        reason: "not_due",
+        scheduledFor: row.scheduledFor
+      };
+    case "SENDING":
+      return { id: row.id, status: row.status, provider: row.provider ?? undefined, reason: "in_flight" };
+    default:
+      // FAILED and any future terminal status. Retrying without operator action
+      // would resend a message the provider already rejected.
+      return {
+        id: row.id,
+        status: row.status,
+        provider: row.provider ?? undefined,
+        error: row.lastError ?? undefined,
+        reason: "terminal"
+      };
+  }
+}
 
 /**
  * Sends one notification. Safe to call twice: the claim is a conditional
- * update from QUEUED to SENDING, so only one caller proceeds.
+ * update from QUEUED to SENDING, so only one caller proceeds. When the claim
+ * fails, the current row is read and classified so callers can distinguish a
+ * message that is merely not due from one that is in flight or terminally
+ * failed.
  */
 export async function deliverNotification(notificationId: string): Promise<DeliveryOutcome> {
   const claim = await prisma.notification.updateMany({
     where: { id: notificationId, status: "QUEUED", scheduledFor: { lte: new Date() } },
     data: { status: "SENDING", attempts: { increment: 1 } }
   });
-  if (claim.count === 0) return { id: notificationId, status: "skipped", skipped: true };
+  if (claim.count === 0) {
+    const current = await prisma.notification.findUnique({
+      where: { id: notificationId },
+      select: { id: true, status: true, scheduledFor: true, lastError: true, provider: true }
+    });
+    if (!current) return { id: notificationId, status: "missing", skipped: true, reason: "missing" };
+    return { ...unclaimedOutcome(current), skipped: true };
+  }
 
   const notification = await prisma.notification.findUnique({ where: { id: notificationId } });
-  if (!notification) return { id: notificationId, status: "missing", skipped: true };
+  if (!notification) return { id: notificationId, status: "missing", skipped: true, reason: "missing" };
 
   const recipient = await resolveRecipient(notification.userId, notification.channel);
   const chain = transportChain(notification.channel);
@@ -319,7 +391,7 @@ export async function deliverNotification(notificationId: string): Promise<Deliv
         template: notification.templateKey,
         provider: transport.name
       });
-      return { id: notification.id, status: "SENT", provider: transport.name };
+      return { id: notification.id, status: "SENT", provider: transport.name, reason: "delivered" };
     }
 
     last = { provider: transport.name, error: result.error ?? "send_failed", retryable: result.retryable };
@@ -330,20 +402,21 @@ export async function deliverNotification(notificationId: string): Promise<Deliv
   const retryable = last?.retryable ?? false;
   const nextStatus = retryable && !exhausted ? "QUEUED" : "FAILED";
   const backoff = BACKOFF_MS[Math.min(Math.max(attempt - 1, 0), BACKOFF_MS.length - 1)];
+  const retryAt = new Date(Date.now() + backoff);
 
   await prisma.notification.update({
     where: { id: notification.id },
     data: {
       status: nextStatus,
       lastError: last?.error ?? "no_transport",
-      scheduledFor: nextStatus === "QUEUED" ? new Date(Date.now() + backoff) : notification.scheduledFor
+      scheduledFor: nextStatus === "QUEUED" ? retryAt : notification.scheduledFor
     }
   });
 
   infraMetrics().queueJobs.inc({ queue: "notifications", event: nextStatus === "QUEUED" ? "retry" : "failed" });
 
   if (nextStatus === "QUEUED") {
-    await scheduleDelivery(notification.id, new Date(Date.now() + backoff));
+    await scheduleDelivery(notification.id, retryAt);
   } else {
     await recordAudit({
       action: "notification.failed",
@@ -366,7 +439,16 @@ export async function deliverNotification(notificationId: string): Promise<Deliv
     });
   }
 
-  return { id: notification.id, status: nextStatus, provider: last?.provider, error: last?.error };
+  return {
+    id: notification.id,
+    status: nextStatus,
+    provider: last?.provider,
+    error: last?.error,
+    reason: nextStatus === "QUEUED" ? "not_due" : "terminal",
+    // A retryable send failure retries on the notification's own backoff; the
+    // intent processor reuses that schedule instead of inventing a second one.
+    scheduledFor: nextStatus === "QUEUED" ? retryAt : undefined
+  };
 }
 
 /** Creates and delivers immediately, for environments without a queue. */
@@ -388,7 +470,7 @@ export async function flushDueNotifications(limit = 25): Promise<number> {
   let delivered = 0;
   for (const row of due) {
     const outcome = await deliverNotification(row.id);
-    if (outcome.status !== "skipped") delivered += 1;
+    if (outcome.reason === "delivered") delivered += 1;
   }
   return delivered;
 }

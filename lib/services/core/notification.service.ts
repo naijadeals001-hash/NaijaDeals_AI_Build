@@ -70,7 +70,7 @@ export async function enqueueVendorNotification(input: {
     entityType: input.entityType,
     entityId: input.entityId,
     recipientUserId: vendor.ownerId,
-    payload: { orderNumber: input.orderNumber, href: input.href ?? "/seller" }
+    payload: { version: 1, orderNumber: input.orderNumber, href: input.href ?? "/seller" }
   });
 }
 

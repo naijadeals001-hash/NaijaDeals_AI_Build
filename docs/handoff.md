@@ -1,5 +1,34 @@
 # NaijaDeals Handoff — Phase 00 & Phase 01
 
+## Current local automation handoff (2026-11-16)
+
+**Source:** branch `naijashop-marketplace`, commit `661cfd7`. **Staging:** build `83_q2cG-YEW1IrYOHq0Qz` on
+`http://127.0.0.1:3200`, database `naijadeals_staging` (TEST classification,
+`127.0.0.1:55432`). **n8n:** `http://127.0.0.1:5680`, workflows
+`1lU7ERGPS0jAW7V4` (drain) and `Hcf6yI7AWn2ihNAy` (operations scan), both
+published with two-minute schedules and an encrypted header credential
+(`N8N_BLOCK_ENV_ACCESS_IN_NODE=true`).
+
+**Implemented and tested locally:** classified delivery outcomes (no intent
+completes on a not-due/in-flight/terminal notification), durable support /
+order / refund / payout / onboarding / daily-report / backup-alert events, and
+tracked acceptance suites (type-check 0, retry 23/23, operations 22/22,
+served-build routes 22/22, support 12/12 + 20/20 + 23/23). Encrypted DB backup
+restore, remote B2 fetch/checksum, representative R2 public/private object
+reads (private object returns 404 on the public base) and n8n archive restore
+pass. Scheduled tasks are Ready with last result 0.
+
+**Blocked by account state, not code:** protected external tester access
+(`naijadeals.com` is delegated to Hostinger nameservers, so it is not an active
+Cloudflare zone; Access returns `not_enabled`), and GitHub preservation
+(`git push` 403 for `BetFuz`; remote remains `e80a0f9`). No tunnel, DNS record,
+Access app, production deployment or live message was created.
+
+**Next executable step:** owner enables Cloudflare Access and decides DNS
+delegation for a dedicated staging hostname, supplies tester emails, and grants
+repository write access or an authorized credential. Then publish the prepared
+tunnel/Access configuration and push the local commits.
+
 ## Verification Baseline Summary (Phase 00)
 
 **Phase:** 00 — Verified baseline and recovery  
