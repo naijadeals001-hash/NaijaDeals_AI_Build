@@ -8,10 +8,10 @@ if (-not (Test-Path $pidPath)) {
 }
 $tunnelPid = 0
 [void][int]::TryParse((Get-Content $pidPath -Raw).Trim(), [ref]$tunnelPid)
-$proc = if ($tunnelPid -gt 0) { Get-Process -Id $tunnelPid -ErrorAction SilentlyContinue } else { $null }
-if (-not $proc -or $proc.ProcessName -ne "cloudflared") {
+$proc = if ($tunnelPid -gt 0) { Get-CimInstance Win32_Process -Filter "ProcessId=$tunnelPid" -ErrorAction SilentlyContinue } else { $null }
+if (-not $proc -or $proc.Name -ne "cloudflared.exe" -or $proc.CommandLine -notmatch 'tunnel run') {
   Remove-Item $pidPath -Force -ErrorAction SilentlyContinue
-  Write-Output "tracked process is not running; nothing stopped"
+  Write-Output "tracked process is not a cloudflared tunnel; nothing stopped"
   exit 0
 }
 Stop-Process -Id $tunnelPid -Force
