@@ -100,6 +100,11 @@ if (ticketId) {
     body: { message: "Staging verification reply. This ticket is removed automatically.", internal: true }
   });
   check("Testing Manager can add an internal note", reply.status === 201, `status=${reply.status}`);
+  const publicReply = await request(`/api/admin/support/tickets/${ticketId}/messages`, {
+    cookie: manager.cookie,
+    body: { message: "Staging verification public reply. This ticket is removed automatically.", internal: false }
+  });
+  check("Testing Manager can send a customer-visible reply", publicReply.status === 201, `status=${publicReply.status}`);
 }
 
 const seller = await login(sellerAccount);

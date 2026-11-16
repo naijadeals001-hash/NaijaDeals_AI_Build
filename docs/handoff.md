@@ -30,7 +30,7 @@ created through the registration endpoint. The Testing Manager has the existing
 `support` role (support/test-report inbox, reply and assignment only); the two
 testers have the `customer` role. Separate seller and driver personas were
 created for the two testers who need those journeys. Local allowed/denied
-checks pass 22/22: no payout, super-admin, support-console or cross-persona
+checks pass 23/23: no payout, super-admin, support-console or cross-persona
 access where it should be denied. Passwords are not in Git or chat; they are in
 the ACL-protected `C:/NaijaDeals-Staging/secrets/tester-activation.json` file for
 out-of-band owner handoff. The Cloudflare allowlist with exactly the three
