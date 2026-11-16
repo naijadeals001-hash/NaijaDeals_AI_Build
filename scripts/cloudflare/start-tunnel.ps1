@@ -99,8 +99,12 @@ if (Test-Path $pidPath) {
     $old = $null
   }
   if ($old -and $old.ProcessName -eq "cloudflared") {
-    Write-Output "tracked tunnel already running PID $oldPid"
-    exit 0
+    $state = Invoke-Cf "https://api.cloudflare.com/client/v4/accounts/$($cfg['CLOUDFLARE_ACCOUNT_ID'])/cfd_tunnel/$($cfg['CLOUDFLARE_TUNNEL_ID'])"
+    if ($state.result.status -eq "healthy" -and @($state.result.connections).Count -gt 0) {
+      Write-Output "tracked tunnel already running and healthy PID $oldPid"
+      exit 0
+    }
+    throw "tracked tunnel PID $oldPid is running but not healthy; run stop-tunnel.ps1 before retrying"
   }
   Remove-Item $pidPath -Force
 }
