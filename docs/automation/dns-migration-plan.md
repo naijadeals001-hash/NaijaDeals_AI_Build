@@ -121,6 +121,9 @@ www CNAME answer with the values above.
 
 - Registrar nameservers changed to `armando.ns.cloudflare.com` and
   `nucum.ns.cloudflare.com`; Cloudflare reports the zone **active**.
+- Current Cloudflare record types: 6 A, 7 CNAME, 2 MX and 2 TXT (17 total). The
+  one A→CNAME change from the Hostinger export is the intentional
+  `staging-remote` tunnel route; every other record is unchanged.
 - Public resolver checks: apex A `187.127.252.23`, `www` CNAME, MX
   `mx1/mx2.hostinger.com`, SPF, DMARC and all three Hostinger DKIM CNAMEs
   resolve correctly. `staging-remote` resolves to the tunnel.
