@@ -92,8 +92,8 @@ extend them.
 | `tester01` | customer + staging_test_manager (Testing Manager) | Testing Manager | Support inbox triage, assignment, replies, internal notes, customer-side checks | `/admin` — go directly to `/admin/support` |
 | `tester02` | customer | tester02 | Customer journeys: account, Shop shell/search, support tickets, country directory, navigation | `/account` |
 | `tester03` | customer | tester03 | Customer journeys; owner of the driver persona | `/account` |
-| `tester02.seller@staging.naijadeals.test` | customer + vendor (seller persona) | tester02 only | `/seller` overview and read-only empty lists | `/seller` |
-| `tester03.driver@staging.naijadeals.test` | customer + driver (driver persona) | tester03 only | `/driver` presence and workspace | `/account` — then open `/driver` manually |
+| `seller persona account` | customer + vendor (seller persona) | tester02 only | `/seller` overview and read-only empty lists | `/seller` |
+| `driver persona account` | customer + driver (driver persona) | tester03 only | `/driver` presence and workspace | `/account` — then open `/driver` manually |
 
 Notes:
 
