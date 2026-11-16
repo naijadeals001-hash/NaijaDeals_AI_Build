@@ -1,6 +1,7 @@
 # Cloudflare tunnel credentials and local overrides must never enter Git.
-# Only config.yml (placeholders), the README and the read-only preflight
-# script are intended to be tracked from this directory.
+# The README, config.yml (reference placeholders), configure/start/stop/status
+# scripts, preflight/audit tools and approved-testers.sha256 are tracked. Real
+# credentials, allowlist files and local overrides stay outside the repository.
 
 config.local.yml
 *.local.yml

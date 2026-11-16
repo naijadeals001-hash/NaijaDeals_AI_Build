@@ -49,9 +49,14 @@ tester addresses are allowed; there is no domain-wide rule and no bypass.
 4. Testing Manager lands on `/admin`; open `/admin/support` directly. Other
    Control Center modules are not authorized and return 403.
 
-Do not share an Access code or sign-in link. If your address is not accepted,
-stop and contact the coordinator; do not try another identity or a domain-wide
-address. The local URL remains available for offline/local checks.
+The three aliases currently deliver to the coordinator's shared office mailbox.
+Possession of that mailbox satisfies the Access email step for any alias; the
+NaijaDeals app login remains per-account. Never share the mailbox credentials,
+an Access code or a sign-in link.
+
+If your address is not accepted, stop and contact the coordinator; do not try
+another identity or a domain-wide address. The local URL remains available for
+offline/local checks.
 
 ## 3. Credentials and the activation handoff
 
@@ -189,7 +194,8 @@ Do not attempt to work around these:
   earnings.
 - Stay host application, host dashboard, host verification and property listing.
 - Country guide detail pages.
-- Any external/Cloudflare login.
+- Any external identity or Cloudflare login other than your own approved tester
+  address (the approved external Access flow is described in §2).
 - Any real payment, refund, payout or wallet top-up.
 
 ## 7. How to submit findings through support
@@ -287,9 +293,10 @@ Guidance:
 These are known and intentional for this round. Report them only if the
 behaviour changes or blocks a journey in a new way.
 
-1. **External access is unavailable.** Local `http://localhost:3200` only. The
-   Cloudflare zone is pending, the tunnel is inactive, and
-   `staging-remote.naijadeals.com` does not point at this build.
+1. **External access is restricted to the approved testers.** Use
+   <https://staging-remote.naijadeals.com> only with your own approved address
+   through the Cloudflare Access gate in §2. There is no domain-wide rule and
+   no bypass; do not ask for one.
 2. **The Shop catalogue is empty.** 0 products, 0 published public categories,
    0 orders. Product detail, variants, saved actions, cart mutation, checkout,
    orders and returns are blocked. Do not seed products, categories or orders.
@@ -356,8 +363,9 @@ These are out of scope and may invalidate the test round:
 
 - **No real money.** No payments, refunds, payouts, transfers, top-ups, card
   details or provider calls.
-- **No production.** Do not use `naijadeals.com`, `staging-remote.naijadeals.com`
-  or any production service.
+- **No production.** Do not use `naijadeals.com` or any production service.
+  `staging-remote.naijadeals.com` is the approved staging URL and may be used
+  only through your own approved Access identity.
 - **No infrastructure changes.** No DNS, Cloudflare, Access, tunnel, Hostinger,
   Nginx, service start/stop or configuration changes.
 - **No admin or platform access.** Except for `tester01` using `/admin/support`,

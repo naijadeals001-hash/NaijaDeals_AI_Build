@@ -1,6 +1,19 @@
-# Stop the staging tunnel without affecting other processes.
+# Stop only the tunnel started by start-tunnel.ps1. The PID file prevents this
+# script from killing an unrelated cloudflared process or another service.
 $ErrorActionPreference = "Stop"
-$running = @(Get-CimInstance Win32_Process -Filter "Name='cloudflared.exe'" | Where-Object { $_.CommandLine -match 'tunnel run' })
-if ($running.Count -eq 0) { Write-Output "tunnel not running"; exit 0 }
-foreach ($proc in $running) { Stop-Process -Id $proc.ProcessId -Force }
-Write-Output "stopped $($running.Count) tunnel process(es)"
+$pidPath = "C:\NaijaDeals-Staging\run\cloudflared.pid"
+if (-not (Test-Path $pidPath)) {
+  Write-Output "no tracked tunnel PID; nothing stopped"
+  exit 0
+}
+$tunnelPid = 0
+[void][int]::TryParse((Get-Content $pidPath -Raw).Trim(), [ref]$tunnelPid)
+$proc = if ($tunnelPid -gt 0) { Get-Process -Id $tunnelPid -ErrorAction SilentlyContinue } else { $null }
+if (-not $proc -or $proc.ProcessName -ne "cloudflared") {
+  Remove-Item $pidPath -Force -ErrorAction SilentlyContinue
+  Write-Output "tracked process is not running; nothing stopped"
+  exit 0
+}
+Stop-Process -Id $tunnelPid -Force
+Remove-Item $pidPath -Force -ErrorAction SilentlyContinue
+Write-Output "stopped tracked tunnel PID $tunnelPid"

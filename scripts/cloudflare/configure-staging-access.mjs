@@ -9,6 +9,7 @@
  * wildcard, Everyone, bypass or service-token rule.
  */
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 
 const ENV = "C:/NaijaDeals-Automation/config/cloudflare.env";
 const ALLOWLIST = "C:/NaijaDeals-Staging/secrets/cloudflare-access-allowlist.json";
@@ -34,9 +35,36 @@ if (!zone.success || zone.result?.status !== "active") {
 }
 const allowlist = JSON.parse(fs.readFileSync(ALLOWLIST, "utf8"));
 const emails = allowlist?.policy?.include?.[0]?.email?.email;
-if (!Array.isArray(emails) || emails.length !== 3 || emails.some((email) => !email.endsWith("@naijadeals.com"))) {
+if (!Array.isArray(emails) || emails.length !== 3 || emails.some((email) => typeof email !== "string" || !email.endsWith("@naijadeals.com"))) {
   console.error("allowlist must contain exactly three approved addresses");
   process.exit(2);
+}
+const approved = new Set(emails.map((email) => email.trim().toLowerCase()));
+const approvedHash = fs.readFileSync(new URL("./approved-testers.sha256", import.meta.url), "utf8").trim();
+const actualHash = createHash("sha256").update([...approved].sort().join("\n")).digest("hex");
+if (approved.size !== 3 || actualHash !== approvedHash) {
+  console.error("allowlist does not match the pinned approved-tester hash");
+  process.exit(2);
+}
+
+function exactAllowPolicy(policies) {
+  if (!Array.isArray(policies) || policies.length !== 1) return false;
+  const policy = policies[0];
+  if (!policy || policy.decision !== "allow" || !Array.isArray(policy.include)) return false;
+  if (policy.include.length !== approved.size) return false;
+  const seen = new Set();
+  for (const rule of policy.include) {
+    if (!rule || typeof rule !== "object" || Array.isArray(rule)) return false;
+    const keys = Object.keys(rule);
+    if (keys.length !== 1 || keys[0] !== "email") return false;
+    const value = rule.email;
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    if (typeof value.email !== "string") return false;
+    const email = value.email.trim().toLowerCase();
+    if (!approved.has(email) || seen.has(email)) return false;
+    seen.add(email);
+  }
+  return seen.size === approved.size;
 }
 
 // One-time PIN is the login method for the approved tester mailboxes.
@@ -114,9 +142,7 @@ if (!(policies.result ?? []).some((row) => row.decision === "allow")) {
   }
 }
 const finalPolicies = await (await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/access/apps/${app.id}/policies`, { headers })).json();
-const allow = (finalPolicies.result ?? []).filter((row) => row.decision === "allow");
-const configured = allow.flatMap((row) => row.include ?? []).flatMap((rule) => [rule.email?.email].flat().filter(Boolean));
-if (allow.length !== 1 || configured.length !== 3 || configured.sort().join(",") !== [...emails].sort().join(",")) {
+if (!exactAllowPolicy(finalPolicies.result)) {
   console.error("existing_access_policy_mismatch");
   process.exit(1);
 }
@@ -125,4 +151,4 @@ const updated = /^CLOUDFLARE_ACCESS_APP_ID=/m.test(text)
   ? text.replace(/^CLOUDFLARE_ACCESS_APP_ID=.*$/m, `CLOUDFLARE_ACCESS_APP_ID=${app.id}`)
   : text.trimEnd() + `\nCLOUDFLARE_ACCESS_APP_ID=${app.id}\n`;
 fs.writeFileSync(ENV, updated, "utf8");
-console.log(JSON.stringify({ ok: true, app_id_present: true, otp_idp: true, allow_policies: allow.length, allowed_emails: configured.length }));
+console.log(JSON.stringify({ ok: true, app_id_present: true, otp_idp: true, allow_policies: 1, allowed_emails: approved.size }));

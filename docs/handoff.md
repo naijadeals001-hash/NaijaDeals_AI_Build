@@ -46,10 +46,15 @@ application for `https://staging-remote.naijadeals.com` has a single Allow polic
 with exactly the three approved tester emails and One-time PIN; the named tunnel
 is healthy with four connections. Unauthenticated requests are redirected to
 Access; an approved tester completed the email sign-in, signed into NaijaDeals,
-opened the support inbox and was denied payouts (403). n8n 5680 and PostgreSQL
-55432 remain loopback-only. Rollback is restoring
-`athena/apollo.dns-parking.com` at the registrar; the Hostinger zone export is
-retained. No production application deployment or live message was performed.
+opened the support inbox and was denied payouts (403). The startup and status
+scripts assert the live Access policy, OTP binding and live tunnel ingress, and
+pin the allowlist hash; the reviewed fixes are recorded in
+`scripts/cloudflare/README.md`. n8n 5680 and
+PostgreSQL 55432 remain loopback-only. Development previews 3047 and 3107
+listen on `::` and are not loopback-only (pre-existing; not in tunnel ingress);
+3109 was not listening. Rollback is restoring `athena/apollo.dns-parking.com`
+at the registrar; the Hostinger zone export is retained. No production
+application deployment or live message was performed.
 
 **Next executable step:** owner/tester acceptance of the journeys in
 `docs/staging/tester-guide.md`; Shop/checkout/order journeys remain blocked by

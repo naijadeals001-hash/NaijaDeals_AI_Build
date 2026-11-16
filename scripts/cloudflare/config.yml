@@ -1,18 +1,19 @@
 # NaijaDeals — protected external tester access (named Cloudflare Tunnel)
 #
-# STATUS: PREPARED ONLY. NOT ACTIVE.
-#   No tunnel exists, no DNS record exists and this file has never been run.
-#   Both blockers must clear before anything here is used; see README.md.
+# STATUS: LIVE; this file is the reference ingress contract, not the applied
+# configuration. The live tunnel is remotely managed and started with its
+# token; start-tunnel.ps1 and status-tunnel.ps1 read and assert the live
+# configuration through the Cloudflare API.
 #
 # Ingress contract (do not extend without an owner decision):
 #   * exactly one public hostname -> the staging app on 127.0.0.1:3200
 #   * every other hostname routed to this tunnel -> HTTP 404
 #   * n8n (5680), PostgreSQL (55432) and the development previews
-#     (3047 / 3107 / 3109) must never appear in this file
+#     (3047 / 3107 / 3109) must never appear in this file or the live ingress
 #
-# Replace both placeholders after `cloudflared tunnel create`. The UUID is not
-# a secret; the credentials JSON it points at is, and stays outside the repo
-# (default location: C:\Users\<you>\.cloudflared\<UUID>.json).
+# The placeholders below are illustrative only; the live UUID and tunnel
+# credentials stay in protected local configuration. The UUID is not a secret;
+# the credentials JSON it points at is, and stays outside the repo.
 
 tunnel: REPLACE_WITH_TUNNEL_UUID
 credentials-file: C:\Users\User\.cloudflared\REPLACE_WITH_TUNNEL_UUID.json
