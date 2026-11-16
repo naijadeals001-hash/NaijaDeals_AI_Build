@@ -26,24 +26,29 @@ cites local automation or recorded evidence, that evidence is named.
 | Published country guides | 0 (`/naijashop/countries` reported "0 published country guides") |
 | Payment methods offered | `wallet` only (`GET /api/payments/methods?country=NG`) |
 | n8n | `http://127.0.0.1:5680`, health endpoint HTTP 200 |
-| External access | **NOT AVAILABLE** — see below |
+| External access | **PASS** — Cloudflare Access + tunnel; see below |
 
-### External access is blocked
+### External access (verified)
 
-This build is **local only**. Do not attempt an external login and do not treat
-the following as tester URLs:
+The protected hostname is **<https://staging-remote.naijadeals.com>**. The local
+URL remains <http://localhost:3200>.
 
-- The Cloudflare zone `naijadeals.com` is still pending nameserver migration.
-  Hostinger nameservers remain authoritative.
-- The Cloudflare Access organisation is enabled but no Access application can be
-  created while the zone is pending. The API refuses application creation with
-  `400 domain_does_not_belong_to_zone`.
-- The named tunnel exists but is inactive.
-- `staging-remote.naijadeals.com` is still an `A` record to `187.127.252.23`
-  (the existing VPS), not this staging build. It must not be used for acceptance.
+- Cloudflare zone `naijadeals.com` is **active**; public nameservers are
+  `armando.ns.cloudflare.com` and `nucum.ns.cloudflare.com`.
+- The Access application has exactly one Allow policy containing the three
+  approved tester addresses, no domain-wide rule and no bypass. One-time PIN is
+  configured as the login method.
+- The named tunnel is healthy with four connections; ingress is only
+  `staging-remote.naijadeals.com` to `127.0.0.1:3200` plus a 404 catch-all.
+- An unauthenticated request is denied and redirected to Cloudflare Access.
+- An approved tester received the Access email, completed the one-time sign-in,
+  signed into the NaijaDeals app, opened `/admin/support`, and was denied
+  `/api/admin/payouts` (403).
+- Website A, MX, SPF, DKIM and DMARC records resolve correctly after the
+  nameserver change. n8n 5680 and PostgreSQL 55432 remain loopback-only.
 
-The only working URL is <http://localhost:3200> on the machine that runs the
-staging stack.
+The code-entry path was not separately exercised; the email's one-time sign-in
+link was used. Do not claim a different tester identity or an unapproved address.
 
 ## Status legend
 
@@ -58,7 +63,7 @@ staging stack.
 
 | ID | Journey | Route(s) | Implementation | Status | Persona | Preconditions / data | Steps to expected result | Automation / evidence | Limitations |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| S1 | Sign in | `/login` → `POST /api/auth/login` | Implemented | **PASS** | All five accounts | Own credential from the owner's activation handoff; app running | Open `/login`; enter your own email and password; submit → HTTP 200, session cookie set, landing is role-based: `tester01` → `/admin`; `tester02`/`tester03` → `/account`; seller persona → `/seller`; driver persona → `/account` | `scripts/staging/verify-tester-access.mjs` sign-in checks; `docs/handoff.md` records 36/36 local allowed/denied checks | The driver persona has no driver-aware post-login landing; navigate to `/driver` manually. Use a current Chromium browser on localhost. |
+| S1 | Sign in | `/login` → `POST /api/auth/login` | Implemented | **PASS** | All five accounts | Own credential from the owner's activation handoff; app running | Open `/login`; enter your own email and password; submit → HTTP 200, session cookie set, landing is role-based: `tester01` → `/admin`; `tester02`/`tester03` → `/account`; seller persona → `/seller`; driver persona → `/account` | `scripts/staging/verify-tester-access.mjs` sign-in checks; `docs/handoff.md` records 36/36 local allowed/denied checks | The driver persona has no driver-aware post-login landing; navigate to `/driver` manually. Use a current Chromium browser on the local or protected external URL. |
 | S2 | Invalid sign-in / auth validation | `/login` | Implemented | **PASS** | Any account | Own email plus a deliberately wrong password | Submit → stay on `/login`; inline `role="alert"` reads "Email or password is incorrect."; no session established | Manual; `app/api/auth/login/route.ts` | Do not repeatedly retry or attempt to lock accounts. |
 | S3 | Sign out | Header account/user menu → `POST /api/auth/logout` | Implemented | **PASS** | Any signed-in account | Active session | Sign out → session cookie cleared; `/account` then redirects to `/login?next=/account` | Manual; `lib/auth/session.ts`, `app/api/auth/logout/route.ts` | Control Center sign-out is inside the avatar menu; the Shop header is a separate shell. |
 | S4 | Account profile | `/account` | Implemented | **PASS** | Customer roles, including personas | Signed in | Change name and phone; save → "Profile saved."; email and roles remain read-only | Manual; `components/functional/account-page.tsx` | Do not change email or password. |
@@ -149,9 +154,9 @@ staging stack.
    workaround, not a support workflow.
 6. **No host persona or tester-held host approval.** Stay host application,
    verification and listing approval are deferred.
-7. **External tester access is blocked by DNS/Cloudflare state.** Only
-   `http://localhost:3200` is valid. `staging-remote.naijadeals.com` does not
-   point at this build.
+7. **External access requires an approved tester identity.** The hostname is
+   behind Cloudflare Access and looks the same as local only after the gate and
+   app login. A local URL or unapproved address is not sufficient.
 8. **Driver login landing is not role-aware.** The driver persona lands on
    `/account` and must navigate to `/driver` manually.
 9. **Support has no attachment upload and no outbound email/SMS.** Findings are

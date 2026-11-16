@@ -24,7 +24,7 @@ staging build `ygTpeinzqY0L2X5fgwNUL` on `127.0.0.1:3200`, database
 | Document expiry alerts | Compliance | Not scheduled | No partner-document model with an expiry field exists | — | — | Blocked by missing feature, not by a missing contract: implementing it requires a document store and retention policy decision | DEFERRED |
 | Per-vertical workflows (Eats, Drive, Stay, Gigs, Fresh, Stream) | Vertical owners | Only where implemented | Their business transitions are incomplete or demo-only | — | — | Not claimed; shipments already use durable intents | DEFERRED |
 | n8n outage/recovery | Prove core operations are independent | Stop n8n during staging activity | Local process control | Application commits; pending intents drain on restart | Durable rows + dedupe keys | Ticket committed PENDING with 0 notifications while n8n stopped; scheduled drain after restart produced exactly one | PASS (local) |
-| Protected external tester access | Remote protected staging | Cloudflare Tunnel + Access | Account-level DNS/Access | Prepared, not published | — | Cloudflare zone `naijadeals.com` pending; all 17 Hostinger records mirrored DNS-only; tunnel inactive with 3200-only ingress; Access org enabled but app refused while pending; Hostinger NS unchanged | BLOCKED (nameserver migration approval) |
+| Protected external tester access | Remote protected staging | Cloudflare Tunnel + Access | Cloudflare zone active; NS `armando/nucum`; Access app + OTP | `/staging-remote` hostname only; no origin exposure | Cloudflare Access policy, one-time PIN, tunnel connections | 17 records reconciled; public A/MX/SPF/DKIM/DMARC verified; unauth 302; approved tester signed in and support inbox 200 / payouts 403; 4 tunnel connections | PASS (local staging) |
 
 ## Delivery retry contract (fixed)
 
@@ -114,14 +114,11 @@ clean up run-owned rows.
 
 ## Remaining work
 
-- External tester access is blocked by account and DNS state, not
-  implementation: `staging-remote.naijadeals.com` already exists as an A record
-  to the VPS, `naijadeals.com` uses Hostinger nameservers so it is not an active
-  Cloudflare zone, Access reports `not_enabled`, and no tester email list is
-  present locally. Preserving the existing A record and using a tunnel/Access
-  route are mutually exclusive until the owner chooses a hostname strategy.
-  Prepared, unactivated files are in `scripts/cloudflare/`. No tunnel, DNS
-  change or Access application was created.
+- External tester access is **PASS**: the zone is active, the Access app has
+  exactly the three approved tester emails with One-time PIN, the tunnel is
+  healthy, and an approved tester reached `/admin/support` while payouts were
+  denied (403). Rollback remains restoring the Hostinger nameservers; see
+  `docs/automation/dns-migration-plan.md`.
 - **Document-expiry alerts are blocked by missing data, not by a missing
   event contract.** The schema has no partner-document entity: `DriverProfile`
   stores only `licenseNumber`; transport providers store `licenceRef`; Stay

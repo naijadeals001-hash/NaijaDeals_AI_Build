@@ -26,40 +26,31 @@ config. R2/S3 keys were exposed in a local tool transcript and still require
 rotation in the Cloudflare dashboard; no API route exists for that.
 
 **Approved staging testers (2026-11-16):** three distinct tester accounts were
-created through the registration endpoint. The Testing Manager has the existing
-`support` role (support/test-report inbox, reply and assignment only); the two
+created through the registration endpoint. The Testing Manager has the narrow
+`staging_test_manager` role (support inbox read, reply and assignment only); the two
 testers have the `customer` role. Separate seller and driver personas were
 created for the two testers who need those journeys. Local allowed/denied
 checks pass 36/36: no payout, order/user administration, financial overview, super-admin, support-console or cross-persona
 access where it should be denied. Passwords are not in Git or chat; they are in
 the ACL-protected `C:/NaijaDeals-Staging/secrets/tester-activation.json` file for
 out-of-band owner handoff. The Cloudflare allowlist with exactly the three
-approved emails is saved in the protected local staging configuration but is
-not applied, because Access and the hostname route are still blocked.
+approved emails is applied to the live Cloudflare Access application.
 
-**External staging preparation (2026-11-16):** the Cloudflare zone
-`naijadeals.com` is created and pending; the complete Hostinger zone export is
-mirrored with 17 DNS-only records, including the previously missed `seller`
-record and all email/DKIM records. A named tunnel is created but inactive, with
-ingress only to `127.0.0.1:3200`; the Access organization is enabled. Cloudflare
-refuses the Access application until the zone is active. Hostinger remains
-authoritative and `staging-remote` still resolves to the existing VPS. The
-migration/rollback plan is `docs/automation/dns-migration-plan.md`; the only
-remaining gate is owner approval to change the registrar nameservers to
-`armando.ns.cloudflare.com` and `nucum.ns.cloudflare.com`.
+**Protected external staging (2026-11-16):** `naijadeals.com` was moved to
+Cloudflare after preflight reconciliation of all 17 Hostinger records. The zone
+is active; public A, MX, SPF, DKIM and DMARC records verify. The Access
+application for `https://staging-remote.naijadeals.com` has a single Allow policy
+with exactly the three approved tester emails and One-time PIN; the named tunnel
+is healthy with four connections. Unauthenticated requests are redirected to
+Access; an approved tester completed the email sign-in, signed into NaijaDeals,
+opened the support inbox and was denied payouts (403). n8n 5680 and PostgreSQL
+55432 remain loopback-only. Rollback is restoring
+`athena/apollo.dns-parking.com` at the registrar; the Hostinger zone export is
+retained. No production application deployment or live message was performed.
 
-**Blocked by account state, not code:** protected external tester access.
-`staging-remote.naijadeals.com` exists as an **A record to `187.127.252.23`**
-on Hostinger nameservers; it does not point at a Cloudflare tunnel. Cloudflare
-Access is not enabled, the account has zero zones, and the approved config
-contains no tester email list. GitHub preservation is now **PASS**
-(`e55d45f` on both sides). No tunnel, DNS record, Access app, production
-deployment or live message was created.
-
-**Next executable step:** owner must either move the zone to Cloudflare or
-authorize replacing/delegating the existing A-record name; enable Zero Trust
-Access; supply the exact tester email list. Then create the Access allowlist
-before DNS, create/run the named tunnel, and verify denial plus tester login.
+**Next executable step:** owner/tester acceptance of the journeys in
+`docs/staging/tester-guide.md`; Shop/checkout/order journeys remain blocked by
+the empty staging catalogue and absent test-payment adapter.
 
 ## Verification Baseline Summary (Phase 00)
 

@@ -1,8 +1,8 @@
-# Local staging tester guide
+# Staging tester guide
 
 NaijaDeals staging acceptance — tester instructions.
 
-This guide is for the approved local testers of the current staging build. It
+This guide is for the approved testers of the current staging build. It
 tells you what you can reach, which account to use, what is known to be
 unavailable, how to report a finding through the existing support system, and
 what you must not do.
@@ -15,49 +15,43 @@ documents before you start.
 
 | Item | Value |
 | --- | --- |
-| Application URL | <http://localhost:3200> |
+| Application URL (local) | <http://localhost:3200> |
+| Application URL (protected external) | <https://staging-remote.naijadeals.com> |
 | Staging build | `ygTpeinzqY0L2X5fgwNUL` |
 | Source | `naijashop-marketplace`, tester-role commit |
 | Database | `naijadeals_staging` (TEST classification) |
 | Testers | 3 primary accounts plus 2 persona accounts |
 | Environment | Local Windows staging stack; not production |
 
-Quote the build ID `ygTpeinzqY0L2X5fgwNUL` in every finding. The automation
-The served build ID is the acceptance
-identity. Do not assume the current working tree is byte-identical to the served
+Quote the build ID `ygTpeinzqY0L2X5fgwNUL` in every finding. The served build ID
+is the acceptance identity. Do not assume the current working tree is
+byte-identical to the served
 bundle. If the build ID you see or are told differs from this, stop and ask the
 coordinator before testing.
 
-## 2. Access is local only
+## 2. Access
 
-The only working URL is:
+Working URLs:
 
-**<http://localhost:3200>**
+- **External:** <https://staging-remote.naijadeals.com>
+- **Local:** <http://localhost:3200> (the machine running staging)
 
-External access is **not available** on this build. Do not attempt to sign in
-through a public URL, a Cloudflare Access email prompt, or a tunnel hostname.
+The external hostname is protected by Cloudflare Access. Only the three approved
+tester addresses are allowed; there is no domain-wide rule and no bypass.
 
-What is blocked, and why:
+1. Open the external URL and enter your own approved tester address.
+2. Cloudflare sends a one-time login email to that address (the tester aliases
+   deliver to the shared office mailbox used by the test coordinator). Use the
+   email's sign-in link or enter the one-time code.
+3. After the Access gate, sign in to NaijaDeals with your own activation
+   credentials from the protected handoff. Access does not replace the app's
+   login or role checks.
+4. Testing Manager lands on `/admin`; open `/admin/support` directly. Other
+   Control Center modules are not authorized and return 403.
 
-- The Cloudflare zone `naijadeals.com` is still pending nameserver migration.
-  Hostinger nameservers remain authoritative.
-- The Cloudflare Access organisation is enabled, but no Access application can
-  be created while the zone is pending. Application creation is refused with
-  `400 domain_does_not_belong_to_zone`.
-- The named tunnel is inactive.
-- `staging-remote.naijadeals.com` still resolves to an `A` record for
-  `187.127.252.23` (the existing VPS). It does **not** serve this staging build.
-
-Therefore:
-
-- No public or remote tester login exists.
-- No Cloudflare Access email allowlist login exists.
-- No external DNS, tunnel, Access or nameserver change is part of this round.
-- Do not test `naijadeals.com`, `staging-remote.naijadeals.com`, or any other
-  public hostname as if it were this build.
-
-If someone gives you an external staging URL, stop and confirm it with the
-coordinator before opening it.
+Do not share an Access code or sign-in link. If your address is not accepted,
+stop and contact the coordinator; do not try another identity or a domain-wide
+address. The local URL remains available for offline/local checks.
 
 ## 3. Credentials and the activation handoff
 
@@ -111,10 +105,10 @@ Notes:
 
 ## 5. Before you start
 
-- Use a current Chromium-based browser (Chrome or Edge) on the staging machine.
-  The session cookie is set for a production build on localhost; if sign-in
-  appears to succeed but the next page redirects to `/login`, record the browser
-  and version in a finding.
+- Use a current Chromium-based browser (Chrome or Edge). For the external URL,
+  complete the Cloudflare Access sign-in first; for the local URL, no Access
+  gate is involved. If sign-in appears to succeed but the next page redirects
+  to `/login`, record the browser and version in a finding.
 - Use a separate browser profile or private window per account so sessions do
   not mix.
 - Test at these viewports:

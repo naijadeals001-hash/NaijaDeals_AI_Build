@@ -1,24 +1,30 @@
-# naijadeals.com DNS migration plan (approval required)
+# naijadeals.com DNS migration — completed
 
-Status: **PREPARED; nameservers NOT changed.** Hostinger remains authoritative.
-Do not set the Cloudflare nameservers at the registrar until the owner approves
-this plan.
+Status: **COMPLETED on 2026-11-16.** The owner authorised the migration after
+the preflight below passed. The registrar nameservers now point at Cloudflare,
+the zone is active, and public A/MX/SPF/DKIM/DMARC verification passed. The
+pre-migration state and rollback are retained below.
 
-## Current authoritative state
+## Pre-migration state (retained for rollback)
 
-- Registrar/DNS: Hostinger; NS `athena.dns-parking.com`, `apollo.dns-parking.com`.
+- Pre-migration registrar/DNS: Hostinger; NS `athena.dns-parking.com`,
+  `apollo.dns-parking.com`.
 - Zone export: `C:\NaijaDeals-Staging\backups\hostinger-naijadeals-zone-2026-11-16.txt`
   (exported 2026-11-16 11:12 UTC).
-- Cloudflare zone: `naijadeals.com`, Free, **pending**; assigned NS
-  `armando.ns.cloudflare.com`, `nucum.ns.cloudflare.com`.
-- Cloudflare Access organization enabled (`naijadeals.cloudflareaccess.com`).
-- Named tunnel `naijadeals-staging-remote` created **inactive**; ingress only
-  `staging-remote.naijadeals.com -> http://127.0.0.1:3200` plus a 404 catch-all.
-- `staging-remote.naijadeals.com` in the pending zone is a proxied CNAME to the
-  tunnel. No Access application exists yet because Cloudflare refuses it while
-  the zone is pending (`domain does not belong to zone`).
-- The Hostinger `staging-remote` A record still points at `187.127.252.23`; no
-  public traffic has moved.
+- Before the cutover, the Cloudflare zone `naijadeals.com` was Free and
+  **pending**; assigned NS `armando.ns.cloudflare.com`,
+  `nucum.ns.cloudflare.com`.
+- Cloudflare Access organization was enabled
+  (`naijadeals.cloudflareaccess.com`).
+- The named tunnel `naijadeals-staging-remote` was created **inactive**; ingress
+  was only `staging-remote.naijadeals.com -> http://127.0.0.1:3200` plus a 404
+  catch-all.
+- Before the cutover, `staging-remote.naijadeals.com` in the pending zone was a
+  proxied CNAME to the tunnel. No Access application existed yet because
+  Cloudflare refused it while the zone was pending (`domain does not belong to
+  zone`).
+- Before the cutover, the Hostinger `staging-remote` A record pointed at
+  `187.127.252.23`; no public traffic had moved.
 
 ## Authoritative DNS inventory (Hostinger export)
 
@@ -52,7 +58,23 @@ The only proxied record is `staging-remote` -> tunnel. Verified directly against
 `armando.ns.cloudflare.com`: apex A, MX, SPF, DMARC, DKIM CNAMEs, seller A and
 www CNAME answer with the values above.
 
-## Migration steps (after approval)
+## Preflight result (2026-11-16, approved)
+
+- Authoritative export: 17 user records (7 A, 6 CNAME, 2 MX, 2 TXT), excluding SOA/NS.
+- Cloudflare copy: 17 records. Diff: only `staging-remote` is intentionally
+  changed from A `187.127.252.23` to the proxied tunnel CNAME; all other 16
+  records match exactly after normalising TXT quoting/trailing dots.
+- DNS-only: every record except `staging-remote` has `proxied=false`.
+- DNSSEC: public DS and DNSKEY are absent; Cloudflare DNSSEC is `disabled`.
+  No registrar DS removal or replacement is required.
+- Nameservers read directly from the current Cloudflare zone:
+  `armando.ns.cloudflare.com`, `nucum.ns.cloudflare.com`.
+- Hostinger zone export is retained at
+  `C:\NaijaDeals-Staging\backups\hostinger-naijadeals-zone-2026-11-16.txt`;
+  rollback is restoring `athena/apollo.dns-parking.com`.
+- Result: **PASS — nameserver change authorized by owner on 2026-11-16.**
+
+## Migration steps (completed)
 
 1. Confirm the Cloudflare pending zone still answers all records from
    `armando.ns.cloudflare.com` and `nucum.ns.cloudflare.com`.
@@ -91,5 +113,24 @@ www CNAME answer with the values above.
   records.
 - The only intentional behavior change is `staging-remote` moving from the VPS
   A record to the protected tunnel after Access is configured.
-- **Approval required before step 2.** Approve changing the nameservers, or
-  reject and keep Hostinger DNS.
+- Approval was granted and the migration was executed. Rollback remains
+  available by restoring the Hostinger nameservers; no Hostinger records were
+  deleted.
+
+## Execution result (2026-11-16)
+
+- Registrar nameservers changed to `armando.ns.cloudflare.com` and
+  `nucum.ns.cloudflare.com`; Cloudflare reports the zone **active**.
+- Public resolver checks: apex A `187.127.252.23`, `www` CNAME, MX
+  `mx1/mx2.hostinger.com`, SPF, DMARC and all three Hostinger DKIM CNAMEs
+  resolve correctly. `staging-remote` resolves to the tunnel.
+- Cloudflare Access application exists for `staging-remote.naijadeals.com`
+  with one Allow policy containing exactly the three approved tester emails;
+  One-time PIN is configured. The named tunnel is healthy with four connections.
+- Unauthenticated access is redirected to Cloudflare Access. An approved tester
+  completed the email sign-in, signed into the NaijaDeals app, opened the
+  support inbox and was denied payout access (403).
+- n8n `5680` and PostgreSQL `55432` remain loopback-only; ingress exposes only
+  `127.0.0.1:3200`.
+- Rollback remains: restore `athena/apollo.dns-parking.com` at the registrar
+  and stop the tunnel. The Hostinger zone export is retained.

@@ -2,13 +2,11 @@
 /**
  * Applies the approved tester allowlist to the staging Access application.
  *
- * Preconditions: the Cloudflare zone must be ACTIVE (nameserver migration
- * approved and propagated). While the zone is pending Cloudflare refuses the
- * application with `domain does not belong to zone`.
- *
- * The only policy created is a single Allow containing exactly the addresses
- * in the protected allowlist. No domain wildcard, Everyone, bypass or service
- * token rule is created.
+ * Preconditions: the Cloudflare zone must be ACTIVE, otherwise Cloudflare
+ * refuses the self-hosted application. The script ensures the One-time PIN
+ * identity provider exists, binds it to the app, and guarantees exactly one
+ * Allow policy with the three approved addresses. It never creates a domain
+ * wildcard, Everyone, bypass or service-token rule.
  */
 import fs from "node:fs";
 
@@ -40,23 +38,43 @@ if (!Array.isArray(emails) || emails.length !== 3 || emails.some((email) => !ema
   console.error("allowlist must contain exactly three approved addresses");
   process.exit(2);
 }
+
+// One-time PIN is the login method for the approved tester mailboxes.
+const idpList = await (await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/access/identity_providers`, { headers })).json();
+let idp = (idpList.result ?? []).find((row) => row.type === "onetimepin");
+if (!idp) {
+  const created = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/access/identity_providers`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ name: "One-time PIN", type: "onetimepin", config: {} })
+  });
+  const body = await created.json();
+  if (!body.success) {
+    console.error(`idp_create_failed: ${created.status} ${(body.errors ?? []).map((e) => `${e.code}:${e.message}`).join("|")}`);
+    process.exit(1);
+  }
+  idp = body.result;
+}
+
+const appBody = {
+  name: "NaijaDeals Staging Remote",
+  domain: "staging-remote.naijadeals.com",
+  type: "self_hosted",
+  session_duration: "8h",
+  app_launcher_visible: false,
+  auto_redirect_to_identity: true,
+  allowed_idps: [idp.id],
+  http_only_cookie_attribute: true,
+  same_site_cookie_attribute: "lax",
+  skip_interstitial: false
+};
 const list = await (await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/access/apps`, { headers })).json();
 let app = (list.result ?? []).find((row) => row.domain === "staging-remote.naijadeals.com");
 if (!app) {
   const created = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/access/apps`, {
     method: "POST",
     headers,
-    body: JSON.stringify({
-      name: "NaijaDeals Staging Remote",
-      domain: "staging-remote.naijadeals.com",
-      type: "self_hosted",
-      session_duration: "8h",
-      app_launcher_visible: false,
-      auto_redirect_to_identity: true,
-      http_only_cookie_attribute: true,
-      same_site_cookie_attribute: "lax",
-      skip_interstitial: false
-    })
+    body: JSON.stringify(appBody)
   });
   const body = await created.json();
   if (!body.success) {
@@ -64,25 +82,40 @@ if (!app) {
     process.exit(1);
   }
   app = body.result;
-  const policy = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/access/apps/${app.id}/policies`, {
+} else {
+  const updated = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/access/apps/${app.id}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(appBody)
+  });
+  const body = await updated.json();
+  if (!body.success) {
+    console.error(`app_update_failed: ${updated.status} ${(body.errors ?? []).map((e) => `${e.code}:${e.message}`).join("|")}`);
+    process.exit(1);
+  }
+  app = body.result;
+}
+
+const policies = await (await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/access/apps/${app.id}/policies`, { headers })).json();
+if (!(policies.result ?? []).some((row) => row.decision === "allow")) {
+  const created = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/access/apps/${app.id}/policies`, {
     method: "POST",
     headers,
     body: JSON.stringify({
       name: "Approved staging testers",
       decision: "allow",
-      include: [{ email: { email: emails } }]
+      include: emails.map((email) => ({ email: { email } }))
     })
   });
-  const policyBody = await policy.json();
-  if (!policyBody.success) {
-    await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/access/apps/${app.id}`, { method: "DELETE", headers });
-    console.error(`policy_create_failed: ${policy.status} ${(policyBody.errors ?? []).map((e) => `${e.code}:${e.message}`).join("|")}`);
+  const body = await created.json();
+  if (!body.success) {
+    console.error(`policy_create_failed: ${created.status} ${(body.errors ?? []).map((e) => `${e.code}:${e.message}`).join("|")}`);
     process.exit(1);
   }
 }
-const policies = await (await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/access/apps/${app.id}/policies`, { headers })).json();
-const allow = (policies.result ?? []).filter((row) => row.decision === "allow");
-const configured = allow.flatMap((row) => row.include ?? []).flatMap((rule) => rule.email?.email ?? []);
+const finalPolicies = await (await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/access/apps/${app.id}/policies`, { headers })).json();
+const allow = (finalPolicies.result ?? []).filter((row) => row.decision === "allow");
+const configured = allow.flatMap((row) => row.include ?? []).flatMap((rule) => [rule.email?.email].flat().filter(Boolean));
 if (allow.length !== 1 || configured.length !== 3 || configured.sort().join(",") !== [...emails].sort().join(",")) {
   console.error("existing_access_policy_mismatch");
   process.exit(1);
@@ -92,4 +125,4 @@ const updated = /^CLOUDFLARE_ACCESS_APP_ID=/m.test(text)
   ? text.replace(/^CLOUDFLARE_ACCESS_APP_ID=.*$/m, `CLOUDFLARE_ACCESS_APP_ID=${app.id}`)
   : text.trimEnd() + `\nCLOUDFLARE_ACCESS_APP_ID=${app.id}\n`;
 fs.writeFileSync(ENV, updated, "utf8");
-console.log(JSON.stringify({ ok: true, app_id_present: true, allow_policies: allow.length, allowed_emails: configured.length }));
+console.log(JSON.stringify({ ok: true, app_id_present: true, otp_idp: true, allow_policies: allow.length, allowed_emails: configured.length }));
