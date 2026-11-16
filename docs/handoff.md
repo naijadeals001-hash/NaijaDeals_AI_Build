@@ -2,7 +2,7 @@
 
 ## Current local automation handoff (2026-11-16)
 
-**Verified source:** branch `naijashop-marketplace`, commit `b503475`
+**Verified source:** branch `naijashop-marketplace`, commit `08f1dd6`
 (hardening commit; app code unchanged since `57132e0`; remote matched at
 verification time). The handoff metadata update is a separate docs-only commit.
 **Staging:** build `ygTpeinzqY0L2X5fgwNUL` on
@@ -27,6 +27,17 @@ schedules recovered (one transient error during the switch, then success). The
 owner rotated the n8n public-API key and it was propagated to the automation
 config. R2/S3 keys were exposed in a local tool transcript and still require
 rotation in the Cloudflare dashboard; no API route exists for that.
+
+**Independent review (2026-11-16):** a code-security reviewer found four
+Medium and six Low gaps in the first staging-access implementation (exact
+policy/OTP/ingress verification, stale guide text, preview binding disclosure,
+PID scope and hash pinning). They were fixed in `b503475`, `7b06528` and
+`08f1dd6`. The second pass accepted M1-M4/L1-L3/L5-L6 and left one Low
+hash-canonicalization defect, now fixed with ordinal sorting in PowerShell and
+Node; `preflight.ps1`, `start-tunnel.ps1 -CheckOnly`, `status-tunnel.ps1` and
+`configure-staging-access.mjs` were re-run successfully against the live
+staging configuration. Runtime-unverified residual: the tunnel token's
+ownership of the configured tunnel ID is still not decoded/proven by a script.
 
 **Approved staging testers (2026-11-16):** three distinct tester accounts were
 created through the registration endpoint. The Testing Manager has the narrow
