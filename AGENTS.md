@@ -2,6 +2,17 @@
 
 You are implementing NaijaDeals in C:\\Users\\User\\Documents\\naijadeals.com. Verify this is the actual repository before editing. Treat this as a fresh quality and acceptance baseline, NOT permission to discard existing code.
 
+## MANDATORY SECRET-HANDLING RULE
+
+Never put any API key, token, password, connection string or other secret in chat, progress updates, final reports, tool output, logs, screenshots, command arguments or Git.
+
+- Load secrets directly from approved local files.
+- Do not print `.env` contents or secret-bearing request headers.
+- Report only variable names, sanitized errors and verification results.
+- Never ask the user to paste a secret into chat.
+- Before sharing output, redact secret values.
+- If a secret is exposed, report the exposure without repeating the value and follow the authorized rotation process.
+
 ## PROJECT RULES
 
 1. Inspect before changing. Read AGENTS.md, the current phase tracker, architecture decisions, Git state and relevant source/tests. Reuse and repair working code. Never reset, clean, overwrite, delete the workspace, reset databases or guess an original version.
