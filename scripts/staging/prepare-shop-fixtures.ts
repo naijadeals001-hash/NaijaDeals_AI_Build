@@ -5,8 +5,9 @@
  * needs, using the existing Control Center catalogue services rather than
  * direct table writes:
  *
- *   - a passwordless staging fixture actor holding only the existing
- *     `moderator` role (service-layer audit identity, cannot sign in);
+ *   - a passwordless staging fixture actor holding only the dedicated,
+ *     non-staff `staging_catalogue_fixture` role (service-layer audit identity;
+ *     cannot sign in and has no Control Center access);
  *   - the demonstration seller required by catalogue-admin.service.ts
  *     (`demo-catalogue-review`), clearly labelled, VERIFIED, NG, Wuse/Abuja;
  *   - three labelled STAGING DEMO departments;
@@ -49,6 +50,7 @@ const EXPECTED_DATABASE = "naijadeals_staging";
 const DEMO_VENDOR_SLUG = "demo-catalogue-review";
 const FIXTURE_EMAIL = "staging.shop.fixture@staging.invalid";
 const FIXTURE_NAME = "STAGING FIXTURE — Shop catalogue operator (non-login)";
+const FIXTURE_ROLE = "staging_catalogue_fixture";
 const PRODUCT_NAME_PREFIX = "STAGING DEMO —";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -280,6 +282,7 @@ const FORBIDDEN_FIXTURE_ROLES = new Set([
   "finance",
   "support",
   "staging_test_manager",
+  "moderator",
   "courier"
 ]);
 
@@ -312,9 +315,15 @@ async function openDatabase(): Promise<{ prisma: PrismaClient; databaseName: str
 }
 
 async function ensureFixtureActor(prisma: PrismaClient): Promise<{ actor: SessionUser; created: boolean }> {
-  const role = await prisma.role.findUnique({ where: { name: "moderator" }, select: { id: true } });
+  // A dedicated non-staff role is granted only to this passwordless audit
+  // actor. It is absent from STAFF_ROLES and the app permission map, so even a
+  // future login path for this address would not open a Control Center surface.
+  let role = await prisma.role.findUnique({ where: { name: FIXTURE_ROLE }, select: { id: true } });
   if (!role) {
-    throw new Error('the existing "moderator" role is not present in this database; no fixture actor was created');
+    role = await prisma.role.create({
+      data: { name: FIXTURE_ROLE, description: "Staging catalogue fixture only; not a staff or human role" },
+      select: { id: true }
+    });
   }
 
   const existing = await prisma.user.findUnique({
@@ -352,7 +361,9 @@ async function ensureFixtureActor(prisma: PrismaClient): Promise<{ actor: Sessio
       });
   created = !existing;
 
-  await prisma.userRole.createMany({ data: [{ userId: user.id, roleId: role.id }], skipDuplicates: true });
+  // Never retain a broader role from an earlier fixture run.
+  await prisma.userRole.deleteMany({ where: { userId: user.id } });
+  await prisma.userRole.create({ data: { userId: user.id, roleId: role.id } });
 
   const fresh = await prisma.user.findUniqueOrThrow({
     where: { id: user.id },
@@ -360,9 +371,9 @@ async function ensureFixtureActor(prisma: PrismaClient): Promise<{ actor: Sessio
   });
   const roles = roleNamesOf(fresh);
   const forbidden = roles.filter((name) => FORBIDDEN_FIXTURE_ROLES.has(name));
-  if (roles.length !== 1 || roles[0] !== "moderator" || forbidden.length > 0) {
+  if (roles.length !== 1 || roles[0] !== FIXTURE_ROLE || forbidden.length > 0) {
     throw new Error(
-      `the staging fixture actor must hold exactly the moderator role; observed ${roles.length} role(s) and refused role(s): ${
+      `the staging fixture actor must hold exactly ${FIXTURE_ROLE}; observed ${roles.length} role(s) and refused role(s): ${
         forbidden.join(", ") || "none"
       }`
     );
@@ -377,7 +388,7 @@ async function ensureFixtureActor(prisma: PrismaClient): Promise<{ actor: Sessio
         metadata: {
           purpose: "Staging Shop catalogue demonstration audit identity",
           nonLogin: true,
-          roles: ["moderator"],
+          roles: [FIXTURE_ROLE],
           note: "Passwordless staging-only account. Never a real person or seller."
         }
       }
@@ -385,11 +396,6 @@ async function ensureFixtureActor(prisma: PrismaClient): Promise<{ actor: Sessio
   }
 
   const actor = fresh as unknown as SessionUser;
-  const { permissionsFor } = await import("../../lib/auth/permissions");
-  const granted = permissionsFor(actor);
-  if (!granted.includes("products:moderate")) {
-    throw new Error("the moderator role did not grant products:moderate; refusing to use it for catalogue writes");
-  }
   return { actor, created };
 }
 
@@ -795,7 +801,7 @@ async function runPrepare(
   });
 
   return {
-    mode: "prepare",
+    mode,
     sellerBoundary: {
       demoVendorSlug: vendor.slug,
       demoVendorOwner: vendor.ownerLabel,
@@ -869,7 +875,7 @@ async function runCleanup(prisma: PrismaClient, actor: SessionUser, services: Ca
     mode: "cleanup",
     retained: [
       "The demonstration seller row is retained (no delete workflow exists); it has no products after archiving.",
-      "The passwordless moderator fixture actor is retained for audit references.",
+      "The passwordless staging_catalogue_fixture actor is retained for audit references.",
       "Order, payment, refund and ledger rows are never deleted by this or any catalogue cleanup."
     ],
     archivedProducts: archived,

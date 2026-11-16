@@ -3,10 +3,11 @@
  * Safe R2 storage probe for the staging buckets.
  *
  * It loads the protected staging environment, writes one unique small object
- * to each required staging bucket, reads it through S3, checks the public URL
- * for the public bucket and its denial for the private bucket, then deletes
- * both probe objects. It never prints credentials, endpoints, bucket names or
- * object bodies.
+ * to each required staging bucket, reads both through S3, checks the public
+ * URL for the public bucket, then deletes both probe objects. It does not
+ * claim to verify the private bucket's separate public exposure: no private
+ * public hostname or R2 token-management permission is available. It never
+ * prints credentials, endpoints, bucket names or object bodies.
  */
 import fs from "node:fs";
 import { randomBytes } from "node:crypto";
@@ -50,12 +51,10 @@ async function main() {
     s3_get_public: false,
     s3_get_private: false,
     public_url_ok: false,
-    private_public_url_blocked: false,
     cleanup_public: false,
     cleanup_private: false
   };
   const publicUrl = `${env.S3_PUBLIC_BASE_URL.replace(/\/$/, "")}/${publicKey}`;
-  const privatePublicUrl = `${env.S3_PUBLIC_BASE_URL.replace(/\/$/, "")}/${privateKey}`;
   try {
     await client.send(new PutObjectCommand({ Bucket: env.S3_PUBLIC_BUCKET, Key: publicKey, Body: body, ContentType: "text/plain" }));
     result.s3_put_public = true;
@@ -69,12 +68,6 @@ async function main() {
 
     const publicResponse = await fetch(publicUrl, { signal: AbortSignal.timeout(15000) });
     result.public_url_ok = publicResponse.status === 200;
-    const privateResponse = await fetch(privatePublicUrl, { signal: AbortSignal.timeout(15000) });
-    // The public base URL is bound to the public bucket. A private-only key
-    // must not be served from it.
-    result.private_public_url_blocked = !(
-      privateResponse.status === 200 && (await privateResponse.text()).includes("rotation probe")
-    );
   } finally {
     for (const [bucket, key, field] of [
       [env.S3_PUBLIC_BUCKET, publicKey, "cleanup_public"],
@@ -88,12 +81,25 @@ async function main() {
       }
     }
   }
-  console.log(JSON.stringify({ ok: Object.values(result).every(Boolean), ...result }, null, 2));
-  if (!Object.values(result).every(Boolean)) process.exitCode = 1;
+  const ok = Object.values(result).every(Boolean);
+  console.log(
+    JSON.stringify(
+      {
+        ok,
+        ...result,
+        private_public_access:
+          "UNVERIFIED: no private-bucket public hostname or R2 token-management permission is available. Public-base isolation is not inferred from a missing key."
+      },
+      null,
+      2
+    )
+  );
+  if (!ok) process.exitCode = 1;
   await client.destroy();
 }
 
 main().catch((error) => {
-  console.error(`R2_PROBE_FAILED: ${error instanceof Error ? error.message.slice(0, 300) : "unknown error"}`);
+  const name = error && typeof error === "object" && typeof error.name === "string" ? error.name : "error";
+  console.error(`R2_PROBE_FAILED: ${name} (details withheld; no credential or endpoint printed)`);
   process.exitCode = 1;
 });

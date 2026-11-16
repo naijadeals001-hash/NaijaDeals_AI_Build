@@ -6,6 +6,7 @@
  * It never prints user emails, tokens or message bodies.
  */
 import fs from "node:fs";
+import { verifyTestDatabase } from "../lib/test-db-guard";
 
 const ENV_FILE = "C:/NaijaDeals-Staging/env/staging.env";
 const EXPECTED_DATABASE = "naijadeals_staging";
@@ -18,11 +19,16 @@ function loadStagingEnvironment() {
     if (index > 0) values[line.slice(0, index)] = line.slice(index + 1);
   }
   if (!values.DATABASE_URL) throw new Error("staging DATABASE_URL is not configured");
-  process.env.DATABASE_URL = values.DATABASE_URL;
+  return values;
 }
 
 async function main() {
-  loadStagingEnvironment();
+  const values = loadStagingEnvironment();
+  const target = await verifyTestDatabase({ url: values.DATABASE_URL });
+  if (target.databaseName !== EXPECTED_DATABASE) {
+    throw new Error(`refusing: connected database is ${target.databaseName}`);
+  }
+  process.env.DATABASE_URL = target.url;
   const { prisma } = await import("../../lib/prisma");
   const database = await prisma.$queryRaw<Array<{ name: string }>>`select current_database() as name`;
   if (database[0]?.name !== EXPECTED_DATABASE) {

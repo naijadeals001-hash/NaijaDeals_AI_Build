@@ -32,8 +32,10 @@ rotation in the Cloudflare dashboard; no API route exists for that.
 **R2 rotation status (2026-11-16): BLOCKED on an owner-only dashboard action.**
 The exposed key is the staging R2 key for `naijadeals-staging-public` and
 `naijadeals-staging-private`; it still lists both buckets and the safe probe
-`scripts/staging/verify-r2-credentials.mjs` returned 8/8 (public/private
-write/read, public URL, private public-URL denial, cleanup). The configured
+`scripts/staging/verify-r2-credentials.mjs` passed every *checked* field
+(public/private S3 write/read, public URL, cleanup). Private-bucket public
+access remains **UNVERIFIED** because this host has no private public hostname
+and the token cannot read R2 bucket settings. The configured
 Cloudflare API token returns HTTP 403 for `/r2/api_tokens` and `/r2/buckets`, so
 it cannot create or revoke R2 credentials. Exact owner cutover, verification
 and revocation steps are in `docs/staging/r2-credential-rotation.md`. No

@@ -104,7 +104,14 @@ function readStagingDatabaseUrl(): string {
 
 function loadActivationAccounts(): ActivationAccount[] {
   if (!existsSync(ACTIVATION_FILE)) throw new Error("the protected tester activation file is missing");
-  const parsed = JSON.parse(readFileSync(ACTIVATION_FILE, "utf8")) as { accounts?: unknown };
+  let parsed: { accounts?: unknown };
+  try {
+    parsed = JSON.parse(readFileSync(ACTIVATION_FILE, "utf8")) as { accounts?: unknown };
+  } catch {
+    // JSON.parse errors can quote the malformed input, which may include a
+    // credential. Replace the message rather than printing it.
+    throw new Error("the protected tester activation file is not valid JSON; repair it locally");
+  }
   if (!Array.isArray(parsed.accounts)) throw new Error("the tester activation file has no accounts array");
   return parsed.accounts as ActivationAccount[];
 }

@@ -44,7 +44,7 @@ already-approved project images are used (no paid generation).
 
 | Fixture | Identifier | Details |
 | --- | --- | --- |
-| Fixture audit actor (non-login) | `staging.shop.fixture@staging.invalid` | Passwordless, `actorType = CUSTOMER`, NG scope, exactly the existing `moderator` role (`products:moderate`). Used only as the service-layer audit actor. It cannot sign in. The script refuses to create a role if `moderator` is absent from the seeded role table. |
+| Fixture audit actor (non-login) | `staging.shop.fixture@staging.invalid` | Passwordless, `actorType = CUSTOMER`, NG scope, exactly the dedicated `staging_catalogue_fixture` role. That role is not in `STAFF_ROLES` or the app permission map, so it grants no Control Center access even if a future login path appeared. Used only as the service-layer audit actor; it cannot sign in. |
 | Demonstration seller | `demo-catalogue-review` | `STAGING DEMO — Catalogue Seller (not a real seller)`, `VERIFIED`, `NG`, market `Wuse, Abuja`. Required by `chooseVendor(isDemo)` in `catalogue-admin.service.ts`. |
 | Department | `staging-demo-phones-tablets` | `STAGING DEMO — Phones & Tablets` |
 | Department | `staging-demo-fashion` | `STAGING DEMO — Fashion` |
@@ -114,7 +114,9 @@ or an administrator.
   wallet by the same amount;
 - proves one DEBIT and one CREDIT leg of the exact amount, tester02 +amount,
   platform −amount, and that the NGN sum of all wallet positions is unchanged
-  (currencies are never summed together);
+  (currencies are never summed together). The TEST platform counter-wallet
+  therefore shows `-10,000,000` kobo after funding; it is a test-funding
+  counterparty, not a funded treasury, and no real money is represented;
 - re-submits the same create and credit calls to prove idempotency: the create
   returns the same row and the credit returns `already_credited` with no balance
   movement;
@@ -181,8 +183,10 @@ session you are already authorised to use, or run against localhost.
 - Browser journey: **28 PASS, 0 FAIL, 0 BLOCKED, 1 DEFERRED**. The deferred
   row is return-case creation after a legitimate delivery; the honest empty
   state was checked. Evidence:
-  `qa-artifacts/staging-shop/report-20261116232354-e7aa60.json` and the
-  corresponding screenshots.
+  `qa-artifacts/staging-shop/report-20261116235443-aa9d8a.json` and the
+  corresponding screenshots. The report records build
+  `ygTpeinzqY0L2X5fgwNUL`, the health database check, zero baseline cart/saved
+  records and zero run-owned leftovers.
 - n8n outbox evidence: order/refund/status intents are `PROCESSED`; vendor,
   refund and status notifications are `SENT`. A direct customer `order.paid`
   notification may remain `QUEUED` because the optional Valkey worker is not
@@ -227,7 +231,7 @@ this customer-only journey. Do not fabricate a delivered order or a return.
 | Record | Owner | Cleanup |
 | --- | --- | --- |
 | Demo departments, vendor and products | Persistent staging fixtures | Retained; `--cleanup` archives/deactivates |
-| Passwordless moderator actor | Persistent staging fixture | Retained for audit references |
+| Passwordless `staging_catalogue_fixture` actor | Persistent staging fixture | Retained for audit references |
 | tester02/tester03 cart lines for `staging-demo-*` products | This run | Removed at start and in the journey's `finally` block |
 | tester02/tester03 saved demo products | This run | Removed at start and in the journey's `finally` block |
 | Addresses | Avoided | The journey unchecks "Save this address to my account" |

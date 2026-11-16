@@ -22,10 +22,13 @@ The documented exposure is the staging R2 S3 key held in
 | `scripts/backup/run.mjs backup` object snapshot | same `S3_*` variables | both staging buckets |
 
 On 2026-11-16 the current key successfully listed both staging buckets
-(`public: listed`, `private: listed`) and the safe probe
-`node scripts/staging/verify-r2-credentials.mjs` returned **8/8 true**:
-public/private write and read, public URL success, private public-URL denial,
-and cleanup. The old key is therefore still valid and rotation is not complete.
+(`public: listed`, `private: listed`) and the corrected safe probe
+`node scripts/staging/verify-r2-credentials.mjs` returned all *checked* fields
+true: public/private S3 write and read, public URL success, and cleanup.
+`private_public_access` is deliberately **UNVERIFIED**: this host has no
+private-bucket public hostname and the API token cannot read R2 bucket settings,
+so the probe does not infer private isolation from a missing key. The old key
+is therefore still valid and rotation is not complete.
 It is not the local SeaweedFS key: the root `.env` uses
 `S3_ENDPOINT=http://127.0.0.1:9002` and bucket `naijadeals-dev`; that is a
 different local development credential. Backblaze B2 uses separate `B2_*`
@@ -45,12 +48,14 @@ variables and is not part of this rotation.
 4. Restart the staging app so it reads the new process environment. The
    existing backup task inherits `staging.env` on its next run; verify it.
 5. Run `node scripts/staging/verify-r2-credentials.mjs` from the repository root
-   after the new values are in place. It checks listing, a temporary
-   public/private object, public URL accessibility, private public-URL denial
-   and cleanup, without printing credentials.
+   after the new values are in place. It checks a temporary public/private
+   object, public URL accessibility and cleanup, without printing credentials.
+   `private_public_access` remains UNVERIFIED until the owner confirms the
+   private bucket's public-access setting in the R2 dashboard; no current API
+   permission can read it.
 6. Run the existing backup task or `node scripts/backup/run.mjs backup` and
    confirm the manifest and encrypted upload. Do not accept the rotation if
-   either the public/private check or the backup fails.
+   either the storage probe or the backup fails.
 7. Only after successful cutover, revoke the old R2 token in the dashboard.
    Verify the old credential no longer authenticates (for example by running
    the same verification script with a temporary process environment containing

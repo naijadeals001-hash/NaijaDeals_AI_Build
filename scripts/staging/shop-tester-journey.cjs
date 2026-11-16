@@ -52,6 +52,8 @@ const BASE_ORIGIN = (() => {
   }
 })();
 const ACTIVATION_FILE = "C:/NaijaDeals-Staging/secrets/tester-activation.json";
+const BUILD_ID_FILE = "C:/NaijaDeals-Staging/app/.next/BUILD_ID";
+const BUILD_ID = fs.existsSync(BUILD_ID_FILE) ? fs.readFileSync(BUILD_ID_FILE, "utf8").trim() : null;
 const OUT_DIR = path.join(ROOT, "qa-artifacts", "staging-shop");
 const RUN_ID = `${new Date().toISOString().replace(/\D/g, "").slice(0, 14)}-${randomBytes(3).toString("hex")}`;
 const TIMEOUT_MS = Number(process.env.SHOP_JOURNEY_TIMEOUT_MS || 30_000);
@@ -112,9 +114,12 @@ const state = {
   tester02PrePaymentWallet: null,
   tester03Order: null,
   tester03OrderActive: false,
+  health: null,
   persistentOrders: [],
   cleanup: { tester02: null, tester03: null },
-  foreignActiveCartLines: { tester02: 0, tester03: 0 }
+  baseline: { tester02: null, tester03: null },
+  runCartItemIds: new Set(),
+  runSavedProductIds: new Set()
 };
 
 class Blocked extends Error {}
@@ -187,7 +192,13 @@ async function getJson(context, urlPath) {
 
 function loadActivationAccounts() {
   if (!fs.existsSync(ACTIVATION_FILE)) throw new Error("the protected tester activation file is missing");
-  const parsed = JSON.parse(fs.readFileSync(ACTIVATION_FILE, "utf8"));
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(ACTIVATION_FILE, "utf8"));
+  } catch {
+    // Never surface JSON.parse's input excerpt: it can contain a credential.
+    throw new Error("the protected tester activation file is not valid JSON; repair it locally");
+  }
   if (!Array.isArray(parsed.accounts)) throw new Error("the tester activation file has no accounts array");
   return parsed.accounts;
 }
@@ -247,30 +258,43 @@ async function orderCount(context) {
   return Array.isArray(orders) ? orders.length : 0;
 }
 
-async function demoCartCleanup(context) {
+async function captureBaseline(context) {
   const cart = await getJson(context, "/api/cart");
+  const saved = await getJson(context, "/api/account/saved?country=NG");
   const items = Array.isArray(cart.items) ? cart.items : [];
-  const demo = items.filter((item) => String(item.product && item.product.slug ? item.product.slug : "").startsWith(DEMO_PREFIX));
-  const foreignActive = items.filter(
-    (item) => !item.savedForLater && !String(item.product && item.product.slug ? item.product.slug : "").startsWith(DEMO_PREFIX)
-  );
-  for (const item of demo) {
-    const removed = await api(context, "DELETE", `/api/cart/items/${item.id}`);
-    assert(removed.status === 200, `could not remove a demo cart line (HTTP ${removed.status})`);
-  }
-  return { removed: demo.length, foreignActive: foreignActive.length };
+  const savedItems = Array.isArray(saved) ? saved : [];
+  return {
+    itemCount: items.length,
+    activeCount: items.filter((item) => !item.savedForLater).length,
+    savedCount: savedItems.length
+  };
 }
 
-async function demoSavedCleanup(context) {
-  const saved = await getJson(context, "/api/account/saved?country=NG");
-  const demo = (Array.isArray(saved) ? saved : []).filter((item) =>
-    String(item.product && item.product.slug ? item.product.slug : "").startsWith(DEMO_PREFIX)
-  );
-  for (const item of demo) {
-    const toggled = await api(context, "POST", "/api/account/saved", { productId: item.product.id });
-    assert(toggled.status === 200, `could not remove a demo saved item (HTTP ${toggled.status})`);
+/**
+ * Remove only records this run created. The baseline snapshot is never
+ * deleted, so a tester's pre-existing cart or saved items survive an
+ * interrupted journey.
+ */
+async function cleanupRunOwned(context) {
+  const cart = await getJson(context, "/api/cart");
+  const items = Array.isArray(cart.items) ? cart.items : [];
+  let removedCart = 0;
+  for (const item of items) {
+    if (!state.runCartItemIds.has(item.id)) continue;
+    const removed = await api(context, "DELETE", `/api/cart/items/${item.id}`);
+    if (removed.status !== 200) throw new Error(`could not remove a run-owned cart line (HTTP ${removed.status})`);
+    removedCart += 1;
   }
-  return { removed: demo.length };
+  const saved = await getJson(context, "/api/account/saved?country=NG");
+  let removedSaved = 0;
+  for (const item of Array.isArray(saved) ? saved : []) {
+    const productId = item.product && item.product.id;
+    if (!productId || !state.runSavedProductIds.has(productId)) continue;
+    const toggled = await api(context, "POST", "/api/account/saved", { productId });
+    if (toggled.status !== 200) throw new Error(`could not remove a run-owned saved item (HTTP ${toggled.status})`);
+    removedSaved += 1;
+  }
+  return { removedCart, removedSaved };
 }
 
 async function discoverFixtures(context) {
@@ -300,17 +324,23 @@ async function discoverFixtures(context) {
 async function main() {
   console.log(`Staging Shop journey ${RUN_ID}`);
   console.log(`Base ${BASE_ORIGIN}`);
+  if (BUILD_ID) console.log(`Build ${BUILD_ID}`);
 
   const health = await (async () => {
     try {
       const response = await fetch(`${BASE}/api/health`, { signal: AbortSignal.timeout(15_000) });
       const body = await response.json().catch(() => null);
       const database = body && Array.isArray(body.checks) ? body.checks.find((check) => check.name === "database") : null;
-      return { ok: response.status === 200 && Boolean(body) && (!database || database.ok !== false), status: response.status };
+      return {
+        ok: response.status === 200 && Boolean(body) && (!database || database.ok !== false),
+        status: response.status,
+        database: database ? { name: database.name, ok: database.ok === true } : null
+      };
     } catch (error) {
       return { ok: false, status: 0, error: safeDetail(error) };
     }
   })();
+  state.health = { status: health.status, database: health.database ?? null };
   if (!health.ok) {
     record("BLOCKED", "S0", "Staging app and database are reachable", `health check failed (status=${health.status})`);
     for (const [id, title] of BLOCKABLE_STEPS) {
@@ -389,10 +419,8 @@ async function main() {
       return t2.page.url().replace(BASE, "");
     });
 
-    const t2StartCleanup = await demoSavedCleanup(t2.context);
-    const t2CartCleanup = await demoCartCleanup(t2.context);
-    state.foreignActiveCartLines.tester02 = t2CartCleanup.foreignActive;
-    state.cleanup.tester02 = { ...t2StartCleanup, ...t2CartCleanup };
+    state.baseline.tester02 = await captureBaseline(t2.context);
+    state.cleanup.tester02 = { baseline: state.baseline.tester02, removedRunOwned: null };
 
     await step("A2", "Shop shell renders", async () => {
       const response = await t2.page.goto(`${BASE}/naijashop`, { waitUntil: "domcontentloaded" });
@@ -451,6 +479,7 @@ async function main() {
       const cart = await getJson(t2.context, "/api/cart");
       const line = (cart.items || []).find((item) => item.productId === fixture.id && item.variantId);
       assert(line, "the selected variant was not added to the cart");
+      state.runCartItemIds.add(line.id);
       assert(line.variant && /Blue/i.test(line.variant.name), "the cart line is missing the selected variant name");
       const evidence = await screenshot(t2.page, "03-variant-selected");
       return `2 options (1 disabled out-of-stock); selected ${purchasable.label}; ${evidence}`;
@@ -479,6 +508,7 @@ async function main() {
         save.click()
       ]);
       assert(saveResponse.status() === 200, `saving an item returned HTTP ${saveResponse.status()}`);
+      state.runSavedProductIds.add(fixture.id);
       await t2.page.getByRole("button", { name: /^saved for later$/i }).waitFor({ state: "visible" });
       const saved = await getJson(t2.context, "/api/account/saved?country=NG");
       assert((saved || []).some((item) => item.product && item.product.slug === fixture.slug), "the saved item is absent from the account API");
@@ -489,12 +519,13 @@ async function main() {
       const evidence = await screenshot(t2.page, "05-saved-items");
       const removed = await api(t2.context, "POST", "/api/account/saved", { productId: fixture.id });
       assert(removed.status === 200, `removing the saved item returned HTTP ${removed.status}`);
+      state.runSavedProductIds.delete(fixture.id);
       return `saved, listed under Account, removed; ${evidence}`;
     });
 
     await step("A8", "Cart add, quantity update, save for later, move and remove", async () => {
-      if (state.foreignActiveCartLines.tester02 > 0) {
-        throw new Blocked("tester02's cart already contains non-demo active lines; clear them before running");
+      if ((state.baseline.tester02?.activeCount ?? 0) > 0) {
+        throw new Blocked("tester02 has pre-existing active cart lines; this run will not delete them. Clear them manually, then rerun");
       }
       const fixture = fixtures.variant;
       let cart = await getJson(t2.context, "/api/cart");
@@ -512,6 +543,7 @@ async function main() {
         line = (cart.items || []).find((item) => item.productId === fixture.id && !item.savedForLater && item.variantId);
       }
       assert(line, "the variant line is not in the cart");
+      state.runCartItemIds.add(line.id);
 
       await t2.page.goto(`${BASE}/cart`, { waitUntil: "domcontentloaded" });
       const article = t2.page.locator("article").filter({ hasText: fixture.name }).first();
@@ -621,8 +653,8 @@ async function main() {
 
     await step("A10", "Successful wallet checkout creates one order", async () => {
       if (!state.walletMethodReady) throw new Blocked("wallet is not offered by the running app; checkout cannot complete");
-      if (state.foreignActiveCartLines.tester02 > 0) {
-        throw new Blocked("tester02's cart contains non-demo active lines; clear them before running the checkout journey");
+      if ((state.baseline.tester02?.activeCount ?? 0) > 0) {
+        throw new Blocked("tester02 has pre-existing active cart lines; this run will not delete or purchase them");
       }
       const beforeOrders = await orderCount(t2.context);
       await t2.page.getByLabel("Full name").fill(stagingAddress.contactName);
@@ -864,9 +896,8 @@ async function main() {
 
     // ---------------------------------------------------------------- tester03
     t3 = await newAccountPage(browser, tester03, "tester03");
-    const t3CartCleanup = await demoCartCleanup(t3.context);
-    state.foreignActiveCartLines.tester03 = t3CartCleanup.foreignActive;
-    state.cleanup.tester03 = { ...(await demoSavedCleanup(t3.context)), ...t3CartCleanup };
+    state.baseline.tester03 = await captureBaseline(t3.context);
+    state.cleanup.tester03 = { baseline: state.baseline.tester03, removedRunOwned: null };
 
     await step("B1", "Tester03 signs in and reaches their own account", async () => {
       await t3.page.goto(`${BASE}/account`, { waitUntil: "domcontentloaded" });
@@ -877,8 +908,8 @@ async function main() {
     let t3WalletReadable = false;
     let t3Wallet = null;
     await step("B2", "Insufficient-balance payment is refused", async () => {
-      if (state.foreignActiveCartLines.tester03 > 0) {
-        throw new Blocked("tester03's cart already contains non-demo active lines; clear them before running");
+      if ((state.baseline.tester03?.activeCount ?? 0) > 0) {
+        throw new Blocked("tester03 has pre-existing active cart lines; this run will not delete or purchase them");
       }
       const fixture = fixtures.phone;
       const before = await getJson(t3.context, `/api/products/${fixture.id}`);
@@ -1093,9 +1124,8 @@ async function main() {
     for (const [label, session] of [["tester02", t2], ["tester03", t3]]) {
       if (!session) continue;
       try {
-        const saved = await demoSavedCleanup(session.context);
-        const cart = await demoCartCleanup(session.context);
-        state.cleanup[label] = { ...(state.cleanup[label] || {}), ...saved, ...cart };
+        const removed = await cleanupRunOwned(session.context);
+        state.cleanup[label] = { ...(state.cleanup[label] || {}), removedRunOwned: removed };
       } catch (error) {
         console.warn(`cleanup ${label} incomplete: ${safeDetail(error)}`);
       }
@@ -1120,6 +1150,8 @@ async function finish() {
   const report = {
     runId: RUN_ID,
     base: BASE_ORIGIN,
+    buildId: BUILD_ID,
+    health: state.health,
     executedAt: new Date().toISOString(),
     counts,
     fixtures: {

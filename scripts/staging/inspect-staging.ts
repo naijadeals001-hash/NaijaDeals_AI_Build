@@ -6,6 +6,7 @@
  * .env values are printed.
  */
 import fs from "node:fs";
+import { verifyTestDatabase } from "../lib/test-db-guard";
 
 const ENV_FILE = "C:/NaijaDeals-Staging/env/staging.env";
 const EXPECTED_DATABASE = "naijadeals_staging";
@@ -23,14 +24,19 @@ function loadStagingEnvironment() {
 }
 
 async function main() {
-  loadStagingEnvironment();
+  const values = loadStagingEnvironment();
+  const target = await verifyTestDatabase({ url: values.DATABASE_URL });
+  if (target.databaseName !== EXPECTED_DATABASE) {
+    throw new Error(`refusing: connected to ${target.databaseName}, expected ${EXPECTED_DATABASE}`);
+  }
+  process.env.DATABASE_URL = target.url;
   const { prisma } = await import("../../lib/prisma");
   const database = await prisma.$queryRaw<Array<{ name: string }>>`select current_database() as name`;
   const name = database[0]?.name ?? "unknown";
-  const classifications = await prisma.databaseClassification.findMany({ select: { classification: true } });
+  const classifications = await prisma.databaseClassification.findMany({ select: { id: true, classification: true } });
   if (name !== EXPECTED_DATABASE) throw new Error(`refusing: connected to ${name}, expected ${EXPECTED_DATABASE}`);
-  if (!classifications.some((row) => row.classification === "TEST")) {
-    throw new Error(`refusing: ${name} is not classified TEST`);
+  if (!classifications.some((row) => row.id === "default" && row.classification === "TEST")) {
+    throw new Error(`refusing: ${name} is not canonically classified TEST`);
   }
 
   const [categories, products, activeProducts, demoProducts, sampleProducts, users, wallets] = await Promise.all([
