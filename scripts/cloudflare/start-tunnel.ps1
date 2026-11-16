@@ -19,8 +19,10 @@ foreach ($key in @("CLOUDFLARE_STAGING_API_TOKEN","CLOUDFLARE_ACCOUNT_ID","CLOUD
 }
 
 $allowlist = Get-Content $allowlistPath -Raw | ConvertFrom-Json
-$approved = @($allowlist.policy.include | ForEach-Object { @($_.email.email) } | ForEach-Object { $_.Trim().ToLowerInvariant() } | Sort-Object)
+[string[]]$approved = @($allowlist.policy.include | ForEach-Object { @($_.email.email) } | ForEach-Object { $_.Trim().ToLowerInvariant() })
 if ($approved.Count -ne 3) { throw "Approved tester allowlist must contain exactly three addresses" }
+# Canonical form: lowercase, ordinal sort, newline join (matches Node .sort()).
+[System.Array]::Sort($approved, [System.StringComparer]::Ordinal)
 $sha = [System.Security.Cryptography.SHA256]::Create()
 try {
   $computed = [BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes(($approved -join "`n")))).Replace("-", "").ToLowerInvariant()
@@ -119,10 +121,19 @@ try {
 }
 if (-not $proc) { throw "cloudflared did not return a process handle" }
 Set-Content -Path $pidPath -Value $proc.Id
-Start-Sleep -Seconds 6
-$proc.Refresh()
-if ($proc.HasExited) {
-  Remove-Item $pidPath -Force -ErrorAction SilentlyContinue
-  throw "cloudflared exited during startup; inspect $logDir"
+$healthy = $false
+for ($attempt = 0; $attempt -lt 3; $attempt++) {
+  Start-Sleep -Seconds 3
+  $proc.Refresh()
+  if ($proc.HasExited) { break }
+  $state = Invoke-Cf "https://api.cloudflare.com/client/v4/accounts/$($cfg['CLOUDFLARE_ACCOUNT_ID'])/cfd_tunnel/$($cfg['CLOUDFLARE_TUNNEL_ID'])"
+  if ($state.result.status -eq "healthy" -and @($state.result.connections).Count -gt 0) {
+    $healthy = $true
+    break
+  }
 }
-Write-Output "tunnel started PID $($proc.Id); verify with status-tunnel.ps1"
+if (-not $healthy) {
+  Remove-Item $pidPath -Force -ErrorAction SilentlyContinue
+  throw "tunnel did not become healthy; inspect $logDir"
+}
+Write-Output "tunnel started PID $($proc.Id); status is healthy; verify with status-tunnel.ps1"

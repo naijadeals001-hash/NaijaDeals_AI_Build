@@ -41,6 +41,8 @@ if (!Array.isArray(emails) || emails.length !== 3 || emails.some((email) => type
 }
 const approved = new Set(emails.map((email) => email.trim().toLowerCase()));
 const approvedHash = fs.readFileSync(new URL("./approved-testers.sha256", import.meta.url), "utf8").trim();
+// Canonical form: lowercase, ordinal sort, newline join. Keep PowerShell's
+// [StringComparer]::Ordinal sort aligned with this.
 const actualHash = createHash("sha256").update([...approved].sort().join("\n")).digest("hex");
 if (approved.size !== 3 || actualHash !== approvedHash) {
   console.error("allowlist does not match the pinned approved-tester hash");

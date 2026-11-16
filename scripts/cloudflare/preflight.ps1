@@ -1,4 +1,4 @@
-# Read-only preflight for the prepared Cloudflare Tunnel configuration.
+# Read-only preflight/status checks for the protected staging configuration.
 # Performs no DNS writes, starts no tunnel, changes no service.
 # Exit code 0 = every check passed, 1 = at least one check failed.
 
@@ -24,11 +24,11 @@ if (Test-Path $Cloudflared) {
   Report "cloudflared binary" $false "missing: $Cloudflared"
 }
 
-# 2. Config present and still placeholder-only (it must not be runnable yet)
+# 2. Reference config present; live configuration is asserted separately by status
 if (Test-Path $ConfigPath) {
   $cfg = Get-Content $ConfigPath -Raw
   $placeholders = ([regex]::Matches($cfg, "REPLACE_WITH_TUNNEL_UUID")).Count
-  Report "config.yml" $true "$ConfigPath (placeholders remaining: $placeholders)"
+  Report "config.yml" $true "$ConfigPath (reference placeholders: $placeholders)"
 } else {
   Report "config.yml" $false "missing: $ConfigPath"
 }
@@ -47,21 +47,21 @@ $leaks = Get-ChildItem -Path $PSScriptRoot -Recurse -File -ErrorAction SilentlyC
   Where-Object { $_.Extension -in ".json", ".pem", ".key" }
 Report "no credential files" ($leaks.Count -eq 0) ("found: " + $leaks.Count)
 
-# 5. Target hostname must still be unused
+# 5. Target hostname must resolve after cutover
 try {
-  $r = Resolve-DnsName -Name $Hostname -ErrorAction Stop -DnsOnly
-  Report "target hostname unused" $false ("resolves already: " + ($r | Select-Object -First 1).IPAddress)
+  $r = Resolve-DnsName -Name $Hostname -ErrorAction Stop -DnsOnly | Where-Object { $_.Type -in @("A", "AAAA", "CNAME") }
+  Report "target hostname resolves" ($r.Count -gt 0) ("$Hostname -> " + (($r | Select-Object -First 1).IPAddress))
 } catch {
-  Report "target hostname unused" $true "$Hostname -> NXDOMAIN"
+  Report "target hostname resolves" $false "$Hostname -> unresolved"
 }
 
-# 6. The protected existing hostname must keep resolving to the same origin
+# 6. The pre-existing staging hostname must keep resolving to the same origin
 try {
   $protectedIp = (Resolve-DnsName -Name $Protected -Type A -ErrorAction Stop -DnsOnly |
     Where-Object { $_.IPAddress } | Select-Object -First 1).IPAddress
-  Report "existing staging untouched" ([bool]$protectedIp) "$Protected -> $protectedIp (read-only observation)"
+  Report "existing staging preserved" ($protectedIp -eq "187.127.252.23") "$Protected -> $protectedIp (expected 187.127.252.23)"
 } catch {
-  Report "existing staging untouched" $false "$Protected did not resolve"
+  Report "existing staging preserved" $false "$Protected did not resolve"
 }
 
 # 7. Staging origin reachable on loopback
@@ -82,6 +82,6 @@ foreach ($port in 5680, 55432) {
 }
 
 Write-Output ""
-if ($failures -eq 0) { Write-Output "PREFLIGHT: PASS (nothing was published)" }
-else { Write-Output "PREFLIGHT: $failures check(s) failed (nothing was published)" }
+if ($failures -eq 0) { Write-Output "PREFLIGHT: PASS (read-only; no changes made)" }
+else { Write-Output "PREFLIGHT: $failures check(s) failed (read-only; no changes made)" }
 exit $failures

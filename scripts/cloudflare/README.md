@@ -46,8 +46,9 @@ owner's decision.
   This origin/certificate issue predates the DNS cutover and is not fixed here;
   `staging.naijadeals.com` returned `200`.
 - Access: one Allow policy, exactly three email rules, no non-Allow policies;
-  the only configured identity provider is `onetimepin`. The allowlist is
-  pinned by `approved-testers.sha256` without tracking the addresses.
+  the application is bound only to the `onetimepin` provider, which is the only
+  account-level provider currently configured. The allowlist is pinned by
+  `approved-testers.sha256` without tracking the addresses.
 - Tunnel: `healthy`, four connections. The live API configuration contains
   exactly `staging-remote -> http://127.0.0.1:3200` plus
   `(catch-all) -> http_status:404`; `status-tunnel.ps1` asserts this and fails
@@ -86,8 +87,10 @@ print, copy or commit the tunnel token, API token, credential JSON or Access
 cookies. The approved email list is deliberately untracked; its protected
 location is `C:\NaijaDeals-Staging\secrets\cloudflare-access-allowlist.json`
 and its canonical sorted-address SHA-256 is pinned in
-`approved-testers.sha256`. Changing either file requires a reviewed change to
-the other.
+`approved-testers.sha256`. Canonical form: trim, lowercase, exactly three
+addresses, ordinal sort, newline join, SHA-256. Node `.sort()` and PowerShell
+`[StringComparer]::Ordinal` are the same ordering. Changing either file requires
+a reviewed change to the other.
 
 The API token is used for zone read, Access application/identity-provider
 read/write and tunnel read; its dashboard scope is not represented in Git.

@@ -19,8 +19,10 @@ if ($missing.Count -gt 0) {
 }
 
 $allowlist = Get-Content $allowlistPath -Raw | ConvertFrom-Json
-$approved = @($allowlist.policy.include | ForEach-Object { @($_.email.email) } | ForEach-Object { $_.Trim().ToLowerInvariant() } | Sort-Object)
+[string[]]$approved = @($allowlist.policy.include | ForEach-Object { @($_.email.email) } | ForEach-Object { $_.Trim().ToLowerInvariant() })
 if ($approved.Count -ne 3) { throw "Approved tester allowlist must contain exactly three addresses" }
+# Canonical form: lowercase, ordinal sort, newline join (matches Node .sort()).
+[System.Array]::Sort($approved, [System.StringComparer]::Ordinal)
 $sha = [System.Security.Cryptography.SHA256]::Create()
 try {
   $computed = [BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes(($approved -join "`n")))).Replace("-", "").ToLowerInvariant()
@@ -68,7 +70,10 @@ function Test-ExactPolicy {
 $zone = Invoke-Cf "https://api.cloudflare.com/client/v4/zones/$($cfg['CLOUDFLARE_ZONE_ID'])"
 Write-Output "zone: status=$($zone.result.status) nameservers=$(@($zone.result.name_servers) -join ',')"
 $tunnel = Invoke-Cf "https://api.cloudflare.com/client/v4/accounts/$($cfg['CLOUDFLARE_ACCOUNT_ID'])/cfd_tunnel/$($cfg['CLOUDFLARE_TUNNEL_ID'])"
-Write-Output "tunnel: status=$($tunnel.result.status) connections=$(@($tunnel.result.connections).Count)"
+$tunnelConnections = @($tunnel.result.connections).Count
+$tunnelOk = $tunnel.result.status -eq "healthy" -and $tunnelConnections -gt 0
+Write-Output "tunnel: status=$($tunnel.result.status) connections=$tunnelConnections healthy=$tunnelOk"
+if (-not $tunnelOk) { throw "Tunnel is not healthy or has no connections" }
 
 $tunnelConfig = Invoke-Cf "https://api.cloudflare.com/client/v4/accounts/$($cfg['CLOUDFLARE_ACCOUNT_ID'])/cfd_tunnel/$($cfg['CLOUDFLARE_TUNNEL_ID'])/configurations"
 $ingress = @($tunnelConfig.result.config.ingress)
