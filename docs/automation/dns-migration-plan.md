@@ -127,6 +127,12 @@ www CNAME answer with the values above.
 - Public resolver checks: apex A `187.127.252.23`, `www` CNAME, MX
   `mx1/mx2.hostinger.com`, SPF, DMARC and all three Hostinger DKIM CNAMEs
   resolve correctly. `staging-remote` resolves to the tunnel.
+- HTTP check: apex returns `200` over plain HTTP; HTTPS currently fails TLS
+  principal validation because the existing VPS certificate does not match
+  `naijadeals.com`. This is a pre-existing origin/certificate state, not a DNS
+  destination change; the apex A record still points at the same
+  `187.127.252.23`. `staging.naijadeals.com` returned `200`. Not claimed as a
+  production fix.
 - Cloudflare Access application exists for `staging-remote.naijadeals.com`
   with one Allow policy containing exactly the three approved tester emails;
   One-time PIN is configured. The named tunnel is healthy with four connections.

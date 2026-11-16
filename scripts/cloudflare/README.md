@@ -41,6 +41,10 @@ owner's decision.
   is a CNAME to `*.cfargotunnel.com`.
 - Public A, `www` CNAME, MX, SPF, DMARC and all three Hostinger DKIM CNAMEs
   resolve correctly after the nameserver change.
+- Apex HTTP returns `200`; apex HTTPS currently fails certificate principal
+  validation because the pre-existing VPS certificate does not match the domain.
+  This origin/certificate issue predates the DNS cutover and is not fixed here;
+  `staging.naijadeals.com` returned `200`.
 - Access: one Allow policy, exactly three email rules, no non-Allow policies;
   the only configured identity provider is `onetimepin`. The allowlist is
   pinned by `approved-testers.sha256` without tracking the addresses.

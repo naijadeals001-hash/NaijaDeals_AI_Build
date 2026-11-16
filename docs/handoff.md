@@ -2,8 +2,8 @@
 
 ## Current local automation handoff (2026-11-16)
 
-**Verified source:** branch `naijashop-marketplace`, commit `98457bd`
-(documentation commit; app code unchanged since `57132e0`; remote matched at
+**Verified source:** branch `naijashop-marketplace`, commit `b503475`
+(hardening commit; app code unchanged since `57132e0`; remote matched at
 verification time). The handoff metadata update is a separate docs-only commit.
 **Staging:** build `ygTpeinzqY0L2X5fgwNUL` on
 `http://127.0.0.1:3200`, database `naijadeals_staging` (TEST classification,
@@ -53,8 +53,13 @@ pin the allowlist hash; the reviewed fixes are recorded in
 PostgreSQL 55432 remain loopback-only. Development previews 3047 and 3107
 listen on `::` and are not loopback-only (pre-existing; not in tunnel ingress);
 3109 was not listening. Rollback is restoring `athena/apollo.dns-parking.com`
-at the registrar; the Hostinger zone export is retained. No production
-application deployment or live message was performed.
+at the registrar; the Hostinger zone export is retained. Post-cutover HTTP
+check: apex returned `200` over plain HTTP, but HTTPS failed TLS principal
+validation because the pre-existing VPS certificate does not match
+`naijadeals.com`; the apex A record is unchanged and `staging.naijadeals.com`
+returned `200`. This is a pre-existing production origin/certificate issue, not
+a DNS destination change, and was not fixed here. No production application
+deployment or live message was performed.
 
 **Next executable step:** owner/tester acceptance of the journeys in
 `docs/staging/tester-guide.md`; Shop/checkout/order journeys remain blocked by
