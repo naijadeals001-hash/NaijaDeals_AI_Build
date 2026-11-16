@@ -2,7 +2,7 @@
 
 ## Current local automation handoff (2026-11-16)
 
-**Verified source:** branch `naijashop-marketplace`, commit `08f1dd6`
+**Verified source:** branch `naijashop-marketplace`, commit `3d3902f`
 (hardening commit; app code unchanged since `57132e0`; remote matched at
 verification time). The handoff metadata update is a separate docs-only commit.
 **Staging:** build `ygTpeinzqY0L2X5fgwNUL` on
@@ -34,7 +34,10 @@ policy/OTP/ingress verification, stale guide text, preview binding disclosure,
 PID scope and hash pinning). They were fixed in `b503475`, `7b06528` and
 `08f1dd6`. The second pass accepted M1-M4/L1-L3/L5-L6 and left one Low
 hash-canonicalization defect, now fixed with ordinal sorting in PowerShell and
-Node; `preflight.ps1`, `start-tunnel.ps1 -CheckOnly`, `status-tunnel.ps1` and
+Node. A follow-up failure-path review found F2 (a still-running child lost its
+PID tracking after an unhealthy startup); fixed in `3d3902f` by retaining the
+PID and directing the operator to `stop-tunnel.ps1`. `preflight.ps1`,
+`start-tunnel.ps1 -CheckOnly`, `status-tunnel.ps1` and
 `configure-staging-access.mjs` were re-run successfully against the live
 staging configuration. Runtime-unverified residual: the tunnel token's
 ownership of the configured tunnel ID is still not decoded/proven by a script.
