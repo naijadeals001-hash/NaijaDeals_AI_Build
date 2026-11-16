@@ -25,6 +25,18 @@ owner rotated the n8n public-API key and it was propagated to the automation
 config. R2/S3 keys were exposed in a local tool transcript and still require
 rotation in the Cloudflare dashboard; no API route exists for that.
 
+**Approved staging testers (2026-11-16):** three distinct tester accounts were
+created through the registration endpoint. The Testing Manager has the existing
+`support` role (support/test-report inbox, reply and assignment only); the two
+testers have the `customer` role. Separate seller and driver personas were
+created for the two testers who need those journeys. Local allowed/denied
+checks pass 22/22: no payout, super-admin, support-console or cross-persona
+access where it should be denied. Passwords are not in Git or chat; they are in
+the ACL-protected `C:/NaijaDeals-Staging/secrets/tester-activation.json` file for
+out-of-band owner handoff. The Cloudflare allowlist with exactly the three
+approved emails is saved in the protected local staging configuration but is
+not applied, because Access and the hostname route are still blocked.
+
 **Blocked by account state, not code:** protected external tester access.
 `staging-remote.naijadeals.com` exists as an **A record to `187.127.252.23`**
 on Hostinger nameservers; it does not point at a Cloudflare tunnel. Cloudflare
