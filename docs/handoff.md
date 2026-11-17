@@ -2,8 +2,8 @@
 
 ## Current local automation handoff (2026-11-16)
 
-**Verified source:** branch `naijashop-marketplace`, commit `feda09b`
-(staging Shop + watchdog hardening and independent-review fixes; app code
+**Verified source:** branch `naijashop-marketplace`, commit `0416459`
+(staging Shop + watchdog hardening and all independent-review fixes; app code
 unchanged since `57132e0`; remote matched at verification time). The handoff
 update is a docs commit following the verified code tip.
 **Staging:** build `ygTpeinzqY0L2X5fgwNUL` on
