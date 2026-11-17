@@ -64,6 +64,16 @@ shows `Payment: Paid`. The `test` payment adapter remains intentionally
 unavailable in the production-mode staging build; the only checkout provider
 offered is `wallet`. No live payment, payout or provider call occurred.
 
+**Independent acceptance (2026-11-16):** a separate `journey-tester` ran the
+frozen Shop journey and corroborated **28 PASS / 0 FAIL / 0 BLOCKED / 1
+DEFERRED**, including the financial records, wallet-only method, duplicate
+handling, tester03 refusal and seller boundary. A `code-security-reviewer`
+found the initial R2-probe/cleanup/role/evidence issues; after fixes it
+rechecked the final code tip and reported **no remaining code-proven findings**
+for those residuals. The only accepted gap remains return-case creation after
+a legitimate delivery, which is DEFERRED. Independent runtime evidence is
+under `qa-artifacts/staging-shop/` and is not committed.
+
 **Watchdog (2026-11-16):** `scripts/cloudflare/watchdog.ps1` verifies the exact
 Access app/hostname/policy/three-email hash/OTP binding, tunnel ID/config/
 `config_src=cloudflare`, exact 3200+404 ingress, token account/tunnel
