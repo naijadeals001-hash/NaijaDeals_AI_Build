@@ -183,7 +183,7 @@ session you are already authorised to use, or run against localhost.
 - Browser journey: **28 PASS, 0 FAIL, 0 BLOCKED, 1 DEFERRED**. The deferred
   row is return-case creation after a legitimate delivery; the honest empty
   state was checked. Evidence:
-  `qa-artifacts/staging-shop/report-20261116235443-aa9d8a.json` and the
+  `qa-artifacts/staging-shop/report-20261117000309-be279b.json` and the
   corresponding screenshots. The report records build
   `ygTpeinzqY0L2X5fgwNUL`, the health database check, zero baseline cart/saved
   records and zero run-owned leftovers.
@@ -232,8 +232,8 @@ this customer-only journey. Do not fabricate a delivered order or a return.
 | --- | --- | --- |
 | Demo departments, vendor and products | Persistent staging fixtures | Retained; `--cleanup` archives/deactivates |
 | Passwordless `staging_catalogue_fixture` actor | Persistent staging fixture | Retained for audit references |
-| tester02/tester03 cart lines for `staging-demo-*` products | This run | Removed at start and in the journey's `finally` block |
-| tester02/tester03 saved demo products | This run | Removed at start and in the journey's `finally` block |
+| tester02/tester03 cart lines for `staging-demo-*` products | This run only | Baseline captured; journey blocks if active baseline lines exist and removes only IDs it created |
+| tester02/tester03 saved demo products | This run only | Baseline captured; journey removes only saved IDs it created |
 | Addresses | Avoided | The journey unchecks "Save this address to my account" |
 | Orders, payments, refunds, escrow, ledger | Financial records | **Retained.** The journey never deletes them |
 

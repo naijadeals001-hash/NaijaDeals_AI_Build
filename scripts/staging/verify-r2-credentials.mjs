@@ -13,7 +13,7 @@ import fs from "node:fs";
 import { randomBytes } from "node:crypto";
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
-const ENV_FILE = "C:/NaijaDeals-Staging/env/staging.env";
+const ENV_FILE = process.env.R2_VERIFY_ENV_FILE || "C:/NaijaDeals-Staging/env/staging.env";
 
 function loadStagingEnvironment() {
   const values = {};

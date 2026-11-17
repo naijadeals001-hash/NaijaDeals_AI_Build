@@ -601,6 +601,11 @@ async function main() {
       await select.selectOption(options.find((option) => !option.disabled).value);
       await t2.page.locator('[data-testid="add-to-cart"]').click();
       await t2.page.locator('[data-testid="cart-added-notice"]').waitFor({ state: "visible" });
+      const addedCart = await getJson(t2.context, "/api/cart");
+      const addedLine = (addedCart.items || []).find(
+        (item) => item.productId === fixtures.variant.id && !item.savedForLater && item.variantId
+      );
+      if (addedLine) state.runCartItemIds.add(addedLine.id);
     }
 
     const stagingAddress = {
@@ -917,6 +922,11 @@ async function main() {
       await t3.page.goto(`${BASE}/product/${fixture.slug}`, { waitUntil: "domcontentloaded" });
       await t3.page.locator('[data-testid="add-to-cart"]').click();
       await t3.page.locator('[data-testid="cart-added-notice"]').waitFor({ state: "visible" });
+      const addedCart = await getJson(t3.context, "/api/cart");
+      const addedLine = (addedCart.items || []).find(
+        (item) => item.productId === fixture.id && !item.savedForLater && !item.variantId
+      );
+      if (addedLine) state.runCartItemIds.add(addedLine.id);
       await t3.page.goto(`${BASE}/checkout`, { waitUntil: "domcontentloaded" });
       await t3.page.getByLabel("Full name").fill("STAGING TESTER03");
       await t3.page.getByLabel("Phone number").fill("08030000003");

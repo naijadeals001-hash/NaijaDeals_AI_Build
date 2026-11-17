@@ -57,10 +57,13 @@ variables and is not part of this rotation.
    confirm the manifest and encrypted upload. Do not accept the rotation if
    either the storage probe or the backup fails.
 7. Only after successful cutover, revoke the old R2 token in the dashboard.
-   Verify the old credential no longer authenticates (for example by running
-   the same verification script with a temporary process environment containing
-   only the old Access Key ID/Secret). Do not print the failure response body
-   or either value.
+   Verify the old credential no longer authenticates by pointing the probe at a
+   temporary ACL-protected env file containing only the old key and the staging
+   bucket variables:
+   `R2_VERIFY_ENV_FILE=<temporary-file> node scripts/staging/verify-r2-credentials.mjs`.
+   The probe must fail; do not print the failure response body, the file
+   contents or either value, and remove the temporary file afterwards. The
+   script never reads S3 credentials from the process environment.
 8. Update `docs/handoff.md` with the actual date, replacement token name/scope
    (not the secret), verification results, and the old token's failure result.
 

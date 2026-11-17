@@ -2,10 +2,10 @@
 
 ## Current local automation handoff (2026-11-16)
 
-**Verified source:** branch `naijashop-marketplace`, commit `c465e2d`
-(staging Shop + watchdog hardening; app code unchanged since `57132e0`; remote
-matched at verification time). The handoff metadata update is a separate
-docs-only commit.
+**Verified source:** branch `naijashop-marketplace`, commit `feda09b`
+(staging Shop + watchdog hardening and independent-review fixes; app code
+unchanged since `57132e0`; remote matched at verification time). The handoff
+update is a docs commit following the verified code tip.
 **Staging:** build `ygTpeinzqY0L2X5fgwNUL` on
 `http://127.0.0.1:3200`, database `naijadeals_staging` (TEST classification,
 `127.0.0.1:55432`). **n8n:** `http://127.0.0.1:5680`, workflows
@@ -18,9 +18,10 @@ completes on a not-due/in-flight/terminal notification), durable support /
 order / refund / payout / onboarding / daily-report / backup-alert events, and
 tracked acceptance suites (type-check 0, retry 23/23, operations 22/22,
 served-build routes 22/22, support 12/12 + 20/20 + 23/23). Encrypted DB backup
-restore, remote B2 fetch/checksum, representative R2 public/private object
-reads (private object returns 404 on the public base) and n8n archive restore
-pass. Scheduled tasks are Ready with last result 0.
+restore, remote B2 fetch/checksum, representative R2 public/private S3 reads,
+and n8n archive restore pass. Private-bucket public access is separately
+**UNVERIFIED** because the current API token cannot read R2 bucket settings;
+see the R2 rotation handoff. Scheduled tasks are Ready with last result 0.
 
 **Credential rotation (2026-11-16):** the staging database password and the
 automation consumer token were rotated; the n8n credential was updated and both
